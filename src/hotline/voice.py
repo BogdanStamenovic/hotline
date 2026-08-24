@@ -30,7 +30,7 @@ import contextlib
 import logging
 import time
 from collections.abc import Callable
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import discord
 import numpy as np
@@ -88,19 +88,27 @@ def install_receive_fixes() -> None:
 
     from discord.voice.receive import reader as _reader
 
-    def _decrypt(self, packet):  # type: ignore[no-untyped-def]
+    def _decrypt(decryptor: Any, packet: Any) -> bytes:
         packet.adjust_rtpsize()
         nonce = packet.nonce + b"\x00" * 20
         header = bytes(packet.header)
-        if packet.cc and len(header) < 12 + 4 * packet.cc:
-            header = bytes(packet.raw[: 12 + 4 * packet.cc]) if hasattr(packet, "raw") else header
-        result = self.box.decrypt(packet.decrypted_data or packet.data, header, nonce)
+        result: bytes = decryptor.box.decrypt(
+            packet.decrypted_data or packet.data, header, nonce
+        )
         if packet.extended:
             packet.update_extended_header(result)
+            # Only now is there an extension to skip. Doing this unconditionally
+            # is the entire bug.
             return result[8:]
         return result
 
-    _reader.PacketDecryptor._decrypt_rtp_aead_xchacha20_poly1305_rtpsize = _decrypt  # type: ignore[method-assign]
+    # setattr, not assignment: mypy rejects rebinding a method, and this is
+    # deliberately monkeypatching a third-party class.
+    setattr(  # noqa: B010
+        _reader.PacketDecryptor,
+        "_decrypt_rtp_aead_xchacha20_poly1305_rtpsize",
+        _decrypt,
+    )
     _PATCHED = True
     log.info("installed py-cord receive fixes (pycord#3139 is a red herring)")
 
