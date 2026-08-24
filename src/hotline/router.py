@@ -164,6 +164,7 @@ class Router:
             raise SessionNotFound("no live Claude sessions on this machine")
 
         want = _FILLER.sub("", spec.strip(), count=1).strip().strip("'\"").lower()
+        want = want.rstrip(".,!?;:")
         # "the newest one" survives the leading-filler strip as "newest one".
         want = _TRAILING_FILLER.sub("", want).strip()
         if not want:
@@ -184,9 +185,14 @@ class Router:
                 if session.pid == int(want):
                     return session
 
-        exact = [s for s in live if s.name.lower() == want]
-        if len(exact) == 1:
-            return exact[0]
+        # Spoken names arrive with spaces where the real name has hyphens:
+        # "connect to data thirteen" is transcribed "Connect to Data 13", and
+        # "data 13" must find `data-13`. Cheap, and the alternative is telling
+        # Bogdan to pronounce punctuation.
+        for candidate in (want, want.replace(" ", "-"), want.replace(" ", "")):
+            exact = [s for s in live if s.name.lower() == candidate]
+            if len(exact) == 1:
+                return exact[0]
 
         by_id = [s for s in live if s.session_id.lower().startswith(want)]
         if len(by_id) == 1:

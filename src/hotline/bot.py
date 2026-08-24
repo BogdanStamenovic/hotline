@@ -26,6 +26,7 @@ import contextlib
 import os
 import time
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import discord
 
@@ -34,6 +35,9 @@ from .errors import HotlineError
 from .fresh import Event
 from .pool import SessionPool
 from .text import MAX_MESSAGE, chunk
+
+if TYPE_CHECKING:  # the voice extra is optional; only the type is needed here
+    from .voice import VoiceCall
 
 # A page-claim older than this is assumed to belong to a process that died, so
 # the bridge un-mutes itself rather than staying silent forever.
@@ -84,15 +88,27 @@ class HotlineBot(discord.Bot):
         guild_id: int | None,
         channel_id: int | None,
         log: Callable[[str], None],
+        voice_channel_id: int | None = None,
+        voice: bool = True,
     ) -> None:
         intents = discord.Intents.default()
         intents.message_content = True
+        # voice_states is not privileged; without it the bot never learns that
+        # Bogdan joined the channel and can only be summoned by typing.
+        intents.voice_states = True
         super().__init__(intents=intents)
         self.pool = pool
         self.user_id = user_id
         self.guild_id = guild_id
         self.channel_id = channel_id
         self.log = log
+        self.voice_channel_id = voice_channel_id
+        self.voice_enabled = voice
+        # Typed loosely on purpose: `hotline.voice` imports numpy, torch and
+        # faster-whisper, and this module must import cleanly without the voice
+        # extra so the text bridge works on its own.
+        self.call: VoiceCall | None = None
+        self._call_lock = asyncio.Lock()
 
     async def on_ready(self) -> None:
         who = f"{self.user} ({self.user.id})" if self.user else "?"
@@ -139,6 +155,12 @@ class HotlineBot(discord.Bot):
             return
         if text.lower() in ("!sessions", "!status"):
             await self._status(message)
+            return
+        if text.lower() in ("!join", "!call"):
+            await self._join_voice(message)
+            return
+        if text.lower() in ("!leave", "!hangup"):
+            await self._leave_voice(message)
             return
 
         key = f"discord-{message.channel.id}"
@@ -201,6 +223,113 @@ class HotlineBot(discord.Bot):
             )
         await message.channel.send("\n".join(lines)[:MAX_MESSAGE])
 
+    # ---- voice ---------------------------------------------------------
+
+    async def _voice_channel(self) -> discord.VoiceChannel | None:
+        if not self.voice_channel_id:
+            return None
+        channel = self.get_channel(self.voice_channel_id)
+        return channel if isinstance(channel, discord.VoiceChannel) else None
+
+    async def _join_voice(self, message: discord.Message | None = None) -> None:
+        """Join the call and warm the models.
+
+        Loading Whisper takes seconds and about 1.5 GB of VRAM, so it happens on
+        joining rather than at startup -- the text and phone paths should not pay
+        for a GPU they never use.
+        """
+        async with self._call_lock:
+            if self.call is not None:
+                if message:
+                    await message.channel.send("Already on the call.")
+                return
+            if not self.voice_enabled:
+                if message:
+                    await message.channel.send("Voice is disabled (no `voice` extra installed).")
+                return
+            channel = await self._voice_channel()
+            if channel is None:
+                if message:
+                    await message.channel.send(
+                        "No voice channel configured — set DISCORD_VOICE_CHANNEL_ID."
+                    )
+                return
+
+            try:
+                from .audio import Speaker, Transcriber
+                from .voice import VoiceCall
+            except ImportError as exc:
+                if message:
+                    await message.channel.send(f"Voice extra not installed: `{exc}`")
+                return
+
+            if message:
+                await message.channel.send(f"Joining **{channel.name}** — loading models…")
+            transcriber, speaker = Transcriber(), Speaker()
+            loop = asyncio.get_running_loop()
+            began = time.monotonic()
+            await loop.run_in_executor(None, transcriber.load)
+            await loop.run_in_executor(None, speaker.load)
+            self.log(f"voice models warm in {time.monotonic() - began:.1f}s")
+
+            call = VoiceCall(
+                pool=self.pool,
+                transcriber=transcriber,
+                speaker=speaker,
+                allowed=self._allowed_speakers(),
+                key=f"voice-{channel.id}",
+                log_fn=self.log,
+            )
+            await call.join(channel)
+            self.call = call
+            await call.say("Hotline. What do you need?")
+            if message:
+                await message.channel.send("On the call. Talk to me.")
+
+    def _allowed_speakers(self) -> set[int]:
+        """Whose audio is transcribed at all.
+
+        Defaults to Bogdan alone. HOTLINE_VOICE_ALLOWED_IDS widens it, which is
+        how the two-bot end-to-end test works -- and is the single most dangerous
+        setting here, because anyone in this set can speak into a root shell.
+        """
+        allowed = {self.user_id}
+        extra = os.environ.get("HOTLINE_VOICE_ALLOWED_IDS", "")
+        allowed |= {int(x) for x in extra.replace(" ", "").split(",") if x.isdigit()}
+        return allowed
+
+    async def _leave_voice(self, message: discord.Message | None = None) -> None:
+        async with self._call_lock:
+            call = self.call
+            self.call = None
+        if call is None:
+            if message:
+                await message.channel.send("Not on a call.")
+            return
+        await call.leave()
+        lines = [f"**{who}:** {what}" for who, what in call.transcript[-12:]]
+        body = "Call ended.\n\n" + ("\n".join(lines) if lines else "_nothing was said_")
+        if message:
+            for part in chunk(body):
+                await message.channel.send(part)
+
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ) -> None:
+        """Answer the phone. Bogdan joining the channel *is* the call starting."""
+        if member.id != self.user_id or not self.voice_channel_id:
+            return
+        joined = after.channel is not None and after.channel.id == self.voice_channel_id
+        left = before.channel is not None and before.channel.id == self.voice_channel_id
+        if joined and self.call is None:
+            self.log("bogdan joined the voice channel; picking up")
+            await self._join_voice()
+        elif left and not joined and self.call is not None:
+            self.log("bogdan left the voice channel; hanging up")
+            await self._leave_voice()
 
 def build_bot(pool: SessionPool, log: Callable[[str], None]) -> HotlineBot | None:
     """None when Discord is not configured -- the phone path must still work."""
@@ -219,6 +348,8 @@ def build_bot(pool: SessionPool, log: Callable[[str], None]) -> HotlineBot | Non
         guild_id=as_int("DISCORD_GUILD_ID"),
         channel_id=as_int("DISCORD_TEXT_CHANNEL_ID"),
         log=log,
+        voice_channel_id=as_int("DISCORD_VOICE_CHANNEL_ID"),
+        voice=os.environ.get("HOTLINE_VOICE", "1") not in ("0", "false", "no"),
     )
 
 
@@ -243,3 +374,4 @@ async def run_bot(bot: HotlineBot, token: str, log: Callable[[str], None]) -> No
             await bot.close()
         await asyncio.sleep(delay)
         delay = min(delay * 2, 300.0)
+

@@ -54,3 +54,9 @@ line-length = 100
 python_version = "3.12"
 warn_unused_ignores = true
 warn_redundant_casts = true
+
+# Neither ships type information. Everything they return is immediately narrowed
+# to str / ndarray in audio.py, so there is nothing to check across the boundary.
+[[tool.mypy.overrides]]
+module = ["faster_whisper.*", "silero_vad.*", "piper.*", "soxr.*"]
+ignore_missing_imports = true

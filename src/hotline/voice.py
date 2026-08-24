@@ -1,0 +1,395 @@
+"""The actual call: join a Discord voice channel, listen, think out loud, answer.
+
+The shape is a loop per speaker -- packets in, VAD segments them, Whisper turns a
+segment into text, the router answers, Piper speaks it -- but three details are
+what make it feel like talking to someone rather than querying a machine.
+
+**The gate is at the sink, on user id.** py-cord hands out one stream per speaker,
+so the filter goes there, before a single sample is transcribed. Filtering only by
+guild or channel would mean anyone who joins the call gets a root shell on this
+machine, because these sessions run with permissions bypassed and `%wheel
+NOPASSWD: ALL` is in place. Everyone else's audio is dropped where it arrives.
+
+**Dead air is narrated, not filled.** A tool call can run for thirty seconds and
+every published voice-agent pattern hits this and suggests hold music. The stream
+already carries `tool_use` events and, better, `task_summary` sentences written for
+a person -- "Reading the nginx config", "Running the test suite". Speaking those as
+they happen turns a wait into presence, and costs nothing.
+
+**Barge-in is real.** If you start talking while it is speaking, it stops. Not at
+the end of the sentence -- immediately, by clearing the playback queue. A voice
+agent you cannot interrupt is exhausting, and interrupting is how people signal
+that the answer has gone the wrong way.
+"""
+
+from __future__ import annotations
+
+import array
+import asyncio
+import contextlib
+import logging
+import time
+from collections.abc import Callable
+from typing import ClassVar
+
+import discord
+import numpy as np
+from discord import sinks
+
+from .audio import Segmenter, Speaker, Transcriber, stereo48_to_mono16
+from .errors import HotlineError
+from .fresh import Event
+from .pool import SessionPool
+
+log = logging.getLogger("hotline.voice")
+
+FRAME_BYTES = 3840  # 20 ms of 48 kHz stereo 16-bit, what discord.AudioSource wants
+SILENCE = b"\x00" * FRAME_BYTES
+
+# How long a turn must be running before it is worth saying something. Below this
+# the answer arrives first anyway and narration would just talk over it.
+NARRATE_AFTER = 3.0
+# Minimum gap between spoken narration lines, so a burst of tool calls does not
+# become a stream of chatter.
+NARRATE_EVERY = 4.0
+
+
+class StreamSource(discord.AudioSource):
+    """A queue of PCM that can be emptied instantly.
+
+    py-cord pulls 20 ms frames from `read()` on its own thread. Making that a
+    queue rather than a file is what allows barge-in: dropping everything queued
+    stops the voice mid-word, which is the only interruption that feels like an
+    interruption.
+    """
+
+    def __init__(self) -> None:
+        self._buffer = bytearray()
+        self._lock = asyncio.Lock()
+        self.finished = False
+
+    def push(self, pcm: bytes) -> None:
+        self._buffer.extend(pcm)
+
+    def clear(self) -> int:
+        dropped = len(self._buffer)
+        self._buffer.clear()
+        return dropped
+
+    @property
+    def pending_seconds(self) -> float:
+        return len(self._buffer) / (FRAME_BYTES * 50)
+
+    def read(self) -> bytes:
+        if not self._buffer:
+            # Silence rather than b"": returning empty tells py-cord the source is
+            # exhausted and it tears the player down, which would mean restarting
+            # a player for every sentence.
+            return SILENCE
+        frame = bytes(self._buffer[:FRAME_BYTES])
+        del self._buffer[:FRAME_BYTES]
+        if len(frame) < FRAME_BYTES:
+            frame += b"\x00" * (FRAME_BYTES - len(frame))
+        return frame
+
+    def is_opus(self) -> bool:
+        return False
+
+    def cleanup(self) -> None:
+        self._buffer.clear()
+
+
+class GatedSink(sinks.Sink):
+    """Receives per-user PCM and forwards only the permitted speaker's.
+
+    `write` runs on py-cord's decoder thread, so nothing here may block or touch
+    the event loop directly -- it hands the bytes over with
+    `call_soon_threadsafe` and gets out of the way.
+
+    The odd attributes below exist because py-cord 2.8.1's receive path is
+    half-migrated and `discord.sinks.Sink` no longer satisfies it. py-cord warns
+    that "voice reception is currently broken due to Discord's DAVE protocol"
+    (their issue #3139) -- but that warning is broader than the truth. DAVE
+    decryption works: RTP packets arrive decrypted and are handed to the classic
+    `sink.write(data, source)` in `PacketRouter`. What is actually missing is
+    three attributes the newer machinery expects and the old base class never
+    grew:
+
+      __sink_listeners__   the separate SinkEventRouter registers speaking
+                           start/stop callbacks from it; empty is fine, this
+                           does its own VAD and never used those events
+      walk_children()      the same router walks nested sinks; there are none
+      is_opus()            the decoder asks whether to hand over Opus or PCM.
+                           False means "decode it for me", which is what we want
+
+    Without them `start_recording` raises AttributeError before a single packet
+    is delivered, which looks exactly like the advertised DAVE breakage and is
+    not.
+    """
+
+    # See the class docstring. Not decoration -- reception fails without these.
+    __sink_listeners__: ClassVar[list[tuple[str, str]]] = []
+
+    def walk_children(self) -> list[GatedSink]:
+        return []
+
+    def is_opus(self) -> bool:
+        return False
+
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        allowed: set[int],
+        on_audio: Callable[[int, bytes], None],
+        on_rejected: Callable[[int], None],
+    ) -> None:
+        super().__init__()
+        self.loop = loop
+        self.allowed = allowed
+        self.on_audio = on_audio
+        self.on_rejected = on_rejected
+        self._warned: set[int] = set()
+        self.packets = 0
+
+    def write(self, data: object, user: object) -> None:
+        """py-cord 2.8 hands over a `VoiceData` and a Member, not bytes and an int.
+
+        The old signature (`bytes, int`) is what every sink example still shows,
+        and silently doing the wrong thing with it is why this looked like the
+        DAVE breakage for so long. Both shapes are accepted so a py-cord upgrade
+        in either direction does not break the call.
+        """
+        self.packets += 1
+        pcm = getattr(data, "pcm", None)
+        if self.packets <= 3 or self.packets % 500 == 0:
+            log.info("sink.write #%d data=%s user=%r pcm=%s", self.packets,
+                     type(data).__name__, user,
+                     len(pcm) if pcm is not None else None)
+        if pcm is None and isinstance(data, (bytes, bytearray)):
+            pcm = bytes(data)
+        speaker = getattr(user, "id", user)
+        if not isinstance(speaker, int) or not pcm:
+            return
+
+        if speaker not in self.allowed:
+            if speaker not in self._warned:
+                self._warned.add(speaker)
+                self.loop.call_soon_threadsafe(self.on_rejected, speaker)
+            return
+        self.loop.call_soon_threadsafe(self.on_audio, speaker, bytes(pcm))
+
+    def cleanup(self) -> None:
+        self.finished = True
+
+
+class VoiceCall:
+    """One live call in one channel."""
+
+    def __init__(
+        self,
+        pool: SessionPool,
+        transcriber: Transcriber,
+        speaker: Speaker,
+        allowed: set[int],
+        key: str,
+        log_fn: Callable[[str], None] | None = None,
+    ) -> None:
+        self.pool = pool
+        self.transcriber = transcriber
+        self.speaker = speaker
+        self.allowed = allowed
+        self.key = key
+        self.log = log_fn or (lambda message: log.info(message))
+        self.client: discord.VoiceClient | None = None
+        self.source = StreamSource()
+        self.segmenters: dict[int, Segmenter] = {}
+        self.transcript: list[tuple[str, str]] = []
+        self._queue: asyncio.Queue[tuple[int, bytes]] = asyncio.Queue()
+        self._tasks: list[asyncio.Task[None]] = []
+        self._busy = False
+        self._speaking_since = 0.0
+
+    # ---- lifecycle ------------------------------------------------------
+
+    async def join(self, channel: discord.VoiceChannel) -> None:
+        loop = asyncio.get_running_loop()
+        self.client = await channel.connect()
+        self.client.play(self.source)
+        sink = GatedSink(loop, self.allowed, self._on_audio, self._on_rejected)
+        # py-cord 2.8 never calls `sink.init(vc)` from `start_recording`, and the
+        # opus decoder asserts on `sink.client`. Without this every packet dies in
+        # an AssertionError on the router thread, which then tears down recording
+        # entirely -- and looks, from outside, exactly like the advertised DAVE
+        # breakage.
+        sink.init(self.client)
+        self.client.start_recording(sink, self._on_recording_done)
+        self._tasks.append(asyncio.create_task(self._consume()))
+        self.log(f"joined {channel.name}; listening only to {sorted(self.allowed)}")
+
+    async def leave(self) -> None:
+        for task in self._tasks:
+            task.cancel()
+        for task in self._tasks:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await task
+        self._tasks.clear()
+        if self.client is not None:
+            with contextlib.suppress(Exception):
+                self.client.stop_recording()
+            with contextlib.suppress(Exception):
+                await self.client.disconnect(force=True)
+            self.client = None
+
+    async def _on_recording_done(self, sink: sinks.Sink, *args: object) -> None:
+        self.log("recording stopped")
+
+    # ---- receiving ------------------------------------------------------
+
+    def _on_rejected(self, user: int) -> None:
+        """Someone who is not Bogdan is talking. Say so once, then stay silent.
+
+        Worth surfacing rather than dropping quietly: from the caller's side an
+        ignored voice is indistinguishable from a broken bot.
+        """
+        self.log(f"ignoring audio from user {user} (not in the allowed set)")
+
+    def _on_audio(self, user: int, pcm: bytes) -> None:
+        self._queue.put_nowait((user, pcm))
+
+    async def _consume(self) -> None:
+        try:
+            await self._consume_loop()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # A bare create_task swallows this until garbage collection, which is
+            # how a dead consumer looked like "the audio never arrived" for an
+            # hour. Never again.
+            log.exception("voice consumer died")
+            raise
+
+    async def _consume_loop(self) -> None:
+        while True:
+            user, pcm = await self._queue.get()
+            mono = stereo48_to_mono16(pcm)
+            if mono.size == 0:
+                continue
+            segmenter = self.segmenters.setdefault(user, Segmenter())
+
+            # Barge-in: any speech at all while we are talking stops us. Checked
+            # before segmentation finishes, because waiting for a complete
+            # utterance would mean talking over the whole interruption.
+            if self.source.pending_seconds > 0.2 and self._is_speech(mono):
+                dropped = self.source.clear()
+                if dropped:
+                    self.log(f"barge-in: dropped {dropped / (FRAME_BYTES * 50):.1f}s of speech")
+
+            for utterance in segmenter.feed(mono):
+                asyncio.create_task(self._handle(utterance.audio, utterance.seconds))
+
+    def _is_speech(self, mono: np.ndarray) -> bool:
+        """Cheap energy gate for barge-in. Deliberately not the VAD: this runs on
+        every packet, and being slightly wrong costs an unnecessary pause, not a
+        wrong answer."""
+        if mono.size == 0:
+            return False
+        return bool(np.sqrt(np.mean(mono.astype(np.float64) ** 2)) > 0.02)
+
+    # ---- one turn -------------------------------------------------------
+
+    async def _handle(self, audio: np.ndarray, seconds: float) -> None:
+        loop = asyncio.get_running_loop()
+        began = time.monotonic()
+        text = await loop.run_in_executor(None, self.transcriber.transcribe, audio)
+        text = text.strip()
+        if not text or len(text) < 2:
+            return
+        self.transcript.append(("you", text))
+        self.log(f"heard ({seconds:.1f}s, stt {time.monotonic() - began:.2f}s): {text!r}")
+
+        if self._busy:
+            # One turn at a time. Discarding is better than queueing: by the time
+            # the first finishes, a spoken follow-up is usually stale.
+            await self.say("Hang on, still working on the last one.")
+            return
+
+        self._busy = True
+        turn_started = time.monotonic()
+        spoken: list[str] = []
+        last_narration = [turn_started]
+
+        def narrate(event: Event) -> None:
+            if event.kind not in ("tool", "summary"):
+                return
+            now = time.monotonic()
+            if now - turn_started < NARRATE_AFTER or now - last_narration[0] < NARRATE_EVERY:
+                return
+            last_narration[0] = now
+            spoken.append(event.detail)
+            asyncio.run_coroutine_threadsafe(self.say(event.detail), loop)
+
+        try:
+            _route, reply = await self.pool.ask(self.key, text, narrator=narrate, timeout=900.0)
+            answer = reply.text
+        except HotlineError as exc:
+            answer = f"That didn't work. {exc}"
+        except Exception as exc:
+            log.exception("voice turn failed")
+            answer = f"Something broke on my side. {type(exc).__name__}."
+        finally:
+            self._busy = False
+
+        self.transcript.append(("claude", answer))
+        self.log(f"answered in {time.monotonic() - turn_started:.1f}s ({len(answer)} chars)")
+        await self.say(speakable(answer))
+
+    # ---- speaking -------------------------------------------------------
+
+    async def say(self, text: str) -> None:
+        if not text.strip():
+            return
+        loop = asyncio.get_running_loop()
+        pcm = await loop.run_in_executor(None, self.speaker.to_discord, text)
+        self.source.push(pcm)
+        self._speaking_since = time.monotonic()
+
+
+def speakable(text: str, limit: int = 1200) -> str:
+    """Turn a written answer into something worth listening to.
+
+    Markdown read aloud is unbearable -- "hash hash Results, star star three star
+    star failures" -- and a model told to be brief still reaches for a bullet list.
+    This is a last line of defence over the system prompt, not a replacement for it.
+    """
+    lines: list[str] = []
+    in_code = False
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        if line.strip().startswith("```"):
+            in_code = not in_code
+            if in_code:
+                lines.append("Here's the code, I'll put it in the channel.")
+            continue
+        if in_code:
+            continue
+        line = line.lstrip("#").strip()
+        if line.startswith(("- ", "* ", "+ ")):
+            line = line[2:].strip()
+        line = line.replace("**", "").replace("`", "")
+        if line:
+            lines.append(line)
+
+    spoken = " ".join(lines).strip()
+    if len(spoken) <= limit:
+        return spoken
+    cut = spoken.rfind(". ", 0, limit)
+    if cut < limit // 2:
+        cut = limit
+    return spoken[: cut + 1] + " There's more — I've put the rest in the channel."
+
+
+def pcm_to_array(pcm: bytes) -> array.array:
+    """Only used by tests and debugging; kept here so the shape is documented."""
+    values = array.array("h")
+    values.frombytes(pcm[: len(pcm) - len(pcm) % 2])
+    return values
