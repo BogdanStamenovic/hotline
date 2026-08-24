@@ -341,6 +341,19 @@ class SessionPool:
         if route.action == "resources":
             return Reply(text=describe_resources(), subtype="control")
 
+        if route.action == "agents":
+            from .agents import Registry
+
+            known = sorted(
+                Registry().agents.values(), key=lambda a: a.declared_at, reverse=True
+            )
+            if not known:
+                return Reply(
+                    text="No agents have declared themselves.", subtype="control"
+                )
+            lines = [a.describe() for a in known]
+            return Reply(text="\n".join(lines), subtype="control")
+
         if route.action == "detach":
             was = conv.attached_to
             conv.attached_to = None
@@ -654,6 +667,7 @@ HELP_TEXT = """**Commands** (these are handled by hotline itself, not sent to a 
 `session kill <n|name>` — SIGTERM it, then close its tmux session
 `where am i` — which session you are bound to, and how to attach to it
 `resources` — RAM, VRAM, load
+`agents` — who is working on what, and who has finished
 `new session` — close your session and start over
 
 Anything else goes to a Claude session. `connect` accepts a number from the

@@ -137,3 +137,22 @@ def test_lookup_by_name_is_case_insensitive(registry: Registry) -> None:
     registry.declare("sid-1", "Voice-Decoder", "a job")
     assert registry.by_name("voice-decoder") is not None
     assert registry.by_name("nope") is None
+
+
+# ---- asking over Discord or voice, not just from a shell ----------------
+
+
+def test_agents_is_a_control_word() -> None:
+    """Bogdan asks this from his phone, so it belongs in the router rather than
+    only in the CLI."""
+    from hotline.router import parse_utterance
+
+    for phrase in ["agents", "who is working", "who's working on what", "what is everyone doing"]:
+        assert parse_utterance(phrase).action == "agents", phrase
+
+
+def test_agent_shaped_questions_still_reach_a_session() -> None:
+    from hotline.router import parse_utterance
+
+    for phrase in ["agents are hard to name", "who is working on the decoder right now"]:
+        assert parse_utterance(phrase).action != "agents", phrase

@@ -112,6 +112,10 @@ _DETACH = re.compile(r"^(?:detach|disconnect|leave|never\s*mind|new\s+session)\s
 _WHERE = re.compile(r"^(?:where\s+am\s+i|who\s+am\s+i\s+talking\s+to|what\s+am\s+i"
                     r"\s+connected\s+to)\s*[.?]?$", re.IGNORECASE)
 
+_AGENTS = re.compile(
+    r"^(?:agents?|who(?:'?s| is)\s+working(?:\s+on\s+what)?|what(?:\s+is|'?s)\s+"
+    r"everyone\s+doing)\s*[.?]?$", re.IGNORECASE
+)
 _HELP = re.compile(r"^(?:help|commands?|what\s+can\s+(?:you|i)\s+do)\s*[.?!]?$", re.IGNORECASE)
 _RESOURCES = re.compile(
     r"^(?:resources?|load|how\s+(?:much|is)\s+(?:ram|memory|vram|load)\S*)\s*[.?]?$", re.IGNORECASE
@@ -141,6 +145,8 @@ def parse_utterance(utterance: str) -> Route:
         return Route("control", None, text, action="help")
     if _RESOURCES.match(low):
         return Route("control", None, text, action="resources")
+    if _AGENTS.match(low):
+        return Route("control", None, text, action="agents")
     if _LIST.match(low):
         return Route("control", None, text, action="list")
     kill = _KILL.match(text)
