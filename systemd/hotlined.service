@@ -1,0 +1,21 @@
+[Unit]
+Description=hotline daemon (HTTP bridge from the phone to Claude Code)
+# Wants= not Requires=: a slow tailscaled must delay this, not prevent it. The
+# daemon is useful on localhost even before the tailnet is up.
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/bodas/data/hotline
+ExecStart=/home/bodas/data/hotline/.venv/bin/hotlined
+Restart=always
+RestartSec=5
+# claude reads ~/.claude/.credentials.json and writes the stop spool under
+# $XDG_RUNTIME_DIR. A *user* unit gets both for free; a system unit with
+# User=bodas would need XDG_RUNTIME_DIR set by hand, and getting it wrong means
+# the Stop hook and the daemon disagree about where the spool lives.
+Environment=PATH=/home/bodas/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target

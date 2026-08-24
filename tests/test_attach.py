@@ -14,12 +14,12 @@ import asyncio
 from pathlib import Path
 
 import pytest
+from helpers import assistant_entry, make_session, user_entry, write_transcript
 
 import hotline.router as router_module
 from hotline.errors import ReplyTimeout
 from hotline.router import Router
 from hotline.stops import record_stop
-from helpers import assistant_entry, make_session, user_entry, write_transcript
 
 SID = "sess-attach"
 PID = 500
@@ -35,7 +35,7 @@ def quick(monkeypatch: pytest.MonkeyPatch) -> None:
 def fake_reply(home: Path, marker: str, answer: str, delay: float, tools: list[str] | None = None):
     """Stand in for the real session: after `delay`, append our message and a reply."""
 
-    async def _inject(session, text, timeout=5.0):  # noqa: ANN001, ARG001
+    async def _inject(session, text, timeout=5.0):
         async def later() -> None:
             await asyncio.sleep(delay)
             write_transcript(home, SID, [user_entry(marker), assistant_entry(answer, tools=tools)])
@@ -79,7 +79,7 @@ async def test_does_not_return_a_reply_to_an_earlier_turn(
     """The target was already mid-turn. The first thing that lands is not ours."""
     make_session(fake_claude, PID, "target-aa", "/home/bodas/data", SID)
 
-    async def _inject(session, text, timeout=5.0):  # noqa: ANN001, ARG001
+    async def _inject(session, text, timeout=5.0):
         async def later() -> None:
             await asyncio.sleep(0.05)
             write_transcript(fake_claude, SID, [assistant_entry("answer to the previous turn")])
@@ -116,7 +116,7 @@ async def test_timeout_says_the_message_never_landed(
     """The two failure modes need different advice, so they get different messages."""
     make_session(fake_claude, PID, "target-aa", "/home/bodas/data", SID)
 
-    async def _inject(session, text, timeout=5.0):  # noqa: ANN001, ARG001
+    async def _inject(session, text, timeout=5.0):
         return None
 
     monkeypatch.setattr(router_module, "inject", _inject)
@@ -130,7 +130,7 @@ async def test_timeout_says_it_landed_but_went_unanswered(
 ) -> None:
     make_session(fake_claude, PID, "target-aa", "/home/bodas/data", SID)
 
-    async def _inject(session, text, timeout=5.0):  # noqa: ANN001, ARG001
+    async def _inject(session, text, timeout=5.0):
         write_transcript(fake_claude, SID, [user_entry("ping")])
 
     monkeypatch.setattr(router_module, "inject", _inject)
@@ -146,7 +146,7 @@ async def test_a_busy_target_is_not_mistaken_for_a_finished_one(
     A session thinking for a long time before its first token is quiet but busy."""
     make_session(fake_claude, PID, "target-aa", "/home/bodas/data", SID, status="busy")
 
-    async def _inject(session, text, timeout=5.0):  # noqa: ANN001, ARG001
+    async def _inject(session, text, timeout=5.0):
         write_transcript(fake_claude, SID, [user_entry("ping")])
 
     monkeypatch.setattr(router_module, "inject", _inject)

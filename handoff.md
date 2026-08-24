@@ -79,10 +79,13 @@ read `PLAN.md` in this directory (the full architecture), then continue from
   `/dev/nvme0n1p4` ext4, 73G total / 43G avail.
 - `wake-bogdan.sh` at `~/.claude/bin/wake-bogdan.sh` — siren, needs PipeWire (running).
 
-## BLOCKER: Discord tokens
+## RESOLVED: Discord tokens
 
-Phases 3-5 cannot be *live-tested* until Bogdan fills `~/data/hotline/.env`
-(currently empty stubs). He was given `DISCORD-SETUP.md` and said he'd do it.
+**Bogdan filled `.env` on 2026-08-24. Blocker CLEARED, stop polling.** All six
+values set (2x 72-char tokens, 4x 19-digit snowflakes, mode 600). Never print the
+values anywhere but `.env`.
+
+Historical: He was given `DISCORD-SETUP.md` and said he'd do it.
 **Poll `.env` at each phase boundary.** Build and unit-test everything regardless;
 when the tokens appear, run the live tests and log the result.
 Do NOT email him just to ask for tokens — he already knows.
@@ -102,9 +105,12 @@ Do NOT email him just to ask for tokens — he already knows.
       projects (reported another session at 96.7% on its first run here) and
       hardcoded a 200k window. Now defaults to `$CLAUDE_CODE_SESSION_ID` and reads
       `~/.claude/ctx.conf` (`window = 1000000`). Re-set that file if the model changes.
-- [ ] **Phase 1 — router core  <-- START HERE** (cc-socks client, Stop-hook reply capture,
+- [x] **Phase 1 — router core.** DONE. 76 tests, ruff+mypy clean, commit 472a078.
+      Attach needs `crossSessionInbound: "accept"` (set). Stop hook is a fast path
+      only; transcript quiescence is the fallback. Guard installed, default ON.
+      (was: cc-socks client, Stop-hook reply capture,
       persistent `stream-json` subprocess, 3 routing modes). Headless CLI.
-- [ ] Phase 2 — iPhone Shortcut path (`/api/v1/claude` beside pigion-todo,
+- [ ] **Phase 2 — iPhone Shortcut path  <-- START HERE** (`/api/v1/claude` beside pigion-todo,
       new Shortcut recipe). The 2-hour win; do it before Discord.
 - [ ] Phase 3 — Discord text bridge + escalating `@mention` page ladder +
       `call-bogdan` skill.

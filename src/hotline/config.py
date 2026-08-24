@@ -61,3 +61,29 @@ DEFAULT_REPLY_TIMEOUT = 300.0
 # enough not to trip on the pause between a tool result and the next token; short
 # enough that a caller on a phone does not notice it.
 QUIET_SECONDS = 2.0
+
+
+def load_env(path: str | os.PathLike[str] | None = None) -> dict[str, str]:
+    """Read a KEY=VALUE file into os.environ without overwriting what is already set.
+
+    Real environment wins, so a systemd unit or a shell export can override the
+    file without editing it. Values are not unquoted or expanded -- a bot token is
+    an opaque string and the moment this starts interpreting `$` it will corrupt one.
+    """
+    target = Path(path) if path else Path(__file__).resolve().parent.parent.parent / ".env"
+    found: dict[str, str] = {}
+    try:
+        lines = target.read_text().splitlines()
+    except OSError:
+        return found
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip()
+        if not key:
+            continue
+        found[key] = value
+        os.environ.setdefault(key, value)
+    return found

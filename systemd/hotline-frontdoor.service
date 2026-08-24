@@ -1,0 +1,25 @@
+[Unit]
+Description=hotline front door (proxies the iPhone Shortcut to archserver)
+# Wants= not Requires=: if the network is slow to come up this should still
+# start and simply report the upstream as unreachable, rather than refuse to run.
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/hotline-frontdoor.env
+ExecStart=/usr/bin/python3 %h/hotline/frontdoor.py
+Restart=always
+RestartSec=5
+# It is a 20MB stdlib proxy on a 415MB machine; a leak here would take out
+# pigion.service, which is in daily use.
+MemoryMax=80M
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=default.target
