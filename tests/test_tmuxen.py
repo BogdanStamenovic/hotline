@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 
 from hotline import tmuxen
+from hotline.errors import ClaudeLaunchFailed
 
 
 class FakeTmux:
@@ -54,7 +55,7 @@ async def test_spawn_passes_the_display_name(tmux: FakeTmux) -> None:
     back called `hl-demo-res` instead of `demo-res`, losing the identity you
     resumed it by.
     """
-    with pytest.raises(Exception):  # noqa: B017,PT011 - never registers; we want the argv
+    with pytest.raises(ClaudeLaunchFailed):  # never registers; the argv is the point
         await tmuxen.spawn("demo-res", cwd="/tmp", timeout=0.01, name="demo-res")
     argv = tmux.new_session
     assert "--name" in argv
@@ -63,16 +64,16 @@ async def test_spawn_passes_the_display_name(tmux: FakeTmux) -> None:
 
 
 async def test_spawn_without_a_name_does_not_pass_the_flag(tmux: FakeTmux) -> None:
-    with pytest.raises(Exception):  # noqa: B017,PT011
+    with pytest.raises(ClaudeLaunchFailed):
         await tmuxen.spawn("plain", cwd="/tmp", timeout=0.01)
     assert "--name" not in tmux.new_session
 
 
 async def test_bypass_is_on_by_default_and_can_be_turned_off(tmux: FakeTmux) -> None:
-    with pytest.raises(Exception):  # noqa: B017,PT011
+    with pytest.raises(ClaudeLaunchFailed):
         await tmuxen.spawn("a", timeout=0.01)
     assert "bypassPermissions" in tmux.new_session
     tmux.commands.clear()
-    with pytest.raises(Exception):  # noqa: B017,PT011
+    with pytest.raises(ClaudeLaunchFailed):
         await tmuxen.spawn("b", timeout=0.01, bypass=False)
     assert "bypassPermissions" not in tmux.new_session
