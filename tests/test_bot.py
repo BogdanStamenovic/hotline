@@ -259,3 +259,85 @@ def test_the_owning_agent_is_found_by_its_voice_channel(
     found = gate._agent_for_voice(777)
     assert found is not None and found.name == "builder"
     assert gate._agent_for_voice(778) is None
+
+
+# ---- an agent's own text channel ----------------------------------------
+#
+# These channels were created, kept in step with the agent's task and deleted on
+# `done` -- and never read. Every message typed into one failed the gate and was
+# logged as ignored, so they were write-only and looked complete from the outside
+# because the channel appeared. Voice got the binding; text never did.
+
+
+@pytest.fixture
+def registry(monkeypatch: pytest.MonkeyPatch, tmp_path):
+    """A registry on disk, since permitted() consults it."""
+    import hotline.agents as agents_module
+
+    path = tmp_path / "agents.json"
+    monkeypatch.setattr(agents_module, "agents_file", lambda: path)
+    return agents_module.Registry(path=path)
+
+
+AGENT_CHANNEL = 500000000000000005
+
+
+def test_an_agents_own_channel_is_permitted(registry) -> None:
+    agent = registry.declare("sid-1", "builder", "a job")
+    agent.channel_id = AGENT_CHANNEL
+    registry.save()
+    assert Gate().permitted(msg(USER, AGENT_CHANNEL, GUILD)) is True
+
+
+def test_another_channel_is_still_refused_with_a_registry_present(registry) -> None:
+    """The security property the old test pinned, kept: widening the gate to agent
+    channels must not open it to every channel in the guild."""
+    registry.declare("sid-1", "builder", "a job")  # no channel_id
+    assert Gate().permitted(msg(USER, 999999999999999999, GUILD)) is False
+
+
+def test_a_finished_agents_channel_is_refused(registry) -> None:
+    """Its channel is deleted on `done`; if the id is reused, it is not ours."""
+    agent = registry.declare("sid-1", "builder", "a job")
+    agent.channel_id = AGENT_CHANNEL
+    registry.complete("sid-1")
+    assert Gate().permitted(msg(USER, AGENT_CHANNEL, GUILD)) is False
+
+
+def test_anyone_else_in_an_agents_channel_is_still_refused(registry) -> None:
+    """The author-id check is the security model and comes first."""
+    agent = registry.declare("sid-1", "builder", "a job")
+    agent.channel_id = AGENT_CHANNEL
+    registry.save()
+    assert Gate().permitted(msg(USER + 1, AGENT_CHANNEL, GUILD)) is False
+
+
+def test_another_guild_is_still_refused_in_an_agent_channel(registry) -> None:
+    agent = registry.declare("sid-1", "builder", "a job")
+    agent.channel_id = AGENT_CHANNEL
+    registry.save()
+    assert Gate().permitted(msg(USER, AGENT_CHANNEL, GUILD + 1)) is False
+
+
+def test_the_owning_agent_is_found_by_its_text_channel(registry) -> None:
+    agent = registry.declare("sid-1", "builder", "a job")
+    agent.channel_id = AGENT_CHANNEL
+    registry.save()
+    gate = Gate()
+    found = gate._agent_for_text(AGENT_CHANNEL)
+    assert found is not None and found.name == "builder"
+    assert gate._agent_for_text(AGENT_CHANNEL + 1) is None
+
+
+def test_text_and_voice_channels_do_not_cross(registry) -> None:
+    """They are separate fields; matching the wrong one would route a typed
+    message at the voice binding and vice versa."""
+    agent = registry.declare("sid-1", "builder", "a job")
+    agent.channel_id = AGENT_CHANNEL
+    agent.voice_channel_id = AGENT_CHANNEL + 1
+    registry.save()
+    gate = Gate()
+    assert gate._agent_for_text(AGENT_CHANNEL) is not None
+    assert gate._agent_for_text(AGENT_CHANNEL + 1) is None
+    assert gate._agent_for_voice(AGENT_CHANNEL + 1) is not None
+    assert gate._agent_for_voice(AGENT_CHANNEL) is None

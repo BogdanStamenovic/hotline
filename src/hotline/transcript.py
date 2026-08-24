@@ -28,6 +28,11 @@ class Turn:
     tools: list[str] = field(default_factory=list)
     saw_marker: bool = False
     offset: int = 0
+    # True when the last thing in this slice is a step rather than an answer --
+    # an outstanding tool call. Without it a waiter cannot tell "here is the
+    # answer" from "let me check that", and returns the opening sentence of a
+    # turn that has barely started.
+    in_flight: bool = False
 
 
 def transcript_path(session_id: str) -> Path | None:
@@ -85,7 +90,11 @@ def read_since(session_id: str, offset: int, marker: str | None = None) -> Turn:
         return turn
 
     marker_seen = marker is None
-    for raw in data.split(b"\n"):
+    # Indices within this slice only. Evaluating over the whole tail would let a
+    # tool call from *before* the injection keep the turn looking unfinished
+    # forever.
+    last_answer = last_tool = -1
+    for index, raw in enumerate(data.split(b"\n")):
         if not raw.strip():
             continue
         try:
@@ -107,11 +116,21 @@ def read_since(session_id: str, offset: int, marker: str | None = None) -> Turn:
         # tool-driven turn, not the top-level answer.
         if obj.get("parent_tool_use_id"):
             continue
-        text = _text_of(msg.get("content"))
+        content = msg.get("content")
+        tools = _tools_of(content)
+        text = _text_of(content)
         if text:
             turn.text = text
-        turn.tools.extend(_tools_of(msg.get("content")))
+        # Checked in this order because a record carrying a tool call is a step,
+        # not an answer. The CLI never puts both in one record (0 of 665 measured
+        # on this machine), so in practice these are disjoint.
+        if tools:
+            last_tool = index
+        elif text:
+            last_answer = index
+        turn.tools.extend(tools)
     turn.saw_marker = marker_seen
+    turn.in_flight = last_tool > last_answer
     return turn
 
 

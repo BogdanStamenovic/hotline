@@ -412,7 +412,14 @@ class Router:
 
             turn = read_since(sid, watch.offset, marker=watch.marker)
             watch.saw_marker = watch.saw_marker or turn.saw_marker
-            if turn.saw_marker and turn.text:
+            # `in_flight` is the guard that was missing. Leaving the stop armed
+            # fixed a turn being handed another turn's answer, and introduced a
+            # quieter failure in its place: a stop landing at or just after
+            # injection latches `stopped` forever, so the loop returned the first
+            # text the target emitted -- the opening sentence of a turn that had
+            # barely started. A sender gets a plausible paragraph and assumes it
+            # is the whole answer.
+            if turn.saw_marker and turn.text and not turn.in_flight:
                 reply = Reply(text=turn.text, session_id=sid, subtype="attached")
                 reply.events = [Event("tool", name, tool=name) for name in turn.tools]
                 return reply

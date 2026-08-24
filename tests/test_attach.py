@@ -33,12 +33,22 @@ def quick(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def fake_reply(home: Path, marker: str, answer: str, delay: float, tools: list[str] | None = None):
-    """Stand in for the real session: after `delay`, append our message and a reply."""
+    """Stand in for the real session: after `delay`, append our message and a reply.
+
+    Tool calls are written as their own assistant records, ahead of the answer,
+    because that is what the CLI actually does -- measured at 0 of 665 assistant
+    records carrying both text and a tool call. The waiter now depends on that
+    ordering to tell a step from an answer, so a fixture that bundled them was
+    testing a shape that never occurs.
+    """
 
     async def _inject(session, text, timeout=5.0):
         async def later() -> None:
             await asyncio.sleep(delay)
-            write_transcript(home, SID, [user_entry(marker), assistant_entry(answer, tools=tools)])
+            records = [user_entry(marker)]
+            records += [assistant_entry("", tools=[t]) for t in tools or []]
+            records.append(assistant_entry(answer))
+            write_transcript(home, SID, records)
 
         asyncio.get_running_loop().create_task(later())
 
@@ -198,3 +208,57 @@ async def test_a_busy_session_reporting_waiting_is_still_not_finished(
     monkeypatch.setattr(router_module, "inject", _inject)
     with pytest.raises(ReplyTimeout):
         await Router().ask_session("target-aa", "ping", timeout=0.6)
+
+
+async def test_an_opening_sentence_is_not_the_answer(
+    fake_claude: Path, quick: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The regression that a relaying session caught by being relayed to.
+
+    Leaving the stop armed fixed one turn being handed another turn's answer, and
+    introduced a quieter failure in its place. A stop landing at or just after
+    injection latches `stopped` forever, so the loop returned the first text the
+    target emitted -- the opening sentence of a turn that had barely started.
+
+    Measured live: a stop at 23:07:08, a text-only assistant record at 23:07:19,
+    a tool_use at 23:07:22. The sender received the 23:07:19 sentence as the
+    finished answer and had no way to know more was coming.
+    """
+    make_session(fake_claude, PID, "target-aa", "/home/bodas/data", SID, status="waiting")
+
+    async def _inject(session, text, timeout=5.0):
+        async def later() -> None:
+            write_transcript(fake_claude, SID, [user_entry("ping")])
+            # A stop lands immediately -- it belongs to the turn that just ended.
+            record_stop(SID)
+            await asyncio.sleep(0.1)
+            write_transcript(fake_claude, SID, [assistant_entry("Let me look into that.")])
+            await asyncio.sleep(0.3)
+            write_transcript(fake_claude, SID, [assistant_entry("", tools=["Bash"])])
+            await asyncio.sleep(0.3)
+            write_transcript(fake_claude, SID, [assistant_entry("pong, the real answer")])
+
+        asyncio.get_running_loop().create_task(later())
+
+    monkeypatch.setattr(router_module, "inject", _inject)
+    reply = await Router().ask_session("target-aa", "ping", timeout=5.0)
+    assert reply.text == "pong, the real answer"
+
+
+async def test_a_stale_tool_call_before_the_injection_does_not_block_forever(
+    fake_claude: Path, quick: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`in_flight` is computed over the turn slice, not the whole tail.
+
+    A tool call from a previous turn sits in the transcript forever. Judged over
+    the whole file it would make every later turn look unfinished, and the waiter
+    would never return anything again.
+    """
+    make_session(fake_claude, PID, "target-aa", "/home/bodas/data", SID)
+    write_transcript(fake_claude, SID, [
+        user_entry("an earlier question"),
+        assistant_entry("", tools=["Bash"]),  # last record before our offset
+    ])
+    monkeypatch.setattr(router_module, "inject", fake_reply(fake_claude, "ping", "pong", 0.05))
+    reply = await Router().ask_session("target-aa", "ping", timeout=5.0)
+    assert reply.text == "pong"

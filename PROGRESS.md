@@ -1098,3 +1098,66 @@ shares is the router, which is where resolution actually lives. `where am i` and
 A kill whose target does not resolve still falls through and is answered as an
 ordinary question, the same rule the pool follows — `kill the process on port
 9999` gets you `fuser -k 9999/tcp`, not a resolution error.
+
+---
+
+## Two findings from `data-fe`, the session hotlined spawned for #hotline-log
+
+Both were reported by another session, both were real, and I verified each myself
+before acting rather than taking them on faith.
+
+### Per-agent text channels were write-only
+
+I shipped "every agent gets a text channel" and the channel could not be typed
+into. `agent.channel_id` was created at `--declare`, kept in step with the task on
+a retask, and deleted on `--done` — and **nothing ever read it**. Every message
+Bogdan typed in one failed `permitted()` and was logged as ignored.
+
+Voice got the binding and text never did: I wrote `_agent_for_voice` and
+`_is_ours` for the voice path and simply never wrote the text equivalents. Worse,
+`test_another_channel_in_the_right_guild_is_refused` asserted the broken
+behaviour, so a passing test held the bug in place. The feature looked complete
+from the outside because the channel appeared.
+
+Fixed by mirroring voice: `permitted()` also accepts a channel the registry says
+belongs to a *working* agent, and `on_message` binds the conversation to that
+agent before asking. The author-id and guild checks are the security model and
+are untouched — this widens which of Bogdan's channels are listened to, not who
+may speak. Verified against the real registry and real ids: his own agent channel
+`True`, `#hotline-log` `True`, a random channel `False`, anyone else in an agent
+channel `False`.
+
+The registry was also `{"agents": []}` — nothing on this machine had ever declared
+itself, so the entire lifecycle was unexercised. It is not any more; this session
+is in it.
+
+### The 226-second fix traded one wrong answer for a quieter one
+
+This is the more serious of the two, and it is mine twice over.
+
+Removing the stamp advance fixed a turn being handed *another turn's* answer. But
+a stop landing at or just after injection then latches `stopped=True` permanently,
+and from that point the loop returns **the first text the target emits** — the
+opening sentence of a turn that has barely started. The sender gets a plausible
+paragraph and assumes it is the whole answer.
+
+`data-fe` caught it by being relayed to: I answered with one sentence and kept
+working, and hotline handed that sentence over as my finished reply. Their
+timeline, measured: stop at 23:07:08, text-only assistant record at 23:07:19,
+`tool_use` at 23:07:22 — and 23:07:19 was delivered as the answer.
+
+My comment claimed leaving the stop armed "costs nothing — `saw_marker` plus
+non-empty text is what actually decides". That was the error: non-empty text does
+not mean finished.
+
+The rule needed already existed. `read_since` now also reports `in_flight` — the
+last record in the slice being a tool call rather than an answer — and the waiter
+requires `not in_flight` before returning. Computed **over the turn slice only**,
+because a tool call from a previous turn sits in the transcript forever and
+judging over the whole tail would make every later turn look unfinished and the
+waiter never return anything again. Both halves have tests.
+
+One fixture had to change with it: `fake_reply` bundled a tool call and the answer
+into one assistant record, a shape the CLI never produces (0 of 665 measured). The
+waiter now depends on that ordering to tell a step from an answer, so a fixture
+testing an impossible shape was hiding the distinction.

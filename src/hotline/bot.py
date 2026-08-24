@@ -152,7 +152,14 @@ class HotlineBot(discord.Bot):
             return True
         if self.guild_id and (message.guild is None or message.guild.id != self.guild_id):
             return False
-        return not (self.channel_id and message.channel.id != self.channel_id)
+        if not self.channel_id or message.channel.id == self.channel_id:
+            return True
+        # An agent's own channel counts too. The author-id and guild checks above
+        # are the security model and are untouched; this only widens *which* of
+        # Bogdan's channels are listened to, and only to channels the registry
+        # says belong to an agent that is still working -- not to anything merely
+        # named like one.
+        return self._agent_for_text(message.channel.id) is not None
 
     async def on_message(self, message: discord.Message) -> None:
         if not self.permitted(message):
@@ -180,6 +187,14 @@ class HotlineBot(discord.Bot):
             return
 
         key = f"discord-{message.channel.id}"
+        # Typing in an agent's own channel is how you say which agent you mean.
+        # Without this the message keys a conversation that has never been bound,
+        # falls through to `own`, and answers from a freshly spawned session with
+        # no idea what it is -- the "it spawned an agent telling me you are not
+        # available" failure, one layer down.
+        owner = self._agent_for_text(message.channel.id)
+        if owner is not None:
+            self.pool.bind(key, owner.name, owner.session_id)
         placeholder = await message.channel.send(THINKING)
         narration = Narration(placeholder)
         pending: list[Event] = []
@@ -277,10 +292,25 @@ class HotlineBot(discord.Bot):
 
     def _agent_for_voice(self, channel_id: int) -> Agent | None:
         """Which agent owns this voice channel, if any."""
+        return self._agent_owning(channel_id, "voice_channel_id")
+
+    def _agent_for_text(self, channel_id: int) -> Agent | None:
+        """Which agent owns this text channel, if any.
+
+        Its absence was the bug: an agent's channel was created, kept in step with
+        its task and deleted on `done`, and nothing ever read it. Every message
+        typed into one failed the gate and was logged as ignored, so the channels
+        were write-only -- the feature looked complete from the outside because
+        the channel appeared.
+        """
+        return self._agent_owning(channel_id, "channel_id")
+
+    @staticmethod
+    def _agent_owning(channel_id: int, field: str) -> Agent | None:
         from .agents import Registry
 
         for agent in Registry().agents.values():
-            if agent.voice_channel_id == channel_id:
+            if getattr(agent, field) == channel_id and not agent.done:
                 return agent
         return None
 
