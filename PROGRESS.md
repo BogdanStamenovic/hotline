@@ -883,3 +883,39 @@ touched for four hours. A session Bogdan started himself is never a candidate,
 and neither is one anybody is attached to. Idleness is measured from the
 transcript rather than a timer, so a session left thinking for three hours is not
 mistaken for an abandoned one.
+
+### And then the first real `session kill` was answered by a stand-in
+
+Two bugs, both surfaced by one command typed at the running daemon.
+
+`session kill hl-final` did not resolve, because `resolve()` matched on session
+name, session id, cwd and ordinals — but not on the **tmux name**, which is the
+one string the system actually hands the user (`where am i` and `session list`
+both print `tmux attach -t hl-final`). So it fell through as an ordinary question
+and was sent to the session as chat. Fixed: `resolve()` accepts the tmux name.
+
+Worse, the message it fell through to was answered by a stand-in, on a session
+that had finished its turn twenty-five seconds earlier. My `mid_turn` test —
+"wrote recently, with no stop recorded since that write" — is systematically true
+right after *every* turn, because **the Stop hook fires before the turn's final
+transcript write**. Measured: last write 2.9s ago, stop 25.5s ago. So it called
+every session busy for two minutes after every turn.
+
+That is the second signal I had reached for and the second one that was wrong, so
+this time I measured before choosing. The transcript answers it directly: a turn
+is finished only when the last thing in it is an assistant message with text — an
+unanswered question *or an outstanding tool call* both mean it is still working.
+The tool-call half matters: a model that says "let me check that" and then runs
+something has answered nothing, and without it any turn that opened with a
+sentence looked finished for the whole of its tool call.
+
+One more measurement settled the shape: across 665 assistant records on this
+machine the CLI **never** puts text and a tool call in the same record. My test
+helper does, and its comment claimed that was the realistic shape. Both corrected
+— the rule handles either, and the helper now says what it is.
+
+Verified against every live session on the box: idle ones False, actively-working
+ones True, and a session whose last record is a stale tool call is excluded by the
+freshness window rather than being called busy forever. Then, live through the
+daemon: a turn answered in 6.0s, and `session kill hl-final2` executed one second
+later as a control command.

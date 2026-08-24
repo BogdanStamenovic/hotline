@@ -36,7 +36,7 @@ from .errors import (
 )
 from .fresh import Event, FreshSession, Narrator, Reply
 from .stops import stop_stamp
-from .transcript import read_since, size_of, transcript_path
+from .transcript import read_since, size_of, transcript_path, turn_in_flight
 
 __all__ = [
     "AmbiguousSession",
@@ -191,25 +191,31 @@ def _split_target(tail: str) -> tuple[str, str]:
 def mid_turn(session: LiveSession, window: float = MID_TURN_WINDOW) -> bool:
     """Is this session in the middle of a turn right now?
 
-    The descriptor's `status` cannot answer this. A session started in tmux
-    reports "waiting" from the moment it boots until it dies -- measured across a
-    full twenty-five second tool call, it never changed once -- so trusting it
-    means never noticing a busy session at all.
+    Two cheaper signals were tried first and both were wrong, which is worth
+    recording because both looked obviously right.
 
-    The transcript can answer it. A turn in flight is a session that wrote
-    something recently with no stop recorded since that write; once the turn ends
-    the stop lands after the last write and the condition clears by itself.
+    The descriptor's `status` cannot answer this: a session started in tmux
+    reports "waiting" from the moment it boots until it dies, unchanged through a
+    full twenty-five second tool call. And "wrote recently, with no stop recorded
+    since that write" fails because the Stop hook fires *before* the turn's final
+    transcript write -- so it called every session busy for two minutes after
+    every turn, and the very first live `session kill` got a stand-in instead.
+
+    So: ask the transcript whether the last thing a person said has been answered,
+    and bound it by a window so a session abandoned mid-turn does not stay
+    "working" forever.
     """
+    if session.status == "busy":
+        return True
     path = transcript_path(session.session_id)
     if path is None:
-        return session.status == "busy"
-    try:
-        last_write = path.stat().st_mtime
-    except OSError:
-        return session.status == "busy"
-    if time.time() - last_write > window:
         return False
-    return stop_stamp(session.session_id) < last_write * 1e9
+    try:
+        if time.time() - path.stat().st_mtime > window:
+            return False
+    except OSError:
+        return False
+    return turn_in_flight(session.session_id)
 
 
 def describe(session: LiveSession) -> str:
@@ -261,6 +267,12 @@ class Router:
             exact = [s for s in live if s.name.lower() == candidate]
             if len(exact) == 1:
                 return exact[0]
+
+        # The tmux session name is what `where am i` and `session list` hand the
+        # caller ("tmux attach -t hl-final"), so it is the name they will say back.
+        by_tmux = [s for s in live if (s.tmux_session or "").lower() == want]
+        if len(by_tmux) == 1:
+            return by_tmux[0]
 
         by_id = [s for s in live if s.session_id.lower().startswith(want)]
         if len(by_id) == 1:

@@ -67,8 +67,11 @@ def user_entry(text: str, sidechain: bool = False) -> dict:
 
 
 def assistant_entry(text: str, tools: list[str] | None = None, sidechain: bool = False) -> dict:
-    # Tool blocks precede the text in a real assistant message, and their order is
-    # the order they were called in -- which read_since() is expected to preserve.
+    # Convenience shape, not a faithful one: the CLI never writes text and a tool
+    # call into the same assistant record (0 of 665 on this machine). It is kept
+    # because it makes read_since()'s tool-ordering tests compact, and read_since
+    # handles both shapes. Anything asserting on turn boundaries should use
+    # separate entries instead.
     content: list[dict] = [{"type": "tool_use", "name": t, "input": {}} for t in tools or []]
     content.append({"type": "text", "text": text})
     return {
