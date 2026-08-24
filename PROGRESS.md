@@ -1561,3 +1561,28 @@ that by hand is the workaround for the provenance hole; the fix is still the
 next thing.
 
 291 tests, ruff and mypy clean.
+
+### data-f3 finished, and I checked rather than relayed
+
+It ran the GPU test and closed the one open item. I verified it myself rather
+than passing on its report: a real `/api/generate` returns `Belgrade`,
+`/api/ps` shows `size_vram 5.01 GiB of 5.01 GiB` — fully offloaded — and the
+card goes 421 → 5675 MiB and back. `systemctl show` confirms the drop-in is
+live: `OLLAMA_MODELS` pointed at the NTFS store and `RequiresMountsFor` covering
+`/mnt/windows`. `enabled`, so it comes up at boot.
+
+It also found the actual cause of the 500 I had been reasoning about, and it was
+neither of the candidates: not VRAM pressure, not a broken CUDA build. The
+request died because the process was SIGKILLed underneath it. The 500 was the
+tmux bug's fingerprint, showing up in a completely unrelated service's journal
+an hour before anyone knew what the tmux bug was.
+
+Its own find worth keeping: with Qwen3 thinking left on, a small `num_predict`
+is spent entirely inside the `<think>` block and `response` comes back as an
+empty string with a populated `context` — a 200 that reads exactly like a silent
+failure. Pass `"think": false`.
+
+It declined to page him at 00:19 for two non-blocking open questions, on the
+grounds that `hotline-page` is a siren and the task finished rather than
+stalled. That is the right reading of the escalation rules, and it left both
+defaults conservative: CUDA stays installed, ollama stays on `127.0.0.1`.
