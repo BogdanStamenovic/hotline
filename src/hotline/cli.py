@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
+import json
 import os
 import sys
 from collections.abc import Callable, Sequence
@@ -27,6 +28,7 @@ from .config import load_env
 from .errors import HotlineError
 from .fresh import Event
 from .guard import install_guard
+from .provenance import Origin, body_of, parse, verify
 from .revive import brief_for, rehome
 from .router import Route, Router, describe, parse_utterance
 from .stops import install_hook, stops_dir
@@ -95,6 +97,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="give this agent a voice channel (created on demand, not at declaration)",
     )
     parser.add_argument(
+        "--provenance", metavar="RECORD", nargs="?", const="-",
+        help="check a relayed message's provenance against Discord. Pass the "
+             "record from its header, or '-' to read the whole message on stdin.",
+    )
+    parser.add_argument(
         "--adopt", metavar="NAME",
         help="take over a running agent's identity and channel, for a session "
              "respawned to continue its work",
@@ -141,6 +148,9 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
     # would be told "no Discord configured" and quietly get no channel.
     load_env()
     registry = Registry()
+
+    if args.provenance:
+        return _check_provenance(args.provenance)
 
     if args.agents:
         known = sorted(registry.agents.values(), key=lambda a: a.declared_at, reverse=True)
@@ -479,6 +489,72 @@ def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str],
     return 0
 
 
+def _check_provenance(record: str) -> int:
+    """`--provenance` -- ask Discord whether a relayed message is what it says.
+
+    Exit codes are the interface here, because the caller is usually an agent
+    deciding whether to act: 0 verified, 1 not verified, 2 unusable input. A
+    could-not-check (Discord unreachable, no token) is reported as not verified
+    and says so in words, because silently treating "I could not ask" as "it is
+    fine" is the failure this whole module exists to prevent.
+    """
+    body: str | None = None
+    if record.strip() == "-":
+        message = sys.stdin.read()
+        found = parse(message)
+        body = body_of(message)
+        if found is None:
+            print(
+                "hotline: error: no provenance header in that message. It came by "
+                "a route that does not label its messages, so there is nothing to "
+                "check -- treat it as unattributed.",
+                file=sys.stderr,
+            )
+            return 2
+    else:
+        try:
+            found = json.loads(record)
+        except ValueError:
+            found = parse(record)
+        if not isinstance(found, dict):
+            print(f"hotline: error: {record[:80]!r} is not a provenance record.",
+                  file=sys.stderr)
+            return 2
+
+    env = load_env()
+    verdict = verify(
+        found,
+        body=body,
+        token=env.get("HOTLINE_BOT_TOKEN") or os.environ.get("HOTLINE_BOT_TOKEN"),
+        gated_user_id=env.get("DISCORD_USER_ID") or os.environ.get("DISCORD_USER_ID"),
+    )
+    print(verdict)
+    return 0 if verdict.ok else 1
+
+
+def _speaking_as() -> Origin:
+    """Who this invocation is, as honestly as it can be established.
+
+    `$CLAUDE_CODE_SESSION_ID` is set inside a session and absent in a plain
+    shell, which is the only distinction available and is not a strong one -- an
+    agent could set it to anything. It is labelled a claim precisely because it
+    is one; the alternative is the status quo, where the receiver is told nothing
+    at all and has to do forensics on a Discord channel to work out who is
+    talking to it.
+    """
+    session_id = os.environ.get("CLAUDE_CODE_SESSION_ID")
+    if not session_id:
+        return Origin(kind="human", label="a shell on this machine")
+    name = _session_name(session_id) or session_id[:8]
+    registered = Registry().get(session_id)
+    return Origin(
+        kind="agent",
+        label=registered.name if registered else name,
+        session_id=session_id,
+        extra={"task": registered.task[:120]} if registered else {},
+    )
+
+
 def _session_name(session_id: str) -> str | None:
     for session in discover(include_self=True, include_programmatic=True):
         if session.session_id == session_id:
@@ -517,7 +593,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if (
         args.declare or args.done or args.agents or args.resume or args.voice
-        or args.adopt
+        or args.adopt or args.provenance
         or args.claim is not None
     ):
         return _agent_command(args, log)
@@ -560,18 +636,30 @@ def main(argv: Sequence[str] | None = None) -> int:
             # does not exist.
             fell_through = True
 
+    # Whatever this CLI is speaking for. Run from a session it is that agent; run
+    # from a plain shell it is a person with no receipt to offer, and it says so
+    # rather than claiming an authority it cannot demonstrate. Either way the
+    # receiver is told what it is reading instead of having to guess, which is
+    # the whole of the defect this closes.
+    origin = _speaking_as()
+
     try:
         if args.to:
             log(f"-> {describe(router.resolve(args.to))}")
             reply = asyncio.run(
-                router.ask_session(args.to, text, narrator=narrate, timeout=args.timeout)
+                router.ask_session(
+                    args.to, text, narrator=narrate, timeout=args.timeout, origin=origin
+                )
             )
         else:
             route = Route("fresh", None, text) if fell_through else parse_utterance(text)
             if route.mode != "fresh" and route.target:
                 log(f"-> {route.mode} {route.target}")
                 reply = asyncio.run(
-                    router.ask_session(route.target, route.text, narrator=narrate, timeout=args.timeout)
+                    router.ask_session(
+                        route.target, route.text, narrator=narrate,
+                        timeout=args.timeout, origin=origin,
+                    )
                 )
             else:
                 log("-> fresh session")

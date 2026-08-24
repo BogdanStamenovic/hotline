@@ -36,6 +36,7 @@ from .config import page_claim
 from .errors import HotlineError
 from .fresh import Event
 from .pool import SessionPool
+from .provenance import Origin
 from .text import MAX_MESSAGE, chunk
 
 if TYPE_CHECKING:  # the voice extra is optional; only the type is needed here
@@ -215,7 +216,21 @@ class HotlineBot(discord.Bot):
         began = time.monotonic()
         try:
             async with message.channel.typing():
-                route, reply = await self.pool.ask(key, text, narrator=narrate, timeout=900.0)
+                # The receipt: channel and message id, so anything downstream can
+                # re-fetch this exact message from Discord and confirm the gated
+                # user really posted it. That is the whole point -- the check is
+                # against a third party that already authenticated him, not
+                # against anything on a machine where every agent shares a uid.
+                origin = Origin(
+                    kind="human",
+                    label=str(message.author),
+                    author_id=str(message.author.id),
+                    channel_id=str(message.channel.id),
+                    message_id=str(message.id),
+                )
+                route, reply = await self.pool.ask(
+                    key, text, narrator=narrate, timeout=900.0, origin=origin
+                )
             body = reply.text
             header = "" if route.mode in ("fresh", "own") else f"*{route.mode} → {route.target}*\n"
             if reply.notice:

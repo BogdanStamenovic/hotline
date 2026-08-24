@@ -35,6 +35,7 @@ from .errors import (
     SessionNotFound,
 )
 from .fresh import Event, FreshSession, Narrator, Reply
+from .provenance import Origin
 from .stops import stop_stamp
 from .transcript import read_since, size_of, transcript_path, turn_in_flight
 
@@ -333,7 +334,7 @@ class Router:
         async with FreshSession(cwd or self.default_cwd, bypass=self.bypass) as session:
             return await session.ask(text, narrator=narrator, timeout=timeout)
 
-    async def deliver(self, spec: str, text: str) -> Watch:
+    async def deliver(self, spec: str, text: str, origin: Origin | None = None) -> Watch:
         """Resolve a session, put the message in its inbox, and hand back a receipt.
 
         Split out from the waiting half deliberately. Delivery either happened or
@@ -347,14 +348,18 @@ class Router:
         reply is not ours.
         """
         session = self.resolve(spec)
+        # The header goes on before the marker is taken, because the marker is
+        # how the reply is found in the transcript and the transcript will hold
+        # what was actually delivered, header and all.
+        wire = origin.wrap(text) if origin is not None else text
         watch = Watch(
             session=session,
             offset=size_of(session.session_id),
             stamp=stop_stamp(session.session_id),
-            marker=text,
+            marker=wire,
             was_busy=mid_turn(session),
         )
-        await inject(session, text)
+        await inject(session, wire)
         return watch
 
     async def collect(
@@ -454,9 +459,10 @@ class Router:
         text: str,
         narrator: Narrator | None = None,
         timeout: float = DEFAULT_REPLY_TIMEOUT,
+        origin: Origin | None = None,
     ) -> Reply:
         """Inject into a live session and read its reply back out of the transcript."""
-        watch = await self.deliver(spec, text)
+        watch = await self.deliver(spec, text, origin)
         return await self.collect(watch, narrator=narrator, timeout=timeout)
 
     async def kill_session(self, spec: str) -> str:

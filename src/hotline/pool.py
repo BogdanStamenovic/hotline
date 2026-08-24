@@ -36,6 +36,7 @@ from .ccsocks import LiveSession
 from .config import bindings_file
 from .errors import HotlineError, SessionNotFound
 from .fresh import Narrator, Reply
+from .provenance import Origin
 from .router import Route, Router, Watch, describe, parse_utterance
 from .transcript import transcript_path
 
@@ -685,6 +686,7 @@ class SessionPool:
         utterance: str,
         narrator: Narrator | None = None,
         timeout: float = 300.0,
+        origin: Origin | None = None,
     ) -> tuple[Route, Reply]:
         """One turn of a conversation, routed the same way the CLI routes it."""
         conv = self._conversation(key)
@@ -760,7 +762,7 @@ class SessionPool:
             )
 
         try:
-            reply = await self._send(conv, target, route.text, narrator, timeout)
+            reply = await self._send(conv, target, route.text, narrator, timeout, origin)
         except SessionNotFound:
             # The session this conversation was pointed at is gone. Say so; do not
             # quietly substitute a stranger, which is the whole of tofix #8.
@@ -795,6 +797,7 @@ class SessionPool:
         text: str,
         narrator: Narrator | None,
         timeout: float,
+        origin: Origin | None = None,
     ) -> Reply:
         """Deliver, and either wait for the answer or hand the caller to a stand-in.
 
@@ -804,7 +807,7 @@ class SessionPool:
         instead a stand-in reports on it immediately and the real answer is relayed
         when it lands.
         """
-        watch = await self.router.deliver(target, text)
+        watch = await self.router.deliver(target, text, origin)
 
         if watch.was_busy and self.use_standin:
             standing = await standin.report(watch.session, text, delivered=True)
@@ -937,6 +940,12 @@ HELP_TEXT = """**Commands** (these are handled by hotline itself, not sent to a 
 `resources` — RAM, VRAM, load
 `agents` — who is working on what, and who has finished
 `resume` — agents you can bring back, numbered; `resume 2` or `resume <name>`
+
+Every message relayed into a session now carries a provenance header saying
+where it came from. A message relayed from here carries the Discord channel and
+message id, so the agent can run `hotline --provenance -` and have Discord
+itself confirm you posted it. A message from another agent is labelled as such
+and as not an authorization channel.
 `new session` — close your session and start over
 
 In #general, a message is held and you are told where it is going before it goes

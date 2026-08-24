@@ -54,7 +54,7 @@ async def test_yes_sends_the_held_message_not_the_word_yes(world: FakeWorld) -> 
     p = pool()
     await p.ask(GENERAL, "run the deploy")
 
-    _, reply = await p.ask(GENERAL, "yes")
+    await p.ask(GENERAL, "yes")
 
     assert world.delivered, "the held message should have been delivered"
     assert world.delivered[-1][1] == "run the deploy"
@@ -126,3 +126,38 @@ async def test_connecting_somewhere_new_asks_again(world: FakeWorld) -> None:
 
     assert "Send it?" in reply.text
     assert other.name in reply.text
+
+
+# ---- provenance reaches the session ----------------------------------------
+#
+# Threading an origin through four layers is the kind of thing that silently
+# stops happening during a refactor, and the symptom -- a session quietly losing
+# the ability to tell who is talking to it -- is invisible until it matters.
+
+
+async def test_the_origin_reaches_the_wire(world: FakeWorld) -> None:
+    from hotline.provenance import Origin, parse
+
+    origin = Origin(
+        kind="human", label="bogdan028304", author_id="bogdan-id",
+        channel_id="chan", message_id="999",
+    )
+    p = pool()
+    await p.ask(GENERAL, "restart the deploy", origin=origin)
+    await p.ask(GENERAL, "yes", origin=origin)
+
+    assert world.wire, "something should have been delivered"
+    _, wire = world.wire[-1]
+    record = parse(wire)
+    assert record is not None, "the session must be told where this came from"
+    assert record["message_id"] == "999"
+    assert "restart the deploy" in wire
+
+
+async def test_an_unlabelled_send_still_works(world: FakeWorld) -> None:
+    """Provenance is additive. A caller that supplies none must not break."""
+    p = pool()
+    await p.ask(GENERAL, "hello")
+    await p.ask(GENERAL, "yes")
+
+    assert [text for _, text in world.delivered] == ["hello"]

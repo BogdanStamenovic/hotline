@@ -97,6 +97,7 @@ class FakeWorld:
         self.home = home
         self.spawned: list[str] = []
         self.delivered: list[tuple[str, str]] = []
+        self.wire: list[tuple[str, str]] = []
         self.busy: set[str] = set()
         self.replies: dict[str, str] = {}
         self.delay = 0.0
@@ -124,13 +125,19 @@ class FakeWorld:
         )
         return next(s for s in discover() if s.pid == self._pid)
 
-    async def deliver(self, spec, text):
+    async def deliver(self, spec, text, origin=None):
         from hotline.router import Watch
 
         session = self._router.resolve(spec)
+        # Record what actually goes on the wire, header and all, so a test can
+        # assert on the provenance a session really receives. `delivered` keeps
+        # the bare text -- most tests care about the message, not its envelope --
+        # and `wire` keeps the whole thing for the ones that care.
+        wire = origin.wrap(text) if origin is not None else text
         self.delivered.append((session.name, text))
+        self.wire.append((session.name, wire))
         return Watch(
-            session=session, offset=0, stamp=0.0, marker=text,
+            session=session, offset=0, stamp=0.0, marker=wire,
             was_busy=session.name in self.busy,
         )
 
@@ -163,7 +170,10 @@ class FakeWorld:
 
         monkeypatch.setattr(pool_module.tmuxen, "spawn", self.spawn)
         monkeypatch.setattr(tmuxen_module, "exists", lambda name: name in self.spawned)
-        monkeypatch.setattr(Router, "deliver", lambda r, spec, text: self.deliver(spec, text))
+        monkeypatch.setattr(
+            Router, "deliver",
+            lambda r, spec, text, origin=None: self.deliver(spec, text, origin),
+        )
         monkeypatch.setattr(
             Router, "collect",
             lambda r, watch, narrator=None, timeout=300.0: self.collect(watch, narrator, timeout),
