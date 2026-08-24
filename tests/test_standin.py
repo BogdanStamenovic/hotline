@@ -208,3 +208,47 @@ async def test_hotline_refuses_to_kill_itself(fake_claude: Path) -> None:
     session = next(s for s in discover(include_self=True) if s.pid == os.getpid())
     with pytest.raises(HotlineError, match="refusing to kill"):
         await terminate(session)
+
+
+# ---- bounding the sessions we leave running -----------------------------
+
+
+async def test_orphaned_sessions_are_closed_eventually(
+    world: FakeWorld, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Reaping leaves sessions alive so they can be attached to later. Without a
+    bound that is a slow leak -- each `claude` is a few hundred MB."""
+    import time as time_module
+
+    from helpers import assistant_entry, write_transcript
+
+    pool = SessionPool(idle_timeout=0.05)
+    await pool.ask("k", "hello")
+    session = pool.conversations["k"].own
+    write_transcript(world.home, "sid-9001", [assistant_entry("done")])
+
+    await asyncio.sleep(0.1)
+    await pool.reap()
+    assert world.killed == []  # forgotten, but still running and attachable
+
+    # Four hours later, with nobody bound to it.
+    monkeypatch.setattr(time_module, "time", lambda: 1e12)
+    await pool.reap()
+    assert world.killed == [session]
+    await pool.close()
+
+
+async def test_a_session_someone_is_still_bound_to_is_never_orphaned(
+    world: FakeWorld, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import time as time_module
+
+    from helpers import assistant_entry, write_transcript
+
+    pool = SessionPool()
+    await pool.ask("k", "hello")
+    write_transcript(world.home, "sid-9001", [assistant_entry("done")])
+    monkeypatch.setattr(time_module, "time", lambda: 1e12)
+    await pool.reap()
+    assert world.killed == []
+    await pool.close()

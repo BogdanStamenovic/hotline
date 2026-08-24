@@ -35,12 +35,20 @@ from .config import bindings_file
 from .errors import HotlineError, SessionNotFound
 from .fresh import Narrator, Reply
 from .router import Route, Router, Watch, describe, parse_utterance
+from .transcript import transcript_path
 
 # How long a background relay will wait for a busy session to get round to the
 # message it was handed. Generous: the sender has already been answered by the
 # stand-in, so nothing is blocked on this, and a turn that takes forty minutes is
 # a turn whose answer is still worth delivering.
 RELAY_TIMEOUT = 3600.0
+
+# How long a session hotline started may sit with nobody talking to it before it
+# is closed. Reaping deliberately leaves sessions running so they can be attached
+# to later, which without a bound is a slow leak: each `claude` is a few hundred
+# megabytes and this machine has fifteen gigabytes for everything including local
+# models. Four hours is long enough to come back to something after lunch.
+ORPHAN_TIMEOUT = 4 * 3600.0
 
 Deliver = Callable[[str, str], Awaitable[None]]
 
@@ -183,7 +191,33 @@ class SessionPool:
         ]
         for key in stale:
             await self._forget(key)
+        await self._close_orphans()
         return len(stale)
+
+    async def _close_orphans(self) -> None:
+        """Close sessions we started that nobody is talking to any more.
+
+        Only sessions hotline itself spawned (the `hl-` tmux prefix) and only
+        those not bound to a live conversation -- a session Bogdan started, or one
+        someone is attached to, is never a candidate. Idleness is measured from
+        the transcript, so a session left thinking for three hours is not orphaned.
+        """
+        bound = {conv.own for conv in self.conversations.values() if conv.own}
+        bound |= {conv.attached_to for conv in self.conversations.values() if conv.attached_to}
+        now = time.time()
+        for session in self.router.sessions():
+            name = session.tmux_session or ""
+            if not name.startswith(tmuxen.PREFIX) or session.name in bound:
+                continue
+            path = transcript_path(session.session_id)
+            try:
+                idle = now - path.stat().st_mtime if path else 0.0
+            except OSError:
+                continue
+            if idle < ORPHAN_TIMEOUT:
+                continue
+            with contextlib.suppress(HotlineError, SessionNotFound, OSError):
+                await self.router.kill_session(str(session.pid))
 
     async def _forget(self, key: str) -> None:
         """Drop the binding. The session itself keeps running, and can be walked into."""

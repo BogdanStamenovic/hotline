@@ -868,3 +868,18 @@ that write. It clears itself the moment the turn ends.
 
 Three tool-using turns after the fix: 6.8s, 5.8s, 5.9s, each returning its own
 answer, each narrating its `Bash` call while it ran.
+
+### A leak I introduced and then bounded
+
+Making reaping non-destructive is right — it is what lets a conversation be saved
+for later — but on its own it is a slow leak. A forgotten conversation left its
+tmux session running forever and no longer counted against `max_sessions`, so
+sessions could accumulate without limit at a few hundred megabytes each, on a box
+with fifteen gigabytes for everything including local models.
+
+The reaper now also closes **orphans**: sessions hotline itself started (the `hl-`
+tmux prefix), not bound to any live conversation, whose transcript has not been
+touched for four hours. A session Bogdan started himself is never a candidate,
+and neither is one anybody is attached to. Idleness is measured from the
+transcript rather than a timer, so a session left thinking for three hours is not
+mistaken for an abandoned one.
