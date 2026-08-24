@@ -291,3 +291,39 @@ async def test_help_shaped_questions_still_reach_a_session(three: Path, utteranc
     route, _ = await pool.ask("k", utterance)
     assert route.mode == "fresh"
     await pool.close()
+
+
+async def test_connect_by_number_uses_the_list_you_were_shown(
+    three: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`connect 1` must mean the first line of the list you just saw.
+
+    Bogdan typed `connect 1`, a relay session happened to be newest at that
+    instant, and he spent ten minutes being answered by something that could not
+    see the build. Numbering computed fresh on every command is numbering that
+    changes underneath the person using it.
+    """
+    pool = SessionPool()
+    _, listing = await pool.ask("k", "session list")
+    assert "1. uxo-7f" in listing.text
+
+    # A new session appears and would now be number 1 in a freshly computed list.
+    make_session(three, 400, "newcomer-zz", "/tmp", "ddd", started_at=9000)
+
+    _, reply = await pool.ask("k", "connect 1")
+    assert "uxo-7f" in reply.text
+    assert "newcomer-zz" not in reply.text
+    assert pool.conversations["k"].attached_to == "uxo-7f"
+    await pool.close()
+
+
+async def test_connecting_to_a_number_whose_session_died_says_so(
+    three: Path,
+) -> None:
+    pool = SessionPool()
+    await pool.ask("k", "session list")
+    (three / "sessions" / "300.sock").unlink()  # uxo-7f goes away
+    _, reply = await pool.ask("k", "connect 1")
+    assert "has since exited" in reply.text
+    assert pool.conversations["k"].attached_to is None
+    await pool.close()

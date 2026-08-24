@@ -37,6 +37,13 @@ class Conversation:
     # directly: repeating "join data-13" on every message is not how a
     # conversation works.
     attached_to: str | None = None
+    # The session names from the last `session list` shown to THIS conversation.
+    # `connect 2` has to mean the second line of the list you were just shown, not
+    # the second line of a list computed fresh -- sessions come and go, so the
+    # numbering shifts underneath you. Bogdan typed `connect 1` and reached a
+    # relay session instead of the builder, then spent ten minutes being answered
+    # by something that could not see the work.
+    last_listing: list[str] = field(default_factory=list)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     # The turn currently in flight, if any. Kept so that a caller whose HTTP
     # request timed out can rejoin the same turn instead of starting a new one or
@@ -182,6 +189,7 @@ class SessionPool:
         if route.action == "list":
             if not live:
                 return Reply(text="No live Claude sessions right now.", subtype="control")
+            conv.last_listing = [session.name for session in live]
             lines = ["Live sessions, newest first:"]
             for index, session in enumerate(live, 1):
                 marker = " (connected)" if conv.attached_to == session.name else ""
@@ -226,7 +234,18 @@ class SessionPool:
             spec = route.target
             # "connect 2" means the second line of the list that was just shown,
             # not pid 2. Bare numbers are indices here; pids are reachable by name.
-            if spec.isdigit() and 1 <= int(spec) <= len(live):
+            if spec.isdigit() and 1 <= int(spec) <= len(conv.last_listing):
+                # Resolve against the list this caller was actually shown.
+                wanted = conv.last_listing[int(spec) - 1]
+                try:
+                    session = self.router.resolve(wanted)
+                except SessionNotFound:
+                    return Reply(
+                        text=f"{wanted} was number {spec} when I listed them, but it has "
+                             'since exited. Say "session list" for a current list.',
+                        subtype="control",
+                    )
+            elif spec.isdigit() and 1 <= int(spec) <= len(live):
                 session = live[int(spec) - 1]
             else:
                 try:

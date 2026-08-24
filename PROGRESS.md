@@ -458,3 +458,249 @@ phone before this is real for him**, and until he does, the end-to-end test here
 Services live on both machines.
 
 ### Phase 2 status: **DONE** (bar three minutes of Shortcut-building on the phone).
+
+---
+
+## Phase 3 — Discord text bridge and the pager
+
+`.env` arrived mid-Phase-2, so this was live-testable throughout. Both tokens
+verified against `/users/@me`: `hotline#6924` and `hotline-sentinel#2340`, both in
+"Claudes Call center". He used `#general` and `General` rather than creating
+`#hotline` / `#hotline-log` as `DISCORD-SETUP.md` suggested — harmless, everything
+is keyed by id, but it caused a real design conflict (below).
+
+### The pager is the piece that matters
+
+`hotline-page` is REST-only and **synchronous**, on purpose. No gateway, no
+py-cord, no running daemon — a blocked agent can page from any session on this
+machine even when `hotlined` is dead, which is exactly the situation where you
+most need a human. It blocks and returns his answer **on stdout**, so
+`answer=$(hotline-page "may I spend money on X")` is a question rather than a
+notification. CLAUDE.md is explicit that the approval loop should be fast enough
+not to stall a run.
+
+**Verified end to end with a question I actually needed answered** rather than a
+throwaway test: public or private for the GitHub repo. He replied **by DM** in
+**53 seconds** and the answer came back on stdout. Escalations recorded: `post`,
+`dm`. The ladder above that (nudges at 2/5/15 min, siren at 10/25) is covered by
+tests with an injected clock; the siren was deliberately **not** fired live —
+blasting a full-volume alarm in an empty house to prove a code path is obnoxious,
+and `_fire_siren` is injected in the tests instead.
+
+### Two bugs found by using it
+
+**The pager truncated at 1900 characters.** Discord rejects anything over 2000, so
+I truncated — which delivered a message that read as complete and was not. Bogdan
+lost the end of a long status message and only noticed because the last sentence
+stopped mid-thought. He had to route a correction through a *separate* session to
+tell me. Silent truncation is worse than an error: the reader believes they have
+the whole thing. Now it splits into numbered parts, with a test that pushes ~6000
+characters through and asserts every sentence survives.
+
+**The pager and the bridge shared one channel.** Every reply to a page would also
+be handed to a Claude session as a fresh instruction — noisy, and with bypass on,
+a bad way to discover an ambiguity. The pager now claims the channel in a file
+under `/run` while it waits, with an expiry so a pager killed mid-page cannot mute
+the bridge forever.
+
+### The gate is the security model
+
+These sessions run `bypassPermissions` on a box with `%wheel NOPASSWD: ALL`, so a
+message past the gate is **root-equivalent**. Author user id first, then guild,
+then channel. Guild membership is not sufficient and there are tests that say so —
+it would be very easy to write this such that anyone invited to the server
+inherits a shell.
+
+### A near-miss worth recording
+
+Before the first push I scanned every tracked file and the whole git history for
+any `.env` value. It found three: his **user, guild and channel ids had ended up as
+constants in `tests/test_bot.py`**, staged for a push to a **public** repo.
+`.gitignore` does not help once values are copied somewhere else. Replaced with
+invented snowflakes, and `scripts/scan-secrets.py` is now a pre-commit hook —
+proven by staging a deliberate leak and watching the commit be refused.
+
+---
+
+## Phase 4 — Discord voice
+
+### The stack came up faster than expected
+
+**No CUDA on this machine, and none was installed.** faster-whisper needs only the
+cuBLAS and cuDNN *runtimes*, which ship as pip wheels — so they went into `.venv`
+and the loader is pointed at them at import. Nothing outside `~/data/hotline`
+changed, no root, and deleting the venv undoes all of it.
+
+That cost one nasty hour. Preloading the whole `nvidia/*/lib` tree picks up
+`libnvblas`, which installs itself as a BLAS interposer, finds no CPU BLAS to
+delegate to, and **segfaults the interpreter**. The symptom is a bare exit 139 and
+`[NVBLAS] CPU Blas library need to be provided`, neither of which points at the
+preload. Now only the five libraries ctranslate2 actually opens are loaded.
+
+Measured: **distil-large-v3 on the 4060, 0.2–0.36s per utterance. Piper at 30x
+realtime.** The full audio loop — Piper speaks, encode exactly as Discord would,
+silero segments, Whisper transcribes — was correct four phrases out of four before
+Discord was involved at all.
+
+### pycord#3139 is a red herring, and believing it costs hours
+
+py-cord warns "voice reception is currently broken due to Discord's DAVE
+protocol". **DAVE was never the problem.** It negotiates correctly and the
+transport decrypts 54 of 56 packets in a real call. Declining DAVE is not an
+available route either: advertising `max_dave_protocol_version=0` makes Discord
+reject the connection outright and the gateway reconnect-loops.
+
+What is actually broken is six separate things, and **each one fails in a way that
+looks exactly like the advertised breakage**:
+
+1. `discord.sinks.Sink` has no `__sink_listeners__` or `walk_children()` — the
+   event router raises `AttributeError` before a single packet arrives.
+2. No `is_opus()` — the decoder dies on packet one.
+3. `start_recording` never calls `sink.init(vc)`, so the decoder asserts on
+   `sink.client` and the router thread dies immediately.
+4. `write()` now receives a `VoiceData` and a `Member`, **not** `bytes` and an
+   `int`. A sink written to the documented API silently drops everything.
+5. The AEAD decrypt ends `return result[8:]` — stripped **unconditionally**,
+   including from packets with no RTP extension, where it eats the first eight
+   bytes of the Opus payload. Discord sends `ext=False` for bot speech, so every
+   real audio packet decrypted perfectly, **decoded to digital silence, and raised
+   nothing**. Peak amplitude 0.0000, no error, and a library warning pointing
+   confidently elsewhere.
+6. `cc > 0` packets fail outright because the associated data omits the CSRC list.
+
+None of this was findable by reading. What found it was a **two-bot harness** —
+the sentinel speaks a known phrase through Piper, hotline listens — so there was
+something to compare against, and then measuring at each stage: packets arriving,
+RMS exactly 0.0, then which packet *shapes* failed.
+
+### And then two bugs the harness could not possibly catch
+
+Bot-to-bot worked. Bogdan's actual voice did not. Both remaining bugs exist **only
+when the sender is a real Discord client**:
+
+- py-cord computes the correct payload offset in `update_extended_header` and then
+  **discards it for a hardcoded 8**. Eight is right only for exactly one 32-bit
+  extension word. **Bots send one; real clients send several.** So his audio
+  decoded to a corrupted Opus stream while the harness passed every time. I had
+  also been computing the length by hand — second-guessing a value the library
+  already had right. Now it uses the library's own return value.
+- `OpusError` escaping the decoder killed the packet-router thread, whose
+  `finally` calls `stop_recording()`. **One damaged packet permanently deafened
+  the bot** for the rest of the call. Wrong even with perfect decoding, because
+  real networks lose and mangle packets.
+
+Two bots was necessary and was never going to be sufficient. His testing found
+what mine structurally could not.
+
+### The thing that made all of this take three times longer than it should have
+
+**`hotlined` never configured logging.** Every exception inside py-cord went to a
+logger with no handler and vanished. Three calls died completely invisibly —
+`joined General`, one second, `recording stopped`, no reason given — before I
+noticed I had been debugging a voice call with the tracebacks switched off.
+`basicConfig` now runs at startup. This was the single biggest time sink of the
+build and it was entirely self-inflicted.
+
+### And one from his first real call
+
+`on_voice_state_update` fires for **mute, deafen, video and stream changes**, not
+just joining. It fired three times in five seconds; the guard against a second
+join only closed *after* the models finished loading. Three overlapping joins
+raced, the router thread died, recording was torn down. Now: ignore events where
+the channel did not change, and claim the slot before the slow part. Also, if he
+is already in the channel when the bot connects, no event is ever coming — joining
+is an edge and it was missed — so it checks on ready. I found that by restarting
+the daemon one second after he joined, which was my own fault.
+
+### Voice works
+
+```
+20:08:59  joined General; listening only to [bogdan]
+20:09:03  heard (0.7s, stt 0.35s): 'Thank you.'
+20:09:06  answered in 3.6s
+20:09:28  bogdan left the voice channel; hanging up
+```
+
+A real human voice, heard in 0.35s, answered aloud, clean hangup.
+
+---
+
+## Phase 5 — Pigion sentinel and wake
+
+**Sentinel:** a hand-rolled Discord gateway client — `GUILD_VOICE_STATES` only
+(`1 << 7`), no caching, ignores every event but `VOICE_STATE_UPDATE`. Runs as a
+**thread inside `frontdoor.py`** rather than a second process: two Python
+interpreters on a 415 MB Pi costs ~12 MB for nothing, and `pigion.service` is in
+daily use and must not be squeezed. Total **31 MB resident**, against the plan's
+25–45 MB budget for the bot alone.
+
+Pigion has no `websockets` and **no passwordless sudo**, which closed the obvious
+`apt install`. A user venv needs no root: `~/hotline/.venv`, websockets 17.0.1.
+
+**Verified live on a real join:**
+```
+[sentinel] bogdan joined the voice channel
+[frontdoor] call incoming -- waking archserver
+[frontdoor] wake succeeded for a8:a1:59:fd:4d:13
+```
+It reported success because archserver was already awake — which is honest, and is
+why `wake_and_wait` checks `/health` first rather than assuming.
+
+**Wake-on-LAN is armed**, three layers deep, because the failure mode is silent —
+a box that will not wake looks exactly like a box with no cable in it:
+
+```
+ethtool -s enp4s0 wol g     armed NOW, verified: "Wake-on: g", with no carrier
+NetworkManager              802-3-ethernet.wake-on-lan = magic
+udev rule                   fires on device add, verified with `udevadm test`
+```
+
+**The magic packet has never woken anything and I am not going to imply otherwise.**
+`enp4s0` is `NO-CARRIER` — the cable is not in. What is verified is that the
+correct 102 bytes leave Pigion (6x 0xFF + MAC x16, checked byte for byte). The
+end-to-end wake is **UNVERIFIED-BY-DESIGN**, per Bogdan's explicit instruction to
+build it as though it works and not block on it.
+
+**Still blocked on him, physically:** the ethernet cable, and two BIOS settings on
+an ASRock B550M-HVS SE with no IPMI — ErP/ErP Ready **disabled**, PCIE Devices
+Power On / PME Event Wake Up **enabled**. ErP is the one that bites: it cuts
+standby power to the NIC entirely, and then no packet can arrive however correct
+the OS side is.
+
+**Sleep policy, answered with measurements rather than the plan's assumption.**
+S5 poweroff stands, but S3 is closer than the plan thought: the firmware offers
+`deep`, and `PreserveVideoMemoryAllocations` is already `2` — the hard
+prerequisite is done. All six `nvidia-*` power units are `disabled`, and enabling
+`nvidia-suspend`/`nvidia-resume` is small and well-defined, but needs one real
+cycle tested with the GPU loaded and a human present. Hibernate is **not** viable:
+8 GB swapfile against 15.9 GB RAM, no `resume=`/`resume_offset=` on the cmdline,
+and no `resume` hook in `mkinitcpio.conf`.
+
+**Boot path:** both machines have lingering enabled and both units `enabled`.
+`hotlined` orders `After=network-online.target tailscaled.service` with `Wants=`
+rather than `Requires=` — a flaky tailscaled should delay the daemon, not take the
+phone path down with it. Reboot survival is **configured and audited, not
+observed**; nothing has been power-cycled.
+
+---
+
+## From his `tofix.md`, written while he was testing
+
+Done: **#4** (`help` exists; `detach` no longer leaks to a model as chat),
+**#7** (`resources` — RAM, load, VRAM, disk), **#8** (the one I flagged as the real
+correctness bug: three separate things could retire a conversation — idle reaper,
+eviction at capacity, daemon restart — and **all three were silent**. Each now
+records why and the next message carries a notice, spoken first on voice and
+phone. `connect` bindings persist to `/run`, so a restart keeps the binding while
+being honest that the context is gone).
+
+Also his two feature requests, delivered over the bridge mid-build: **sticky
+routing** (`connect` once, then just talk) and **`session list`**. Both went in the
+router rather than the bot, so the phone gets them too. The hard part was the
+phrases that only *look* like commands — `list the files in ~/data` and `connect
+the dots in this diagram` must reach a session, so a `connect` whose target does
+not resolve falls through and is answered as an ordinary question.
+
+Not built: **#1** (each session spawning its own tmux), **#2** (stand-in agent for
+busy sessions), **#3** (`session kill`), **#5** (delivery receipts), **#6** (raw
+output relayed as one reply).

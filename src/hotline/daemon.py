@@ -118,6 +118,38 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
             "pool": pool.stats(),
         }
 
+    @server.route("POST", "/api/v1/voice")
+    async def voice(request: Request) -> tuple[int, dict[str, object]]:
+        """Make the bot join or leave the voice channel, and say something.
+
+        Exists so the voice path can be exercised without waiting for a human to
+        join -- during this build the only way to test a join was to ask Bogdan to
+        get on a call, which made every iteration cost him a trip.
+        """
+        authorise(request)
+        payload = request.json()
+        action = str(payload.get("action") or "status")
+        bot = getattr(server, "bot", None)
+        if bot is None:
+            raise HttpError(503, "the discord bot is not running")
+        if action == "join":
+            await bot._join_voice()
+            if payload.get("say"):
+                await bot.call.say(str(payload["say"]))
+            return 200, {"joined": bot.call is not None}
+        if action == "say":
+            if bot.call is None:
+                raise HttpError(409, "not on a call")
+            await bot.call.say(str(payload.get("say") or ""))
+            return 200, {"said": True}
+        if action == "leave":
+            await bot._leave_voice()
+            return 200, {"joined": False}
+        return 200, {
+            "joined": bot.call is not None,
+            "transcript": getattr(bot.call, "transcript", []),
+        }
+
     @server.route("POST", "/api/v1/claude")
     async def claude(request: Request) -> tuple[int, dict[str, object]]:
         authorise(request)
@@ -200,6 +232,7 @@ async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: b
             else:
                 token = os.environ["HOTLINE_BOT_TOKEN"]
                 bot_task = asyncio.create_task(run_bot(bot, token, log))
+                server.bot = bot  # type: ignore[attr-defined]
 
     try:
         await server.serve_forever()
