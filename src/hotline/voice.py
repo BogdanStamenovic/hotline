@@ -91,10 +91,33 @@ def install_receive_fixes() -> None:
     def _decrypt(decryptor: Any, packet: Any) -> bytes:
         packet.adjust_rtpsize()
         nonce = packet.nonce + b"\x00" * 20
+
         header = bytes(packet.header)
-        result: bytes = decryptor.box.decrypt(
-            packet.decrypted_data or packet.data, header, nonce
-        )
+        raw = getattr(packet, "_hotline_raw", None)
+        if packet.cc and raw is not None:
+            # The associated data must be the whole RTP header, CSRC list
+            # included. py-cord builds it from data[:12] and never puts the CSRCs
+            # back, so any packet carrying them fails outright.
+            header = bytes(raw[: 12 + 4 * packet.cc]) + header[12:]
+
+        payload = packet.decrypted_data or packet.data
+        try:
+            result: bytes = decryptor.box.decrypt(payload, header, nonce)
+        except Exception:
+            # Discord rotates the transport key when the set of participants
+            # changes -- someone joining a call the bot is already sitting in.
+            # py-cord has an `update_secret_key` for exactly this and **nothing
+            # ever calls it**, so the decryptor keeps a stale box and every
+            # subsequent packet fails to decrypt. Symptom: a call that works
+            # perfectly when the bot joins last, and is stone deaf when it joins
+            # first. Rebuild from the connection's current key and retry once.
+            current = bytes(decryptor.client.secret_key)
+            if current == getattr(decryptor, "_hotline_key", None):
+                raise
+            decryptor._hotline_key = current
+            decryptor.box = decryptor._make_box(current)
+            log.info("voice key rotated; rebuilt the decryptor")
+            result = decryptor.box.decrypt(payload, header, nonce)
 
         if packet.extended:
             # `update_extended_header` already returns the correct payload offset,
@@ -121,6 +144,18 @@ def install_receive_fixes() -> None:
         "_decrypt_rtp_aead_xchacha20_poly1305_rtpsize",
         _decrypt,
     )
+
+    # Keep the raw bytes: RTPPacket.__init__ slices them away immediately, and
+    # the CSRC list is needed to rebuild the associated data above.
+    from discord.voice.packets import rtp as _rtp
+
+    _rtp_init = _rtp.RTPPacket.__init__
+
+    def _keep_raw(packet: Any, data: bytes) -> None:
+        packet._hotline_raw = data
+        _rtp_init(packet, data)
+
+    setattr(_rtp.RTPPacket, "__init__", _keep_raw)  # noqa: B010
 
     # A single corrupt frame must not end the call. py-cord lets OpusError escape
     # `pop_data`, which kills the packet-router thread, whose `finally` calls
