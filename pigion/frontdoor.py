@@ -27,6 +27,9 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import wake  # noqa: E402
+
 UPSTREAM = os.environ.get("HOTLINE_UPSTREAM", "http://100.72.2.62:8788")
 PORT = int(os.environ.get("HOTLINE_FRONTDOOR_PORT", "8788"))
 API_KEY = os.environ.get("HOTLINE_API_KEY") or None
@@ -39,6 +42,10 @@ ALLOW = {
 # "still working" well before this, so reaching it means something is genuinely wrong.
 UPSTREAM_TIMEOUT = float(os.environ.get("HOTLINE_UPSTREAM_TIMEOUT", "180"))
 HEALTH_TIMEOUT = 4.0
+
+UPSTREAM_MAC = os.environ.get("HOTLINE_UPSTREAM_MAC", "")
+WAKE_BROADCAST = os.environ.get("HOTLINE_WAKE_BROADCAST", "192.168.1.255")
+WAKE_DEADLINE = float(os.environ.get("HOTLINE_WAKE_DEADLINE", "90"))
 
 ASLEEP = (
     "The workstation isn't reachable right now, so I can't answer that. "
@@ -58,14 +65,29 @@ def upstream_awake() -> bool:
         return False
 
 
-def wake_upstream() -> None:
-    """Phase 5 plugs the magic packet in here.
+def wake_upstream(wait: bool = False) -> bool:
+    """Broadcast a magic packet at archserver, optionally waiting for it to answer.
 
-    Left as an explicit no-op rather than omitted, so the place it belongs is
-    obvious, and so the Phase 2 behaviour -- say honestly that the machine is down
-    -- is what happens until then.
+    Never verified end to end: archserver's ethernet port has no cable in it, so
+    nothing has ever actually been woken by this. What is verified is that the
+    right bytes leave Pigion. See pigion/wake.py.
     """
-    return None
+    if not UPSTREAM_MAC:
+        log("no HOTLINE_UPSTREAM_MAC configured; cannot wake anything")
+        return False
+    try:
+        if wait:
+            woke = wake.wake_and_wait(
+                UPSTREAM_MAC, f"{UPSTREAM}/health", WAKE_BROADCAST, deadline=WAKE_DEADLINE
+            )
+            log(f"wake {'succeeded' if woke else 'timed out'} for {UPSTREAM_MAC}")
+            return woke
+        sent = wake.send(UPSTREAM_MAC, WAKE_BROADCAST)
+        log(f"sent magic packet to {UPSTREAM_MAC} ({sent} bytes)")
+    except (OSError, ValueError) as exc:
+        log(f"wake failed: {exc}")
+        return False
+    return False
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -119,11 +141,14 @@ class Handler(BaseHTTPRequestHandler):
         body = self.rfile.read(length) if length else b"{}"
 
         if not upstream_awake():
-            wake_upstream()
-            # 200, not 503: the Shortcut speaks whatever is in `response` and has
-            # no way to render a status code, so an error status is silence.
-            self._send(200, {"response": ASLEEP, "upstream": "unreachable"})
-            return
+            # Wait, rather than fire and forget: the caller is on the phone with a
+            # question, and "hold on, waking it" then answering beats "try again
+            # later" when the box takes forty seconds to boot.
+            if not wake_upstream(wait=True):
+                # 200, not 503: the Shortcut speaks whatever is in `response` and
+                # has no way to render a status code, so an error status is silence.
+                self._send(200, {"response": ASLEEP, "upstream": "unreachable"})
+                return
 
         request = urllib.request.Request(
             f"{UPSTREAM}/api/v1/claude",
@@ -146,8 +171,48 @@ class Handler(BaseHTTPRequestHandler):
             self._send(502, {"error": f"upstream sent non-JSON: {exc}"})
 
 
+def start_sentinel() -> None:
+    """Watch Discord for Bogdan joining the voice channel, and wake archserver.
+
+    In this process as a thread, not a second service: two Python interpreters on
+    a 415 MB Pi costs about 12 MB for nothing, and this machine also runs
+    pigion.service, which is in daily use and must not be squeezed.
+    """
+    token = os.environ.get("SENTINEL_BOT_TOKEN")
+    user_id = os.environ.get("DISCORD_USER_ID")
+    channel_id = os.environ.get("DISCORD_VOICE_CHANNEL_ID")
+    if not (token and user_id and channel_id):
+        log("sentinel not configured (needs SENTINEL_BOT_TOKEN, DISCORD_USER_ID, "
+            "DISCORD_VOICE_CHANNEL_ID); not watching for calls")
+        return
+    try:
+        from sentinel import Sentinel
+    except ImportError as exc:
+        log(f"sentinel unavailable ({exc}); not watching for calls")
+        return
+
+    def on_join() -> None:
+        log("call incoming -- waking archserver")
+        wake_upstream(wait=True)
+
+    Sentinel(token, int(user_id), int(channel_id), on_join).start()
+    log("sentinel watching for voice joins")
+
+
 def main() -> int:
+    import logging
+
+    # The sentinel logs through `logging`; without a handler its gateway errors
+    # would vanish exactly the way hotlined's did.
+    logging.basicConfig(
+        level=os.environ.get("HOTLINE_LOG_LEVEL", "INFO"),
+        format="[%(name)s] %(message)s",
+        stream=sys.stderr,
+    )
+    logging.getLogger("websockets").setLevel("WARNING")
     log(f"upstream={UPSTREAM} allow={sorted(ALLOW)} key={'set' if API_KEY else 'unset'}")
+    log(f"wake target={UPSTREAM_MAC or '(unset)'} broadcast={WAKE_BROADCAST}")
+    start_sentinel()
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     log(f"listening on 0.0.0.0:{PORT}")
     try:

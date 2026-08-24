@@ -214,8 +214,19 @@ async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: b
 
 def main(argv: Sequence[str] | None = None) -> int:
     import argparse
+    import logging
 
     load_env()
+    # Without this, every exception inside py-cord goes to a logger with no
+    # handler and vanishes. A voice call died silently three times before I
+    # noticed the only reason I had no traceback was that nobody had configured
+    # logging.
+    logging.basicConfig(
+        level=os.environ.get("HOTLINE_LOG_LEVEL", "INFO"),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        stream=sys.stderr,
+    )
+    logging.getLogger("discord").setLevel(os.environ.get("HOTLINE_DISCORD_LOG_LEVEL", "WARNING"))
     parser = argparse.ArgumentParser(prog="hotlined", description=__doc__.splitlines()[0])
     parser.add_argument("--host", default=os.environ.get("HOTLINE_HOST", "0.0.0.0"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("HOTLINE_PORT", DEFAULT_PORT)))

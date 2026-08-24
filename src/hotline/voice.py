@@ -28,7 +28,6 @@ import array
 import asyncio
 import contextlib
 import logging
-import struct
 import time
 from collections.abc import Callable
 from typing import Any, ClassVar
@@ -98,14 +97,13 @@ def install_receive_fixes() -> None:
         )
 
         if packet.extended:
-            packet.update_extended_header(result)
-            # The extension is `length` 32-bit words, read from the preamble that
-            # adjust_rtpsize() appended to the header. py-cord assumes 8 bytes,
-            # which is only right when there is exactly one word -- bots happen to
-            # send that, real Discord clients do not, so a human's audio decodes
-            # to noise where a bot's decodes correctly.
-            words = struct.unpack_from(">H", header, len(header) - 2)[0]
-            result = result[words * 4 :]
+            # `update_extended_header` already returns the correct payload offset,
+            # including the rtpsize adjustment -- py-cord computes it and then
+            # throws it away in favour of a hardcoded 8. Eight is right only for a
+            # single 32-bit extension word. Bots send one; real Discord clients
+            # send several, so a human's audio decoded to a corrupted Opus stream
+            # while a bot's decoded perfectly.
+            result = result[packet.update_extended_header(result) :]
 
         if packet.padding and result:
             # RFC 3550 s5.1: the final byte counts the trailing padding, itself
@@ -123,6 +121,24 @@ def install_receive_fixes() -> None:
         "_decrypt_rtp_aead_xchacha20_poly1305_rtpsize",
         _decrypt,
     )
+
+    # A single corrupt frame must not end the call. py-cord lets OpusError escape
+    # `pop_data`, which kills the packet-router thread, whose `finally` calls
+    # `stop_recording()` -- so one damaged packet permanently deafens the bot with
+    # no way back. That is unacceptable even with perfect decoding: real networks
+    # lose and mangle packets. Skip the frame and keep listening.
+    from discord import opus as _opus
+
+    _pop = _opus.PacketDecoder.pop_data
+
+    def _safe_pop(decoder: Any, *args: Any, **kwargs: Any) -> Any:
+        try:
+            return _pop(decoder, *args, **kwargs)
+        except _opus.OpusError as exc:
+            log.debug("dropped a corrupt opus frame: %s", exc)
+            return None
+
+    setattr(_opus.PacketDecoder, "pop_data", _safe_pop)  # noqa: B010
     _PATCHED = True
     log.info("installed py-cord receive fixes (pycord#3139 is a red herring)")
 
