@@ -265,6 +265,16 @@ class SessionPool:
             self.conversations[key] = conv
         return conv
 
+    def bind(self, key: str, session_name: str) -> None:
+        """Point a conversation at a session without a `connect` being spoken.
+
+        Walking into an agent's own voice channel already says who you want to
+        talk to; making you then say it out loud as well would be the interface
+        asking you to repeat yourself.
+        """
+        self._conversation(key).attached_to = session_name
+        self._save_bindings()
+
     async def _own_session(self, conv: Conversation) -> str:
         """The name of this conversation's own session, spawning one if needed."""
         name = await self._spawn_own(conv)

@@ -30,6 +30,8 @@ from typing import TYPE_CHECKING
 
 import discord
 
+from .agents import Agent
+from .channels import PREFIX as CHANNEL_PREFIX
 from .config import page_claim
 from .errors import HotlineError
 from .fresh import Event
@@ -273,7 +275,20 @@ class HotlineBot(discord.Bot):
         channel = self.get_channel(self.voice_channel_id)
         return channel if isinstance(channel, discord.VoiceChannel) else None
 
-    async def _join_voice(self, message: discord.Message | None = None) -> None:
+    def _agent_for_voice(self, channel_id: int) -> Agent | None:
+        """Which agent owns this voice channel, if any."""
+        from .agents import Registry
+
+        for agent in Registry().agents.values():
+            if agent.voice_channel_id == channel_id:
+                return agent
+        return None
+
+    async def _join_voice(
+        self,
+        message: discord.Message | None = None,
+        channel: discord.VoiceChannel | None = None,
+    ) -> None:
         """Join the call and warm the models.
 
         Loading Whisper takes seconds and about 1.5 GB of VRAM, so it happens on
@@ -293,7 +308,8 @@ class HotlineBot(discord.Bot):
                 if message:
                     await message.channel.send("Voice is disabled (no `voice` extra installed).")
                 return
-            channel = await self._voice_channel()
+            if channel is None:
+                channel = await self._voice_channel()
             if channel is None:
                 if message:
                     await message.channel.send(
@@ -326,12 +342,22 @@ class HotlineBot(discord.Bot):
                 key=f"voice-{channel.id}",
                 log_fn=self.log,
             )
+            # An agent's own voice channel means you have already said who you
+            # want to talk to by walking into it. Binding here saves a "connect"
+            # you would otherwise have to say out loud, and is the reason a voice
+            # channel per agent is worth anything at all.
+            agent = self._agent_for_voice(channel.id)
+            greeting = "Hotline. What do you need?"
+            if agent is not None:
+                self.pool.bind(call.key, agent.name)
+                greeting = f"{agent.name} here. {agent.task}. What do you need?"
+
             try:
                 await call.join(channel)
                 self.call = call
             finally:
                 self._joining = False
-            await call.say("Hotline. What do you need?")
+            await call.say(greeting)
             if message:
                 await message.channel.send("On the call. Talk to me.")
 
@@ -382,14 +408,33 @@ class HotlineBot(discord.Bot):
         ):
             return
 
-        joined = after.channel is not None and after.channel.id == self.voice_channel_id
-        left = before.channel is not None and before.channel.id == self.voice_channel_id
-        if joined and self.call is None:
-            self.log("bogdan joined the voice channel; picking up")
-            await self._join_voice()
-        elif left and not joined and self.call is not None:
+        after_channel = after.channel
+        target = (
+            after_channel
+            if isinstance(after_channel, discord.VoiceChannel) and self._is_ours(after_channel)
+            else None
+        )
+        left = self._is_ours(before.channel) and target is None
+        if target is not None and self.call is None:
+            self.log(f"bogdan joined {target.name}; picking up")
+            await self._join_voice(channel=target)
+        elif left and self.call is not None:
             self.log("bogdan left the voice channel; hanging up")
             await self._leave_voice()
+
+    def _is_ours(self, channel: object) -> bool:
+        """The configured channel, or any agent's own one.
+
+        Only one call runs at a time -- one GPU, one Whisper, one Piper, and
+        Bogdan can only stand in one room anyway -- so agents get a voice channel
+        each and the hardware constraint resolves itself: whichever one he walks
+        into is the call.
+        """
+        if not isinstance(channel, discord.VoiceChannel):
+            return False
+        if self.voice_channel_id and channel.id == self.voice_channel_id:
+            return True
+        return channel.name.startswith(CHANNEL_PREFIX)
 
 def build_bot(pool: SessionPool, log: Callable[[str], None]) -> HotlineBot | None:
     """None when Discord is not configured -- the phone path must still work."""

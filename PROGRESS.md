@@ -919,3 +919,86 @@ ones True, and a session whose last record is a stale tool call is excluded by t
 freshness window rather than being called busy forever. Then, live through the
 daemon: a turn answered in 6.0s, and `session kill hl-final2` executed one second
 later as a control command.
+
+---
+
+## Per-agent Discord channels
+
+New scope, relayed while the tofix round was landing: every agent declares itself
+and what it is working on, gets its own text channel, gets a voice channel only
+when it needs one, and on an explicit `done` writes a handoff and has its
+channels deleted. Records auto-expire three days after completion.
+
+### The one part that could not be built as described
+
+Subagents. The ask was that a subagent spawned by an agent also gets a channel,
+and I measured before designing: across every transcript on this machine, **nine
+Task subagent launches produced zero sidechain records**, and a live probe
+watching `~/.claude/sessions/` through a subagent run saw **no new descriptor**.
+
+A subagent writes nothing to its parent's transcript and registers nothing.
+hotline is structurally blind to them — not a gap in the implementation, there is
+nothing to observe. So it is cooperative: `--declare --parent <name>`. An agent
+that spawns a subagent without declaring it gets no channel for it, silently, and
+that is a property of the platform rather than a decision.
+
+### Measured, after guessing wrong out loud
+
+I had flagged Discord's channel create/delete rate limit as a risk for fleet
+spin-up. It is not: a create returns `x-ratelimit-limit: 2000` against a ~24 hour
+reset, so the budget is two thousand channel operations per guild per day. The
+500-channels-per-guild ceiling is the constraint that will bite first.
+
+I only saw those numbers on the second attempt — my first probe read the headers
+in title case (`X-RateLimit-Remaining`) when Discord sends them lowercase, so it
+printed `None` across the board and I nearly recorded "no rate limit exposed" as
+a finding. It was my bug both times: once in the probe, once nearly in the
+write-up.
+
+### Deleting things
+
+Channels are disposable by explicit instruction — I objected once, on the grounds
+that a channel delete is irreversible and takes the whole conversation with it,
+was overruled, and built it that way. The consequence is that `handoff.md` is the
+*only* thing that outlives an agent, so `--done` warns when there is not one, and
+`--resume` exists to turn a handoff back into a working session with its channel
+restored. Without that, "done" and "lost" are the same operation.
+
+The delete guard is not about second-guessing the instruction. Every channel
+hotline owns carries an `agent-` prefix and `delete()` refuses anything without
+it, because the bot now holds `MANAGE_CHANNELS` on a guild containing real
+channels and the ids being passed around come out of a JSON file on disk.
+Verified live by pointing it at `#general` and watching it refuse.
+
+### Voice, and why one channel each is fine after all
+
+I pushed back on a voice channel per agent: one RTX 4060, one Whisper, one Piper,
+and Bogdan can only be in one voice channel at a time, so ten agents would mean
+nine permanently empty rooms served by a bot that can do one. The answer was
+"lazy per agent", and that turns out to resolve the objection rather than
+overrule it — the channel is created only when an agent asks for one, and the
+hardware limit sorts itself out because **whichever channel he walks into becomes
+the call**. Joining an agent's own voice channel also binds the conversation to
+that session, so you do not have to say `connect` out loud to something you just
+walked up to.
+
+### Two bugs found by running it
+
+`slug()` tested the concatenation rather than the slug, so `PREFIX + ""` stayed
+truthy and a name of pure punctuation became a bare `agent-` — every such agent
+colliding on one channel. Caught by a test, not by inspection.
+
+And a local in `tmuxen.spawn` shadowed the `name` parameter I had just added, so
+`--name` received the tmux session name. A resumed agent came back called
+`hl-demo-res` instead of `demo-res`, losing exactly the identity it had been
+resumed by. It looked like it worked — a session started, a channel appeared, the
+handoff was read back correctly with its canary — and the only symptom was a name.
+
+### What is not verified
+
+The bot joining when Bogdan walks into an agent's voice channel. The decision
+logic has tests; the join itself runs inside py-cord's voice stack, and the only
+way I had to exercise it was a second bot speaking, which needs
+`HOTLINE_VOICE_ALLOWED_IDS` — a setting that lets another bot talk into a
+root-equivalent shell. It was removed for that reason and I am not putting it
+back to make a test pass. Needs one real call.

@@ -85,6 +85,10 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--agents", action="store_true", help="list known agents and exit")
     parser.add_argument(
+        "--voice", action="store_true",
+        help="give this agent a voice channel (created on demand, not at declaration)",
+    )
+    parser.add_argument(
         "--resume", metavar="NAME",
         help="bring a finished agent back: new session seeded from its handoff, "
              "channel recreated, task re-declared",
@@ -147,6 +151,29 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.voice:
+        speaker = registry.get(session_id)
+        if speaker is None:
+            print(
+                "hotline: error: declare yourself first, so the voice channel has "
+                "a name and gets cleaned up when you are done.",
+                file=sys.stderr,
+            )
+            return 1
+        manager = channels_from_env()
+        if manager is None:
+            print("hotline: error: Discord is not configured", file=sys.stderr)
+            return 1
+        try:
+            speaker.voice_channel_id = manager.create_voice(speaker.name)
+        except HotlineError as exc:
+            print(f"hotline: error: {exc}", file=sys.stderr)
+            return 1
+        registry.save()
+        # stdout, because this is the answer: the agent repeats it to Bogdan.
+        print(channel_slug(speaker.name))
+        return 0
 
     if args.declare:
         name = _session_name(session_id) or session_id[:8]
@@ -319,7 +346,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         log(f"spool: {stops_dir()}")
         return 0
 
-    if args.declare or args.done or args.agents or args.resume:
+    if args.declare or args.done or args.agents or args.resume or args.voice:
         return _agent_command(args, log)
 
     if args.list:

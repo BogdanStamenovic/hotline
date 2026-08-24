@@ -180,3 +180,82 @@ def test_unbroken_text_is_still_split() -> None:
     parts = chunk("x" * 5000)
     assert all(len(part) <= 1900 for part in parts)
     assert "".join(parts) == "x" * 5000
+
+
+# ---- which voice channel counts as ours ---------------------------------
+#
+# One call runs at a time -- one GPU, one Whisper, one Piper, and Bogdan can only
+# stand in one room anyway -- so agents get a voice channel each and the hardware
+# constraint resolves itself: whichever one he walks into becomes the call.
+#
+# NOT covered here, and it needs a human: the bot actually joining when he enters
+# an agent's channel. That path runs inside py-cord's voice stack and the only
+# honest way to exercise it was to have a second bot speak, which meant widening
+# HOTLINE_VOICE_ALLOWED_IDS -- and that setting lets another bot talk into a
+# root-equivalent shell, so it was removed rather than kept for testing.
+
+
+@dataclass
+class FakeVoiceChannel:
+    id: int
+    name: str
+
+
+class VoiceGate(HotlineBot):
+    def __init__(self, configured: int | None = 400000000000000004) -> None:
+        self.user_id = USER
+        self.voice_channel_id = configured
+        self.log = lambda _m: None
+
+
+@pytest.fixture
+def voice_type(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(bot_module.discord, "VoiceChannel", FakeVoiceChannel)
+
+
+def test_the_configured_channel_is_ours(voice_type: None) -> None:
+    gate = VoiceGate()
+    assert gate._is_ours(FakeVoiceChannel(400000000000000004, "General")) is True
+
+
+def test_any_agent_channel_is_ours(voice_type: None) -> None:
+    """An agent's own voice channel is created lazily and named by prefix, so the
+    bot has to answer in one it was never configured with."""
+    gate = VoiceGate()
+    assert gate._is_ours(FakeVoiceChannel(999, "agent-builder")) is True
+
+
+def test_someone_elses_voice_channel_is_not_ours(voice_type: None) -> None:
+    gate = VoiceGate()
+    assert gate._is_ours(FakeVoiceChannel(999, "Movie Night")) is False
+
+
+def test_nothing_is_ours_when_it_is_not_a_voice_channel(voice_type: None) -> None:
+    gate = VoiceGate()
+    assert gate._is_ours(None) is False
+    assert gate._is_ours(FakeChannel(400000000000000004)) is False
+
+
+def test_agent_channels_still_count_with_nothing_configured(voice_type: None) -> None:
+    """Voice per agent must not depend on DISCORD_VOICE_CHANNEL_ID being set."""
+    gate = VoiceGate(configured=None)
+    assert gate._is_ours(FakeVoiceChannel(999, "agent-builder")) is True
+    assert gate._is_ours(FakeVoiceChannel(999, "General")) is False
+
+
+def test_the_owning_agent_is_found_by_its_voice_channel(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """Walking into an agent's channel is how you say who you want to talk to."""
+    from hotline.agents import Registry
+
+    registry = Registry(path=tmp_path / "agents.json")
+    agent = registry.declare("sid-1", "builder", "a job")
+    agent.voice_channel_id = 777
+    registry.save()
+    monkeypatch.setattr("hotline.agents.agents_file", lambda: tmp_path / "agents.json")
+
+    gate = VoiceGate()
+    found = gate._agent_for_voice(777)
+    assert found is not None and found.name == "builder"
+    assert gate._agent_for_voice(778) is None
