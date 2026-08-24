@@ -1002,3 +1002,99 @@ way I had to exercise it was a second bot speaking, which needs
 `HOTLINE_VOICE_ALLOWED_IDS` — a setting that lets another bot talk into a
 root-equivalent shell. It was removed for that reason and I am not putting it
 back to make a test pass. Needs one real call.
+
+## Control verbs leak into the conversational layer (found by data-d5, 22:5x)
+
+Two separate incidents, one root cause. Recording both because the second one
+arrived *while* diagnosing the first, which is about as clean a reproduction as
+you get.
+
+**Incident 1 — `hotline-3b` looks busy forever.** pid 100574 has read `"busy"` in
+its descriptor since 18:55:46 and has had no model turn since 18:55:54. The last
+line in its transcript is `system: "Backgrounding after the current tool
+finishes…"` — at 18:55:56 its conversation forked into bg job `493be051`
+("Hotline build continuation", pid 102184). The interactive front-end survived
+in a kgx window on pts/1 (not tmux, so unattachable) with a stale busy latch and
+a queue nothing drains. Three messages are stranded in it: "How are things
+progressing" (20:46), "Check if its stuck" (20:47), and a probe from data-d5
+(20:50) — last successful dequeue was 18:32:43.
+
+`mid_turn()` returns True immediately on `status == "busy"` without ever
+consulting the transcript, so a session with a stale latch is permanently
+"working" and every route to it produces a stand-in. That is the "not available"
+message Bogdan hit on Discord at 20:50:36. Suggested fix: treat a session
+carrying a `parkedJobId` as a forward to that job, and let `mid_turn` fall
+through to the transcript check even when the descriptor says busy.
+
+**Incident 2 — `session kill data-d5` arrived as chat.** Twice. Not through the
+router: it landed on data-d5 as a `<cross-session-message>` relayed by a peer
+session. Verified the control path itself is sound —
+
+    parse_utterance("session kill data-d5") -> mode=control action=kill target='data-d5'
+    Router().resolve("data-d5")             -> data-d5 pid 126072 status waiting
+
+so `pool._control()` would have executed it. `bot.on_message` routes everything
+through `pool.ask`, which parses control first. The verb therefore never reached
+the bot; a Claude session received it as prose and helpfully forwarded it to the
+named target instead of running it.
+
+That is the generalisation of incident 1: **anything that turns a control verb
+into conversation turns it into a no-op.** A stand-in does it structurally, and a
+session relaying to a peer does it by being cooperative. The failure is quiet in
+both cases — the sender sees a plausible reply and assumes the command ran.
+
+Worth fixing at both ends: sessions should refuse to relay a string that parses
+as a control verb (bounce it back with "run this through the router"), and the
+relay path should parse control before injecting, the same way `bot.on_message`
+does. Until then `session kill X` is only reliable when typed in a channel the
+bot owns, or as `hotline "session kill X"`.
+
+data-d5 did not SIGTERM itself on the relayed string — see the note in the
+handoff about why that specific compliance would have been the anti-pattern.
+
+---
+
+## "I tried to get through to you and it spawned an agent telling me you are not available"
+
+The binding for the Discord channel was `attached_to: null`, so every message went
+to `own` — a tmux session hotline had spawned fresh, with no context. That session
+told him he could not reach the builder, and it was right: it had never heard of
+one.
+
+Sticky routing had existed since he asked for it. What was missing is that **only
+he could set it**, by typing `connect hotline-3b` — a derived name that changes
+between runs and that he has no reason to know. So the feature was real and
+unreachable.
+
+`hotline --claim discord` inverts it: the session that wants the traffic asks for
+it. It goes through the daemon rather than editing `bindings.json`, because the
+daemon holds conversations in memory and rewrites that file itself — a CLI
+writing it directly would be silently overwritten by the next turn. The binding
+is by session *name*, which turns out to matter: this session's pid changed twice
+during the work and the binding survived both.
+
+Two corrections came out of it. The channel id is `DISCORD_TEXT_CHANNEL_ID` and I
+had guessed `DISCORD_CHANNEL_ID`, so `--claim` now accepts either and falls back
+to asking the running daemon which conversations it actually has, rather than
+refusing over a variable name. And I had told the other session I was
+`hotline-3b`, inferred rather than checked; this session is **`Hotline build
+continuation`**, verified by matching `$CLAUDE_CODE_SESSION_ID` against the
+descriptors.
+
+### The cleanup that made more mess than it cleaned
+
+`hotline "session kill data-b1"` does not kill anything. The CLI sent every
+utterance to a model, so a control phrase that works over Discord and voice
+spawned a fresh session and asked *it* to kill something. Cleaning up two stray
+sessions that way made two more and hung the shell for two minutes.
+
+`session list`, `session kill`, `resources` and `help` are now answered by the CLI
+itself. Deliberately a thin re-implementation rather than a call into
+`SessionPool`: the pool owns per-conversation state — what you are connected to,
+which listing you were shown — and a one-shot invocation has none of it. What it
+shares is the router, which is where resolution actually lives. `where am i` and
+`detach` say plainly that they only mean something inside a conversation.
+
+A kill whose target does not resolve still falls through and is answered as an
+ordinary question, the same rule the pool follows — `kill the process on port
+9999` gets you `fuser -k 9999/tcp`, not a resolution error.

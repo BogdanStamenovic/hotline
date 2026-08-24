@@ -275,6 +275,19 @@ class SessionPool:
         self._conversation(key).attached_to = session_name
         self._save_bindings()
 
+    def release(self, key: str) -> str | None:
+        """Undo a `bind`. Returns what it was pointing at, if anything."""
+        conv = self.conversations.get(key)
+        if conv is None:
+            return None
+        was, conv.attached_to = conv.attached_to, None
+        # A conversation with no binding and no session of its own is just a
+        # stale key in the file; drop it rather than persist it forever.
+        if conv.own is None and not conv.turns:
+            self.conversations.pop(key, None)
+        self._save_bindings()
+        return was
+
     async def _own_session(self, conv: Conversation) -> str:
         """The name of this conversation's own session, spawning one if needed."""
         name = await self._spawn_own(conv)

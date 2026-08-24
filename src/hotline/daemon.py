@@ -119,6 +119,34 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
             "pool": pool.stats(),
         }
 
+    @server.route("POST", "/api/v1/bind")
+    async def bind(request: Request) -> tuple[int, dict[str, object]]:
+        """Point a conversation at a session, from outside the conversation.
+
+        Sticky routing already existed, but only Bogdan could set it, by typing
+        `connect <name>` -- and the name is derived (`hotline-3b`), changes
+        between runs, and is not something he has any reason to know. So every
+        Discord message went to a freshly spawned session with no context, which
+        answered his questions about the build by saying it had never heard of it.
+
+        Letting the session claim the conversation inverts that: the agent that
+        wants the traffic asks for it, and he just types.
+        """
+        authorise(request)
+        body = request.json()
+        key = str(body.get("key") or "").strip()
+        target = str(body.get("session") or "").strip()
+        if not key:
+            raise HttpError(400, "key is required")
+        if not target:
+            return 200, {"key": key, "attached_to": None, "released": pool.release(key)}
+        try:
+            session = pool.router.resolve(target)
+        except HotlineError as exc:
+            raise HttpError(404, str(exc)) from exc
+        pool.bind(key, session.name)
+        return 200, {"key": key, "attached_to": session.name, "pid": session.pid}
+
     @server.route("POST", "/api/v1/voice")
     async def voice(request: Request) -> tuple[int, dict[str, object]]:
         """Make the bot join or leave the voice channel, and say something.

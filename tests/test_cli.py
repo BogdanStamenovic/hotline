@@ -56,3 +56,45 @@ def test_install_hook_can_skip_the_guard(fake_claude: Path, capsys) -> None:
     (fake_claude / "settings.json").write_text("{}")
     assert main(["--install-hook", "--no-guard"]) == 0
     assert "skipped" in capsys.readouterr().err
+
+
+# ---- control phrases are answered by hotline, not by a model ------------
+#
+# `hotline "session kill data-b1"` used to spawn a fresh session and ask it to
+# kill something. Cleaning up two stray sessions that way made two more, plus a
+# hung shell.
+
+
+def test_a_control_phrase_never_reaches_a_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    import hotline.cli as cli_module
+
+    def explode(*args: object, **kwargs: object):
+        raise AssertionError("a control phrase was sent to a model")
+
+    monkeypatch.setattr(cli_module.Router, "ask_fresh", explode)
+    monkeypatch.setattr(cli_module.Router, "sessions", lambda self: [])
+    assert cli_module.main(["session", "list"]) == 0
+
+
+def test_kill_without_a_real_session_falls_through_to_a_question(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """"kill the process on port 9999" is a question. Answering it with a
+    resolution error would make the feature eat ordinary sentences."""
+    import hotline.cli as cli_module
+    from hotline.errors import SessionNotFound
+    from hotline.fresh import Reply
+
+    asked: list[str] = []
+
+    async def fake_fresh(self, text, narrator=None, cwd=None, timeout=300.0):
+        asked.append(text)
+        return Reply(text="that would be lsof")
+
+    def no_such(self, spec):
+        raise SessionNotFound(spec)
+
+    monkeypatch.setattr(cli_module.Router, "resolve", no_such)
+    monkeypatch.setattr(cli_module.Router, "ask_fresh", fake_fresh)
+    assert cli_module.main(["kill", "the", "process", "on", "port", "9999"]) == 0
+    assert asked == ["kill the process on port 9999"]

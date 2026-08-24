@@ -28,7 +28,7 @@ from .config import load_env
 from .errors import HotlineError
 from .fresh import Event
 from .guard import install_guard
-from .router import Router, describe, parse_utterance
+from .router import Route, Router, describe, parse_utterance
 from .stops import install_hook, stops_dir
 
 
@@ -85,6 +85,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--agents", action="store_true", help="list known agents and exit")
     parser.add_argument(
+        "--claim", nargs="?", const="discord", metavar="WHERE",
+        help="route a conversation to THIS session until released. "
+             "'discord' (default), 'voice', or an explicit conversation key. "
+             "--claim '' releases it.",
+    )
+    parser.add_argument(
         "--voice", action="store_true",
         help="give this agent a voice channel (created on demand, not at declaration)",
     )
@@ -139,6 +145,9 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
         for agent in known:
             print(agent.describe())
         return 0
+
+    if args.claim is not None:
+        return _claim(args.claim, args.session_id, log)
 
     if args.resume:
         return _resume(args.resume, registry, args.cwd, log)
@@ -236,6 +245,161 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
     registry.save()
     log(f"done: {finished.name}")
     return 0
+
+
+def _control_command(
+    route: Route, router: Router, log: Callable[[str], None]
+) -> int | None:
+    """`session list`, `session kill`, `resources`, `help` -- answered here.
+
+    A thin re-implementation rather than a call into SessionPool: the pool owns
+    per-conversation state (what you are connected to, which listing you were
+    shown) and a one-shot CLI invocation has none of that. What it shares with the
+    pool is the router, which is where resolution actually lives.
+    """
+    from .pool import HELP_TEXT, describe_resources
+
+    if route.action == "help":
+        print(HELP_TEXT)
+        return 0
+    if route.action == "resources":
+        print(describe_resources())
+        return 0
+    if route.action == "list":
+        live = router.sessions()
+        if not live:
+            log("no live Claude sessions")
+            return 0
+        for index, session in enumerate(live, 1):
+            where = (
+                f"tmux attach -t {session.tmux_session}"
+                if session.tmux_session
+                else "no pane"
+            )
+            print(f"{index}. {describe(session)} [{session.status or '?'}] ({where})")
+        return 0
+    if route.action == "kill" and route.target:
+        try:
+            router.resolve(route.target)
+        except HotlineError:
+            # Not a session. "kill the process on port 9999" is a question, and
+            # answering it with a resolution error would make the feature eat
+            # ordinary sentences -- the same rule the pool follows.
+            return None
+        try:
+            print(asyncio.run(router.kill_session(route.target)))
+        except HotlineError as exc:
+            print(f"hotline: error: {exc}", file=sys.stderr)
+            return 1
+        return 0
+    # `where am i` and `detach` are about a conversation, which a one-shot
+    # invocation does not have. Saying so beats pretending.
+    print(
+        f"hotline: {route.action!r} only means something inside a conversation "
+        "(Discord, voice or the phone), not in a one-shot command.",
+        file=sys.stderr,
+    )
+    return 2
+
+
+def _claim(where: str, session_id: str | None, log: Callable[[str], None]) -> int:
+    """Make this session the one a conversation reaches.
+
+    Goes through the daemon rather than editing the bindings file, because the
+    daemon holds the conversations in memory and rewrites that file itself -- a
+    CLI that wrote it directly would be silently overwritten by the next turn.
+    """
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    key = _conversation_key(where)
+    if key is None:
+        print(
+            f"hotline: error: don't know which conversation {where!r} means. "
+            "Use 'discord', 'voice', or an explicit key.",
+            file=sys.stderr,
+        )
+        return 2
+
+    sid = session_id or os.environ.get("CLAUDE_CODE_SESSION_ID")
+    target = ""
+    if sid:
+        for session in discover(include_self=True, include_programmatic=True):
+            if session.session_id == sid:
+                target = str(session.pid)
+                break
+        else:
+            print(
+                "hotline: error: this session is not visible to hotline, so it "
+                "cannot be claimed. Is it a live Claude session?",
+                file=sys.stderr,
+            )
+            return 1
+
+    port = os.environ.get("HOTLINE_PORT", "8788")
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{port}/api/v1/bind",
+        data=_json.dumps({"key": key, "session": target}).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            answer = _json.loads(response.read())
+    except urllib.error.HTTPError as exc:
+        print(f"hotline: error: {exc.code} {exc.read().decode()[:200]}", file=sys.stderr)
+        return 1
+    except OSError as exc:
+        print(f"hotline: error: hotlined is not reachable ({exc})", file=sys.stderr)
+        return 1
+
+    bound = answer.get("attached_to")
+    if bound:
+        log(f"{key} now reaches {bound}")
+    else:
+        log(f"{key} released; it goes back to its own session")
+    return 0
+
+
+def _conversation_key(where: str) -> str | None:
+    """Turn 'discord' or 'voice' into the key that transport actually uses."""
+    plain = where.strip().lower()
+    if plain in ("", "release", "none"):
+        plain = ""
+    if plain == "discord":
+        # The .env calls it DISCORD_TEXT_CHANNEL_ID; the older name is accepted
+        # too. Guessing this wrong once already cost a debugging round.
+        channel = os.environ.get("DISCORD_TEXT_CHANNEL_ID") or os.environ.get(
+            "DISCORD_CHANNEL_ID"
+        )
+        return f"discord-{channel}" if channel else _live_key("discord-")
+    if plain == "voice":
+        channel = os.environ.get("DISCORD_VOICE_CHANNEL_ID")
+        return f"voice-{channel}" if channel else _live_key("voice-")
+    return where.strip() or None
+
+
+def _live_key(prefix: str) -> str | None:
+    """Fall back to a conversation the daemon actually has.
+
+    If the channel id is not in the environment under any name we know, the
+    running daemon still knows which conversations exist -- and there is normally
+    exactly one per transport. Better than refusing over a variable name.
+    """
+    import json as _json
+    import urllib.request
+
+    port = os.environ.get("HOTLINE_PORT", "8788")
+    try:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/api/v1/sessions", timeout=10
+        ) as response:
+            stats = _json.loads(response.read()).get("pool", {})
+    except (OSError, ValueError):
+        return None
+    keys = [k["key"] for k in stats.get("keys", []) if str(k["key"]).startswith(prefix)]
+    return keys[0] if len(keys) == 1 else None
 
 
 def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str], None]) -> int:
@@ -346,7 +510,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         log(f"spool: {stops_dir()}")
         return 0
 
-    if args.declare or args.done or args.agents or args.resume or args.voice:
+    if (
+        args.declare or args.done or args.agents or args.resume or args.voice
+        or args.claim is not None
+    ):
         return _agent_command(args, log)
 
     if args.list:
@@ -370,6 +537,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif event.kind == "rate_limit":
             log(f"hotline: rate limit: {event.detail}")
 
+    # Control phrases are handled by hotline, not by a model. Without this
+    # `hotline "session kill data-b1"` spawns a fresh session and asks it to kill
+    # something -- which is how two stray sessions and a hung shell got made while
+    # cleaning up two stray sessions.
+    fell_through = False
+    if not args.to:
+        control = parse_utterance(text)
+        if control.mode == "control":
+            handled = _control_command(control, router, log)
+            if handled is not None:
+                return handled
+            # It looked like a command and was not one ("kill the process on port
+            # 9999"). Force it to a plain question, or the dispatch below sees
+            # mode="control" with a target and tries to inject into a session that
+            # does not exist.
+            fell_through = True
+
     try:
         if args.to:
             log(f"-> {describe(router.resolve(args.to))}")
@@ -377,7 +561,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 router.ask_session(args.to, text, narrator=narrate, timeout=args.timeout)
             )
         else:
-            route = parse_utterance(text)
+            route = Route("fresh", None, text) if fell_through else parse_utterance(text)
             if route.mode != "fresh" and route.target:
                 log(f"-> {route.mode} {route.target}")
                 reply = asyncio.run(
