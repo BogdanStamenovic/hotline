@@ -41,6 +41,25 @@ def runtime_dir() -> Path:
     return Path(xdg) / "hotline"
 
 
+def state_dir() -> Path:
+    """Durable state, as opposed to `runtime_dir()`.
+
+    The spool lives under /run on purpose, because a stop event from before a
+    reboot is meaningless. The agent registry is the opposite case: an agent that
+    finished yesterday still has three days of retention left, and a reboot must
+    not silently reset that clock or orphan its channel.
+    """
+    env = os.environ.get("HOTLINE_STATE")
+    if env:
+        return Path(env)
+    xdg = os.environ.get("XDG_STATE_HOME") or (Path.home() / ".local" / "state")
+    return Path(xdg) / "hotline"
+
+
+def agents_file() -> Path:
+    return state_dir() / "agents.json"
+
+
 def stops_dir() -> Path:
     return runtime_dir() / "stops"
 
