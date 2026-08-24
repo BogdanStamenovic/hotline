@@ -139,6 +139,23 @@ def install_receive_fixes() -> None:
             return None
 
     setattr(_opus.PacketDecoder, "pop_data", _safe_pop)  # noqa: B010
+
+    # On hangup py-cord's router calls stop_recording() from its own `finally`,
+    # after we have already stopped it, and the resulting RecordingException is
+    # raised on a daemon thread with a full traceback. Nothing is wrong -- but a
+    # clean hangup that prints a traceback trains you to ignore tracebacks.
+    from discord.voice.client import VoiceClient as _VC
+
+    _stop = _VC.stop_recording
+
+    def _quiet_stop(client: Any, *args: Any, **kwargs: Any) -> Any:
+        try:
+            return _stop(client, *args, **kwargs)
+        except Exception as exc:  # noqa: BLE001
+            log.debug("stop_recording during teardown: %s", exc)
+            return None
+
+    setattr(_VC, "stop_recording", _quiet_stop)  # noqa: B010
     _PATCHED = True
     log.info("installed py-cord receive fixes (pycord#3139 is a red herring)")
 

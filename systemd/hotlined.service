@@ -1,9 +1,11 @@
 [Unit]
 Description=hotline daemon (HTTP bridge from the phone to Claude Code)
-# Wants= not Requires=: a slow tailscaled must delay this, not prevent it. The
-# daemon is useful on localhost even before the tailnet is up.
+# Wants= not Requires=: a slow or failed tailscaled must delay this, not prevent
+# it. The daemon is useful on localhost and to the Discord bot long before the
+# tailnet is up, and Requires= would mean one flaky dependency takes the whole
+# phone path down.
 Wants=network-online.target
-After=network-online.target
+After=network-online.target tailscaled.service
 
 [Service]
 Type=simple
