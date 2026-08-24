@@ -200,7 +200,7 @@ class HotlineBot(discord.Bot):
             async with message.channel.typing():
                 route, reply = await self.pool.ask(key, text, narrator=narrate, timeout=900.0)
             body = reply.text
-            header = "" if route.mode == "fresh" else f"*{route.mode} → {route.target}*\n"
+            header = "" if route.mode in ("fresh", "own") else f"*{route.mode} → {route.target}*\n"
             if reply.notice:
                 header = f"⚠️ *{reply.notice}.*\n" + header
         except HotlineError as exc:
@@ -223,6 +223,32 @@ class HotlineBot(discord.Bot):
             with contextlib.suppress(discord.HTTPException):
                 await message.channel.send(part)
         self.log(f"{key}: answered in {elapsed:.1f}s ({len(body)} chars, {len(parts)} parts)")
+
+    async def deliver(self, key: str, text: str) -> None:
+        """Push something into the channel nobody is currently waiting on.
+
+        The stand-in tells the sender their message is queued and that the answer
+        will be relayed. This is what performs that relay -- and it is also the
+        only way anything in hotline can speak without having been spoken to,
+        which is why it is deliberately narrow: a conversation key maps to exactly
+        one channel, and anything that does not parse is logged rather than
+        guessed at.
+        """
+        if not key.startswith("discord-"):
+            return
+        try:
+            channel_id = int(key.removeprefix("discord-"))
+        except ValueError:
+            self.log(f"cannot relay to {key!r}: not a channel id")
+            return
+        channel = self.get_channel(channel_id) or await self.fetch_channel(channel_id)
+        if not isinstance(channel, discord.abc.Messageable):
+            self.log(f"cannot relay to {key!r}: channel is gone or cannot be posted to")
+            return
+        for part in chunk(text):
+            with contextlib.suppress(discord.HTTPException):
+                await channel.send(part)
+        self.log(f"relayed {len(text)} chars to {key}")
 
     async def _status(self, message: discord.Message) -> None:
         live = self.pool.router.sessions()

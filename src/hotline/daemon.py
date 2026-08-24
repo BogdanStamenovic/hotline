@@ -26,7 +26,8 @@ import contextlib
 import os
 import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
+from typing import Any
 
 from .config import load_env
 from .errors import HotlineError
@@ -205,6 +206,27 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
     return server
 
 
+def _relay_to(bot: Any, log: Callable[[str], None]) -> Callable[[str, str], Awaitable[None]]:
+    """Route an unsolicited message to whichever transport its key belongs to.
+
+    A voice call is spoken to; Discord is posted to. The phone gets neither, and
+    says so in the log rather than pretending: HTTP has no way to push, so a relay
+    for a phone conversation has nowhere to go until the caller asks again.
+    """
+
+    async def relay(key: str, text: str) -> None:
+        call = getattr(bot, "call", None)
+        if call is not None and getattr(call, "key", None) == key:
+            await call.say(text)
+            return
+        if key.startswith("discord-"):
+            await bot.deliver(key, text)
+            return
+        log(f"nowhere to relay {len(text)} chars for {key!r} (no push channel)")
+
+    return relay
+
+
 async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: bool) -> None:
     pool = SessionPool(
         router=Router(default_cwd=cwd),
@@ -233,6 +255,10 @@ async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: b
                 token = os.environ["HOTLINE_BOT_TOKEN"]
                 bot_task = asyncio.create_task(run_bot(bot, token, log))
                 server.bot = bot  # type: ignore[attr-defined]
+                # Wired after construction because the pool has to exist first.
+                # This is how an answer from a session that was busy reaches
+                # Bogdan without him asking a second time.
+                pool.deliver = _relay_to(bot, log)
 
     try:
         await server.serve_forever()

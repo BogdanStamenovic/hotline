@@ -19,20 +19,18 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from helpers import make_session
-from test_pool import FakeSession
+from helpers import FakeWorld, make_session
 
 import hotline.pool as pool_module
-from hotline.fresh import Reply
 from hotline.pool import SessionPool
 from hotline.router import parse_utterance
 
 
 @pytest.fixture(autouse=True)
-def fake_sessions(monkeypatch: pytest.MonkeyPatch) -> None:
-    FakeSession.created = 0
-    FakeSession.live = []
-    monkeypatch.setattr(pool_module, "FreshSession", FakeSession)
+def world(fake_claude: Path, monkeypatch: pytest.MonkeyPatch) -> FakeWorld:
+    """Real routing, faked transport. See helpers.FakeWorld."""
+    monkeypatch.setattr(SessionPool, "use_standin", False, raising=False)
+    return FakeWorld(fake_claude, monkeypatch, pool_module)
 
 
 @pytest.fixture
@@ -80,14 +78,14 @@ def test_ordinary_questions_are_not_control(utterance: str) -> None:
     assert parse_utterance(utterance).mode != "control"
 
 
-async def test_session_list_numbers_them(three: Path) -> None:
+async def test_session_list_numbers_them(three: Path, world) -> None:
     pool = SessionPool()
     _, reply = await pool.ask("k", "session list")
     assert reply.subtype == "control"
     assert "1. uxo-7f" in reply.text
     assert "3. data-d6" in reply.text
     assert "connect 2" in reply.text
-    assert FakeSession.created == 0
+    assert world.spawned == []
     await pool.close()
 
 
@@ -116,47 +114,32 @@ async def test_connect_by_name_and_by_directory(three: Path) -> None:
     await pool.close()
 
 
-async def test_connecting_makes_plain_messages_sticky(
-    three: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_connecting_makes_plain_messages_sticky(three: Path, world) -> None:
     """The actual request: connect once, then just talk."""
     pool = SessionPool()
-    seen: list[tuple[str, str]] = []
-
-    async def fake_attach(spec, text, narrator=None, timeout=300.0):
-        seen.append((spec, text))
-        return Reply(text=f"{spec} says hi", session_id="remote")
-
-    monkeypatch.setattr(pool.router, "ask_session", fake_attach)
+    world.replies["data-13"] = "data-13 says hi"
 
     await pool.ask("k", "connect data-13")
     route, reply = await pool.ask("k", "is the build green?")
     assert route.mode == "attach"
     assert route.target == "data-13"
     assert reply.text == "data-13 says hi"
-    assert seen == [("data-13", "is the build green?")]
-    # Sticky routing must not spawn a pooled subprocess nobody talks to.
-    assert FakeSession.created == 0
+    assert world.delivered == [("data-13", "is the build green?")]
+    # Sticky routing must not spawn a session nobody talks to.
+    assert world.spawned == []
     await pool.close()
 
 
-async def test_detach_returns_to_a_fresh_session(
-    three: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_detach_returns_to_a_fresh_session(three: Path, world) -> None:
     pool = SessionPool()
-
-    async def fake_attach(spec, text, narrator=None, timeout=300.0):
-        return Reply(text="remote", session_id="remote")
-
-    monkeypatch.setattr(pool.router, "ask_session", fake_attach)
     await pool.ask("k", "connect data-13")
     _, reply = await pool.ask("k", "detach")
     assert "Detached" in reply.text
     assert pool.conversations["k"].attached_to is None
 
     route, _ = await pool.ask("k", "hello")
-    assert route.mode == "fresh"
-    assert FakeSession.created == 1
+    assert route.mode == "own"
+    assert world.spawned == ["hl-k"]
     await pool.close()
 
 
@@ -167,29 +150,33 @@ async def test_connect_to_something_that_is_not_a_session_is_just_a_question(
     through is what stops the feature from eating ordinary sentences."""
     pool = SessionPool()
     route, reply = await pool.ask("k", "connect the dots in this diagram")
-    assert route.mode == "fresh"
+    assert route.mode == "own"
     assert reply.text == "answer-1"
     assert pool.conversations["k"].attached_to is None
     await pool.close()
 
 
-async def test_new_session_with_nothing_attached_is_not_swallowed(three: Path) -> None:
-    """"new session" reads as detach, but with nothing attached it should still
-    start a turn rather than reply with a no-op acknowledgement."""
+async def test_new_session_really_starts_over(three: Path, world) -> None:
+    """"new session" means throw this one away. It now has a session to throw."""
     pool = SessionPool()
-    route, reply = await pool.ask("k", "new session")
-    assert route.mode == "fresh"
-    assert reply.text == "answer-1"
+    await pool.ask("k", "hello")
+    _, reply = await pool.ask("k", "new session")
+    assert route_is_control(reply)
+    assert world.killed == ["hl-k"]
+    assert pool.conversations["k"].own is None
+
+    # And the next thing said opens a genuinely new one.
+    await pool.ask("k", "hello again")
+    assert world.spawned == ["hl-k", "hl-k"]
     await pool.close()
 
 
-async def test_where_am_i(three: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def route_is_control(reply) -> bool:
+    return reply.subtype == "control"
+
+
+async def test_where_am_i(three: Path, world) -> None:
     pool = SessionPool()
-
-    async def fake_attach(spec, text, narrator=None, timeout=300.0):
-        return Reply(text="remote", session_id="remote")
-
-    monkeypatch.setattr(pool.router, "ask_session", fake_attach)
     _, reply = await pool.ask("k", "where am i")
     assert "Not connected" in reply.text
     await pool.ask("k", "connect uxo-7f")
@@ -198,79 +185,55 @@ async def test_where_am_i(three: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     await pool.close()
 
 
-async def test_the_connection_is_per_conversation(
-    three: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_the_connection_is_per_conversation(three: Path, world) -> None:
     """Discord and the phone are different callers; one connecting must not drag
     the other along."""
     pool = SessionPool()
-
-    async def fake_attach(spec, text, narrator=None, timeout=300.0):
-        return Reply(text=spec, session_id="remote")
-
-    monkeypatch.setattr(pool.router, "ask_session", fake_attach)
     await pool.ask("discord", "connect data-13")
     route, _ = await pool.ask("phone", "hello there")
-    assert route.mode == "fresh"
+    assert route.mode == "own"
     assert pool.conversations["phone"].attached_to is None
     await pool.close()
 
 
-async def test_an_explicit_connection_beats_an_inferred_target(
-    three: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_an_explicit_connection_beats_an_inferred_target(three: Path, world) -> None:
     """"what are you working on" infers the *newest* session. While deliberately
     connected to an older one, that inference must not hijack the message."""
     pool = SessionPool()
-    seen: list[str] = []
-
-    async def fake_attach(spec, text, narrator=None, timeout=300.0):
-        seen.append(spec)
-        return Reply(text="ok", session_id="remote")
-
-    monkeypatch.setattr(pool.router, "ask_session", fake_attach)
     await pool.ask("k", "connect data-d6")  # the oldest
     route, _ = await pool.ask("k", "what are you working on")
     assert route.target == "data-d6"
-    assert seen == ["data-d6"]
+    assert [name for name, _ in world.delivered] == ["data-d6"]
     await pool.close()
 
 
-async def test_an_inferred_target_still_works_with_no_connection(
-    three: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_an_inferred_target_still_works_with_no_connection(three: Path, world) -> None:
     pool = SessionPool()
-    seen: list[str] = []
-
-    async def fake_attach(spec, text, narrator=None, timeout=300.0):
-        seen.append(spec)
-        return Reply(text="ok", session_id="remote")
-
-    monkeypatch.setattr(pool.router, "ask_session", fake_attach)
     route, _ = await pool.ask("k", "what are you working on")
     assert route.mode == "attach"
-    assert seen == ["newest"]
+    # "newest" resolved against the real listing, which is uxo-7f.
+    assert [name for name, _ in world.delivered] == ["uxo-7f"]
     await pool.close()
 
 
 @pytest.mark.parametrize("utterance", ["help", "Help", "commands", "what can you do"])
-async def test_help_is_answered_by_the_system(three: Path, utterance: str) -> None:
+async def test_help_is_answered_by_the_system(three: Path, utterance: str, world) -> None:
     """Bogdan typed control words and watched them reach a model as chat instead.
     Commands the system knows about must never leak through."""
     pool = SessionPool()
     route, reply = await pool.ask("k", utterance)
     assert route.mode == "control"
     assert "session list" in reply.text
-    assert FakeSession.created == 0
+    assert world.spawned == []
     await pool.close()
 
 
-async def test_detach_with_nothing_attached_is_still_answered(three: Path) -> None:
+async def test_detach_with_nothing_attached_is_still_answered(three: Path, world) -> None:
     pool = SessionPool()
     route, reply = await pool.ask("k", "detach")
     assert route.mode == "control"
     assert "Not connected" in reply.text
-    assert FakeSession.created == 0
+    assert world.spawned == []
     await pool.close()
 
 
@@ -289,13 +252,11 @@ async def test_resources_reports_real_numbers(three: Path) -> None:
 async def test_help_shaped_questions_still_reach_a_session(three: Path, utterance: str) -> None:
     pool = SessionPool()
     route, _ = await pool.ask("k", utterance)
-    assert route.mode == "fresh"
+    assert route.mode == "own"
     await pool.close()
 
 
-async def test_connect_by_number_uses_the_list_you_were_shown(
-    three: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_connect_by_number_uses_the_list_you_were_shown(three: Path, world) -> None:
     """`connect 1` must mean the first line of the list you just saw.
 
     Bogdan typed `connect 1`, a relay session happened to be newest at that

@@ -704,3 +704,167 @@ not resolve falls through and is answered as an ordinary question.
 Not built: **#1** (each session spawning its own tmux), **#2** (stand-in agent for
 busy sessions), **#3** (`session kill`), **#5** (delivery receipts), **#6** (raw
 output relayed as one reply).
+
+---
+
+## Working through `tofix.md` — the session-management round
+
+Bogdan came back to the machine with three complaints and one instruction
+("basically implement the whole `~/tofix.md`"):
+
+> when i type a message in discord and it starts a fresh agent, that agent never
+> gets started in tmux meaning i cannot detach and save for later. Second thing
+> is session kill isnt implemented. Third thing is: When you send a message to a
+> specified agent never did a temp agent spawn.
+
+### The one architectural decision
+
+Items #1, #3, #6 and half of #8 turned out to be the same defect wearing four
+hats, and none of them were fixable in place.
+
+A "fresh" session was a `claude --output-format stream-json` on the end of a
+pipe. It answered questions perfectly well and was, to a human, a ghost: no pane,
+nothing to attach to, nothing to kill by name, nothing to look at when it went
+quiet. **A process driven over pipes cannot also be a terminal you type into**,
+so this was never going to be a patch — the transport had to change.
+
+So a session is now an ordinary interactive `claude` in a detached tmux session,
+reached the way an attached session has always been reached: inject on the
+AF_UNIX socket, read the answer out of the transcript. **One mechanism instead of
+two.**
+
+The discovery that made it cheap: **the CLI already records its own tmux target
+in its descriptor.**
+
+```json
+"tmux": "hl-discord:@6.%6",
+"messagingSocketPath": "/run/user/1000/cc-socks/101920.sock"
+```
+
+There was no registry to invent. `LiveSession.tmux` had to start reading a field
+that was already being written. `session list` now marks every session with
+either its `tmux attach -t …` command or "no pane — cannot be attached to",
+which is Bogdan's own observation turned into a line of output.
+
+Measured on the real machine: **spawn plus first answer, 4.1 seconds.** Second
+turn 2.4s, and it remembered the first — so context genuinely survives across
+requests.
+
+### What the change bought beyond a pane
+
+- **`session kill` means one thing.** Resolve by name, number-from-the-list-you-
+  were-shown, directory or ordinal; SIGTERM, wait, SIGKILL, then close the tmux
+  session so `tmux ls` does not fill with dead shells. It refuses to kill hotline
+  itself — `kill` resolves fuzzily, and "kill the hotline one" is an entirely
+  natural thing to say to the process named hotline.
+- **`kill` is the one command where a generous match is a bug.** Bare `stop` and
+  `end` were in my first regex and came straight back out: "stop the build" is one
+  fuzzy match away from ending a session someone is sitting in front of. Only
+  `kill`/`terminate`, or an explicit `session stop`. Anything whose target does
+  not resolve falls through and is answered as an ordinary question.
+- **Reaping stopped destroying things.** It used to kill the subprocess, which is
+  how a conversation could vanish mid-exchange (#8). It now drops the in-memory
+  binding only — and because the tmux name is derived from the caller key rather
+  than remembered, the next message **walks back into the same session with its
+  context intact**. The same property means a `hotlined` restart no longer costs
+  anyone their conversation, so the "your context is gone" notice is now only
+  printed when the session really did die.
+
+### The stand-in (#2 and #5, which are one mechanism seen from two ends)
+
+A message to a session that is mid-turn lands in its inbox and sits there. That
+is correct, and from the sender's chair it is **indistinguishable from the
+message having been dropped on the floor.** Silence is the one answer a messaging
+system must never give.
+
+So when the target is busy, three things happen instead of a wait:
+
+1. the message is injected anyway — that is the receipt, and it is real
+2. a short-lived agent is handed the target's pane, its transcript tail, its
+   descriptor status and how long since it last wrote anything, and reports back
+3. a background task keeps waiting, and **relays the real answer when it lands**
+
+Step 3 is the half that is easy to skip, and skipping it makes the stand-in a
+liar: it promises a relay that nothing in the system can perform.
+
+The stand-in is deliberately tool-less, single-turn, and the one place hotline
+pins a smaller model. Latency is the entire product — it is competing with the
+sender staring at nothing, and an accurate report ninety seconds later is worth
+less than a good one in five.
+
+### Two things found by running it
+
+**The pane lies about liveness.** Every freshly spawned session comes up showing
+`Make auto mode your default permission mode?` — a modal nobody is going to
+answer. It looks exactly like a wedged session. It is not: messages arrive over a
+socket, not by typing, and an injected question came back in **2.4s with the
+prompt still on screen**. The stand-in is now told this explicitly, because its
+main evidence is the pane and it would otherwise report every healthy session as
+stuck.
+
+**The notice was being popped one message too early.** `ask()` read the pending
+"your session went away" notice on the way in, then discovered the session was
+gone while routing — so the caller was handed a brand-new empty session with no
+warning, and the warning arrived attached to the *next* message. That is tofix #8
+in miniature, reintroduced by my own refactor and caught by a test I had written
+for the old code path. Popped after routing now.
+
+### Narration, and the "endless raw output" (#6)
+
+Bogdan flagged #6 as possibly wrong, and it half was. Nothing emits raw output
+forever; what he saw was live narration on a long turn with no final answer yet.
+But the underlying complaint was real in a different way: narration only ever
+existed for the old pipe-driven sessions, because only stream-json emitted
+events. Attached sessions — the ones you actually care about, the ones doing four
+minutes of work — had none.
+
+The transcript is being appended to the whole time a turn runs, so those events
+were always readable; nothing was parsing them. `collect()` now reads them
+incrementally while it waits. Attached sessions gained live narration they never
+had, and the reply is still exactly one message: the final assistant text, not
+the stream.
+
+### Test seam moved down a layer
+
+The old tests swapped in a fake `FreshSession`, which stopped meaning anything
+once a session became a pane reached over a socket. The seam moved to where it
+should always have been: `tmuxen.spawn` really writes a descriptor into a fake
+`~/.claude`, and only `Router.deliver`/`Router.collect` are faked. So resolution,
+stickiness, spawning, eviction and the busy path all run their real code.
+
+### The bug that mattered more than any of the tofix items
+
+While testing #1 I found that a turn could be handed **another turn's answer**.
+
+The Stop hook fires a beat before the final assistant text reaches the
+transcript. The waiter saw "stopped, and no text yet", and *consumed* the stop —
+it advanced its stamp past it, so that stop could never fire again for this turn.
+The quiescence fallback that exists to catch precisely this was switched off,
+because it only accepted status `idle` and a freshly spawned session sits in
+`waiting`. So the loop spun until the **next** turn's stop and returned that
+turn's reply. Live: 226 seconds, then the answer to a different question.
+
+**My first fix was wrong, and worse than the bug.** I widened quiescence to
+"anything that is not `busy`". A probe sampling the descriptor every 400ms
+through a full twenty-five second tool call showed status `waiting` at t=0 and
+never changing — it is not a turn indicator at all, it is where a tmux-spawned
+session sits for its entire life. So the next run returned the model's opening
+word, `STARTING`, 8.4 seconds into a 25-second job. I had traded a rare wrong
+answer for a constant one.
+
+The status field was never the cause. Consuming the stop was. The waiter now
+never advances its stamp — `saw_marker` plus non-empty text is what decides, and
+a stop belonging to an earlier turn yields neither, so leaving it armed costs
+nothing — with a 0.6s settle so a stop that beats its own text still reads it.
+Quiescence went back to the narrow fallback it was, with a comment saying exactly
+why it must never be widened again.
+
+The same measurement forced a second change. The stand-in's "is this session
+busy?" test was `status == "busy"`, which for these sessions is never true — so
+the stand-in never fired at all in its first live test, and the message went to
+the busy session and sat there. Busy is now derived from evidence instead:
+a session wrote to its transcript recently and no stop has been recorded since
+that write. It clears itself the moment the turn ends.
+
+Three tool-using turns after the fix: 6.8s, 5.8s, 5.9s, each returning its own
+answer, each narrating its `Bash` call while it ran.

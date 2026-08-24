@@ -20,10 +20,11 @@ from __future__ import annotations
 
 import asyncio
 import re
+import time
 from dataclasses import dataclass
 from time import monotonic
 
-from .ccsocks import LiveSession, discover, inject, status_of
+from .ccsocks import LiveSession, discover, inject, status_of, terminate
 from .config import DEFAULT_REPLY_TIMEOUT, POLL_INTERVAL, QUIET_SECONDS
 from .errors import (
     AmbiguousSession,
@@ -35,7 +36,7 @@ from .errors import (
 )
 from .fresh import Event, FreshSession, Narrator, Reply
 from .stops import stop_stamp
-from .transcript import read_since, size_of
+from .transcript import read_since, size_of, transcript_path
 
 __all__ = [
     "AmbiguousSession",
@@ -48,6 +49,7 @@ __all__ = [
     "Route",
     "Router",
     "SessionNotFound",
+    "Watch",
     "describe",
     "parse_utterance",
 ]
@@ -63,13 +65,35 @@ _NEWEST = {"newest", "latest", "newer", "last", "most recent", "recent", "curren
 _OLDEST = {"oldest", "older", "first", "earliest", "original"}
 _ORDINALS = {"first": 0, "second": 1, "third": 2, "fourth": 3, "fifth": 4}
 
+# How long after its last transcript write a session still counts as working. Long
+# enough to span a slow tool call, short enough that a session abandoned mid-turn
+# stops being described as busy forever.
+MID_TURN_WINDOW = 120.0
+# Grace for a stop event that fired just before its own text was flushed.
+SETTLE_SECONDS = 0.6
+
+
+@dataclass
+class Watch:
+    """A message that has been put in a session's inbox, and where to look for the reply."""
+
+    session: LiveSession
+    offset: int
+    stamp: float
+    marker: str
+    # Whether the target was mid-turn when we injected. The sender is owed a very
+    # different answer in that case -- see `hotline.standin`.
+    was_busy: bool = False
+    saw_marker: bool = False
+
 
 @dataclass
 class Route:
     mode: str  # fresh | attach | agent | control
     target: str | None
     text: str
-    # Only set for mode == "control": list | connect | detach | where
+    # Only set for mode == "control": list | connect | detach | where | kill
+    #                               | help | resources
     action: str | None = None
     # True when the target was inferred from phrasing rather than named. An
     # explicit `connect` beats an inference -- otherwise "what are you working
@@ -92,6 +116,14 @@ _HELP = re.compile(r"^(?:help|commands?|what\s+can\s+(?:you|i)\s+do)\s*[.?!]?$",
 _RESOURCES = re.compile(
     r"^(?:resources?|load|how\s+(?:much|is)\s+(?:ram|memory|vram|load)\S*)\s*[.?]?$", re.IGNORECASE
 )
+# `kill` has to be an explicit verb with an explicit target. No fuzzy synonyms and
+# no bare "kill" -- this ends a process someone may be sitting in front of, and it
+# is the one command here where a generous match is a bug rather than a kindness.
+_KILL = re.compile(
+    r"^(?:kill|terminate)\s+(?:session\s+)?(.+?)\s*[.?]?$"
+    r"|^session\s+(?:kill|terminate|stop|end)\s+(.+?)\s*[.?]?$",
+    re.IGNORECASE,
+)
 
 def parse_utterance(utterance: str) -> Route:
     """Work out what the caller wants from how they opened the call.
@@ -111,6 +143,10 @@ def parse_utterance(utterance: str) -> Route:
         return Route("control", None, text, action="resources")
     if _LIST.match(low):
         return Route("control", None, text, action="list")
+    kill = _KILL.match(text)
+    if kill:
+        target = kill.group(1) or kill.group(2) or ""
+        return Route("control", target.strip(), text, action="kill")
     if _DETACH.match(low):
         return Route("control", None, text, action="detach")
     if _WHERE.match(low):
@@ -150,6 +186,30 @@ def _split_target(tail: str) -> tuple[str, str]:
         return head.strip(), rest.strip()
     parts = tail.split(None, 1)
     return (parts[0].strip(), parts[1].strip() if len(parts) > 1 else "")
+
+
+def mid_turn(session: LiveSession, window: float = MID_TURN_WINDOW) -> bool:
+    """Is this session in the middle of a turn right now?
+
+    The descriptor's `status` cannot answer this. A session started in tmux
+    reports "waiting" from the moment it boots until it dies -- measured across a
+    full twenty-five second tool call, it never changed once -- so trusting it
+    means never noticing a busy session at all.
+
+    The transcript can answer it. A turn in flight is a session that wrote
+    something recently with no stop recorded since that write; once the turn ends
+    the stop lands after the last write and the condition clears by itself.
+    """
+    path = transcript_path(session.session_id)
+    if path is None:
+        return session.status == "busy"
+    try:
+        last_write = path.stat().st_mtime
+    except OSError:
+        return session.status == "busy"
+    if time.time() - last_write > window:
+        return False
+    return stop_stamp(session.session_id) < last_write * 1e9
 
 
 def describe(session: LiveSession) -> str:
@@ -228,6 +288,11 @@ class Router:
 
     # ---- the three modes ------------------------------------------------
 
+    # The pipe-driven transport, kept for exactly one caller: the one-shot CLI.
+    # Conversations use tmux sessions (see `hotline.tmuxen`) because they need to
+    # be attachable, killable and long-lived. A single `hotline "what is X"` needs
+    # none of that, and spawning a pane per question would leave litter behind for
+    # every one-liner. Nothing else should use this.
     async def ask_fresh(
         self,
         text: str,
@@ -238,40 +303,83 @@ class Router:
         async with FreshSession(cwd or self.default_cwd, bypass=self.bypass) as session:
             return await session.ask(text, narrator=narrator, timeout=timeout)
 
-    async def ask_session(
+    async def deliver(self, spec: str, text: str) -> Watch:
+        """Resolve a session, put the message in its inbox, and hand back a receipt.
+
+        Split out from the waiting half deliberately. Delivery either happened or
+        it did not, and that is knowable in milliseconds -- whereas the *answer*
+        may be five minutes away if the target is mid-turn. Conflating the two is
+        what made a message to a busy session look identical to a message that
+        went nowhere.
+
+        The two baselines are taken before injecting, not after: if the target is
+        already working, the next stop event belongs to the turn in flight and its
+        reply is not ours.
+        """
+        session = self.resolve(spec)
+        watch = Watch(
+            session=session,
+            offset=size_of(session.session_id),
+            stamp=stop_stamp(session.session_id),
+            marker=text,
+            was_busy=mid_turn(session),
+        )
+        await inject(session, text)
+        return watch
+
+    async def collect(
         self,
-        spec: str,
-        text: str,
+        watch: Watch,
         narrator: Narrator | None = None,
         timeout: float = DEFAULT_REPLY_TIMEOUT,
     ) -> Reply:
-        """Inject into a live session and read its reply back out of the transcript.
+        """Wait for the delivered message to be answered, narrating as it goes.
 
-        The two baselines taken before injecting are what make this safe when the
-        target is already mid-turn: the stop that fires next may belong to the turn
-        already in flight, so we keep waiting until the transcript actually shows
-        our own message followed by an answer.
+        Narration used to exist only for fresh sessions, because only the
+        stream-json transport emitted events. But the transcript is being appended
+        to the whole time a turn runs, so the same events are readable here -- and
+        an attached session doing four minutes of work is exactly where a caller
+        most needs to hear that something is happening.
         """
-        session = self.resolve(spec)
+        session = watch.session
         sid = session.session_id
-        offset = size_of(sid)
-        stamp = stop_stamp(sid)
-
-        await inject(session, text)
-
         deadline = monotonic() + timeout
         last_size = size_of(sid)
         last_change = monotonic()
-        saw_marker = False
+        narrated = 0
+        stamp = watch.stamp
+        settled = False
 
         while monotonic() < deadline:
             await asyncio.sleep(POLL_INTERVAL)
 
             size = size_of(sid)
-            if size != last_size:
+            grew = size != last_size
+            if grew:
                 last_size, last_change = size, monotonic()
 
+            turn = read_since(sid, watch.offset, marker=watch.marker) if grew else None
+            if turn is not None:
+                watch.saw_marker = watch.saw_marker or turn.saw_marker
+                if narrator is not None and turn.saw_marker:
+                    for name in turn.tools[narrated:]:
+                        narrator(Event("tool", name, tool=name))
+                narrated = max(narrated, len(turn.tools))
+
+            # `stamp` is never advanced. The stop hook can fire a beat before the
+            # final assistant text reaches the transcript, and consuming the stop
+            # in that window disarms the only reliable completion signal we have:
+            # the loop then spins until the *next* turn's stop and hands this
+            # caller that turn's answer. Live, one turn waited 226 seconds and
+            # returned the reply to a different question. Leaving the stop armed
+            # costs nothing -- `saw_marker` plus non-empty text is what actually
+            # decides, and a stop belonging to an earlier turn yields neither.
             stopped = stop_stamp(sid) > stamp
+            # Quiescence stays narrow on purpose. It is the fallback for sessions
+            # with no Stop hook, and it must never be widened to cover "waiting":
+            # a tmux-spawned session reports "waiting" for its entire life,
+            # including mid-turn, so accepting it returned the model's opening
+            # preamble as the answer eight seconds into a twenty-five second job.
             quiet = (
                 monotonic() - last_change >= QUIET_SECONDS
                 and status_of(session.pid) in (None, "idle")
@@ -279,29 +387,46 @@ class Router:
             if not (stopped or quiet):
                 continue
 
-            turn = read_since(sid, offset, marker=text)
-            saw_marker = saw_marker or turn.saw_marker
+            if stopped and not settled:
+                # Let a just-fired stop finish landing its text before reading.
+                settled = True
+                await asyncio.sleep(SETTLE_SECONDS)
+
+            turn = read_since(sid, watch.offset, marker=watch.marker)
+            watch.saw_marker = watch.saw_marker or turn.saw_marker
             if turn.saw_marker and turn.text:
                 reply = Reply(text=turn.text, session_id=sid, subtype="attached")
                 reply.events = [Event("tool", name, tool=name) for name in turn.tools]
-                if narrator is not None:
-                    for event in reply.events:
-                        narrator(event)
                 return reply
-            if stopped:
-                stamp = stop_stamp(sid)
 
         raise ReplyTimeout(
             f"{describe(session)} did not produce a reply within {timeout:.0f}s. "
             + (
                 "It did receive the message, so it is still working or it stopped "
                 "without answering."
-                if saw_marker
+                if watch.saw_marker
                 else "The message never reached its transcript -- it is most likely "
                 'being held. Set "crossSessionInbound": "accept" in '
                 "~/.claude/settings.json, or approve it in that session's UI."
             )
         )
+
+    async def ask_session(
+        self,
+        spec: str,
+        text: str,
+        narrator: Narrator | None = None,
+        timeout: float = DEFAULT_REPLY_TIMEOUT,
+    ) -> Reply:
+        """Inject into a live session and read its reply back out of the transcript."""
+        watch = await self.deliver(spec, text)
+        return await self.collect(watch, narrator=narrator, timeout=timeout)
+
+    async def kill_session(self, spec: str) -> str:
+        """`session kill <name-or-ref>`, resolving the same way everything else does."""
+        session = self.resolve(spec)
+        outcome = await terminate(session)
+        return f"{describe(session)} {outcome}."
 
     async def ask(
         self,

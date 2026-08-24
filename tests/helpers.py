@@ -18,6 +18,7 @@ def make_session(
     session_id: str,
     started_at: int = 1000,
     status: str | None = "idle",
+    tmux: str | None = None,
 ) -> None:
     """Write a descriptor, a key file, and a stand-in socket.
 
@@ -38,6 +39,7 @@ def make_session(
                 "kind": "interactive",
                 "status": status,
                 "messagingSocketPath": str(sock),
+                "tmux": tmux,
             }
         )
     )
@@ -74,3 +76,97 @@ def assistant_entry(text: str, tools: list[str] | None = None, sidechain: bool =
         "isSidechain": sidechain,
         "message": {"role": "assistant", "content": content},
     }
+
+
+class FakeWorld:
+    """A pool with its transport replaced, one layer lower than the old fake.
+
+    The pool used to be tested by swapping in a fake `FreshSession`, which stopped
+    meaning anything once a session became a tmux pane reached over a socket. The
+    seam moved down to where it should always have been: `tmuxen.spawn` really
+    writes a descriptor into the fake `~/.claude`, and `Router.deliver` /
+    `Router.collect` stand in for the socket and the transcript. So resolution,
+    stickiness, eviction and the busy path all run their real code here, and only
+    the two calls that would touch the machine are faked.
+    """
+
+    def __init__(self, home, monkeypatch, pool_module) -> None:
+        self.home = home
+        self.spawned: list[str] = []
+        self.delivered: list[tuple[str, str]] = []
+        self.busy: set[str] = set()
+        self.replies: dict[str, str] = {}
+        self.delay = 0.0
+        self.explode: set[str] = set()
+        self.killed: list[str] = []
+        self._pid = 9000
+        self._turns: dict[str, int] = {}
+        self._patch(monkeypatch, pool_module)
+
+    # -- the two faked calls --------------------------------------------
+
+    async def spawn(self, key, cwd=None, bypass=True):
+        import hotline.tmuxen as tmuxen_module
+        from hotline.ccsocks import discover
+
+        name = tmuxen_module.tmux_name(key)
+        for session in discover():
+            if session.tmux_session == name:
+                return session
+        self._pid += 1
+        self.spawned.append(name)
+        make_session(
+            self.home, self._pid, name, cwd or "/home/bodas",
+            session_id=f"sid-{self._pid}", started_at=self._pid, tmux=f"{name}:@0.%0",
+        )
+        return next(s for s in discover() if s.pid == self._pid)
+
+    async def deliver(self, spec, text):
+        from hotline.router import Watch
+
+        session = self._router.resolve(spec)
+        self.delivered.append((session.name, text))
+        return Watch(
+            session=session, offset=0, stamp=0.0, marker=text,
+            was_busy=session.name in self.busy,
+        )
+
+    async def collect(self, watch, narrator=None, timeout=300.0):
+        import asyncio
+
+        from hotline.errors import ClaudeLaunchFailed
+        from hotline.fresh import Reply
+
+        name = watch.session.name
+        if self.delay:
+            await asyncio.sleep(self.delay)
+        if name in self.explode:
+            raise ClaudeLaunchFailed("that session died mid-turn")
+        self._turns[name] = self._turns.get(name, 0) + 1
+        text = self.replies.get(name) or f"answer-{self._turns[name]}"
+        return Reply(text=text, session_id=watch.session.session_id, subtype="attached")
+
+    async def kill_session(self, spec):
+        session = self._router.resolve(spec)
+        self.killed.append(session.name)
+        (self.home / "sessions" / f"{session.pid}.json").unlink(missing_ok=True)
+        return f"{session.name} stopped."
+
+    # -- wiring ----------------------------------------------------------
+
+    def _patch(self, monkeypatch, pool_module) -> None:
+        import hotline.tmuxen as tmuxen_module
+        from hotline.router import Router
+
+        monkeypatch.setattr(pool_module.tmuxen, "spawn", self.spawn)
+        monkeypatch.setattr(tmuxen_module, "exists", lambda name: name in self.spawned)
+        monkeypatch.setattr(Router, "deliver", lambda r, spec, text: self.deliver(spec, text))
+        monkeypatch.setattr(
+            Router, "collect",
+            lambda r, watch, narrator=None, timeout=300.0: self.collect(watch, narrator, timeout),
+        )
+        monkeypatch.setattr(Router, "kill_session", lambda r, spec: self.kill_session(spec))
+        self._router = Router()
+
+    def turns_for(self, name: str) -> int:
+        return self._turns.get(name, 0)

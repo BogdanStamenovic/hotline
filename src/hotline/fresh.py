@@ -1,5 +1,11 @@
 """A persistent `claude` subprocess driven over stream-json.
 
+**Scope note.** This used to be how every hotline conversation ran. It is now
+used by the one-shot CLI alone: a process on the end of a pipe cannot also be a
+terminal you can attach to, and that is what conversations need, so they moved to
+`hotline.tmuxen`. A single `hotline "what is X"` genuinely does not want a tmux
+pane left behind, which is why this stayed rather than being deleted.
+
     claude --input-format stream-json --output-format stream-json --verbose \
            --permission-mode bypassPermissions
 

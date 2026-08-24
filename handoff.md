@@ -116,14 +116,45 @@ Do NOT email him just to ask for tokens — he already knows.
       points at pigion so Phase 5's wake is invisible to it -- `wake_upstream()`
       is the seam. Recipe at `iphone/SHORTCUT.md`; Bogdan still has to build the
       Shortcut by hand (3 min). NOTE: `~/pigion-todo` is on PIGION, not here.
-- [ ] **Phase 3 — Discord text bridge  <-- START HERE** + escalating `@mention` page ladder +
-      `call-bogdan` skill.
-- [ ] Phase 4 — Discord voice (py-cord sink -> silero VAD -> faster-whisper ->
-      router -> Piper), with tool-call narration and barge-in.
-- [ ] Phase 5 — Pigion sentinel bot + magic packet + boot units on archserver
-      (`loginctl enable-linger bodas`, system unit `User=bodas`,
-      `After=network-online.target tailscaled.service`, `Wants=` not `Requires=`)
-      + NM `wake-on-lan magic` + udev rule.
+- [x] **Phase 3 — Discord text bridge.** DONE. Gate is author-id first, then
+      guild, then channel — guild membership alone is not sufficient and there are
+      tests that say so. Pager (`hotline-page`) is REST-only and synchronous on
+      purpose, so a blocked agent can page from any session even with `hotlined`
+      dead. Verified live: real question, answered by DM in 53s. Two bugs found by
+      using it: silent truncation at 1900 chars (now numbered parts), and the
+      pager and bridge sharing one channel (now a page-claim file under /run).
+      `scripts/scan-secrets.py` is a pre-commit hook after real ids were found
+      staged in `tests/test_bot.py` for a public push.
+- [x] **Phase 4 — Discord voice.** DONE, verified with Bogdan's own voice.
+      pycord#3139 (DAVE) is a red herring — DAVE works. Six separate receive bugs
+      in py-cord, each of which looks exactly like the advertised breakage, plus
+      two more that only appear when the sender is a real client rather than a
+      bot: the hardcoded 8-byte extension offset, and `OpusError` killing the
+      router thread so one bad frame deafened the call permanently. Also: Discord
+      rotates the transport key when participants change and py-cord never calls
+      its own `update_secret_key`; the decryptor now rebuilds and retries.
+      Measured: distil-large-v3 on the 4060 at 0.2-0.36s/utterance, Piper at 30x.
+- [x] **Phase 5 — Pigion sentinel + boot units + WoL.** Sentinel is a hand-rolled
+      gateway client (GUILD_VOICE_STATES only) running as a thread inside
+      `frontdoor.py`, 31MB resident, verified on a real join. Boot units enabled
+      with lingering on both machines. **The magic packet has never woken
+      anything and is UNVERIFIED-BY-DESIGN:** `enp4s0` is NO-CARRIER. What is
+      verified is that the correct 102 bytes leave Pigion.
+- [x] **`tofix.md` round (2026-08-24).** All 8 items done — see the status block
+      appended to `~/tofix.md`. Sessions now run in tmux and are attachable,
+      killable and survive a daemon restart with their context; busy sessions get
+      a stand-in plus a background relay. One serious bug found and fixed on the
+      way: the reply waiter consumed the Stop event and could hand a caller
+      another turn's answer (226s, wrong question). See PROGRESS.md.
+
+### Still blocked on Bogdan, physically
+
+- Plug an ethernet cable into `enp4s0` (it is NO-CARRIER; nothing can wake it).
+- BIOS on the ASRock B550M-HVS SE (no IPMI, so this cannot be done remotely):
+  ErP / ErP Ready **disabled**, PCIE Devices Power On / PME Event Wake Up
+  **enabled**. ErP is the one that bites — it cuts standby power to the NIC.
+- Optional: enabling `nvidia-suspend`/`nvidia-resume` for S3 needs one real
+  cycle with the GPU loaded and a human present.
 
 ## Design notes worth keeping
 

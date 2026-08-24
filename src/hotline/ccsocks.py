@@ -22,11 +22,13 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import signal
 from dataclasses import dataclass
 from pathlib import Path
+from time import monotonic
 
 from .config import sessions_dir
-from .errors import InjectFailed
+from .errors import HotlineError, InjectFailed
 
 
 @dataclass(frozen=True)
@@ -41,10 +43,23 @@ class LiveSession:
     kind: str
     status: str | None
     entrypoint: str = "?"
+    # "session:@window.%pane", written by the CLI itself when it is running inside
+    # tmux. This is what makes a session attachable after the fact, and it was
+    # already being recorded long before hotline started reading it.
+    tmux: str | None = None
 
     @property
     def cwd_leaf(self) -> str:
         return Path(self.cwd).name
+
+    @property
+    def tmux_session(self) -> str | None:
+        return self.tmux.split(":", 1)[0] if self.tmux else None
+
+    @property
+    def busy(self) -> bool:
+        """Mid-turn. A message sent now lands in the inbox and waits its turn."""
+        return self.status == "busy"
 
 
 def _proc_starttime(pid: int) -> str | None:
@@ -147,6 +162,7 @@ def discover(include_self: bool = False, include_programmatic: bool = False) -> 
                 kind=desc.get("kind") or "interactive",
                 status=desc.get("status"),
                 entrypoint=entrypoint,
+                tmux=desc.get("tmux"),
             )
         )
     out.sort(key=lambda s: s.started_at, reverse=True)
@@ -190,3 +206,59 @@ async def inject(session: LiveSession, text: str, timeout: float = 5.0) -> None:
             await writer.wait_closed()
         except OSError:
             pass
+
+
+async def terminate(session: LiveSession, grace: float = 8.0) -> str:
+    """Stop a session: SIGTERM, wait, SIGKILL, then take its tmux pane with it.
+
+    SIGTERM first because a `claude` that is given the chance flushes its
+    transcript and removes its own descriptor; killing outright leaves a stale
+    descriptor that `discover()` then has to reject by procStart, which works but
+    means the session lingers in listings until something notices.
+
+    Refusing to kill ourselves is not paranoia -- `session kill` resolves fuzzily,
+    and "kill the hotline one" is an entirely natural thing to say to the process
+    named hotline.
+    """
+    if session.pid == os.getpid() or session.pid == os.getppid():
+        raise HotlineError(
+            f"{session.name} is hotline itself (pid {session.pid}); refusing to kill it"
+        )
+
+    def alive() -> bool:
+        try:
+            os.kill(session.pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
+    if not alive():
+        outcome = "was already gone"
+    else:
+        try:
+            os.kill(session.pid, signal.SIGTERM)
+        except OSError as exc:
+            raise HotlineError(f"could not signal {session.name}: {exc}") from exc
+        deadline = monotonic() + grace
+        while monotonic() < deadline and alive():
+            await asyncio.sleep(0.2)
+        if alive():
+            try:
+                os.kill(session.pid, signal.SIGKILL)
+            except OSError:
+                pass
+            await asyncio.sleep(0.3)
+            outcome = "did not stop on SIGTERM and was killed"
+        else:
+            outcome = "stopped"
+
+    if session.tmux_session:
+        from . import tmuxen
+
+        # The pane outlives the process it was running, and a tmux session full of
+        # dead shells is exactly the litter that makes `tmux ls` useless.
+        if tmuxen.kill(session.tmux_session):
+            outcome += f", and its tmux session {session.tmux_session} was closed"
+    return outcome

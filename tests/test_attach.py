@@ -152,3 +152,49 @@ async def test_a_busy_target_is_not_mistaken_for_a_finished_one(
     monkeypatch.setattr(router_module, "inject", _inject)
     with pytest.raises(ReplyTimeout):
         await Router().ask_session("target-aa", "ping", timeout=0.6)
+
+
+async def test_a_stop_that_beats_the_text_does_not_lose_the_answer(
+    fake_claude: Path, quick: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The race that handed one turn's caller another turn's answer.
+
+    The Stop hook fires a beat before the final assistant text reaches the
+    transcript. `stopped` is true, there is no text yet, and the loop advances its
+    stamp past that stop -- so it can never fire again for this turn. The quiet
+    fallback is supposed to catch that, and did not, because a freshly spawned
+    session reports status "waiting" and the check only accepted "idle".
+
+    Live, the turn spun for 226 seconds and then returned the answer to a
+    completely different question that had been asked in the meantime.
+    """
+    make_session(fake_claude, PID, "target-aa", "/home/bodas/data", SID, status="waiting")
+
+    async def _inject(session, text, timeout=5.0):
+        async def later() -> None:
+            # Our message lands, the stop fires, and only then does the answer
+            # appear -- the exact order that broke it.
+            write_transcript(fake_claude, SID, [user_entry("ping")])
+            record_stop(SID)
+            await asyncio.sleep(0.15)
+            write_transcript(fake_claude, SID, [assistant_entry("pong")])
+
+        asyncio.get_running_loop().create_task(later())
+
+    monkeypatch.setattr(router_module, "inject", _inject)
+    reply = await Router().ask_session("target-aa", "ping", timeout=5.0)
+    assert reply.text == "pong"
+
+
+async def test_a_busy_session_reporting_waiting_is_still_not_finished(
+    fake_claude: Path, quick: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Widening the quiet check must not make "busy" quiescent."""
+    make_session(fake_claude, PID, "target-aa", "/home/bodas/data", SID, status="busy")
+
+    async def _inject(session, text, timeout=5.0):
+        write_transcript(fake_claude, SID, [user_entry("ping")])
+
+    monkeypatch.setattr(router_module, "inject", _inject)
+    with pytest.raises(ReplyTimeout):
+        await Router().ask_session("target-aa", "ping", timeout=0.6)

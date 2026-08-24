@@ -1,39 +1,61 @@
-"""Keeps a Claude session alive between HTTP requests.
+"""Keeps a conversation pointed at the same Claude session between messages.
 
-The iPhone Shortcut is a loop: dictate, POST, speak, repeat. Each turn is a
-separate HTTP request, but they are all one conversation, so the `session_id` the
-phone sends has to map to a `claude` process that stays alive between them.
-Spawning per request would make every turn amnesiac and pay startup cost twice.
+Every transport -- the phone, Discord text, a voice call -- is a sequence of
+separate requests that a person experiences as one conversation. This is the
+layer that makes that true: a caller key maps to a session, and stays mapped.
 
-Idle sessions are reaped. A `claude` subprocess is not free, and a phone that
-walks out of Tailscale range mid-call never sends a goodbye -- so the only
-trustworthy signal that a conversation is over is that nothing has arrived for a
-while.
+**A session is a tmux pane now.** It used to be a `claude` subprocess on the end
+of a pipe, which worked and was invisible: nothing to attach to, nothing to look
+at, nothing to kill by name. Fresh sessions are spawned by `hotline.tmuxen` and
+reached the same way an attached session is, so there is one kind of session in
+the system instead of two.
+
+That change pays for itself three times over. The tmux session is named after the
+conversation, so `tmux attach -t hl-discord` walks you into the session you were
+just messaging. The name is derived from the key rather than remembered, so a
+conversation that was reaped, or that outlived a daemon restart, **reconnects to
+its own session with its context intact** instead of being handed a stranger --
+which was `tofix.md` #8. And killing one is `session kill`, not an archaeology
+expedition through `ps`.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from . import standin, tmuxen
+from .ccsocks import LiveSession
 from .config import bindings_file
 from .errors import HotlineError, SessionNotFound
-from .fresh import FreshSession, Narrator, Reply
-from .router import Route, Router, describe, parse_utterance
+from .fresh import Narrator, Reply
+from .router import Route, Router, Watch, describe, parse_utterance
+
+# How long a background relay will wait for a busy session to get round to the
+# message it was handed. Generous: the sender has already been answered by the
+# stand-in, so nothing is blocked on this, and a turn that takes forty minutes is
+# a turn whose answer is still worth delivering.
+RELAY_TIMEOUT = 3600.0
+
+Deliver = Callable[[str, str], Awaitable[None]]
 
 
 @dataclass
 class Conversation:
     key: str
     cwd: str | None = None
-    session: FreshSession | None = None
+    # The name of the session this conversation's own messages go to when it is
+    # not attached to something else. Spawned on demand, in tmux.
+    own: str | None = None
     last_used: float = field(default_factory=time.monotonic)
     turns: int = 0
     # Sticky routing. Once set by `connect`, plain messages go to that session
-    # instead of the pooled subprocess, until `detach`. Bogdan asked for this
+    # instead of this conversation's own, until `detach`. Bogdan asked for this
     # directly: repeating "join data-13" on every message is not how a
     # conversation works.
     attached_to: str | None = None
@@ -49,10 +71,13 @@ class Conversation:
     # request timed out can rejoin the same turn instead of starting a new one or
     # throwing away the work.
     pending: asyncio.Task[tuple[Route, Reply]] | None = None
+    # Answers still owed to this caller by sessions that were busy when we wrote
+    # to them.
+    relays: set[asyncio.Task[None]] = field(default_factory=set)
 
     @property
-    def claude_session_id(self) -> str | None:
-        return self.session.session_id if self.session else None
+    def tmux_target(self) -> str | None:
+        return tmuxen.tmux_name(self.key)
 
 
 class SessionPool:
@@ -65,12 +90,19 @@ class SessionPool:
         max_sessions: int = 8,
         cwd: str | None = None,
         append_system_prompt: str | None = None,
+        deliver: Deliver | None = None,
+        use_standin: bool = True,
     ) -> None:
         self.router = router or Router(default_cwd=cwd)
         self.idle_timeout = idle_timeout
         self.max_sessions = max_sessions
         self.cwd = cwd
         self.append_system_prompt = append_system_prompt
+        # How to reach the caller when we have something for them that no request
+        # is waiting on -- a busy session finally answering. Without this the
+        # stand-in can only ever promise a relay it cannot perform.
+        self.deliver = deliver
+        self.use_standin = use_standin
         self.conversations: dict[str, Conversation] = {}
         # Why a conversation went away, kept until the caller is told. Bogdan had
         # five turns with a session, it vanished mid-message, and the reply came
@@ -84,11 +116,13 @@ class SessionPool:
     # ---- surviving a restart -------------------------------------------
 
     def _load_bindings(self) -> None:
-        """Restore `connect` bindings, and remember that the process restarted.
+        """Restore `connect` bindings after a restart.
 
-        A restart destroys every pooled subprocess, so a caller mid-conversation
-        loses their context whether or not they were attached to a live session.
-        They get told on their next message rather than quietly handed a blank one.
+        A restart no longer costs anyone their context: a conversation's own
+        session lives in tmux and outlives the daemon entirely, and its name is
+        derived from the key rather than remembered. So the next message walks
+        back into the same pane. Only a session that has actually gone away earns
+        a notice.
         """
         try:
             saved = json.loads(bindings_file().read_text())
@@ -99,9 +133,11 @@ class SessionPool:
                 continue
             conv = Conversation(key=key, cwd=self.cwd, attached_to=entry.get("attached_to"))
             self.conversations[key] = conv
-            self.retired[key] = (
-                "hotlined restarted, so the previous session's context is gone"
-            )
+            if entry.get("own") and not tmuxen.exists(tmuxen.tmux_name(key)):
+                self.retired[key] = (
+                    "hotlined restarted and this conversation's session did not "
+                    "survive it, so its context is gone"
+                )
 
     def _save_bindings(self) -> None:
         try:
@@ -110,7 +146,7 @@ class SessionPool:
             path.write_text(
                 json.dumps(
                     {
-                        key: {"attached_to": conv.attached_to}
+                        key: {"attached_to": conv.attached_to, "own": conv.own}
                         for key, conv in self.conversations.items()
                     }
                 )
@@ -128,35 +164,53 @@ class SessionPool:
             await self.reap()
 
     async def reap(self) -> int:
+        """Forget idle conversations without destroying anything.
+
+        This used to kill the subprocess, which is how a conversation could vanish
+        underneath someone mid-exchange. Now it only drops the in-memory entry: the
+        tmux session stays, and because its name is derived from the caller key,
+        the next message finds it again with everything still in it. Bogdan's
+        complaint was that he could not save a session for later -- reaping it out
+        from under him is the same bug wearing a schedule.
+        """
         now = time.monotonic()
         stale = [
             key
             for key, conv in self.conversations.items()
-            if now - conv.last_used > self.idle_timeout and not conv.lock.locked()
+            if now - conv.last_used > self.idle_timeout
+            and not conv.lock.locked()
+            and not any(not task.done() for task in conv.relays)
         ]
         for key in stale:
-            await self._drop(
-                key,
-                f"that conversation was idle for over {self.idle_timeout / 60:.0f} minutes "
-                "and was closed",
-            )
+            await self._forget(key)
         return len(stale)
 
-    async def _drop(self, key: str, reason: str = "") -> None:
+    async def _forget(self, key: str) -> None:
+        """Drop the binding. The session itself keeps running, and can be walked into."""
         conv = self.conversations.pop(key, None)
-        if conv and conv.session:
-            await conv.session.close()
-        if reason and conv is not None:
-            self.retired[key] = reason
+        if conv is not None:
+            for task in conv.relays:
+                task.cancel()
         if not self._shutting_down:
             self._save_bindings()
 
+    async def _drop(self, key: str, reason: str = "") -> None:
+        """Forget the conversation *and* end its session, saying why."""
+        conv = self.conversations.get(key)
+        if conv is not None and conv.own:
+            with contextlib.suppress(HotlineError, SessionNotFound, OSError):
+                await self.router.kill_session(conv.own)
+        await self._forget(key)
+        if reason and conv is not None:
+            self.retired[key] = reason
+
     async def _evict_oldest(self) -> None:
-        """Bound the number of live `claude` processes.
+        """Bound the number of live sessions hotline is responsible for.
 
         Evicting the least recently used is the right call over refusing the new
         request: the caller in front of you matters more than a conversation
-        nobody has touched.
+        nobody has touched. This one really does end the session, because the
+        whole point is to stop paying for it.
         """
         idle = [
             (conv.last_used, key)
@@ -177,12 +231,40 @@ class SessionPool:
             self.conversations[key] = conv
         return conv
 
-    def _control(self, conv: Conversation, route: Route) -> Reply | None:
+    async def _own_session(self, conv: Conversation) -> str:
+        """The name of this conversation's own session, spawning one if needed."""
+        name = await self._spawn_own(conv)
+        return name
+
+    async def _spawn_own(self, conv: Conversation) -> str:
+        if conv.own:
+            try:
+                self.router.resolve(conv.own)
+                return conv.own
+            except (SessionNotFound, HotlineError):
+                # It died, or someone killed it. Replacing it silently is precisely
+                # the tofix #8 failure -- the caller keeps talking and only works
+                # out something changed when the answers stop making sense.
+                self.retired.setdefault(
+                    conv.key,
+                    f"your session {conv.own} had gone away, so this is a new one "
+                    "with none of the earlier conversation in it",
+                )
+                conv.own = None
+        session = await tmuxen.spawn(conv.key, cwd=conv.cwd or self.cwd,
+                                     bypass=self.router.bypass)
+        conv.own = session.name
+        self._save_bindings()
+        return session.name
+
+    # ---- control commands ------------------------------------------------
+
+    async def _control(self, conv: Conversation, route: Route) -> Reply | None:
         """Handle a connection command. None means "that was not really a command".
 
-        `connect` only counts when the target actually resolves -- otherwise
-        "connect the dots in this diagram" would be swallowed as a control command
-        instead of being answered.
+        `connect` and `kill` only count when the target actually resolves --
+        otherwise "connect the dots in this diagram" and "kill the process on port
+        8080" would be swallowed as control commands instead of being answered.
         """
         live = self.router.sessions()
 
@@ -192,10 +274,18 @@ class SessionPool:
             conv.last_listing = [session.name for session in live]
             lines = ["Live sessions, newest first:"]
             for index, session in enumerate(live, 1):
-                marker = " (connected)" if conv.attached_to == session.name else ""
+                marks = []
+                if conv.attached_to == session.name:
+                    marks.append("connected")
+                if conv.own == session.name:
+                    marks.append("this conversation")
+                if session.tmux_session:
+                    marks.append(f"tmux attach -t {session.tmux_session}")
+                else:
+                    marks.append("no pane — cannot be attached to")
                 lines.append(
                     f"{index}. {session.name} — {session.cwd} "
-                    f"[{session.status or '?'}, pid {session.pid}]{marker}"
+                    f"[{session.status or '?'}, pid {session.pid}] ({'; '.join(marks)})"
                 )
             lines.append("")
             lines.append('Say "connect 2" or "connect data-13", then just talk. "detach" to stop.')
@@ -211,47 +301,68 @@ class SessionPool:
             was = conv.attached_to
             conv.attached_to = None
             if was:
-                return Reply(text=f"Detached from {was}. Back to a fresh session.",
+                return Reply(text=f"Detached from {was}. Back to your own session.",
                              subtype="control")
-            # "new session" means start over, so it falls through to a real turn.
-            # A bare "detach" is a command and must be answered as one -- leaking
-            # it to the model as chat is what Bogdan hit.
-            if route.text.strip().lower() != "new session":
-                return Reply(text="Not connected to anything — already on a fresh session.",
-                             subtype="control")
-            return None
+            # "new session" means throw this one away and start over, so it ends
+            # the session rather than falling through as chat. A bare "detach" is a
+            # command and must be answered as one -- leaking it to the model as
+            # chat is what Bogdan hit.
+            if route.text.strip().lower() == "new session":
+                if conv.own:
+                    with contextlib.suppress(HotlineError, SessionNotFound, OSError):
+                        await self.router.kill_session(conv.own)
+                conv.own = None
+                self._save_bindings()
+                return Reply(
+                    text="Started over. Your previous session was closed; the next "
+                         "thing you say opens a fresh one.",
+                    subtype="control",
+                )
+            return Reply(text="Not connected to anything — you are on your own session.",
+                         subtype="control")
 
         if route.action == "where":
             if conv.attached_to:
                 return Reply(text=f"Connected to {conv.attached_to}.", subtype="control")
-            claude_id = conv.claude_session_id or "not started yet"
+            if conv.own:
+                return Reply(
+                    text=f"On your own session {conv.own}, in tmux as "
+                         f"{conv.tmux_target} — `tmux attach -t {conv.tmux_target}`.",
+                    subtype="control",
+                )
             return Reply(
-                text=f"Not connected to anything — talking to a fresh session ({claude_id}).",
+                text="Not connected to anything, and your own session has not been "
+                     "started yet — say anything and it will be.",
                 subtype="control",
             )
 
+        if route.action == "kill" and route.target:
+            try:
+                target = self._resolve_listed(conv, route.target, live)
+            except SessionNotFound as exc:
+                return Reply(text=str(exc), subtype="control")
+            if target is None:
+                return None  # not a session -- let it be answered as a question
+            session = target
+            if conv.own == session.name:
+                conv.own = None
+            if conv.attached_to == session.name:
+                conv.attached_to = None
+            try:
+                outcome = await self.router.kill_session(str(session.pid))
+            except HotlineError as exc:
+                return Reply(text=str(exc), subtype="control")
+            self._save_bindings()
+            return Reply(text=outcome, subtype="control")
+
         if route.action == "connect" and route.target:
-            spec = route.target
-            # "connect 2" means the second line of the list that was just shown,
-            # not pid 2. Bare numbers are indices here; pids are reachable by name.
-            if spec.isdigit() and 1 <= int(spec) <= len(conv.last_listing):
-                # Resolve against the list this caller was actually shown.
-                wanted = conv.last_listing[int(spec) - 1]
-                try:
-                    session = self.router.resolve(wanted)
-                except SessionNotFound:
-                    return Reply(
-                        text=f"{wanted} was number {spec} when I listed them, but it has "
-                             'since exited. Say "session list" for a current list.',
-                        subtype="control",
-                    )
-            elif spec.isdigit() and 1 <= int(spec) <= len(live):
-                session = live[int(spec) - 1]
-            else:
-                try:
-                    session = self.router.resolve(spec)
-                except SessionNotFound:
-                    return None  # not a session name -- treat it as a question
+            try:
+                target = self._resolve_listed(conv, route.target, live)
+            except SessionNotFound as exc:
+                return Reply(text=str(exc), subtype="control")
+            if target is None:
+                return None  # not a session name -- treat it as a question
+            session = target
             conv.attached_to = session.name
             return Reply(
                 text=f"Connected to {describe(session)}. Everything you say now goes there "
@@ -259,6 +370,37 @@ class SessionPool:
                 subtype="control",
             )
         return None
+
+    def _resolve_listed(
+        self, conv: Conversation, spec: str, live: list[LiveSession]
+    ) -> LiveSession | None:
+        """Resolve a target the way the caller meant it, or None if it is not one.
+
+        "connect 2" means the second line of the list that was just shown to *this*
+        conversation, not pid 2 and not the second line of a list computed now.
+        Bogdan typed `connect 1`, reached a different session than the one he had
+        been shown, and spent ten minutes being answered by something that could
+        not see the work.
+        """
+        if spec.isdigit() and 1 <= int(spec) <= len(conv.last_listing):
+            wanted = conv.last_listing[int(spec) - 1]
+            try:
+                return self.router.resolve(wanted)
+            except (SessionNotFound, HotlineError):
+                # Meant unambiguously and no longer reachable. Falling through to
+                # the model here would answer "connect 1" as though it were chat.
+                raise SessionNotFound(
+                    f"{wanted} was number {spec} when I listed them, but it has "
+                    'since exited. Say "session list" for a current list.'
+                ) from None
+        if spec.isdigit() and 1 <= int(spec) <= len(live):
+            return live[int(spec) - 1]
+        try:
+            return self.router.resolve(spec)
+        except (SessionNotFound, HotlineError):
+            return None
+
+    # ---- the turn --------------------------------------------------------
 
     async def ask(
         self,
@@ -269,65 +411,113 @@ class SessionPool:
     ) -> tuple[Route, Reply]:
         """One turn of a conversation, routed the same way the CLI routes it."""
         route = parse_utterance(utterance)
+        conv = self._conversation(key)
 
         if route.mode == "control":
-            conv = self._conversation(key)
-            handled = self._control(conv, route)
+            handled = await self._control(conv, route)
             if handled is not None:
                 handled.notice = self.retired.pop(key, None)
+                conv.last_used = time.monotonic()
                 self._save_bindings()
                 return route, handled
             # Not actually a control command; fall through as an ordinary question.
             route = Route("fresh", None, route.text)
 
-        conv = self._conversation(key)
-        notice = self.retired.pop(key, None)
         if conv.attached_to and (route.mode == "fresh" or route.implicit):
-            reply = await self.router.ask_session(
-                conv.attached_to, route.text, narrator=narrator, timeout=timeout
-            )
-            conv.last_used = time.monotonic()
-            conv.turns += 1
-            reply.notice = notice
-            return Route("attach", conv.attached_to, route.text), reply
+            target, mode = conv.attached_to, "attach"
+        elif route.mode != "fresh" and route.target:
+            target, mode = route.target, route.mode
+        else:
+            if len(self.conversations) > self.max_sessions:
+                await self._evict_oldest()
+            async with conv.lock:
+                target = await self._own_session(conv)
+            mode = "own"
 
-        if route.mode != "fresh" and route.target:
-            # Attach and agent modes have no process of their own to keep warm --
-            # the session on the other end is the state.
-            reply = await self.router.ask_session(
-                route.target, route.text, narrator=narrator, timeout=timeout
-            )
-            reply.notice = notice
-            return route, reply
+        try:
+            reply = await self._send(conv, target, route.text, narrator, timeout)
+        except SessionNotFound:
+            # The session this conversation was pointed at is gone. Say so; do not
+            # quietly substitute a stranger, which is the whole of tofix #8.
+            if conv.attached_to == target:
+                conv.attached_to = None
+                self._save_bindings()
+                raise SessionNotFound(
+                    f"{target} is gone — it exited or was killed. You are back on "
+                    f'your own session; say "session list" to pick another.'
+                ) from None
+            # A session that died between spawning and delivering. Rare, and the
+            # honest thing is to say so rather than retry into a stranger.
+            if conv.own == target:
+                conv.own = None
+                self._save_bindings()
+            raise
 
-        if len(self.conversations) > self.max_sessions:
-            await self._evict_oldest()
-
-        async with conv.lock:
-            if conv.session is None or (
-                conv.session.proc is not None and conv.session.proc.returncode is not None
-            ):
-                if conv.session is not None:
-                    await conv.session.close()
-                conv.session = FreshSession(
-                    conv.cwd,
-                    bypass=self.router.bypass,
-                    append_system_prompt=self.append_system_prompt,
-                )
-                await conv.session.start()
-            try:
-                reply = await conv.session.ask(route.text, narrator=narrator, timeout=timeout)
-            except HotlineError:
-                # A dead subprocess must not poison the key forever; the next turn
-                # should get a fresh one rather than the same corpse.
-                await conv.session.close()
-                conv.session = None
-                raise
-            conv.last_used = time.monotonic()
-            conv.turns += 1
-        reply.notice = notice
+        conv.last_used = time.monotonic()
+        conv.turns += 1
+        # Popped here, not on the way in: routing this turn may itself have
+        # discovered that the session went away, and that notice is owed to the
+        # caller now rather than one message late.
+        if reply.notice is None:
+            reply.notice = self.retired.pop(key, None)
         self._save_bindings()
-        return route, reply
+        return Route(mode, target, route.text), reply
+
+    async def _send(
+        self,
+        conv: Conversation,
+        target: str,
+        text: str,
+        narrator: Narrator | None,
+        timeout: float,
+    ) -> Reply:
+        """Deliver, and either wait for the answer or hand the caller to a stand-in.
+
+        The split matters. Delivery is fast and either happened or did not; the
+        answer may be minutes away. When the target is mid-turn, waiting on it
+        gives the sender silence indistinguishable from the message being lost, so
+        instead a stand-in reports on it immediately and the real answer is relayed
+        when it lands.
+        """
+        watch = await self.router.deliver(target, text)
+
+        if watch.was_busy and self.use_standin:
+            standing = await standin.report(watch.session, text, delivered=True)
+            self._relay_later(conv, watch)
+            return Reply(
+                text=standing.spoken(watch.session.name),
+                session_id=watch.session.session_id,
+                subtype="standin",
+            )
+
+        return await self.router.collect(watch, narrator=narrator, timeout=timeout)
+
+    def _relay_later(self, conv: Conversation, watch: Watch) -> None:
+        """Keep waiting for the busy session, and push its answer out when it comes.
+
+        This is the half of the promise the stand-in makes. Without it the sender is
+        told "I'll relay its answer" by something that has no way to do so.
+        """
+        if self.deliver is None:
+            return
+
+        async def run() -> None:
+            name = watch.session.name
+            try:
+                reply = await self.router.collect(watch, timeout=RELAY_TIMEOUT)
+            except asyncio.CancelledError:
+                raise
+            except HotlineError as exc:
+                body = f"{name} never answered the message I queued for it: {exc}"
+            else:
+                body = f"{name} has finished the message you sent it:\n\n{reply.text}"
+            assert self.deliver is not None
+            with contextlib.suppress(Exception):
+                await self.deliver(conv.key, body)
+
+        task = asyncio.create_task(run())
+        conv.relays.add(task)
+        task.add_done_callback(conv.relays.discard)
 
     async def ask_soft(
         self,
@@ -364,9 +554,13 @@ class SessionPool:
         return result
 
     async def close(self) -> None:
-        # Persist first, then stop saving: tearing the pool down drops every
-        # conversation, and letting that rewrite the file would erase the very
-        # bindings a restart is meant to restore.
+        """Stop tracking conversations. Deliberately leaves their sessions running.
+
+        A daemon restart must not cost anyone their context -- the sessions are in
+        tmux, they are named after their conversations, and the next message walks
+        straight back into them. Killing them here would reintroduce exactly the
+        vanishing-session bug the tmux move was made to fix.
+        """
         self._save_bindings()
         self._shutting_down = True
         if self._reaper is not None:
@@ -374,20 +568,18 @@ class SessionPool:
             self._reaper = None
         # Cancel first, then await -- a cancel() that is never awaited leaves the
         # task in "cancelling" forever and the subprocess behind it running.
-        pending = [
-            conv.pending
+        tasks = [
+            task
             for conv in self.conversations.values()
-            if conv.pending is not None and not conv.pending.done()
+            for task in ([conv.pending] if conv.pending else []) + list(conv.relays)
+            if not task.done()
         ]
-        for task in pending:
+        for task in tasks:
             task.cancel()
-        for task in pending:
-            try:
+        for task in tasks:
+            with contextlib.suppress(Exception, asyncio.CancelledError):
                 await task
-            except (asyncio.CancelledError, Exception):  # noqa: BLE001,S110 - shutting down
-                pass
-        for key in list(self.conversations):
-            await self._drop(key)
+        self.conversations.clear()
 
     def stats(self) -> dict[str, Any]:
         # Any, not object: this is shaped for JSON and for the bot's status
@@ -399,8 +591,10 @@ class SessionPool:
                     "key": conv.key,
                     "turns": conv.turns,
                     "idle_seconds": round(time.monotonic() - conv.last_used, 1),
-                    "claude_session_id": conv.claude_session_id,
+                    "session": conv.own,
+                    "tmux": conv.tmux_target if conv.own else None,
                     "attached_to": conv.attached_to,
+                    "relays_pending": sum(1 for t in conv.relays if not t.done()),
                 }
                 for conv in self.conversations.values()
             ],
@@ -410,15 +604,21 @@ class SessionPool:
 HELP_TEXT = """**Commands** (these are handled by hotline itself, not sent to a model)
 
 `help` — this
-`session list` — live sessions, numbered
+`session list` — live sessions, numbered, with the tmux target for each
 `connect <n|name|dir>` — bind this conversation to a session; then just talk
-`detach` — unbind, back to a fresh session
-`where am i` — which session you are bound to
+`detach` — unbind, back to your own session
+`session kill <n|name>` — SIGTERM it, then close its tmux session
+`where am i` — which session you are bound to, and how to attach to it
 `resources` — RAM, VRAM, load
-`new session` — throw away context and start over
+`new session` — close your session and start over
 
 Anything else goes to a Claude session. `connect` accepts a number from the
 list, a session name, a directory (`uxonews`), or an ordinal (`the older one`).
+
+Your session runs in tmux, so you can walk up to this machine and take it over
+with `tmux attach -t hl-<name>` — `where am i` tells you the exact command.
+If you message a session that is mid-turn, a stand-in answers straight away with
+what it is doing, and the real answer is relayed here when it lands.
 
 On Discord only: `!status`, `!join`, `!leave`."""
 
