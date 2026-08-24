@@ -312,3 +312,149 @@ NATURAL-OK"` returned `NATURAL-OK`.
 public-vs-private is his call; I will ask over Discord in Phase 3.
 
 ### Phase 1 status: **DONE.**
+
+---
+
+## Phase 2 — the iPhone Shortcut path
+
+The plan called this "the 2-hour win". It was, but two facts from the handoff were
+wrong and had to be corrected before anything could be built.
+
+**`~/pigion-todo` is not on archserver.** The handoff says "Source mirror at
+`~/pigion-todo`". There is no such directory here — it lives on **pigion**. SSH to
+pigion is passwordless and works, so this cost minutes rather than being a wall,
+but the recipe I was told to copy was on the other machine.
+
+**Tailscale reality**, checked rather than assumed: archserver `100.72.2.62`,
+pigion `100.114.148.69`, phone `100.108.255.28`. All three online. Nine other
+nodes in the tailnet are offline and irrelevant.
+
+### Where the endpoint lives, and why the phone points at pigion
+
+The plan left this open ("on Pigion, or a small service beside it"). Decided:
+**both**, in a specific arrangement.
+
+- **archserver** runs `hotlined` — the real thing, holding the session pool and
+  spawning `claude`. It has to be here; this is where the CLI and the GPU are.
+- **pigion** runs a stdlib-only `frontdoor.py` that authenticates and forwards.
+
+The phone points at **pigion**. That looks like a pointless extra hop today, and
+for Phase 2 it is. The reason is Phase 5: archserver is the machine that gets
+powered off, pigion is the one with 36 days of uptime, and the URL baked into an
+iPhone Shortcut is genuinely painful to change. When the front door gains the job
+of sending a magic packet and waiting for a boot, the phone will not notice.
+`wake_upstream()` is already in the file as an explicit no-op so the seam is
+obvious.
+
+### The HTTP server is written, not imported
+
+`httpd.py`, ~180 lines, zero dependencies. Two routes on a private tailnet did not
+justify adding a framework to a package that otherwise has **no runtime deps at
+all** — and it would have put a large piece of machinery Bogdan has not read
+between his phone and a shell running with permissions bypassed. "No black boxes"
+pointed one way here. It speaks HTTP/1.1, closes every connection, caps the request
+line, header count and body, and refuses chunked encoding and pipelining outright.
+`aiohttp` stays confined to the optional Discord extra.
+
+### Two things that are less obvious than they look
+
+**A turn can take minutes; a phone will not wait.** Requests carry a *soft*
+timeout, default 100s. When it expires the turn is **shielded, not cancelled**, and
+the caller is told "still working"; whatever they say next rejoins the same task
+and collects the answer. Cancelling would destroy several minutes of real work
+because a handset got bored.
+
+The cost is real and is documented rather than hidden: while a turn is in flight,
+anything the caller says is treated as a check-in and **discarded**. The test pins
+this exactly — after a pending turn, the fake session's history is
+`["warm up", "slow one"]`, with no trace of the "are you done?" that collected it.
+A live run looked like it might have been queueing the follow-up instead, which is
+precisely why it needed a deterministic test rather than an eyeball.
+
+**Authentication is by source address, deliberately.** There is no shared secret to
+hand the phone unless Bogdan sets one, and a secret that has to be *transmitted* to
+be useful is worse than a tailnet allowlist he already controls — I am not putting
+a key in a Discord message. `HOTLINE_API_KEY` is honoured when present, as a second
+factor rather than the only one. `/health` stays unauthenticated on purpose: pigion
+must be able to tell whether archserver is awake before it has any reason to be
+trusted, and that answer leaks nothing.
+
+Verified live, both directions:
+
+```
+pigion -> archserver:8788  (allowlisted)      -> {"response": "TAILSCALE-OK", ...}
+pigion -> archserver:8789  (empty allowlist)  -> HTTP 403 "not an allowed source address"
+pigion -> archserver:8789  /health            -> HTTP 200 (open by design)
+[hotlined] refused POST /api/v1/claude from 100.114.148.69
+```
+
+Errors come back as **200 with the message in `response`**. The Shortcut speaks
+whatever is in that field and has no way to render a status code, so a 500 is
+silence on the phone — the one place where the honest-looking choice is the wrong one.
+
+### Deploying to pigion, without root
+
+`sudo -n` on pigion **requires a password**, so the obvious "install a system unit"
+was closed. Not a wall: `loginctl enable-linger bodas` succeeded as bodas with no
+password (polkit permits self-linger), and the user manager was already running.
+So the front door is a **systemd user unit** with lingering — starts at boot, no
+root involved, `pigion.service` never touched.
+
+Then made archserver match. The plan specified a system unit with `User=bodas`; I
+used a user unit there too, and the reason is concrete rather than aesthetic:
+`claude` writes the stop spool under `$XDG_RUNTIME_DIR`, and the Stop hook running
+inside Bogdan's *interactive* sessions computes the same path from its own
+environment. A user unit gets `/run/user/1000` for free; a system unit would need
+it set by hand, and getting it wrong means the daemon and the hook silently
+disagree about where the spool lives. Same reason lingering is on here too.
+
+Unit hardening on pigion: `MemoryMax=80M` (415MB machine running something in daily
+use — a leak here takes out `pigion.service`), `ProtectSystem=strict`,
+`ProtectHome=read-only`, `NoNewPrivileges`, `PrivateTmp`. `Wants=` not `Requires=`
+on `network-online.target`, per the plan: a slow network should delay it, not
+prevent it.
+
+### Milestone — live, and the whole chain
+
+```
+$ curl -s http://100.114.148.69:8788/api/v1/claude -d '{"text":"...","session_id":"..."}'
+
+iPhone → pigion:8788 (frontdoor) → archserver:8788 (hotlined) → claude → back
+{"response": "FRONTDOOR-OK", "route": "fresh", "elapsed_seconds": 5.2}
+```
+
+- Two-turn context over HTTP: turn 1 answered "`~/data` holds two project
+  directories", turn 2 asked "how many did you just say" and got **2** in 3.0s,
+  same `claude_session_id`. The pool works.
+- Attach over HTTP: `"join testbed, reply with exactly HTTP-ATTACH-OK"` →
+  `route: "attach"`, answered from the live terminal session.
+- Soft timeout: a deliberately slow turn returned `pending: true`, and the
+  follow-up collected the finished answer.
+- Front door RSS on pigion: **23 MB**. Memory after: 74 MB free, 216 MB available.
+
+**Note for Phase 5:** the sentinel bot was budgeted at 25–45 MB *on top* of this.
+Two Python interpreters on a 415 MB Pi is wasteful — roughly 12 MB of that is just
+a second interpreter. **Merge the sentinel into `frontdoor.py` as a thread rather
+than running a second process.** It also removes a whole unit's worth of failure.
+
+### What is not proven
+
+**Reboot survival is configured, not observed.** Lingering is on, both units are
+`enabled`, and both restart cleanly (`systemctl --user restart` → healthy in under
+4s). Nobody has power-cycled either machine, and I am not going to reboot
+archserver mid-build to find out — that kills this session. It is a reasonable
+expectation, not a fact, and it says so in `iphone/SHORTCUT.md`.
+
+**The Shortcut itself is unbuilt.** It has to be built by hand on the phone; a
+generated `.shortcut` cannot be signed without Apple's macOS-only tooling. The
+recipe is written to the same 13-step shape as the `Todo` shortcut he already runs,
+so it is a copy with a different URL. **Bogdan has to spend three minutes on the
+phone before this is real for him**, and until he does, the end-to-end test here is
+`curl` standing in for Dictate Text — which is exactly what the Shortcut sends.
+
+### State
+
+**92 tests pass. ruff clean. mypy clean (13 files).** Commit `47b8c54`.
+Services live on both machines.
+
+### Phase 2 status: **DONE** (bar three minutes of Shortcut-building on the phone).

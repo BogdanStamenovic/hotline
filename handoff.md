@@ -110,9 +110,13 @@ Do NOT email him just to ask for tokens — he already knows.
       only; transcript quiescence is the fallback. Guard installed, default ON.
       (was: cc-socks client, Stop-hook reply capture,
       persistent `stream-json` subprocess, 3 routing modes). Headless CLI.
-- [ ] **Phase 2 — iPhone Shortcut path  <-- START HERE** (`/api/v1/claude` beside pigion-todo,
-      new Shortcut recipe). The 2-hour win; do it before Discord.
-- [ ] Phase 3 — Discord text bridge + escalating `@mention` page ladder +
+- [x] **Phase 2 — iPhone Shortcut path.** DONE. `hotlined` (archserver:8788) +
+      stdlib `frontdoor.py` (pigion:8788, 23MB). Both are systemd **user** units
+      with lingering (pigion has NO passwordless sudo; self-linger works). Phone
+      points at pigion so Phase 5's wake is invisible to it -- `wake_upstream()`
+      is the seam. Recipe at `iphone/SHORTCUT.md`; Bogdan still has to build the
+      Shortcut by hand (3 min). NOTE: `~/pigion-todo` is on PIGION, not here.
+- [ ] **Phase 3 — Discord text bridge  <-- START HERE** + escalating `@mention` page ladder +
       `call-bogdan` skill.
 - [ ] Phase 4 — Discord voice (py-cord sink -> silero VAD -> faster-whisper ->
       router -> Piper), with tool-call narration and barge-in.
