@@ -36,6 +36,10 @@ class FakeTmux:
 def tmux(monkeypatch: pytest.MonkeyPatch) -> FakeTmux:
     fake = FakeTmux()
     monkeypatch.setattr(tmuxen, "_tmux", fake)
+    # Spawning goes through the scoped wrapper, and without this the tests shell
+    # out to a real systemd-run -- which they did, silently, until it started
+    # failing and swallowed the launch error these assert on.
+    monkeypatch.setattr(tmuxen, "_detached_tmux", fake)
     monkeypatch.setattr(tmuxen, "exists", lambda name: False)
     return fake
 

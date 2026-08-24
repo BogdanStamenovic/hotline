@@ -156,3 +156,72 @@ def test_agent_shaped_questions_still_reach_a_session() -> None:
 
     for phrase in ["agents are hard to name", "who is working on the decoder right now"]:
         assert parse_utterance(phrase).action != "agents", phrase
+
+
+# ---- adopt: a respawned worker continues an existing agent -----------------
+#
+# The watchdog restarts a dead worker, and the replacement is the same agent
+# doing the same job. Declaring afresh would mint a second channel and leave
+# Bogdan reading an orphaned one while `connect <name>` resolved to a corpse.
+
+
+def test_adopting_moves_the_identity_to_a_new_session(registry: Registry) -> None:
+    original = registry.declare("sid-old", "hotline-80", "building the voice path")
+    original.channel_id = 4242
+    registry.save()
+
+    adopted = registry.adopt("hotline-80", "sid-new")
+
+    assert adopted is not None
+    assert adopted.session_id == "sid-new"
+    assert adopted.channel_id == 4242, "the channel is the point of adopting"
+    assert registry.get("sid-old") is None, "the corpse must stop resolving"
+    assert registry.get("sid-new") is adopted
+
+
+def test_adopting_keeps_the_original_start_time(registry: Registry) -> None:
+    """Retention dates from completion, but an adopted agent that later finishes
+    should still read as the long-running thing it was, not as newly born."""
+    original = registry.declare("sid-old", "hotline-80", "building")
+    original.declared_at = 1000.0
+    registry.save()
+
+    adopted = registry.adopt("hotline-80", "sid-new")
+
+    assert adopted is not None
+    assert adopted.declared_at == 1000.0
+
+
+def test_adopting_revives_a_finished_agent(registry: Registry) -> None:
+    registry.declare("sid-old", "hotline-80", "building")
+    registry.complete("sid-old", handoff="/tmp/handoff.md")
+
+    adopted = registry.adopt("hotline-80", "sid-new")
+
+    assert adopted is not None
+    assert not adopted.done, "something is alive and has picked the work back up"
+    assert adopted in registry.working()
+
+
+def test_adopting_yourself_is_a_no_op(registry: Registry) -> None:
+    """A worker that re-runs its own start-up script must not lose its record."""
+    registry.declare("sid-1", "hotline-80", "building")
+
+    adopted = registry.adopt("hotline-80", "sid-1")
+
+    assert adopted is not None
+    assert registry.get("sid-1") is adopted
+    assert len(registry.agents) == 1
+
+
+def test_adopting_an_unknown_agent_returns_none(registry: Registry) -> None:
+    assert registry.adopt("nobody", "sid-new") is None
+
+
+def test_adoption_survives_a_reload(registry: Registry, tmp_path: Path) -> None:
+    registry.declare("sid-old", "hotline-80", "building")
+    registry.adopt("hotline-80", "sid-new")
+
+    reloaded = Registry(path=tmp_path / "agents.json")
+    assert reloaded.get("sid-new") is not None
+    assert reloaded.get("sid-old") is None

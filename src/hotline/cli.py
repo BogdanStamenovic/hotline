@@ -95,6 +95,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="give this agent a voice channel (created on demand, not at declaration)",
     )
     parser.add_argument(
+        "--adopt", metavar="NAME",
+        help="take over a running agent's identity and channel, for a session "
+             "respawned to continue its work",
+    )
+    parser.add_argument(
         "--resume", metavar="NAME",
         help="bring a finished agent back: new session seeded from its handoff, "
              "channel recreated, task re-declared",
@@ -160,6 +165,22 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.adopt:
+        adopted = registry.adopt(args.adopt, session_id)
+        if adopted is None:
+            print(
+                f"hotline: error: no agent called {args.adopt!r} to adopt. "
+                "Use --agents to see them, or --declare to start a new one.",
+                file=sys.stderr,
+            )
+            return 1
+        log(f"adopted: {adopted.describe()}")
+        if adopted.channel_id is None:
+            log("it had no channel; use --declare if you want one")
+        else:
+            log(f"channel: #{channel_slug(adopted.name)}")
+        return 0
 
     if args.voice:
         speaker = registry.get(session_id)
@@ -512,6 +533,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if (
         args.declare or args.done or args.agents or args.resume or args.voice
+        or args.adopt
         or args.claim is not None
     ):
         return _agent_command(args, log)

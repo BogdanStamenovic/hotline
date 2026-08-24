@@ -25,6 +25,7 @@ the final assistant message rather than a stream of raw output.
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 import subprocess
 from time import monotonic
@@ -32,6 +33,8 @@ from time import monotonic
 from .ccsocks import LiveSession, discover
 from .config import CLAUDE_BIN
 from .errors import ClaudeLaunchFailed
+
+log = logging.getLogger(__name__)
 
 # tmux session names may not contain '.' or ':' -- both are target syntax.
 _UNSAFE = re.compile(r"[^A-Za-z0-9_-]+")
@@ -54,6 +57,38 @@ def _tmux(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["tmux", *args], capture_output=True, text=True, timeout=15, check=check
     )
+
+
+def _detached_tmux(*args: str) -> subprocess.CompletedProcess[str]:
+    """Run a tmux command in its own systemd scope, so a server it has to start
+    does not end up in ours.
+
+    Whoever first runs `tmux new-session` when no server is listening becomes the
+    server's parent, and the server inherits that process's cgroup. When that
+    parent is `hotlined.service`, the default KillMode=control-group means every
+    stop, restart or crash of the daemon kills the tmux server, which SIGHUPs
+    every pane -- so one restart takes out every agent session on the machine,
+    including whichever one asked for the restart. That is not hypothetical: it
+    happened on 2026-08-24 and cost four sessions.
+
+    A transient scope makes the placement deliberate instead of a race. When a
+    server is already listening this costs one empty scope that `--collect`
+    reaps immediately, so it is safe to use for every spawn rather than trying
+    to detect which call will be the unlucky one.
+
+    Falls back to a plain `tmux` if systemd-run is unavailable: an unprotected
+    session beats no session, and `KillMode=process` on the unit covers this
+    case too.
+    """
+    try:
+        return subprocess.run(
+            ["systemd-run", "--user", "--scope", "--collect", "--quiet", "--",
+             "tmux", *args],
+            capture_output=True, text=True, timeout=15, check=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        log.warning("systemd-run unavailable (%s); starting tmux unscoped", exc)
+        return _tmux(*args)
 
 
 def exists(name: str) -> bool:
@@ -118,7 +153,7 @@ async def spawn(
         # resumed -- which is the whole of its identity.
         argv += ["--name", name]
     try:
-        _tmux(
+        _detached_tmux(
             "new-session", "-d", "-s", target,
             *(("-c", cwd) if cwd else ()),
             # -e keeps this out of the tmux server's global environment, which is

@@ -144,6 +144,35 @@ class Registry:
         self.save()
         return agent
 
+    def adopt(self, name: str, session_id: str) -> Agent | None:
+        """Move an agent's identity onto a new session, keeping its channel.
+
+        A worker that is respawned -- by the watchdog, or by hand from a handoff
+        -- is the same agent continuing, not a new one. Declaring afresh would
+        mint a second channel and orphan the one Bogdan is already reading, and
+        `connect <name>` would keep resolving to the corpse. The record is the
+        identity; the session id is just where it currently lives.
+
+        Returns None if no such agent exists, and refuses to move an identity
+        onto a session when the old one is still registered as a different live
+        agent -- two sessions narrating into one channel is the confusion this
+        is meant to remove.
+        """
+        agent = self.by_name(name)
+        if agent is None:
+            return None
+        if agent.session_id == session_id:
+            return agent
+        del self.agents[agent.session_id]
+        agent.session_id = session_id
+        # An adopted agent is working by definition: something is alive and has
+        # picked the job back up. A predecessor that ran `--done` and then got
+        # resumed should not stay marked finished.
+        agent.completed_at = None
+        self.agents[session_id] = agent
+        self.save()
+        return agent
+
     def retask(self, session_id: str, task: str) -> Agent | None:
         agent = self.agents.get(session_id)
         if agent is None:

@@ -1161,8 +1161,6 @@ One fixture had to change with it: `fake_reply` bundled a tool call and the answ
 into one assistant record, a shape the CLI never produces (0 of 665 measured). The
 waiter now depends on that ordering to tell a step from an answer, so a fixture
 testing an impossible shape was hiding the distinction.
-2026-08-24T23:20:43+02:00 WATCHDOG: worker session gone, restarting
-started: tmux attach -t hotline
 
 ---
 
@@ -1316,3 +1314,182 @@ Voice stopped on his instruction, bot out of the channel, nothing of mine on the
 GPU beyond the resident models. Working tree has one uncommitted change
 (`src/hotline/voice.py`: the guard fix plus instrumentation). 272 tests pass.
 The acceptance test is **not** done and I am not claiming it.
+
+## Redirected: own channel, and models on demand
+
+Bogdan cut across the voice work with two instructions, in order: **"first get
+your own text session and tell me things there… right now general is off limits"**,
+then **"change so voice models are loaded on demand"**.
+
+Declared `hotline-80` via `hotline --declare`, which created `#agent-hotline-80`,
+and moved all reporting there. Nothing of mine goes to `#hotline-log` any more.
+Worth noting the feature earned its keep immediately: three agents narrating into
+one channel is genuinely unreadable, and he said so.
+
+### Models on demand
+
+Both `Transcriber` and `Speaker` already lazy-loaded — `load()` is idempotent and
+called from `transcribe`/`synthesize`. The half that did not exist was giving the
+memory back, so the practical effect was that the first call of the daemon's life
+took the GPU and kept it for weeks.
+
+Added `unload()` to both and wired it into the hangup path. The `gc.collect()` is
+load-bearing rather than defensive: dropping `self._model` alone leaves the
+decoder's own references in a cycle and the VRAM stays taken. That is the same
+thing I had already observed empirically — hanging up moved `joined` to `false`
+and left 2814 MiB allocated.
+
+Six tests, no GPU required: `load()` is what needs CUDA, `unload()` is
+bookkeeping, so the model slot is set directly. They cover double-unload (hangup
+is reachable twice — an explicit leave racing a voice-state update), unload of a
+never-loaded model (a call that dies before warm-up still runs teardown), and
+that a reload actually happens afterwards rather than `load()` early-returning on
+a stale slot.
+
+### Two process mistakes of mine, recorded because they cost real time
+
+**`ruff format src/ tests/` reflowed 20+ files I had not touched** — 507 lines of
+churn on top of my actual changes. Cause: `pyproject.toml` sets
+`line-length = 100`, but the repo had been formatted at ruff's default 88, so the
+project has never been `ruff format`-clean under its own config. Reverted every
+file I had not functionally changed and kept the diff at six. Not fixing the
+underlying inconsistency unasked — it is a whole-repo reformat and that is his
+call.
+
+**I over-corrected the previous session's handoff.** It said `tests/test_pager.py`
+was red; I ran pytest, saw 16/16 green, and wrote in this log that the claim "was
+wrong". It was not — running `ruff check tests/` shows `RUF007` on exactly that
+line, plus three `F821`s for a missing `pytest` import in `test_cli.py`. It was a
+**lint** failure described as a test failure. My correction was itself sloppier
+than the thing I was correcting, and the earlier paragraph in this file should be
+read with that attached. All four are fixed now.
+
+### State
+
+Committed as `5924324`. 280 tests, ruff and mypy clean on `src/`, `tests/` and
+`scripts/`.
+
+**Not live.** The unload path only takes effect after `hotlined` restarts, and the
+restart is also the only way to reclaim the 2814 MiB the running daemon holds —
+it has no unload path in the code it is running. The pool shows 4 pending relays
+and `RELAY_TIMEOUT` is 3600s, so draining them could take an hour. Asked him to
+authorise the bounce rather than dropping four of his answers on my own judgement.
+
+The acceptance test remains stopped on his instruction and untouched.
+
+## Respawn, and the bug that had been killing every session on the box
+
+Picked this up as the replacement for `hotline-80`, which died at 23:47:31
+without ever sending Bogdan the confirmation he had asked for. Finding out why
+turned out to matter more than the confirmation.
+
+### The bounce did happen, and it worked
+
+`hotlined` restarted 12s after he authorised it, came back clean, and has been
+answering since. The 2814 MiB is back: `nvidia-smi` reads 421 MiB total on the
+card, none of it hotlined's. The daemon is an editable install, so the running
+process genuinely is the `unload()` code from `5924324`. What is *not* verified
+is that unload frees VRAM during a live call — that needs a real call, and voice
+is still stopped where he left it.
+
+### Why the predecessor died — and it was not just the predecessor
+
+The first answer I reached for was "it restarted the daemon it was running
+inside". That was the right shape and the wrong mechanism, and the difference
+matters, so: `systemd-cgls` puts pid 141010 inside `hotlined.service`, and
+`ss -xlp` shows that same pid holding `/tmp/tmux-1000/default`. It is the tmux
+**server**.
+
+Whoever first runs `tmux new-session` when no server is listening becomes the
+server's parent, and the server inherits that process's cgroup. hotlined won
+that race. With the default `KillMode=control-group`, every stop, restart or
+crash of the daemon kills the server, and the server SIGHUPs every pane.
+
+The journal is unambiguous about the blast radius. One second after the restart,
+four `tmux-spawn-*.scope` units ended together: 3.9G peak, 2.3G, 296M, 350M.
+Four Claude sessions, including `data-f3` mid-way through Bogdan's ollama job,
+and including the agent that issued the restart. `hotlined` has `Restart=always`,
+so a plain crash would have done the same thing.
+
+Two fixes, safe one first:
+
+- **`KillMode=process` on `hotlined.service`.** Applied to the live unit and the
+  repo copy. This costs nothing and immediately protects the server that is
+  *already* misplaced — including the one hosting this session.
+- **`tmuxen` now spawns through `systemd-run --user --scope --collect`,** so a
+  server it has to start lands in its own transient scope instead of inheriting
+  whatever cgroup the caller happens to be in. Verified on a throwaway socket:
+  the server lands in `run-p*.scope`, the scope survives the client exiting, and
+  a second spawn reuses the same server. When a server already exists this costs
+  one empty scope that `--collect` reaps immediately, so it is safe to do on
+  every spawn rather than trying to guess which call will be the unlucky one.
+
+### The watchdog was manufacturing duplicates, not recovering from crashes
+
+While fixing the above, a second worker appeared and started reading the same
+files. `hotline-watchdog` tested `tmux has-session -t hotline`, which is not a
+liveness test for the worker — it is a liveness test for one particular way of
+starting it. This session lives in a Discord-spawned pane, so the check was
+false by construction and the timer minted a fresh worker every six minutes.
+
+Rewritten to resolve the worker the way everything else does: by registry
+identity. It looks up the agent by name, asks whether *its* session is among the
+live ones, and only then restarts. Verified in both directions — silent while
+the worker is alive, and it fires on a genuinely dead record (tested against
+`data-f3`, with the spawn stubbed so the test could not start anything).
+
+It also no longer scribbles heartbeat lines into the middle of this file;
+they go to `watchdog.log`. The eight that had already landed here are removed.
+
+### `hotline --adopt NAME`
+
+A respawned worker is the same agent continuing, and declaring afresh mints a
+second channel while `connect <name>` keeps resolving to the corpse — which is
+exactly what Bogdan hit when he tried to reach `hotline-80` and got
+`SessionNotFound` four times. `--adopt` moves the registry record and its
+channel onto the live session. `hotline-run` now tells a replacement to run it
+before anything else, and the watchdog depends on it: adoption is what lets it
+tell "the worker moved" from "the worker died".
+
+I did the first adoption by editing `agents.json` by hand before the flag
+existed, which is worth admitting because the hand edit is what made the flag
+obviously necessary.
+
+### Two mistakes of mine in this stretch
+
+**I leaked three live Claude sessions from the test suite.** Patching the spawn
+to go through `_detached_tmux` left `tests/test_tmuxen.py` faking only `_tmux`,
+so three pytest runs shelled out to a real `systemd-run` and started real
+`claude` processes in `hl-a`, `hl-plain` and `hl-demo-res`. One of them then
+made `test_bypass_is_on_by_default_and_can_be_turned_off` fail, and I briefly
+recorded that as a pre-existing red test on main. It was not: it was my own
+leak, and I had contaminated the very check I was using to rule myself out.
+Fixture fixed, sessions killed.
+
+**I told Bogdan the wrong cause first.** The Discord message saying hotline-80
+died "because it was in hotlined's process tree" was directionally right and
+mechanically wrong — it was the tmux server, not the session, and the
+consequence was four sessions rather than one. Corrected in the channel.
+
+`hotline-88`, the duplicate, stood down cleanly, verified my claims against the
+filesystem before accepting them rather than taking them on trust, and caught a
+mypy error in the `--adopt` code I had not run yet. Recording that because it is
+the first time one of these agents has audited another and been right to.
+
+### The provenance hole, from the inside
+
+Bogdan's "Resume" arrived at this session wearing the same wrapper as a peer
+agent's message, and so did every instruction after it. `hotline-88` raised the
+same thing unprompted from the other side: it complied with a stand-down from an
+unauthenticated peer only because it could independently verify every factual
+claim, and said plainly that a peer asking it to *start* something irreversible
+would have gotten a different answer.
+
+That is two agents independently hitting the defect recorded last session as the
+most important finding, within an hour, in a tree where every session runs with
+permissions bypassed. It is the next thing I fix.
+
+### State
+
+286 tests, ruff and mypy clean. Watchdog timer re-armed and verified no-op
+against the live worker.
