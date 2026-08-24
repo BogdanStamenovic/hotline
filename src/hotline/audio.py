@@ -19,6 +19,7 @@ VRAM, and the text and phone paths must not pay for that.
 from __future__ import annotations
 
 import ctypes
+import gc
 import glob
 import logging
 import os
@@ -246,6 +247,24 @@ class Transcriber:
             self.model_name, self.device, time.monotonic() - began,
         )
 
+    def unload(self) -> None:
+        """Drop the model and give the VRAM back.
+
+        The daemon runs for weeks; a call lasts minutes. Keeping distil-large-v3
+        resident costs ~2.8GB of an 8GB card for the whole time nobody is calling,
+        which is enough to stop anything else on this box using the GPU at all --
+        it blocked a 5GB model outright. Reloading costs about two seconds, and it
+        is paid while the caller is still saying hello. CTranslate2 frees device
+        memory when the model is collected, so the `gc.collect()` is load-bearing
+        and not defensive: without it the object lingers in a reference cycle and
+        the VRAM stays taken.
+        """
+        if self._model is None:
+            return
+        self._model = None
+        gc.collect()
+        log.info("transcriber unloaded")
+
     def transcribe(self, audio: np.ndarray) -> str:
         self.load()
         assert self._model is not None
@@ -279,6 +298,15 @@ class Speaker:
         config = getattr(self._voice, "config", None)
         self.rate = int(getattr(config, "sample_rate", self.rate) or self.rate)
         log.info("piper voice %s ready at %d Hz", os.path.basename(self.voice_path), self.rate)
+
+    def unload(self) -> None:
+        """Piper is CPU-only, so this is memory rather than VRAM -- but a voice
+        model held for weeks between calls is still just held."""
+        if self._voice is None:
+            return
+        self._voice = None
+        gc.collect()
+        log.info("piper voice unloaded")
 
     def synthesize(self, text: str) -> np.ndarray:
         """Float32 mono at `self.rate`."""

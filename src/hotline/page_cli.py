@@ -91,16 +91,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.no_siren:
         from .pager import build_ladder
 
-        span = 0.1 if args.no_wait else args.timeout
-        ladder = [step for step in build_ladder(span) if step[1] != "siren"]
+        ladder = [step for step in build_ladder(args.timeout) if step[1] != "siren"]
 
     try:
         result = pager.page(
             reason,
             context=args.context,
-            timeout=0.1 if args.no_wait else args.timeout,
+            timeout=args.timeout,
             ladder=ladder,
             source=args.source,
+            wait=not args.no_wait,
         )
     except PagerError as exc:
         print(f"hotline-page: error: {exc}", file=sys.stderr)

@@ -1161,3 +1161,158 @@ One fixture had to change with it: `fake_reply` bundled a tool call and the answ
 into one assistant record, a shape the CLI never produces (0 of 665 measured). The
 waiter now depends on that ordering to tell a step from an answer, so a fixture
 testing an impossible shape was hiding the distinction.
+2026-08-24T23:20:43+02:00 WATCHDOG: worker session gone, restarting
+started: tmux attach -t hotline
+
+---
+
+# Session 4 — acceptance (2026-08-24, from `handoff-session.md`)
+
+Picked up as the watchdog's replacement (`WATCHDOG: worker session gone,
+restarting`). I am pid 135159 in tmux `hotline`. Inherited state: all five phases
+and the `tofix.md` round marked done, working tree clean at `07f5aeb`.
+
+## What I verified before believing the handoff
+
+- **272 tests pass**, 8.0s. Including `tests/test_pager.py` — 16/16. The previous
+  session left that file flagged as "red on main from `47ff1ec` (`zip(...)` →
+  `itertools.pairwise`), not mine to fix". It is not red. `zip(mentions,
+  mentions[1:])` at line 168 is ordinary valid Python and always was; the claim
+  was wrong, and I am recording that rather than silently dropping it, because a
+  handoff that invents a red test costs the next session a detour.
+- `hotlined` active, 38MB, Discord bot connected as `hotline#6924`, gated on
+  Bogdan's user id.
+- `hotline-frontdoor` active on Pigion. 219MB available, so the sentinel is still
+  living inside its budget after a day.
+- `enp4s0` still `NO-CARRIER`. Unchanged, as expected — the wake path stays
+  UNVERIFIED-BY-DESIGN.
+
+One live signal arrived unprompted: pid 135141 (`data-f3`), the session `hotlined`
+spawned for a Discord caller, messaged this one over the cc-socks channel to say
+the cross-session path works end to end. That is Phase 1's mechanism reporting
+itself healthy from the far side, which is worth more than a test asserting it.
+
+## What is actually left
+
+Only the final acceptance test — announce completion *through the system itself*,
+over the real voice pipeline. Everything else on the checklist is done.
+
+## The acceptance test, and why it is not done
+
+Bogdan stopped it. That is the headline, and the rest of this section is what I
+found before he did.
+
+### The pipeline itself is fine
+
+`scripts/voice-loopback-test.py` ran clean, twice. Sentinel speaks through Piper →
+real Discord voice transport (Opus/RTP/DAVE) → hotline's sink → Whisper → router →
+spoken reply:
+
+    you:    Say the word acceptance and nothing else.
+    claude: acceptance
+
+distil-large-v3 warm on cuda in 1.8s, transcription 0.35s on a 2.6s utterance,
+answer in 2.6s, transcript character-exact. So Phase 4's stack works and the
+py-cord receive fixes hold up.
+
+### But the real path — a human client — failed three times
+
+- **23:23:29** Bogdan joined. Bot picked up, started recording, and 2s later the
+  voice websocket died with Discord close **4006** (session no longer valid).
+  Not caused by me: my first loopback run did not start until 23:25:35.
+- **23:25:38** he joined again. "Could not connect to voice." **This one was
+  mine** — my loopback had connected the *same* `hotline` bot token to the same
+  guild, and one bot user gets one voice connection per guild. I stole the
+  daemon's call out from under him while he was trying to use it. The harness
+  builds its own clients by design, which is fine when the daemon is stopped and
+  actively harmful when it is not. It needs an interlock; it does not have one.
+- **23:31:02** with the bot on the call, audio arrived that would not decrypt.
+  `CryptoError` on every packet, transcript empty.
+
+### The "key rotated" message was a confident wrong diagnosis, and it was mine
+
+The rotation fix from `be550e7` logs `voice key rotated; rebuilt the decryptor`
+and then fails anyway. Reading it back:
+
+    current = bytes(decryptor.client.secret_key)
+    if current == getattr(decryptor, "_hotline_key", None):
+        raise
+
+`_hotline_key` was only ever *set* inside that except branch. So on the first
+failure it is `None`, `None` never equals `current`, and the guard passes
+unconditionally — the box gets rebuilt with **the identical key it already had**,
+logs that the key rotated, and fails again for the original reason. The guard is
+vacuous exactly once per decryptor, which is the only time it matters. Every
+`CryptoError` in the journal is therefore preceded by a log line asserting a cause
+that has been ruled out by the very next line.
+
+Fixed: `_hotline_key` is now seeded from `PacketDecryptor.__init__` and from
+`update_secret_key`, so "the key changed" is a real comparison. Added
+`_log_undecryptable`, which reports ssrc, the mapped user id, mode, cc, extended,
+padding, header and payload lengths, and DAVE readiness — because a bare
+`CryptoError` cannot distinguish a stale key from malformed associated data and
+the two have opposite fixes. Rate-limited; a broken call emits ~50/s.
+
+Ruff and mypy clean, 272 tests still pass. **Uncommitted** — the instrumentation
+was never run against a real call, because that is the moment Bogdan called it off.
+
+### Two dead ends worth recording
+
+- I suspected DAVE was unsupported: `import davey` raised ImportError, which would
+  have neatly explained "works bot-to-bot, breaks with a real client". It was
+  wrong — I had run the import under **system python 3.14**, not the venv. Inside
+  the venv `HAS_DAVEY=True`, `DAVE_PROTOCOL_VERSION=1`. A cd from an earlier
+  command had also persisted and silently changed what I was testing. Both are the
+  same lesson: verify which interpreter answered.
+- I suspected a token collision between the sentinel and hotline. Checked: Pigion
+  uses `SENTINEL_BOT_TOKEN`, the deployed `frontdoor.py` md5-matches the repo copy,
+  and the loopback shows two distinct bot user ids. Not it.
+
+### The actual bug is worse than the one I was chasing
+
+From the Discord log: a transcribed fragment, **"I am not on voice all"**, was
+delivered to session `data-d4`. That is Bogdan's own speech — so the audio
+decrypted, segmented and transcribed correctly, and then the text was **routed to
+the wrong session**. Two context-free `say the word acceptance` messages from my
+loopback landed in other sessions the same way.
+
+So the decrypt failures are real but partial, and the headline defect is
+misrouting, not deafness. I had told Bogdan he was "talking to a wall" and then
+told him he "was not in voice"; both were wrong, and he corrected me twice. The
+lesson is that I diagnosed from the daemon's log lines instead of from what the
+sessions actually received.
+
+### The provenance hole — the most important finding of the session
+
+`data-f3` received three messages down the cc-socks relay: Bogdan's ollama task
+(relayed from Discord), my warning (peer session, direct), and Bogdan's "who
+spawned you" (relayed). **All three arrive in an identical wrapper.** It had no way
+to tell the user's authority from a peer agent's, and correctly refused to treat
+the relay as an authorization path.
+
+I hit the same wall from the other side: when "stop the voice task" arrived I could
+not verify it was Bogdan without going and reading the Discord channel history. I
+complied because *stop* is the safe direction — but a system where an agent must
+do forensics to authenticate an instruction is broken, and these sessions run with
+permissions bypassed.
+
+This is a design defect in hotline, not in either agent. A relayed human message
+must be labelled distinguishably from a peer injection. **Not fixed.**
+
+### Also found, not fixed
+
+- `hotline-page --no-wait` posts the page and then immediately posts *"giving up
+  after 0 minutes with no answer"*. It was never waiting. The message is false and
+  it went to Bogdan twice.
+- The loopback harness leaks a router session per run (`data-7a`, tmux
+  `hl-loopback-test`), which shows up in his session list looking like a real agent.
+- `hotlined` keeps Whisper and Piper resident after hangup — 2814 MiB held with no
+  call in progress. Only a daemon restart frees it, which collided with `data-f3`
+  needing the GPU.
+
+### State
+
+Voice stopped on his instruction, bot out of the channel, nothing of mine on the
+GPU beyond the resident models. Working tree has one uncommitted change
+(`src/hotline/voice.py`: the guard fix plus instrumentation). 272 tests pass.
+The acceptance test is **not** done and I am not claiming it.

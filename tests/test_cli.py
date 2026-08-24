@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from helpers import make_session
 
 from hotline.cli import main
@@ -79,7 +80,7 @@ def test_a_control_phrase_never_reaches_a_model(monkeypatch: pytest.MonkeyPatch)
 def test_kill_without_a_real_session_falls_through_to_a_question(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """"kill the process on port 9999" is a question. Answering it with a
+    """ "kill the process on port 9999" is a question. Answering it with a
     resolution error would make the feature eat ordinary sentences."""
     import hotline.cli as cli_module
     from hotline.errors import SessionNotFound

@@ -246,6 +246,7 @@ class Pager:
         timeout: float = DEFAULT_TIMEOUT,
         ladder: list[tuple[float, str]] | None = None,
         source: str = "an agent",
+        wait: bool = True,
     ) -> PageResult:
         steps = sorted(ladder if ladder is not None else build_ladder(timeout))
         started = self._now()
@@ -270,6 +271,14 @@ class Pager:
 
         result.message_id = self.send(self.channel_id, head)
         result.escalations.append("post")
+
+        if not wait:
+            # Nobody is blocked on an answer, so there is no ladder to climb and
+            # nothing to give up on. This used to be faked with a 0.1s timeout,
+            # which posted the page and then, a tenth of a second later, posted
+            # "giving up after 0 minutes with no answer" -- telling him nobody
+            # wanted his attention in the same breath as asking for it.
+            return result
 
         pending = [step for step in steps if step[1] != "post"]
         self._claim(True)

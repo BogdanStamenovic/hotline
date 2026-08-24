@@ -412,6 +412,12 @@ class HotlineBot(discord.Bot):
                 await message.channel.send("Not on a call.")
             return
         await call.leave()
+        # Hanging up is not enough: the models stay resident and keep the GPU. The
+        # call object going out of scope does not free them either, because the
+        # decoder holds references of its own.
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, call.transcriber.unload)
+        await loop.run_in_executor(None, call.speaker.unload)
         lines = [f"**{who}:** {what}" for who, what in call.transcript[-12:]]
         body = "Call ended.\n\n" + ("\n".join(lines) if lines else "_nothing was said_")
         if message:

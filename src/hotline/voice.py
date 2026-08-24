@@ -56,6 +56,50 @@ NARRATE_EVERY = 4.0
 _PATCHED = False
 
 
+_undecryptable = 0
+
+
+def _log_undecryptable(
+    decryptor: Any,
+    packet: Any,
+    header: bytes,
+    payload: bytes,
+    rotated: bool = False,
+) -> None:
+    """Say what an undecryptable packet actually looked like.
+
+    A bare `CryptoError` says nothing about which of the several things that have
+    to line up -- key, associated data, CSRC list, extension, mode -- did not.
+    Without this you cannot tell a stale key from a malformed header, and the two
+    have opposite fixes. Rate-limited because a broken call produces fifty of
+    these a second.
+    """
+    global _undecryptable
+    _undecryptable += 1
+    if _undecryptable > 12 and _undecryptable % 250:
+        return
+    state = getattr(decryptor.client, "_connection", None)
+    dave = getattr(state, "dave_session", None)
+    who = None
+    if state is not None:
+        who = getattr(state, "ssrc_user_map", {}).get(packet.ssrc)
+    log.error(
+        "undecryptable voice packet #%d%s: ssrc=%s user=%s mode=%s cc=%d ext=%s "
+        "pad=%s hdr=%dB payload=%dB dave_ready=%s dave_proto=%s",
+        _undecryptable,
+        " (after rebuild)" if rotated else "",
+        packet.ssrc,
+        who,
+        decryptor.mode,
+        packet.cc,
+        packet.extended,
+        packet.padding,
+        len(header),
+        len(payload),
+        None if dave is None else getattr(dave, "ready", "?"),
+        None if state is None else getattr(state, "dave_protocol_version", None),
+    )
+
 
 def install_receive_fixes() -> None:
     """Repair py-cord 2.8's inbound audio path. Idempotent; call before recording.
@@ -111,13 +155,24 @@ def install_receive_fixes() -> None:
             # subsequent packet fails to decrypt. Symptom: a call that works
             # perfectly when the bot joins last, and is stone deaf when it joins
             # first. Rebuild from the connection's current key and retry once.
+            #
+            # `_hotline_key` is seeded in __init__ below, so "the key changed" is
+            # a real comparison. It used to be seeded only here, which meant the
+            # first failure of *any* kind found None, rebuilt the box with the
+            # identical key, logged "key rotated", and failed again -- a
+            # confident wrong diagnosis printed on top of an unchanged bug.
             current = bytes(decryptor.client.secret_key)
             if current == getattr(decryptor, "_hotline_key", None):
+                _log_undecryptable(decryptor, packet, header, payload)
                 raise
             decryptor._hotline_key = current
             decryptor.box = decryptor._make_box(current)
             log.info("voice key rotated; rebuilt the decryptor")
-            result = decryptor.box.decrypt(payload, header, nonce)
+            try:
+                result = decryptor.box.decrypt(payload, header, nonce)
+            except Exception:
+                _log_undecryptable(decryptor, packet, header, payload, rotated=True)
+                raise
 
         if packet.extended:
             # `update_extended_header` already returns the correct payload offset,
@@ -144,6 +199,24 @@ def install_receive_fixes() -> None:
         "_decrypt_rtp_aead_xchacha20_poly1305_rtpsize",
         _decrypt,
     )
+
+    # Seed the key the box was actually built from, so the rotation check above
+    # compares against something real instead of None.
+    _dec_init = _reader.PacketDecryptor.__init__
+
+    def _keep_key(self: Any, mode: Any, secret_key: bytes, client: Any) -> None:
+        _dec_init(self, mode, secret_key, client)
+        self._hotline_key = bytes(secret_key)
+
+    setattr(_reader.PacketDecryptor, "__init__", _keep_key)  # noqa: B010
+
+    _upd = _reader.PacketDecryptor.update_secret_key
+
+    def _upd_tracked(self: Any, secret_key: bytes) -> None:
+        _upd(self, secret_key)
+        self._hotline_key = bytes(secret_key)
+
+    setattr(_reader.PacketDecryptor, "update_secret_key", _upd_tracked)  # noqa: B010
 
     # Keep the raw bytes: RTPPacket.__init__ slices them away immediately, and
     # the CSRC list is needed to rebuild the associated data above.

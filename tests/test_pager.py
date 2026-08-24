@@ -7,6 +7,8 @@ layer is faked at `_request` so the ladder is exercised without touching Discord
 
 from __future__ import annotations
 
+from itertools import pairwise
+
 import pytest
 
 import hotline.pager as pager_module
@@ -165,8 +167,30 @@ def test_the_spam_cadence_is_regular(discord: FakeDiscord) -> None:
     steps = build_ladder(700)
     mentions = [t for t, action in steps if action == "nudge"]
     assert mentions[0] == SPAM_START
-    assert all(b - a == SPAM_EVERY for a, b in zip(mentions, mentions[1:]))
+    assert all(b - a == SPAM_EVERY for a, b in pairwise(mentions))
     assert mentions[-1] < 700
+
+
+def test_no_wait_posts_the_page_and_says_nothing_else(discord: FakeDiscord) -> None:
+    """`--no-wait` used to be faked with a 0.1s timeout, so it posted the page and
+    then immediately posted "giving up after 0 minutes with no answer" -- telling
+    him nobody wanted his attention in the same breath as asking for it."""
+    clock = Clock()
+    pager, fired = build(discord, clock)
+    result = pager.page("question", wait=False)
+    assert result.escalations == ["dm", "post"]
+    assert not result.answered
+    assert not any("giving up" in text for _, text in discord.sent)
+    assert not fired
+
+
+def test_waiting_is_still_the_default(discord: FakeDiscord) -> None:
+    """The fix must not turn every page into a fire-and-forget."""
+    clock = Clock()
+    pager, _ = build(discord, clock)
+    result = pager.page("question", timeout=30)
+    assert any("giving up" in text for _, text in discord.sent)
+    assert result.waited_seconds >= 30
 
 
 def test_a_broken_siren_is_recorded_not_fatal(discord: FakeDiscord) -> None:
