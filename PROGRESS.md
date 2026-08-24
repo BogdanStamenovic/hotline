@@ -1754,3 +1754,49 @@ The CLI labels itself honestly too: run from inside a session it declares
 declares a human origin with no receipt and says so.
 
 325 tests, ruff and mypy clean.
+
+## "I tried to startup a new agent" — and could not, by construction
+
+He said this in his own channel, and the message arrived carrying the provenance
+header written an hour earlier. `hotline --provenance` returned VERIFIED against
+Discord — first real use of the thing, and it worked.
+
+What happened, from the channel log:
+
+    22:52:20  him:      New session
+    22:52:20  hotline:  Started over. Your previous session was closed.
+    22:53:06  him:      I need you to stylize the app on port 8000...
+    22:53:06  hotline:  This would start **data-88**, this channel's own session.
+
+`data-88` is me. He asked for a new agent, was told the old one was closed, and
+was then offered the same session again — and after he said yes, his styling
+request was delivered to the session he had just replaced.
+
+### Why
+
+`tmux_name(key)` derives the pane from the conversation key, so a channel's own
+session is a **singleton**. `tmuxen.spawn` returns the existing pane whenever one
+is alive, which means `new session` can close nothing it will not immediately
+re-open as the same session. The kill was also wrapped in a `suppress` and the
+"your previous session was closed" line printed unconditionally — so when the
+session survived, the claim was not merely unverified, it was self-defeating.
+
+There was no route to a second agent from Discord at all. That is a real gap
+rather than a bug in a feature: he told me hours earlier that every agent needs
+its own thread, so starting agents from Discord is central, and it was
+impossible.
+
+### `new agent <task>`
+
+Own key, minted rather than derived — which is the whole fix, since anything
+derived from the conversation makes it a singleton again. Own pane, own registry
+record, own channel, and the task handed to it immediately rather than left for
+someone to type: he asked for an agent to do a thing, not an idle session. The
+task arrives labelled `kind=system`, so the new agent knows it came from hotline
+relaying its brief and not from a person.
+
+`new session` now reports what actually happened. If the session survives the
+kill it says so, explains that the next message would reach it again, and points
+at `new agent` for a genuinely separate one.
+
+337 tests, ruff and mypy clean.

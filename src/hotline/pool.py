@@ -26,6 +26,7 @@ import contextlib
 import json
 import logging
 import re
+import secrets
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -352,7 +353,7 @@ class SessionPool:
         name = await self._spawn_own(conv, task)
         return name
 
-    def _enrol(self, session_id: str, name: str, task: str) -> None:
+    def _enrol(self, session_id: str, name: str, task: str) -> int | None:
         """Register a session Bogdan created himself, and give it a channel.
 
         Declaring used to be cooperative: an agent registered itself if it
@@ -375,17 +376,20 @@ class SessionPool:
 
         try:
             registry = Registry()
-            if registry.get(session_id) is not None:
-                return
+            existing = registry.get(session_id)
+            if existing is not None:
+                return existing.channel_id
             summary = " ".join(task.split())[:200] or "started from Discord; not yet declared"
             agent = registry.declare(session_id, name, summary)
             manager = channels_from_env()
             if manager is None or not agent.wants_channel or agent.channel_id is not None:
-                return
+                return agent.channel_id
             agent.channel_id = manager.create_text(agent.name, topic=agent.task)
             registry.save()
+            return agent.channel_id
         except Exception as exc:  # noqa: BLE001 - never take a session down over bookkeeping
             log.warning("could not enrol %s: %s: %s", name, type(exc).__name__, exc)
+            return None
 
     async def _spawn_own(self, conv: Conversation, task: str = "") -> str:
         if conv.own:
@@ -462,6 +466,9 @@ class SessionPool:
             lines = [a.describe() for a in known]
             return Reply(text="\n".join(lines), subtype="control")
 
+        if route.action == "new_agent":
+            return await self._new_agent(route)
+
         if route.action == "resume":
             handled = await self._resume(conv, route, live)
             if handled is not None:
@@ -482,11 +489,33 @@ class SessionPool:
             # command and must be answered as one -- leaking it to the model as
             # chat is what Bogdan hit.
             if route.text.strip().lower() == "new session":
-                if conv.own:
+                # Report what actually happened. This used to announce "your
+                # previous session was closed" unconditionally, with the kill
+                # wrapped in a suppress -- so when the session survived, the next
+                # message was answered by the very session he had just been told
+                # was gone. A pane is named after the conversation, so
+                # `tmuxen.spawn` hands the same one back if it is still alive:
+                # the claim was not just unverified, it was self-defeating.
+                closed, was = False, conv.own
+                if was:
                     with contextlib.suppress(HotlineError, SessionNotFound, OSError):
-                        await self.router.kill_session(conv.own)
+                        await self.router.kill_session(was)
+                    await asyncio.sleep(0.5)
+                    closed = not tmuxen.exists(tmuxen.tmux_name(conv.key))
                 conv.own = None
+                conv.confirmed = conv.held = conv.held_for = None
                 self._save_bindings()
+                if was and not closed:
+                    return Reply(
+                        text=f"**{was} did not close** — it is still running, and "
+                             f"because this channel's session is named after the "
+                             f"channel, your next message would reach it again "
+                             f"rather than something new.\nIf you want a genuinely "
+                             f"separate one, say `new agent <what it should do>` — "
+                             f"that gets its own session and its own channel. To "
+                             f"force this one down: `session kill {was}`.",
+                        subtype="control",
+                    )
                 return Reply(
                     text="Started over. Your previous session was closed; the next "
                          "thing you say opens a fresh one.",
@@ -549,6 +578,53 @@ class SessionPool:
                 subtype="control",
             )
         return None
+
+    async def _new_agent(self, route: Route) -> Reply:
+        """`new agent <task>` -- a genuinely separate agent, with its own channel.
+
+        This did not exist and could not be improvised, which is the bug it
+        fixes. A pane is named after the conversation key, so a channel's own
+        session is a singleton: `tmuxen.spawn` hands back the existing pane when
+        one is already there, and "new session" therefore closed nothing it could
+        not immediately re-open as the same session. Bogdan asked #general for a
+        new agent, was told it had started over, and was answered by the session
+        that was already running.
+
+        So the key is minted here rather than derived. Its own key means its own
+        pane, its own registry record and its own channel -- which is the shape
+        he asked for when he said every agent needs its own thread.
+        """
+        task = (route.target or "").strip()
+        if not task:
+            return Reply(
+                text='Say what it should work on — `new agent stylize the app on '
+                     'port 8000`. The task becomes its name and its channel topic.',
+                subtype="control",
+            )
+        # Minted, not derived: two agents started a second apart must not collide,
+        # and nothing about the conversation can be part of the name without
+        # making it a singleton again.
+        key = f"agent-{secrets.token_hex(3)}"
+        try:
+            session = await tmuxen.spawn(key, cwd=self.cwd, bypass=self.router.bypass)
+        except HotlineError as exc:
+            return Reply(text=f"Could not start it: {exc}", subtype="control")
+
+        channel = self._enrol(session.session_id, session.name, task)
+        # Handed the task straight away rather than waiting to be spoken to: he
+        # asked for an agent to do a thing, not for an idle session.
+        with contextlib.suppress(HotlineError):
+            await self.router.deliver(session.name, task, Origin(
+                kind="system",
+                label="hotline, relaying the task this agent was created for",
+            ))
+        where = f" in <#{channel}>" if channel else " (no channel — Discord refused)"
+        return Reply(
+            text=f"Started **{session.name}**{where}, working on:\n> {task}\n"
+                 f"Talk to it there, or `connect {session.name}` from here. "
+                 f"`tmux attach -t {tmuxen.tmux_name(key)}` to take it over directly.",
+            subtype="control",
+        )
 
     async def _resume(
         self, conv: Conversation, route: Route, live: list[LiveSession]
@@ -939,6 +1015,7 @@ HELP_TEXT = """**Commands** (these are handled by hotline itself, not sent to a 
 `where am i` — which session you are bound to, and how to attach to it
 `resources` — RAM, VRAM, load
 `agents` — who is working on what, and who has finished
+`new agent <task>` — start a SEPARATE agent with its own session and channel
 `resume` — agents you can bring back, numbered; `resume 2` or `resume <name>`
 
 Every message relayed into a session now carries a provenance header saying
@@ -946,7 +1023,9 @@ where it came from. A message relayed from here carries the Discord channel and
 message id, so the agent can run `hotline --provenance -` and have Discord
 itself confirm you posted it. A message from another agent is labelled as such
 and as not an authorization channel.
-`new session` — close your session and start over
+`new session` — close *this channel's* session and start over. Note it is not
+   how you get a second agent: this channel's session is named after the channel,
+   so a replacement is the same session again. Use `new agent` for that.
 
 In #general, a message is held and you are told where it is going before it goes
 — answer `yes` to send, `no` to drop, or just type something else to replace it.

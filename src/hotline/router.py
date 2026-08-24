@@ -117,6 +117,17 @@ _AGENTS = re.compile(
     r"^(?:agents?|who(?:'?s| is)\s+working(?:\s+on\s+what)?|what(?:\s+is|'?s)\s+"
     r"everyone\s+doing)\s*[.?]?$", re.IGNORECASE
 )
+# Starting a NEW agent, as opposed to talking to this channel's own session.
+# These are different things and used to be impossible to say apart: the pane
+# name is derived from the conversation key, so a channel's session is a
+# singleton and "new session" could only ever hand back the same one. Bogdan
+# tried to start an agent from #general, was told "started over", and was then
+# answered by the session that was already there.
+_NEW_AGENT = re.compile(
+    r"^(?:new|start|spawn|launch|make)\s+(?:a\s+|an\s+|another\s+)?agent"
+    r"(?:\s+(?:to|for|that|which)\b)?[:,]?\s*(.*?)\s*[.?!]?$",
+    re.IGNORECASE,
+)
 _HELP = re.compile(r"^(?:help|commands?|what\s+can\s+(?:you|i)\s+do)\s*[.?!]?$", re.IGNORECASE)
 # Bare `resume` lists what can be brought back; `resume <n|name>` brings one back.
 # The target form deliberately overlaps with attaching to a live session, and the
@@ -150,6 +161,10 @@ def parse_utterance(utterance: str) -> Route:
 
     # Control first. These are about the connection itself, not questions for
     # whatever is on the other end of it.
+    new_agent = _NEW_AGENT.match(text)
+    if new_agent:
+        return Route("control", new_agent.group(1).strip() or None, text,
+                     action="new_agent")
     if _HELP.match(low):
         return Route("control", None, text, action="help")
     resume = _RESUME.match(text)
