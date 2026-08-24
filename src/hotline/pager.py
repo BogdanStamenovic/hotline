@@ -32,6 +32,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from .config import page_claim
+from .text import chunk
 
 API = "https://discord.com/api/v10"
 USER_AGENT = "DiscordBot (https://github.com/BogdanStamenovic/hotline, 0.1)"
@@ -153,19 +154,34 @@ class Pager:
     # ---- primitives -----------------------------------------------------
 
     def send(self, channel_id: str, content: str) -> str:
-        payload = _request(
-            f"/channels/{channel_id}/messages",
-            self.token,
-            "POST",
-            {
-                "content": content[:1900],
-                # Without this an @mention inside a code block or an edited message
-                # can silently fail to notify, which defeats the entire purpose.
-                "allowed_mentions": {"users": [self.user_id]},
-            },
-        )
-        assert isinstance(payload, dict)
-        return str(payload["id"])
+        """Post a message, splitting it if Discord will not take it whole.
+
+        Returns the id of the FIRST part, because that is the anchor replies are
+        counted from. Truncating instead -- which this used to do -- delivers
+        something that reads as complete and is not; Bogdan lost the end of a
+        status message that way and only noticed because the last sentence stopped
+        mid-thought.
+        """
+        parts = chunk(content)
+        first_id: str | None = None
+        for index, part in enumerate(parts):
+            body = part if len(parts) == 1 else f"{part}\n\n*({index + 1}/{len(parts)})*"
+            payload = _request(
+                f"/channels/{channel_id}/messages",
+                self.token,
+                "POST",
+                {
+                    "content": body,
+                    # Without this an @mention inside a code block or an edited
+                    # message can silently fail to notify, defeating the purpose.
+                    "allowed_mentions": {"users": [self.user_id]},
+                },
+            )
+            assert isinstance(payload, dict)
+            if first_id is None:
+                first_id = str(payload["id"])
+        assert first_id is not None
+        return first_id
 
     def dm_channel(self) -> str | None:
         """A DM pushes even when the guild is muted. Best-effort: he may have DMs

@@ -183,3 +183,33 @@ def test_from_env_names_what_is_missing(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_result_defaults() -> None:
     assert PageResult(answered=False).escalations == []
+
+
+def test_a_long_message_is_split_not_truncated(discord: FakeDiscord) -> None:
+    """The bug this exists to prevent: a status message was cut at 1900 chars and
+    delivered looking complete. Bogdan read it and had no way to know the end was
+    missing. Silent truncation is worse than an error."""
+    clock = Clock()
+    pager, _ = build(discord, clock)
+    body = "sentence. " * 600  # ~6000 chars
+    discord.replies["chan-1"] = [reply_from("user-1", "ok")]
+    pager.page(body, timeout=60)
+
+    posted = [text for channel, text in discord.sent if channel == "chan-1"]
+    delivered = "".join(posted)
+    assert len(posted) > 1
+    assert all(len(part) <= 2000 for part in posted)
+    # Nothing was dropped: every sentence survives somewhere.
+    assert delivered.count("sentence.") == 600
+    assert "(1/" in posted[0]
+
+
+def test_send_returns_the_first_part_as_the_reply_anchor(discord: FakeDiscord) -> None:
+    """Replies are counted from `after=<id>`, so it has to be the first part or a
+    reply arriving between parts would be missed."""
+    clock = Clock()
+    pager, _ = build(discord, clock)
+    first = pager.send("chan-1", "x " * 3000)
+    ids = sorted(int(i) for i in [first])
+    assert int(first) == 1001  # the first POST of the batch
+    assert ids

@@ -33,39 +33,14 @@ from .config import page_claim
 from .errors import HotlineError
 from .fresh import Event
 from .pool import SessionPool
+from .text import MAX_MESSAGE, chunk
 
 # A page-claim older than this is assumed to belong to a process that died, so
 # the bridge un-mutes itself rather than staying silent forever.
 CLAIM_MAX_AGE = 2400.0
 
-MAX_MESSAGE = 1900  # Discord's limit is 2000; leave room for the code fence
 EDIT_INTERVAL = 2.0  # Discord allows ~5 edits / 5s per channel. Stay well under.
 THINKING = "…"
-
-
-def chunk(text: str, limit: int = MAX_MESSAGE) -> list[str]:
-    """Split a long answer on paragraph, then line, then hard boundaries.
-
-    Discord silently rejects an oversized message, so an answer that is merely long
-    would otherwise vanish entirely -- the worst possible failure for something
-    whose only job is to deliver an answer.
-    """
-    text = text.strip() or "(no answer)"
-    parts: list[str] = []
-    while len(text) > limit:
-        window = text[:limit]
-        cut = window.rfind("\n\n")
-        if cut < limit // 2:
-            cut = window.rfind("\n")
-        if cut < limit // 2:
-            cut = window.rfind(" ")
-        if cut < limit // 2:
-            cut = limit
-        parts.append(text[:cut].rstrip())
-        text = text[cut:].lstrip()
-    if text:
-        parts.append(text)
-    return parts
 
 
 class Narration:

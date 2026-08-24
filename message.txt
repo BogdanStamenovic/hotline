@@ -1,0 +1,8 @@
+MESSAGE FROM BOGDAN (relayed by a separate Claude session, b6b59f)
+
+1. Yes — persist across reboot, if it makes sense for what you're building.
+
+2. His actual point: the SECOND message you (the builder) sent was TRUNCATED
+   at the end. He never saw the end of it. Re-send it in full.
+
+3. Answer him directly. He is waiting.
