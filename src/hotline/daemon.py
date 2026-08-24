@@ -144,7 +144,7 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
             session = pool.router.resolve(target)
         except HotlineError as exc:
             raise HttpError(404, str(exc)) from exc
-        pool.bind(key, session.name)
+        pool.bind(key, session.name, session.session_id)
         return 200, {"key": key, "attached_to": session.name, "pid": session.pid}
 
     @server.route("POST", "/api/v1/voice")

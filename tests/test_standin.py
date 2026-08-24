@@ -20,6 +20,7 @@ from helpers import FakeWorld, make_session
 
 import hotline.pool as pool_module
 import hotline.standin as standin_module
+from hotline.errors import SessionNotFound
 from hotline.pool import SessionPool
 from hotline.standin import Standing
 
@@ -251,4 +252,63 @@ async def test_a_session_someone_is_still_bound_to_is_never_orphaned(
     monkeypatch.setattr(time_module, "time", lambda: 1e12)
     await pool.reap()
     assert world.killed == []
+    await pool.close()
+
+
+# ---- a binding has to outlive the thing it points at moving --------------
+
+
+async def test_a_binding_survives_the_session_getting_a_new_pid(
+    world: FakeWorld,
+) -> None:
+    """The bug Bogdan hit twice.
+
+    The builder session's process was replaced mid-conversation. Resolution was
+    by name, the old descriptor went away, and `ask` correctly refused to hand him
+    a stranger -- which is the right safety and still meant his claim silently
+    stopped working. Session ids survive a new pid; names and pids do not.
+    """
+    make_session(world.home, 300, "builder", "/home/bodas/data", "stable-id",
+                 started_at=3000)
+    pool = SessionPool()
+    await pool.ask("k", "connect builder")
+    assert pool.conversations["k"].attached_id == "stable-id"
+
+    # Same session, new process: different pid, and it even renames itself.
+    (world.home / "sessions" / "300.json").unlink()
+    make_session(world.home, 999, "builder-renamed", "/home/bodas/data", "stable-id",
+                 started_at=3000)
+
+    route, reply = await pool.ask("k", "still there?")
+    assert route.mode == "attach"
+    assert world.delivered[-1] == ("builder-renamed", "still there?")
+    assert reply.text == "answer-1"
+    await pool.close()
+
+
+async def test_the_route_reports_the_name_not_the_id(world: FakeWorld) -> None:
+    """Telling a caller it is attached to "stable-id" teaches them nothing."""
+    make_session(world.home, 301, "builder", "/home/bodas/data", "stable-id",
+                 started_at=3000)
+    pool = SessionPool()
+    await pool.ask("k", "connect builder")
+    route, _ = await pool.ask("k", "hello")
+    assert route.target == "builder"
+    await pool.close()
+
+
+async def test_a_binding_to_a_session_that_really_died_is_still_reported(
+    world: FakeWorld,
+) -> None:
+    """Binding by id must not weaken the tofix #8 guarantee."""
+    make_session(world.home, 302, "builder", "/home/bodas/data", "gone-id",
+                 started_at=3000)
+    pool = SessionPool()
+    await pool.ask("k", "connect builder")
+    (world.home / "sessions" / "302.json").unlink()
+
+    with pytest.raises(SessionNotFound, match="is gone"):
+        await pool.ask("k", "still there?")
+    assert pool.conversations["k"].attached_to is None
+    assert pool.conversations["k"].attached_id is None
     await pool.close()

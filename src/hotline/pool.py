@@ -67,6 +67,12 @@ class Conversation:
     # directly: repeating "join data-13" on every message is not how a
     # conversation works.
     attached_to: str | None = None
+    # The stable handle for the same session. A name can change and a pid
+    # certainly does -- the builder session's pid was replaced mid-conversation
+    # and the binding was correctly dropped rather than pointed at a stranger,
+    # which is safe and still meant the connection did not stick. Session ids
+    # survive both, so resolution prefers this and keeps the name for display.
+    attached_id: str | None = None
     # The session names from the last `session list` shown to THIS conversation.
     # `connect 2` has to mean the second line of the list you were just shown, not
     # the second line of a list computed fresh -- sessions come and go, so the
@@ -139,7 +145,12 @@ class SessionPool:
         for key, entry in saved.items():
             if not isinstance(entry, dict):
                 continue
-            conv = Conversation(key=key, cwd=self.cwd, attached_to=entry.get("attached_to"))
+            conv = Conversation(
+                key=key,
+                cwd=self.cwd,
+                attached_to=entry.get("attached_to"),
+                attached_id=entry.get("attached_id"),
+            )
             self.conversations[key] = conv
             if entry.get("own") and not tmuxen.exists(tmuxen.tmux_name(key)):
                 self.retired[key] = (
@@ -154,7 +165,11 @@ class SessionPool:
             path.write_text(
                 json.dumps(
                     {
-                        key: {"attached_to": conv.attached_to, "own": conv.own}
+                        key: {
+                            "attached_to": conv.attached_to,
+                            "attached_id": conv.attached_id,
+                            "own": conv.own,
+                        }
                         for key, conv in self.conversations.items()
                     }
                 )
@@ -265,14 +280,16 @@ class SessionPool:
             self.conversations[key] = conv
         return conv
 
-    def bind(self, key: str, session_name: str) -> None:
+    def bind(self, key: str, session_name: str, session_id: str | None = None) -> None:
         """Point a conversation at a session without a `connect` being spoken.
 
         Walking into an agent's own voice channel already says who you want to
         talk to; making you then say it out loud as well would be the interface
         asking you to repeat yourself.
         """
-        self._conversation(key).attached_to = session_name
+        conv = self._conversation(key)
+        conv.attached_to = session_name
+        conv.attached_id = session_id
         self._save_bindings()
 
     def release(self, key: str) -> str | None:
@@ -369,7 +386,7 @@ class SessionPool:
 
         if route.action == "detach":
             was = conv.attached_to
-            conv.attached_to = None
+            conv.attached_to = conv.attached_id = None
             if was:
                 return Reply(text=f"Detached from {was}. Back to your own session.",
                              subtype="control")
@@ -417,7 +434,7 @@ class SessionPool:
             if conv.own == session.name:
                 conv.own = None
             if conv.attached_to == session.name:
-                conv.attached_to = None
+                conv.attached_to = conv.attached_id = None
             try:
                 outcome = await self.router.kill_session(str(session.pid))
             except HotlineError as exc:
@@ -434,6 +451,7 @@ class SessionPool:
                 return None  # not a session name -- treat it as a question
             session = target
             conv.attached_to = session.name
+            conv.attached_id = session.session_id
             return Reply(
                 text=f"Connected to {describe(session)}. Everything you say now goes there "
                      f'until you say "detach".',
@@ -494,23 +512,30 @@ class SessionPool:
             route = Route("fresh", None, route.text)
 
         if conv.attached_to and (route.mode == "fresh" or route.implicit):
-            target, mode = conv.attached_to, "attach"
+            # The id first: it outlives a rename and a new pid, both of which
+            # happen to a long-running session.
+            target, mode = (conv.attached_id or conv.attached_to), "attach"
+            # Resolve by id, report by name: a caller being told it is attached to
+            # "bbb" learns nothing.
+            display = conv.attached_to
         elif route.mode != "fresh" and route.target:
             target, mode = route.target, route.mode
+            display = target
         else:
             if len(self.conversations) > self.max_sessions:
                 await self._evict_oldest()
             async with conv.lock:
                 target = await self._own_session(conv)
             mode = "own"
+            display = target
 
         try:
             reply = await self._send(conv, target, route.text, narrator, timeout)
         except SessionNotFound:
             # The session this conversation was pointed at is gone. Say so; do not
             # quietly substitute a stranger, which is the whole of tofix #8.
-            if conv.attached_to == target:
-                conv.attached_to = None
+            if target in (conv.attached_to, conv.attached_id):
+                conv.attached_to = conv.attached_id = None
                 self._save_bindings()
                 raise SessionNotFound(
                     f"{target} is gone — it exited or was killed. You are back on "
@@ -531,7 +556,7 @@ class SessionPool:
         if reply.notice is None:
             reply.notice = self.retired.pop(key, None)
         self._save_bindings()
-        return Route(mode, target, route.text), reply
+        return Route(mode, display, route.text), reply
 
     async def _send(
         self,

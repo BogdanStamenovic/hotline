@@ -349,7 +349,7 @@ class HotlineBot(discord.Bot):
             agent = self._agent_for_voice(channel.id)
             greeting = "Hotline. What do you need?"
             if agent is not None:
-                self.pool.bind(call.key, agent.name)
+                self.pool.bind(call.key, agent.name, agent.session_id)
                 greeting = f"{agent.name} here. {agent.task}. What do you need?"
 
             try:
