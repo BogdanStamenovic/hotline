@@ -54,10 +54,14 @@ class FakeSession:
 
 
 @pytest.fixture(autouse=True)
-def fake_sessions(monkeypatch: pytest.MonkeyPatch) -> None:
+def fake_sessions(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     FakeSession.created = 0
     FakeSession.live = []
     monkeypatch.setattr(pool_module, "FreshSession", FakeSession)
+    # Isolate the runtime dir. Without this the pool loads the *real* machine's
+    # saved bindings and the counts in these tests depend on whatever the live
+    # daemon happens to have open.
+    monkeypatch.setenv("HOTLINE_RUNTIME", str(tmp_path / "run"))
 
 
 async def test_one_process_serves_a_whole_conversation() -> None:
@@ -168,3 +172,49 @@ async def test_close_cancels_work_in_flight() -> None:
     pending = pool.conversations["phone-1"].pending
     await pool.close()
     assert pending is not None and pending.cancelled() or pending.done()
+
+
+async def test_a_reaped_conversation_says_so_next_time() -> None:
+    """Bogdan lost five turns of context and the reply came back from a stranger
+    with nothing anywhere saying a swap had happened. Silence is the bug."""
+    pool = SessionPool(idle_timeout=0.05)
+    await pool.ask("phone-1", "hello")
+    await asyncio.sleep(0.1)
+    await pool.reap()
+
+    _, reply = await pool.ask("phone-1", "still there?")
+    assert reply.notice is not None
+    assert "idle" in reply.notice
+    # Said once, not on every message afterwards.
+    _, again = await pool.ask("phone-1", "and now?")
+    assert again.notice is None
+    await pool.close()
+
+
+async def test_an_evicted_conversation_says_so_next_time() -> None:
+    pool = SessionPool(max_sessions=2)
+    await pool.ask("a", "hi")
+    await asyncio.sleep(0.01)
+    await pool.ask("b", "hi")
+    await asyncio.sleep(0.01)
+    await pool.ask("a", "again")
+    await pool.ask("c", "hi")
+    _, reply = await pool.ask("b", "am i still here?")
+    assert reply.notice is not None
+    assert "least recently used" in reply.notice
+    await pool.close()
+
+
+async def test_bindings_and_a_restart_notice_survive_the_process(fake_claude) -> None:
+    """A restart destroys every subprocess. The binding is worth keeping; the
+    pretence that the context survived is not."""
+    pool = SessionPool()
+    pool.conversations["phone-1"] = pool._conversation("phone-1")
+    pool.conversations["phone-1"].attached_to = "data-13"
+    pool._save_bindings()
+    await pool.close()
+
+    revived = SessionPool()
+    assert revived.conversations["phone-1"].attached_to == "data-13"
+    assert "restarted" in revived.retired["phone-1"]
+    await revived.close()

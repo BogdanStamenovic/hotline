@@ -49,6 +49,15 @@ def stops_log() -> Path:
     return runtime_dir() / "stops.jsonl"
 
 
+def bindings_file() -> Path:
+    """Where `connect` bindings survive a restart of the daemon.
+
+    Under /run deliberately: a binding to a session that died with the reboot is
+    worse than no binding, because it looks like continuity and is not.
+    """
+    return runtime_dir() / "bindings.json"
+
+
 def page_claim() -> Path:
     """Marker saying a page is waiting for an answer in the Discord channel.
 

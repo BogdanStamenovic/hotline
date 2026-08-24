@@ -433,6 +433,8 @@ class VoiceCall:
         try:
             _route, reply = await self.pool.ask(self.key, text, narrator=narrate, timeout=900.0)
             answer = reply.text
+            if reply.notice:
+                answer = f"Heads up, {reply.notice}. {answer}"
         except HotlineError as exc:
             answer = f"That didn't work. {exc}"
         except Exception as exc:

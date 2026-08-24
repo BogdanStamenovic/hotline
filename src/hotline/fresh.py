@@ -45,6 +45,10 @@ class Event:
 @dataclass
 class Reply:
     text: str = ""
+    # Set when something happened to the conversation itself that the caller
+    # needs told -- their session was reaped, evicted, or lost to a restart.
+    # Silently handing them a stranger is the bug this exists to prevent.
+    notice: str | None = None
     events: list[Event] = field(default_factory=list)
     session_id: str | None = None
     subtype: str | None = None

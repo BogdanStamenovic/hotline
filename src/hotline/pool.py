@@ -14,10 +14,12 @@ while.
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from .config import bindings_file
 from .errors import HotlineError, SessionNotFound
 from .fresh import FreshSession, Narrator, Reply
 from .router import Route, Router, describe, parse_utterance
@@ -63,7 +65,51 @@ class SessionPool:
         self.cwd = cwd
         self.append_system_prompt = append_system_prompt
         self.conversations: dict[str, Conversation] = {}
+        # Why a conversation went away, kept until the caller is told. Bogdan had
+        # five turns with a session, it vanished mid-message, and the reply came
+        # back from a stranger with none of the context -- with nothing anywhere
+        # saying a swap had happened.
+        self.retired: dict[str, str] = {}
         self._reaper: asyncio.Task[None] | None = None
+        self._shutting_down = False
+        self._load_bindings()
+
+    # ---- surviving a restart -------------------------------------------
+
+    def _load_bindings(self) -> None:
+        """Restore `connect` bindings, and remember that the process restarted.
+
+        A restart destroys every pooled subprocess, so a caller mid-conversation
+        loses their context whether or not they were attached to a live session.
+        They get told on their next message rather than quietly handed a blank one.
+        """
+        try:
+            saved = json.loads(bindings_file().read_text())
+        except (OSError, ValueError):
+            return
+        for key, entry in saved.items():
+            if not isinstance(entry, dict):
+                continue
+            conv = Conversation(key=key, cwd=self.cwd, attached_to=entry.get("attached_to"))
+            self.conversations[key] = conv
+            self.retired[key] = (
+                "hotlined restarted, so the previous session's context is gone"
+            )
+
+    def _save_bindings(self) -> None:
+        try:
+            path = bindings_file()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                json.dumps(
+                    {
+                        key: {"attached_to": conv.attached_to}
+                        for key, conv in self.conversations.items()
+                    }
+                )
+            )
+        except OSError:
+            pass
 
     def start(self) -> None:
         if self._reaper is None:
@@ -82,13 +128,21 @@ class SessionPool:
             if now - conv.last_used > self.idle_timeout and not conv.lock.locked()
         ]
         for key in stale:
-            await self._drop(key)
+            await self._drop(
+                key,
+                f"that conversation was idle for over {self.idle_timeout / 60:.0f} minutes "
+                "and was closed",
+            )
         return len(stale)
 
-    async def _drop(self, key: str) -> None:
+    async def _drop(self, key: str, reason: str = "") -> None:
         conv = self.conversations.pop(key, None)
         if conv and conv.session:
             await conv.session.close()
+        if reason and conv is not None:
+            self.retired[key] = reason
+        if not self._shutting_down:
+            self._save_bindings()
 
     async def _evict_oldest(self) -> None:
         """Bound the number of live `claude` processes.
@@ -103,7 +157,11 @@ class SessionPool:
             if not conv.lock.locked()
         ]
         if idle:
-            await self._drop(min(idle)[1])
+            await self._drop(
+                min(idle)[1],
+                f"too many conversations were open at once ({self.max_sessions}), so the "
+                "least recently used one was closed",
+            )
 
     def _conversation(self, key: str) -> Conversation:
         conv = self.conversations.get(key)
@@ -197,17 +255,21 @@ class SessionPool:
             conv = self._conversation(key)
             handled = self._control(conv, route)
             if handled is not None:
+                handled.notice = self.retired.pop(key, None)
+                self._save_bindings()
                 return route, handled
             # Not actually a control command; fall through as an ordinary question.
             route = Route("fresh", None, route.text)
 
         conv = self._conversation(key)
+        notice = self.retired.pop(key, None)
         if conv.attached_to and (route.mode == "fresh" or route.implicit):
             reply = await self.router.ask_session(
                 conv.attached_to, route.text, narrator=narrator, timeout=timeout
             )
             conv.last_used = time.monotonic()
             conv.turns += 1
+            reply.notice = notice
             return Route("attach", conv.attached_to, route.text), reply
 
         if route.mode != "fresh" and route.target:
@@ -216,6 +278,7 @@ class SessionPool:
             reply = await self.router.ask_session(
                 route.target, route.text, narrator=narrator, timeout=timeout
             )
+            reply.notice = notice
             return route, reply
 
         if len(self.conversations) > self.max_sessions:
@@ -243,6 +306,8 @@ class SessionPool:
                 raise
             conv.last_used = time.monotonic()
             conv.turns += 1
+        reply.notice = notice
+        self._save_bindings()
         return route, reply
 
     async def ask_soft(
@@ -280,6 +345,11 @@ class SessionPool:
         return result
 
     async def close(self) -> None:
+        # Persist first, then stop saving: tearing the pool down drops every
+        # conversation, and letting that rewrite the file would erase the very
+        # bindings a restart is meant to restore.
+        self._save_bindings()
+        self._shutting_down = True
         if self._reaper is not None:
             self._reaper.cancel()
             self._reaper = None

@@ -114,6 +114,19 @@ class HotlineBot(discord.Bot):
     async def on_ready(self) -> None:
         who = f"{self.user} ({self.user.id})" if self.user else "?"
         self.log(f"discord connected as {who}; gated on user {self.user_id}")
+        # If he is already sitting in the voice channel, no state-update event is
+        # ever coming -- joining is an edge, and we missed it. Without this a
+        # restart mid-call leaves him talking to a bot that will never pick up,
+        # with nothing in the log to say why.
+        await self._pick_up_if_already_waiting()
+
+    async def _pick_up_if_already_waiting(self) -> None:
+        channel = await self._voice_channel()
+        if channel is None or self.call is not None:
+            return
+        if any(member.id == self.user_id for member in channel.members):
+            self.log("bogdan is already in the voice channel; picking up")
+            await self._join_voice()
 
     @staticmethod
     def page_outstanding() -> bool:
@@ -188,6 +201,8 @@ class HotlineBot(discord.Bot):
                 route, reply = await self.pool.ask(key, text, narrator=narrate, timeout=900.0)
             body = reply.text
             header = "" if route.mode == "fresh" else f"*{route.mode} → {route.target}*\n"
+            if reply.notice:
+                header = f"⚠️ *{reply.notice}.*\n" + header
         except HotlineError as exc:
             body = f"That didn't work.\n```\n{type(exc).__name__}: {exc}\n```"
             header = ""

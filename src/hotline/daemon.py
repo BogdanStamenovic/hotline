@@ -155,8 +155,14 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
 
         route, reply = outcome
         log(f"{key}: {route.mode} -> {len(reply.text)} chars in {time.monotonic() - began:.1f}s")
+        spoken = reply.text
+        if reply.notice:
+            # Spoken first, because on the phone this is the only way the caller
+            # learns their context is gone.
+            spoken = f"Heads up — {reply.notice}. {spoken}"
         return 200, {
-            "response": reply.text,
+            "response": spoken,
+            "notice": reply.notice,
             "route": route.mode,
             "target": route.target,
             "narration": narration,
