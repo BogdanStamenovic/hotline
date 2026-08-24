@@ -122,7 +122,7 @@ def _fire_siren(repeats: int = 3) -> bool:
     if not os.path.exists(SIREN):
         return False
     try:
-        subprocess.run(
+        done = subprocess.run(
             [SIREN, str(repeats), "hotline: an agent is blocked and needs you"],
             timeout=90,
             check=False,
@@ -130,7 +130,11 @@ def _fire_siren(repeats: int = 3) -> bool:
         )
     except (OSError, subprocess.SubprocessError):
         return False
-    return True
+    # Starting the process is not the same as making a noise. A remembered
+    # per-application volume once pinned the siren at -76 dB: it played, exited 0
+    # and woke nobody. wake-bogdan.sh now exits 3 when the sink never went
+    # RUNNING, so anything but 0 is a siren that did not actually fire.
+    return done.returncode == 0
 
 
 class Pager:
