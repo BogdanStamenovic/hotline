@@ -22,6 +22,7 @@ honoured when present, as a second factor rather than the only one.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import sys
 import time
@@ -145,13 +146,37 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
     return server
 
 
-async def serve(host: str, port: int, cwd: str | None, verbose: bool) -> None:
+async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: bool) -> None:
     pool = SessionPool(router=Router(default_cwd=cwd), cwd=cwd)
     pool.start()
     server = build_server(pool, host, port, verbose=verbose)
+
+    def log(message: str) -> None:
+        print(f"[hotlined] {message}", file=sys.stderr, flush=True)
+
+    bot_task: asyncio.Task[None] | None = None
+    if discord:
+        # Imported here, not at module scope: py-cord lives in the optional
+        # `discord` extra, and the phone path must run without it installed.
+        try:
+            from .bot import build_bot, run_bot
+        except ImportError as exc:
+            log(f"discord requested but py-cord is not installed ({exc}); skipping")
+        else:
+            bot = build_bot(pool, log)
+            if bot is None:
+                log("discord not configured (HOTLINE_BOT_TOKEN / DISCORD_USER_ID unset)")
+            else:
+                token = os.environ["HOTLINE_BOT_TOKEN"]
+                bot_task = asyncio.create_task(run_bot(bot, token, log))
+
     try:
         await server.serve_forever()
     finally:
+        if bot_task is not None:
+            bot_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await bot_task
         await pool.close()
         await server.close()
 
@@ -165,6 +190,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--port", type=int, default=int(os.environ.get("HOTLINE_PORT", DEFAULT_PORT)))
     parser.add_argument("--cwd", default=os.environ.get("HOTLINE_CWD") or None)
     parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument(
+        "--no-discord",
+        action="store_true",
+        help="serve HTTP only, even if a bot token is configured",
+    )
     args = parser.parse_args(argv)
 
     print(
@@ -173,7 +203,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         file=sys.stderr,
     )
     try:
-        asyncio.run(serve(args.host, args.port, args.cwd, args.verbose))
+        asyncio.run(serve(args.host, args.port, args.cwd, args.verbose, not args.no_discord))
     except KeyboardInterrupt:
         return 0
     return 0

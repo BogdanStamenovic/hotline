@@ -12,6 +12,16 @@ Ordinary destructive work -- `rm -rf` on a project directory, `git reset --hard`
 dropping a table -- is not listed, because a guard that fires on normal work gets
 switched off, and then it protects nothing.
 
+**Matching is by command position, not by substring.** The first version matched
+raw command strings anywhere, and blocked four legitimate calls during this build
+whose only sin was *writing about* the commands it guards -- a test file, and a
+status message explaining the guard itself. A denylist that cannot tell a command
+from a mention of one is a denylist people route around, and routing around it is
+exactly the habit it exists to prevent. So each clause is split on shell separators
+and the dangerous name must be the thing being *run*: first token, after stripping
+`sudo`, `env VAR=x` and similar prefixes. `sh -c "..."` is unwrapped and its
+argument checked in turn, so the obvious escape still gets caught.
+
 The other half of the problem (a mis-transcription that runs something merely
 *wrong* rather than catastrophic) is not solvable here and is not pretended to be.
 """
@@ -19,47 +29,104 @@ The other half of the problem (a mis-transcription that runs something merely
 from __future__ import annotations
 
 import re
+import shlex
 
-# Each entry: (compiled pattern, what to tell the model). Patterns are matched
-# against the raw command string with no shell parsing -- a hook that tried to
-# understand shell grammar would be a bug farm, and the failure mode we care about
-# is a plain-looking command, not an obfuscated one.
-RULES: list[tuple[re.Pattern[str], str]] = [
-    (
-        # `rm -rf /` and friends. The trailing guard is what keeps this from firing
-        # on every legitimate `rm -rf /home/bodas/some/project`: root only counts
-        # when the slash is the whole path, or is globbed.
-        re.compile(r"\brm\b[^|;&\n]*?\s-[a-zA-Z]*[rR][a-zA-Z]*f|\brm\b[^|;&\n]*?\s-[a-zA-Z]*f[a-zA-Z]*[rR]", re.IGNORECASE),
-        "recursive forced delete of the filesystem root",
-    ),
-    (re.compile(r"\bmkfs(\.\w+)?\b", re.IGNORECASE), "creating a filesystem (destroys the target device)"),
-    (re.compile(r"\bdd\b[^|;&\n]*\bof=\s*/dev/", re.IGNORECASE), "dd writing directly to a block device"),
-    (re.compile(r">\s*/dev/(sd[a-z]|nvme\d|vd[a-z]|mmcblk\d)", re.IGNORECASE), "redirecting output onto a raw disk"),
-    (re.compile(r"\bwipefs\b", re.IGNORECASE), "wiping filesystem signatures"),
-    (re.compile(r"\bshred\b[^|;&\n]*\s/dev/", re.IGNORECASE), "shredding a block device"),
-    (re.compile(r"\b(sgdisk|parted|fdisk)\b[^|;&\n]*(--zap-all|\bmklabel\b|\bo\b\s*$)", re.IGNORECASE),
-     "destroying a partition table"),
-]
+# Prefixes that stand in front of the real command without being it.
+_PREFIXES = {"sudo", "doas", "env", "time", "nohup", "nice", "ionice", "command", "exec", "setsid"}
+_SHELLS = {"sh", "bash", "zsh", "dash", "ash", "ksh"}
 
-# Only the root-delete rule needs the second stage; the others are unconditional.
-_ROOT_TARGET = re.compile(r"(?:^|\s)(?:--\s+)?/(?:\s|$|\*)")
+# Binaries that are catastrophic no matter what arguments they are given.
+_ALWAYS: dict[str, str] = {
+    "mkfs": "creating a filesystem (destroys the target device)",
+    "wipefs": "wiping filesystem signatures",
+}
+
+_DEVICE = re.compile(r"/dev/(sd[a-z]|nvme\d|vd[a-z]|mmcblk\d|disk\d)", re.IGNORECASE)
+_RECURSIVE_FORCE = re.compile(r"^-[a-zA-Z]*(?:[rR][a-zA-Z]*f|f[a-zA-Z]*[rR])[a-zA-Z]*$")
+_ROOT_PATH = re.compile(r"^/\*?$")
+# A redirect onto a raw device is not a command, so it is the one thing still
+# matched against the clause text rather than an argv.
+_REDIRECT_TO_DEVICE = re.compile(r">\s*/dev/(sd[a-z]|nvme\d|vd[a-z]|mmcblk\d)", re.IGNORECASE)
 
 
-def _is_root_delete(command: str) -> bool:
-    """True only when an `rm -rf` actually targets `/` itself.
+def _split_clauses(command: str) -> list[str]:
+    return [clause for clause in re.split(r"[|;\n]+|&&|\|\||&", command) if clause.strip()]
 
-    Split on shell separators first so that `cd /tmp/x && rm -rf .` is judged on
-    the `rm` clause alone and a `/` appearing in an earlier clause cannot convict it.
-    """
-    for clause in re.split(r"[|;&\n]+", command):
-        if not re.search(r"\brm\b", clause, re.IGNORECASE):
+
+def _argv(clause: str) -> list[str]:
+    """Best-effort argv for a clause. Unparseable quoting means we cannot judge it."""
+    try:
+        return shlex.split(clause, comments=True)
+    except ValueError:
+        return []
+
+
+def _strip_prefixes(argv: list[str]) -> list[str]:
+    """Drop `sudo`, `env FOO=bar`, and friends until the real command is in front."""
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        base = token.rsplit("/", 1)[-1]
+        if base in _PREFIXES or ("=" in token and not token.startswith("-") and index > 0):
+            index += 1
             continue
-        if not re.search(r"-[a-zA-Z]*[rR][a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*[rR]", clause):
+        if base == "env":
+            index += 1
             continue
-        args = re.sub(r"\brm\b|\s-[a-zA-Z-]+", " ", clause, flags=re.IGNORECASE)
-        if _ROOT_TARGET.search(args):
-            return True
-    return False
+        break
+    # `env FOO=bar cmd` leaves the assignments in front of cmd.
+    while index < len(argv) and "=" in argv[index] and not argv[index].startswith("-"):
+        index += 1
+    return argv[index:]
+
+
+def _inspect(argv: list[str], clause: str, depth: int = 0) -> str | None:
+    argv = _strip_prefixes(argv)
+    if not argv:
+        return None
+    base = argv[0].rsplit("/", 1)[-1]
+    rest = argv[1:]
+
+    if base in _SHELLS and depth < 2:
+        # `bash -c "<command>"` -- judge what it would actually run.
+        for index, token in enumerate(rest):
+            if token == "-c" and index + 1 < len(rest):
+                inner = rest[index + 1]
+                for sub in _split_clauses(inner):
+                    found = _inspect(_argv(sub), sub, depth + 1)
+                    if found:
+                        return found
+        return None
+
+    for name, reason in _ALWAYS.items():
+        if base == name or base.startswith(name + "."):
+            return reason
+
+    if base == "rm":
+        forced = any(_RECURSIVE_FORCE.match(token) for token in rest if token.startswith("-"))
+        targets = [token for token in rest if not token.startswith("-")]
+        if forced and any(_ROOT_PATH.match(token) for token in targets):
+            return "a recursive forced delete of the filesystem root"
+        return None
+
+    if base == "dd":
+        for token in rest:
+            if token.startswith("of=") and _DEVICE.search(token):
+                return "dd writing directly to a block device"
+        return None
+
+    if base == "shred":
+        if any(_DEVICE.search(token) for token in rest):
+            return "shredding a block device"
+        return None
+
+    if base in {"sgdisk", "parted", "fdisk", "sfdisk"}:
+        lowered = [token.lower() for token in rest]
+        if "--zap-all" in lowered or "-Z" in rest or "mklabel" in lowered:
+            return "destroying a partition table"
+        return None
+
+    return None
 
 
 def check(tool_name: str, tool_input: dict[str, object]) -> str | None:
@@ -70,12 +137,12 @@ def check(tool_name: str, tool_input: dict[str, object]) -> str | None:
     if not isinstance(command, str) or not command.strip():
         return None
 
-    for pattern, reason in RULES:
-        if not pattern.search(command):
-            continue
-        if reason.startswith("recursive forced delete") and not _is_root_delete(command):
-            continue
-        return reason
+    for clause in _split_clauses(command):
+        if _REDIRECT_TO_DEVICE.search(clause):
+            return "redirecting output onto a raw disk"
+        found = _inspect(_argv(clause), clause)
+        if found:
+            return found
     return None
 
 
@@ -85,8 +152,7 @@ HOOK_SCRIPT = '''#!/usr/bin/env python3
 hotline runs Claude with bypassPermissions from a phone, sometimes via speech
 recognition, so there is no human in the loop to catch a mis-heard command. This
 blocks only what cannot be undone. Remove the "PreToolUse" entry from
-~/.claude/settings.json to disable it. See hotline/guard.py for the reasoning.
-"""
+~/.claude/settings.json to disable it. See hotline/guard.py for the reasoning."""
 import json, sys
 
 sys.path.insert(0, {package_root!r})
@@ -110,15 +176,21 @@ sys.exit(0)
 '''
 
 
+def hook_path() -> str:
+    from .config import claude_home
+
+    return str(claude_home() / "hooks" / "hotline-guard.py")
+
+
 def install_guard() -> tuple[str, bool]:
     """Write the guard hook and register it for Bash. Idempotent and additive."""
     import json
     from pathlib import Path
 
-    from .config import claude_home, settings_path
+    from .config import settings_path
 
     package_root = str(Path(__file__).resolve().parent.parent)
-    path = claude_home() / "hooks" / "hotline-guard.py"
+    path = Path(hook_path())
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(HOOK_SCRIPT.format(package_root=package_root))
     path.chmod(0o755)

@@ -49,6 +49,16 @@ def stops_log() -> Path:
     return runtime_dir() / "stops.jsonl"
 
 
+def page_claim() -> Path:
+    """Marker saying a page is waiting for an answer in the Discord channel.
+
+    The pager and the text bridge share one channel, so without this every reply
+    to a page would also be fed to a Claude session as a new instruction. The
+    pager is a separate short-lived process, so the handshake has to be on disk.
+    """
+    return runtime_dir() / "page-active"
+
+
 # How often the reply waiter re-checks the spool. inotify would avoid the poll but
 # would cost a dependency (or a ctypes shim) for a saving measured in milliseconds
 # against turns that take seconds.

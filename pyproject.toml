@@ -38,6 +38,7 @@ dev = [
 [project.scripts]
 hotline = "hotline.cli:main"
 hotlined = "hotline.daemon:main"
+hotline-page = "hotline.page_cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hotline"]

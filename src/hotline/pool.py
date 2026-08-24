@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass, field
+from typing import Any
 
 from .errors import HotlineError
 from .fresh import FreshSession, Narrator, Reply
@@ -197,7 +198,9 @@ class SessionPool:
         for key in list(self.conversations):
             await self._drop(key)
 
-    def stats(self) -> dict[str, object]:
+    def stats(self) -> dict[str, Any]:
+        # Any, not object: this is shaped for JSON and for the bot's status
+        # command, and pretending it has a static shape only buys casts.
         return {
             "conversations": len(self.conversations),
             "keys": [
