@@ -135,13 +135,25 @@ class SessionPool:
             lines.append('Say "connect 2" or "connect data-13", then just talk. "detach" to stop.')
             return Reply(text="\n".join(lines), subtype="control")
 
+        if route.action == "help":
+            return Reply(text=HELP_TEXT, subtype="control")
+
+        if route.action == "resources":
+            return Reply(text=describe_resources(), subtype="control")
+
         if route.action == "detach":
             was = conv.attached_to
             conv.attached_to = None
             if was:
                 return Reply(text=f"Detached from {was}. Back to a fresh session.",
                              subtype="control")
-            return None  # "new session" with nothing attached is just a fresh start
+            # "new session" means start over, so it falls through to a real turn.
+            # A bare "detach" is a command and must be answered as one -- leaking
+            # it to the model as chat is what Bogdan hit.
+            if route.text.strip().lower() != "new session":
+                return Reply(text="Not connected to anything — already on a fresh session.",
+                             subtype="control")
+            return None
 
         if route.action == "where":
             if conv.attached_to:
@@ -304,3 +316,65 @@ class SessionPool:
                 for conv in self.conversations.values()
             ],
         }
+
+
+HELP_TEXT = """**Commands** (these are handled by hotline itself, not sent to a model)
+
+`help` — this
+`session list` — live sessions, numbered
+`connect <n|name|dir>` — bind this conversation to a session; then just talk
+`detach` — unbind, back to a fresh session
+`where am i` — which session you are bound to
+`resources` — RAM, VRAM, load
+`new session` — throw away context and start over
+
+Anything else goes to a Claude session. `connect` accepts a number from the
+list, a session name, a directory (`uxonews`), or an ordinal (`the older one`).
+
+On Discord only: `!status`, `!join`, `!leave`."""
+
+
+def describe_resources() -> str:
+    """RAM, VRAM and load, so you can tell whether another session will fit."""
+    import shutil
+    import subprocess
+
+    lines: list[str] = []
+    try:
+        meminfo = {}
+        with open("/proc/meminfo") as fh:
+            for line in fh:
+                key, _, rest = line.partition(":")
+                meminfo[key] = int(rest.split()[0]) // 1024
+        lines.append(
+            f"RAM: {meminfo['MemAvailable']} MB available of {meminfo['MemTotal']} MB"
+        )
+    except (OSError, KeyError, ValueError, IndexError):
+        lines.append("RAM: unreadable")
+
+    try:
+        with open("/proc/loadavg") as fh:
+            load = fh.read().split()[:3]
+        lines.append(f"Load: {' '.join(load)}")
+    except (OSError, IndexError):
+        pass
+
+    if shutil.which("nvidia-smi"):
+        try:
+            out = subprocess.run(
+                ["nvidia-smi", "--query-gpu=name,memory.used,memory.total",
+                 "--format=csv,noheader"],
+                capture_output=True, text=True, timeout=10, check=False,
+            ).stdout.strip()
+            if out:
+                lines.append(f"GPU: {out}")
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+    try:
+        usage = shutil.disk_usage("/")
+        lines.append(f"Disk /: {usage.free // 2**30} GB free of {usage.total // 2**30} GB")
+    except OSError:
+        pass
+
+    return "\n".join(lines)

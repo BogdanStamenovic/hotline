@@ -28,6 +28,7 @@ import array
 import asyncio
 import contextlib
 import logging
+import struct
 import time
 from collections.abc import Callable
 from typing import Any, ClassVar
@@ -95,11 +96,24 @@ def install_receive_fixes() -> None:
         result: bytes = decryptor.box.decrypt(
             packet.decrypted_data or packet.data, header, nonce
         )
+
         if packet.extended:
             packet.update_extended_header(result)
-            # Only now is there an extension to skip. Doing this unconditionally
-            # is the entire bug.
-            return result[8:]
+            # The extension is `length` 32-bit words, read from the preamble that
+            # adjust_rtpsize() appended to the header. py-cord assumes 8 bytes,
+            # which is only right when there is exactly one word -- bots happen to
+            # send that, real Discord clients do not, so a human's audio decodes
+            # to noise where a bot's decodes correctly.
+            words = struct.unpack_from(">H", header, len(header) - 2)[0]
+            result = result[words * 4 :]
+
+        if packet.padding and result:
+            # RFC 3550 s5.1: the final byte counts the trailing padding, itself
+            # included. Leaving it in feeds junk to Opus.
+            pad = result[-1]
+            if 0 < pad <= len(result):
+                result = result[:-pad]
+
         return result
 
     # setattr, not assignment: mypy rejects rebinding a method, and this is
@@ -299,7 +313,12 @@ class VoiceCall:
                 await self.client.disconnect(force=True)
             self.client = None
 
-    async def _on_recording_done(self, sink: sinks.Sink, *args: object) -> None:
+    def _on_recording_done(self, *args: object) -> None:
+        """py-cord calls this synchronously from a worker thread.
+
+        Declaring it `async` produced "coroutine was never awaited" and, worse,
+        meant the router's teardown path silently did nothing.
+        """
         self.log("recording stopped")
 
     # ---- receiving ------------------------------------------------------

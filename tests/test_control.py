@@ -251,3 +251,43 @@ async def test_an_inferred_target_still_works_with_no_connection(
     assert route.mode == "attach"
     assert seen == ["newest"]
     await pool.close()
+
+
+@pytest.mark.parametrize("utterance", ["help", "Help", "commands", "what can you do"])
+async def test_help_is_answered_by_the_system(three: Path, utterance: str) -> None:
+    """Bogdan typed control words and watched them reach a model as chat instead.
+    Commands the system knows about must never leak through."""
+    pool = SessionPool()
+    route, reply = await pool.ask("k", utterance)
+    assert route.mode == "control"
+    assert "session list" in reply.text
+    assert FakeSession.created == 0
+    await pool.close()
+
+
+async def test_detach_with_nothing_attached_is_still_answered(three: Path) -> None:
+    pool = SessionPool()
+    route, reply = await pool.ask("k", "detach")
+    assert route.mode == "control"
+    assert "Not connected" in reply.text
+    assert FakeSession.created == 0
+    await pool.close()
+
+
+async def test_resources_reports_real_numbers(three: Path) -> None:
+    pool = SessionPool()
+    _, reply = await pool.ask("k", "resources")
+    assert "RAM:" in reply.text
+    assert "MB available" in reply.text
+    await pool.close()
+
+
+@pytest.mark.parametrize(
+    "utterance",
+    ["help me understand this function", "what can you do about the failing test"],
+)
+async def test_help_shaped_questions_still_reach_a_session(three: Path, utterance: str) -> None:
+    pool = SessionPool()
+    route, _ = await pool.ask("k", utterance)
+    assert route.mode == "fresh"
+    await pool.close()

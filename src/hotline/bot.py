@@ -108,6 +108,7 @@ class HotlineBot(discord.Bot):
         # faster-whisper, and this module must import cleanly without the voice
         # extra so the text bridge works on its own.
         self.call: VoiceCall | None = None
+        self._joining = False
         self._call_lock = asyncio.Lock()
 
     async def on_ready(self) -> None:
@@ -239,10 +240,14 @@ class HotlineBot(discord.Bot):
         for a GPU they never use.
         """
         async with self._call_lock:
-            if self.call is not None:
+            if self.call is not None or self._joining:
                 if message:
                     await message.channel.send("Already on the call.")
                 return
+            # Claim the slot before the slow part. Loading models takes seconds,
+            # and without this every event arriving in that window starts another
+            # join.
+            self._joining = True
             if not self.voice_enabled:
                 if message:
                     await message.channel.send("Voice is disabled (no `voice` extra installed).")
@@ -280,8 +285,11 @@ class HotlineBot(discord.Bot):
                 key=f"voice-{channel.id}",
                 log_fn=self.log,
             )
-            await call.join(channel)
-            self.call = call
+            try:
+                await call.join(channel)
+                self.call = call
+            finally:
+                self._joining = False
             await call.say("Hotline. What do you need?")
             if message:
                 await message.channel.send("On the call. Talk to me.")
@@ -322,6 +330,17 @@ class HotlineBot(discord.Bot):
         """Answer the phone. Bogdan joining the channel *is* the call starting."""
         if member.id != self.user_id or not self.voice_channel_id:
             return
+        # This event also fires for mute, deafen, video and stream changes. Acting
+        # on those made three overlapping joins race each other, which killed the
+        # packet-router thread and tore recording down one second after joining --
+        # the call connected, said hello, and then heard nothing at all.
+        if (
+            before.channel is not None
+            and after.channel is not None
+            and before.channel.id == after.channel.id
+        ):
+            return
+
         joined = after.channel is not None and after.channel.id == self.voice_channel_id
         left = before.channel is not None and before.channel.id == self.voice_channel_id
         if joined and self.call is None:
