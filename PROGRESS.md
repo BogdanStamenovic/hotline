@@ -1493,3 +1493,71 @@ permissions bypassed. It is the next thing I fix.
 
 286 tests, ruff and mypy clean. Watchdog timer re-armed and verified no-op
 against the live worker.
+
+## Bringing data-f3 back, and the gap that made it hard
+
+Bogdan asked for two things: confirmation that per-agent text channels stay
+(they do — nothing to change, the feature works), and `data-f3` resurrected so
+it can finish the ollama mirror.
+
+`data-f3` was one of the four sessions the tmux-server bug killed. It was
+SIGKILLed mid-`curl` with no warning, so it had **no handoff** — and `--resume`
+refused outright without one. That is precisely backwards: an agent that
+finishes tidily leaves a handoff and is easy to revive, while an agent that was
+killed leaves nothing and was unrecoverable. The ones that most need reviving
+were the ones that could not be.
+
+But the transcript is always on disk, and `transcript.transcript_path()` already
+existed. So `--resume` now falls back to it: no handoff means the replacement is
+handed its predecessor's raw transcript and told, explicitly, that it is reading
+a corpse — that the session died mid-flight, that its last actions may not have
+completed, and that it must verify the live system against what the transcript
+*claims* before building on any of it. Then write a real handoff, so it cannot
+happen twice.
+
+Second fix in the same path: `--resume` unconditionally created a new channel.
+For an agent killed mid-work that orphans the thread Bogdan has been reading and
+mints a duplicate — the same mistake `--adopt` exists to prevent. It now keeps a
+channel that still exists and only creates one when the old is genuinely gone,
+which is the `--done` case the branch was actually written for. `Channels.exists`
+answers that from the guild listing rather than a channel fetch, because a bare
+404 is also what a permissions problem looks like and guessing "deleted" there
+would mint duplicates.
+
+### Reconstructing the handoff
+
+Two Sonnet subagents in parallel: one to read the 533KB transcript and write the
+handoff as its return value, one to establish the live system state read-only.
+Running both was the point — the transcript says what data-f3 *believed*, the
+system says what is *true*, and for a session killed mid-command those can
+differ.
+
+They agreed, and together they corrected a hypothesis I had started forming. The
+journal shows data-f3's last request returning HTTP 500 with `llama-server
+-ngl 0` and "no usable GPU found", and I had begun assembling the story that the
+2814 MiB hotlined was holding had squeezed the 5.0 GB model out of VRAM and
+forced a CPU fallback. Wrong: the transcript shows data-f3 passed
+`"options":{"num_gpu":0}` deliberately, choosing CPU precisely so it would not
+contend with hotline-80's models. `-ngl 0` is that request being honoured. The
+500 is real and unexplained, but it is not a broken CUDA build, and I would have
+written the opposite into its handoff if I had only had the journal.
+
+That is the third time tonight that the log line and the cause have come apart —
+after the lying "key rotated" message and after my own first answer about what
+killed hotline-80.
+
+### Result
+
+`hotline --resume data-f3` brought it back into `#agent-data-f3` — same channel,
+same identity — and it independently spot-checked the handoff against the live
+box before accepting it. Its own summary: the mirror is structurally complete
+and verified, but live inference has never once succeeded, so it is not done.
+
+Released it to finish, with the relay marked as a relay: Bogdan's "pick data-f3
+back from the dead" reported as *my account of what he said*, not as proof, and
+explicitly scoped — not approval to keep the ~9 GiB CUDA install, not a decision
+on exposing ollama past localhost. Both remain open questions for him. Labelling
+that by hand is the workaround for the provenance hole; the fix is still the
+next thing.
+
+291 tests, ruff and mypy clean.

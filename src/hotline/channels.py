@@ -161,6 +161,20 @@ class Channels:
         """
         self._call(f"/channels/{channel_id}", "PATCH", {"topic": topic[:1024]})
 
+    def exists(self, channel_id: int) -> bool:
+        """Is this channel still there?
+
+        Answered from the guild listing rather than by fetching the channel,
+        because a bare 404 from Discord is ambiguous -- it is also what a
+        permissions problem or a wrong guild looks like, and treating those as
+        "deleted" would silently mint a duplicate channel for an agent that
+        still has a perfectly good one.
+        """
+        try:
+            return any(int(c["id"]) == int(channel_id) for c in self.all())
+        except HotlineError:
+            return False
+
     def delete(self, channel_id: int, force: bool = False) -> bool:
         """Delete a channel hotline owns. Refuses anything else.
 

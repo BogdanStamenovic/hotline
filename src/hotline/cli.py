@@ -30,6 +30,7 @@ from .fresh import Event
 from .guard import install_guard
 from .router import Route, Router, describe, parse_utterance
 from .stops import install_hook, stops_dir
+from .transcript import transcript_path
 
 
 class _UsageError(Exception):
@@ -440,18 +441,27 @@ def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str],
     if agent is None:
         print(f"hotline: error: no agent called {name!r}. Try --agents.", file=sys.stderr)
         return 1
-    if not agent.handoff:
+    # A handoff is what an agent leaves when it finishes on purpose. An agent
+    # that was killed -- by a crash, an OOM, or a daemon restart taking its tmux
+    # server down -- never got the chance, and refusing to resume those makes
+    # exactly the agents that most need reviving the ones that cannot be. Its
+    # transcript is still on disk, so there is always something to resume from;
+    # the replacement reads it and reconstructs the state itself.
+    brief: str | None = None
+    handoff = Path(agent.handoff) if agent.handoff else None
+    if handoff is not None:
+        try:
+            brief = handoff.read_text()
+        except OSError as exc:
+            log(f"warning: cannot read {handoff}: {exc}; falling back to the transcript")
+            handoff = None
+    corpse = transcript_path(agent.session_id)
+    if brief is None and corpse is None:
         print(
-            f"hotline: error: {agent.name} finished without a handoff, so there is "
-            "nothing to resume it from.",
+            f"hotline: error: {agent.name} left no handoff and its transcript is "
+            "gone, so there is nothing to resume it from.",
             file=sys.stderr,
         )
-        return 1
-    handoff = Path(agent.handoff)
-    try:
-        brief = handoff.read_text()
-    except OSError as exc:
-        print(f"hotline: error: cannot read {handoff}: {exc}", file=sys.stderr)
         return 1
 
     try:
@@ -473,19 +483,42 @@ def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str],
 
     manager = channels_from_env()
     if manager is not None and revived.wants_channel:
-        try:
-            revived.channel_id = manager.create_text(revived.name, topic=revived.task)
+        # An agent that was killed still owns a live channel, and it is the thread
+        # Bogdan has been reading. Minting a second one and leaving the first
+        # orphaned is the same mistake `--adopt` exists to prevent, so the old
+        # channel is only replaced when it is genuinely gone -- which is the case
+        # `--done` creates, and the one this branch was written for.
+        if agent.channel_id is not None and manager.exists(agent.channel_id):
+            revived.channel_id = agent.channel_id
             registry.save()
-            log(f"channel: #{channel_slug(revived.name)}")
-        except HotlineError as exc:
-            log(f"warning: could not recreate the channel: {exc}")
+            log(f"kept its channel: #{channel_slug(revived.name)}")
+        else:
+            try:
+                revived.channel_id = manager.create_text(revived.name, topic=revived.task)
+                registry.save()
+                log(f"channel: #{channel_slug(revived.name)}")
+            except HotlineError as exc:
+                log(f"warning: could not recreate the channel: {exc}")
 
-    seed = (
-        f"You are resuming work that a previous session finished a stint on. "
-        f"Its task was: {agent.task}\n\n"
-        f"This is the handoff it left at {handoff}:\n\n{brief}\n\n"
-        "Read it, say in one sentence what you understand the state to be, and wait."
-    )
+    if brief is not None:
+        seed = (
+            f"You are resuming work that a previous session finished a stint on. "
+            f"Its task was: {agent.task}\n\n"
+            f"This is the handoff it left at {handoff}:\n\n{brief}\n\n"
+            "Read it, say in one sentence what you understand the state to be, and wait."
+        )
+    else:
+        seed = (
+            f"You are taking over work from a session that was KILLED before it "
+            f"could write a handoff, so there is no summary -- only the raw record.\n\n"
+            f"Its task was: {agent.task}\n\n"
+            f"Its full transcript is at {corpse}. Read it (it is JSONL and may be "
+            "large, so parse it with python rather than cat), and separately verify "
+            "the actual state of the system against what it *claimed* -- it died "
+            "mid-flight and its last actions may not have completed. Then write a "
+            "handoff of your own before continuing, so this cannot happen twice.\n\n"
+            "Say in one sentence what you understand the state to be, and wait."
+        )
     try:
         reply = asyncio.run(Router().ask_session(session.name, seed, timeout=300.0))
     except HotlineError as exc:
