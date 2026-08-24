@@ -45,6 +45,27 @@ PENDING_REPLY = (
     "Still working on that one. Ask me again in a moment and I'll have the answer."
 )
 
+# Appended to every pooled session's system prompt. hotline's answers get spoken by
+# a phone or read on a phone screen, and the default behaviour -- investigate
+# thoroughly, then explain at length -- is wrong for both. Bogdan's words, watching
+# a pooled session answer him over Discord: "You are just typing bash over and over
+# again." Overridable with $HOTLINE_SYSTEM_PROMPT.
+CONVERSATIONAL_PREAMBLE = """\
+You are answering over a voice call or a phone-sized chat window, not in a terminal.
+
+Answer in one or two short paragraphs, or a few short bullets. No headings, no
+tables, no code blocks unless code is genuinely the answer. Say the answer first.
+
+Do not investigate beyond what was asked. If a question can be answered from what
+you already know, answer it -- do not run commands to prove it. Use tools when the
+answer genuinely requires looking something up or changing something, and then use
+as few as will do.
+
+If something is ambiguous, ask one short question instead of guessing and
+explaining at length. If you cannot do something, say so plainly in a sentence.
+
+This is a conversation. Match the length of the question."""
+
 
 def _seconds(value: object, default: float, low: float, high: float) -> float:
     """Clamp a caller-supplied duration. These come off the wire, and an
@@ -147,7 +168,11 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
 
 
 async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: bool) -> None:
-    pool = SessionPool(router=Router(default_cwd=cwd), cwd=cwd)
+    pool = SessionPool(
+        router=Router(default_cwd=cwd),
+        cwd=cwd,
+        append_system_prompt=os.environ.get("HOTLINE_SYSTEM_PROMPT", CONVERSATIONAL_PREAMBLE),
+    )
     pool.start()
     server = build_server(pool, host, port, verbose=verbose)
 

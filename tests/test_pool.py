@@ -26,7 +26,7 @@ class FakeSession:
     created = 0
     live: ClassVar[list[FakeSession]] = []
 
-    def __init__(self, cwd=None, bypass=True):
+    def __init__(self, cwd=None, bypass=True, append_system_prompt=None):
         FakeSession.created += 1
         self.ordinal = FakeSession.created
         self.session_id = f"claude-{self.ordinal}"
@@ -35,6 +35,7 @@ class FakeSession:
         self.history: list[str] = []
         self.delay = 0.0
         self.explode = False
+        self.append_system_prompt = append_system_prompt
         FakeSession.live.append(self)
 
     async def start(self) -> None:
@@ -153,7 +154,9 @@ async def test_attach_mode_does_not_allocate_a_process(monkeypatch: pytest.Monke
     assert route.mode == "attach"
     assert reply.text == "from the other session"
     assert FakeSession.created == 0
-    assert pool.conversations == {}
+    # A bookkeeping record is fine and is needed to remember a sticky connection;
+    # what must not happen is a second subprocess for a session that already exists.
+    assert pool.conversations["phone-1"].session is None
     await pool.close()
 
 

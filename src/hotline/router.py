@@ -66,9 +66,27 @@ _ORDINALS = {"first": 0, "second": 1, "third": 2, "fourth": 3, "fifth": 4}
 
 @dataclass
 class Route:
-    mode: str  # fresh | attach | agent
+    mode: str  # fresh | attach | agent | control
     target: str | None
     text: str
+    # Only set for mode == "control": list | connect | detach | where
+    action: str | None = None
+    # True when the target was inferred from phrasing rather than named. An
+    # explicit `connect` beats an inference -- otherwise "what are you working
+    # on?" would jump to the newest session even while you are deliberately
+    # connected to an older one.
+    implicit: bool = False
+
+
+# Control phrases, checked before anything else. Deliberately a small closed set
+# rather than fuzzy matching: "list the files in this directory" must reach a
+# session, not be swallowed as a control command.
+_LIST = re.compile(r"^(?:session\s*list|list\s+sessions?|sessions?|what\s+sessions?"
+                   r"(?:\s+are)?(?:\s+(?:there|running|live|open))?)\s*[:.?]?$", re.IGNORECASE)
+_CONNECT = re.compile(r"^(?:connect(?:\s+to)?|switch\s+to|use)\s+(.+?)\s*[.?]?$", re.IGNORECASE)
+_DETACH = re.compile(r"^(?:detach|disconnect|leave|never\s*mind|new\s+session)\s*[.?]?$", re.IGNORECASE)
+_WHERE = re.compile(r"^(?:where\s+am\s+i|who\s+am\s+i\s+talking\s+to|what\s+am\s+i"
+                    r"\s+connected\s+to)\s*[.?]?$", re.IGNORECASE)
 
 
 def parse_utterance(utterance: str) -> Route:
@@ -80,6 +98,18 @@ def parse_utterance(utterance: str) -> Route:
     """
     text = utterance.strip()
     low = text.lower()
+
+    # Control first. These are about the connection itself, not questions for
+    # whatever is on the other end of it.
+    if _LIST.match(low):
+        return Route("control", None, text, action="list")
+    if _DETACH.match(low):
+        return Route("control", None, text, action="detach")
+    if _WHERE.match(low):
+        return Route("control", None, text, action="where")
+    connect = _CONNECT.match(text)
+    if connect:
+        return Route("control", connect.group(1).strip(), text, action="connect")
 
     match = re.match(r"^(?:please\s+)?(?:can you\s+)?(?:join|attach to|connect to|resume)\s+(.+)$", low)
     if match:
@@ -95,7 +125,7 @@ def parse_utterance(utterance: str) -> Route:
         return Route("fresh", None, re.sub(r"^[^,.]*[,.]?\s*", "", text, count=1))
 
     if re.match(r"^what (?:are|is) you(?:r|'re)?\s+working on\b", low):
-        return Route("attach", "newest", "What are you working on right now?")
+        return Route("attach", "newest", "What are you working on right now?", implicit=True)
 
     return Route("fresh", None, text)
 

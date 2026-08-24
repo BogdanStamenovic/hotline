@@ -56,9 +56,15 @@ Narrator = Callable[[Event], None]
 class FreshSession:
     """Owns one `claude` process for the life of a call."""
 
-    def __init__(self, cwd: str | None = None, bypass: bool = True) -> None:
+    def __init__(
+        self,
+        cwd: str | None = None,
+        bypass: bool = True,
+        append_system_prompt: str | None = None,
+    ) -> None:
         self.cwd = cwd or os.path.expanduser("~")
         self.bypass = bypass
+        self.append_system_prompt = append_system_prompt
         self.proc: asyncio.subprocess.Process | None = None
         self.session_id: str | None = None
         self._stderr: list[str] = []
@@ -73,6 +79,8 @@ class FreshSession:
         ]
         if self.bypass:
             argv += ["--permission-mode", "bypassPermissions"]
+        if self.append_system_prompt:
+            argv += ["--append-system-prompt", self.append_system_prompt]
         try:
             self.proc = await asyncio.create_subprocess_exec(
                 *argv,

@@ -40,6 +40,7 @@ class LiveSession:
     started_at: int
     kind: str
     status: str | None
+    entrypoint: str = "?"
 
     @property
     def cwd_leaf(self) -> str:
@@ -87,8 +88,15 @@ def status_of(pid: int) -> str | None:
         return None
 
 
-def discover(include_self: bool = False) -> list[LiveSession]:
-    """Every live, verified session, newest first.
+# Sessions hotline itself spawned report this entrypoint. They must not appear in
+# a session list: "connect 1" landing on hotline's own pooled subprocess is a loop,
+# and the whole point of attaching is to reach a session a human is sitting in
+# front of.
+PROGRAMMATIC_ENTRYPOINTS = frozenset({"sdk-cli", "sdk-py", "sdk-ts"})
+
+
+def discover(include_self: bool = False, include_programmatic: bool = False) -> list[LiveSession]:
+    """Every live, verified session a human could be sitting in front of, newest first.
 
     Silently skips descriptors that are unparseable, whose process is gone, or
     whose `procStart` no longer matches -- all three mean "not a session we may
@@ -114,6 +122,9 @@ def discover(include_self: bool = False) -> list[LiveSession]:
             continue
         if desc.get("spare"):
             continue
+        entrypoint = desc.get("entrypoint") or "?"
+        if not include_programmatic and entrypoint in PROGRAMMATIC_ENTRYPOINTS:
+            continue
         if not include_self and pid == self_pid:
             continue
         recorded = desc.get("procStartFt") or desc.get("procStart")
@@ -135,6 +146,7 @@ def discover(include_self: bool = False) -> list[LiveSession]:
                 started_at=int(desc.get("startedAt") or 0),
                 kind=desc.get("kind") or "interactive",
                 status=desc.get("status"),
+                entrypoint=entrypoint,
             )
         )
     out.sort(key=lambda s: s.started_at, reverse=True)

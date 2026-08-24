@@ -18,9 +18,9 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from .errors import HotlineError
+from .errors import HotlineError, SessionNotFound
 from .fresh import FreshSession, Narrator, Reply
-from .router import Route, Router, parse_utterance
+from .router import Route, Router, describe, parse_utterance
 
 
 @dataclass
@@ -30,6 +30,11 @@ class Conversation:
     session: FreshSession | None = None
     last_used: float = field(default_factory=time.monotonic)
     turns: int = 0
+    # Sticky routing. Once set by `connect`, plain messages go to that session
+    # instead of the pooled subprocess, until `detach`. Bogdan asked for this
+    # directly: repeating "join data-13" on every message is not how a
+    # conversation works.
+    attached_to: str | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     # The turn currently in flight, if any. Kept so that a caller whose HTTP
     # request timed out can rejoin the same turn instead of starting a new one or
@@ -50,11 +55,13 @@ class SessionPool:
         idle_timeout: float = 900.0,
         max_sessions: int = 8,
         cwd: str | None = None,
+        append_system_prompt: str | None = None,
     ) -> None:
         self.router = router or Router(default_cwd=cwd)
         self.idle_timeout = idle_timeout
         self.max_sessions = max_sessions
         self.cwd = cwd
+        self.append_system_prompt = append_system_prompt
         self.conversations: dict[str, Conversation] = {}
         self._reaper: asyncio.Task[None] | None = None
 
@@ -98,6 +105,72 @@ class SessionPool:
         if idle:
             await self._drop(min(idle)[1])
 
+    def _conversation(self, key: str) -> Conversation:
+        conv = self.conversations.get(key)
+        if conv is None:
+            conv = Conversation(key=key, cwd=self.cwd)
+            self.conversations[key] = conv
+        return conv
+
+    def _control(self, conv: Conversation, route: Route) -> Reply | None:
+        """Handle a connection command. None means "that was not really a command".
+
+        `connect` only counts when the target actually resolves -- otherwise
+        "connect the dots in this diagram" would be swallowed as a control command
+        instead of being answered.
+        """
+        live = self.router.sessions()
+
+        if route.action == "list":
+            if not live:
+                return Reply(text="No live Claude sessions right now.", subtype="control")
+            lines = ["Live sessions, newest first:"]
+            for index, session in enumerate(live, 1):
+                marker = " (connected)" if conv.attached_to == session.name else ""
+                lines.append(
+                    f"{index}. {session.name} — {session.cwd} "
+                    f"[{session.status or '?'}, pid {session.pid}]{marker}"
+                )
+            lines.append("")
+            lines.append('Say "connect 2" or "connect data-13", then just talk. "detach" to stop.')
+            return Reply(text="\n".join(lines), subtype="control")
+
+        if route.action == "detach":
+            was = conv.attached_to
+            conv.attached_to = None
+            if was:
+                return Reply(text=f"Detached from {was}. Back to a fresh session.",
+                             subtype="control")
+            return None  # "new session" with nothing attached is just a fresh start
+
+        if route.action == "where":
+            if conv.attached_to:
+                return Reply(text=f"Connected to {conv.attached_to}.", subtype="control")
+            claude_id = conv.claude_session_id or "not started yet"
+            return Reply(
+                text=f"Not connected to anything — talking to a fresh session ({claude_id}).",
+                subtype="control",
+            )
+
+        if route.action == "connect" and route.target:
+            spec = route.target
+            # "connect 2" means the second line of the list that was just shown,
+            # not pid 2. Bare numbers are indices here; pids are reachable by name.
+            if spec.isdigit() and 1 <= int(spec) <= len(live):
+                session = live[int(spec) - 1]
+            else:
+                try:
+                    session = self.router.resolve(spec)
+                except SessionNotFound:
+                    return None  # not a session name -- treat it as a question
+            conv.attached_to = session.name
+            return Reply(
+                text=f"Connected to {describe(session)}. Everything you say now goes there "
+                     f'until you say "detach".',
+                subtype="control",
+            )
+        return None
+
     async def ask(
         self,
         key: str,
@@ -108,6 +181,23 @@ class SessionPool:
         """One turn of a conversation, routed the same way the CLI routes it."""
         route = parse_utterance(utterance)
 
+        if route.mode == "control":
+            conv = self._conversation(key)
+            handled = self._control(conv, route)
+            if handled is not None:
+                return route, handled
+            # Not actually a control command; fall through as an ordinary question.
+            route = Route("fresh", None, route.text)
+
+        conv = self._conversation(key)
+        if conv.attached_to and (route.mode == "fresh" or route.implicit):
+            reply = await self.router.ask_session(
+                conv.attached_to, route.text, narrator=narrator, timeout=timeout
+            )
+            conv.last_used = time.monotonic()
+            conv.turns += 1
+            return Route("attach", conv.attached_to, route.text), reply
+
         if route.mode != "fresh" and route.target:
             # Attach and agent modes have no process of their own to keep warm --
             # the session on the other end is the state.
@@ -116,12 +206,8 @@ class SessionPool:
             )
             return route, reply
 
-        conv = self.conversations.get(key)
-        if conv is None:
-            if len(self.conversations) >= self.max_sessions:
-                await self._evict_oldest()
-            conv = Conversation(key=key, cwd=self.cwd)
-            self.conversations[key] = conv
+        if len(self.conversations) > self.max_sessions:
+            await self._evict_oldest()
 
         async with conv.lock:
             if conv.session is None or (
@@ -129,7 +215,11 @@ class SessionPool:
             ):
                 if conv.session is not None:
                     await conv.session.close()
-                conv.session = FreshSession(conv.cwd, bypass=self.router.bypass)
+                conv.session = FreshSession(
+                    conv.cwd,
+                    bypass=self.router.bypass,
+                    append_system_prompt=self.append_system_prompt,
+                )
                 await conv.session.start()
             try:
                 reply = await conv.session.ask(route.text, narrator=narrator, timeout=timeout)
@@ -209,6 +299,7 @@ class SessionPool:
                     "turns": conv.turns,
                     "idle_seconds": round(time.monotonic() - conv.last_used, 1),
                     "claude_session_id": conv.claude_session_id,
+                    "attached_to": conv.attached_to,
                 }
                 for conv in self.conversations.values()
             ],
