@@ -38,17 +38,34 @@ API = "https://discord.com/api/v10"
 USER_AGENT = "DiscordBot (https://github.com/BogdanStamenovic/hotline, 0.1)"
 SIREN = os.path.expanduser("~/.claude/bin/wake-bogdan.sh")
 
-# (seconds since the page started, what to do). Deliberately slow at the start:
-# most questions are not urgent, and a pager that shouts immediately gets muted,
-# which is the same failure mode as a denylist that fires on ordinary work.
-DEFAULT_LADDER: list[tuple[float, str]] = [
-    (0, "post"),
-    (120, "nudge"),
-    (300, "nudge"),
-    (600, "siren"),
-    (900, "nudge"),
-    (1500, "siren"),
-]
+# The first two minutes are quiet on purpose: most questions are not urgent, and a
+# pager that shouts immediately gets muted, which is the same failure mode as a
+# denylist that fires on ordinary work. After that the politeness budget is spent
+# and it mentions him every SPAM_EVERY seconds until he answers or it gives up -
+# a lock screen that lights up once is easy to miss, one that keeps lighting up
+# is not.
+SPAM_START = 120.0
+SPAM_EVERY = 30.0
+SIREN_AT = (600.0, 1500.0)
+
+
+def build_ladder(
+    timeout: float = 1800.0,
+    spam_start: float = SPAM_START,
+    every: float = SPAM_EVERY,
+    sirens: tuple[float, ...] = SIREN_AT,
+) -> list[tuple[float, str]]:
+    """Repeating mentions from spam_start until timeout, with sirens layered on."""
+    steps: list[tuple[float, str]] = [(0, "post")]
+    t = spam_start
+    while t < timeout:
+        steps.append((t, "nudge"))
+        t += every
+    steps.extend((s, "siren") for s in sirens if s < timeout)
+    return sorted(steps)
+
+
+DEFAULT_LADDER: list[tuple[float, str]] = build_ladder()
 
 DEFAULT_TIMEOUT = 1800.0
 POLL_SECONDS = 8.0
@@ -230,7 +247,7 @@ class Pager:
         ladder: list[tuple[float, str]] | None = None,
         source: str = "an agent",
     ) -> PageResult:
-        steps = sorted(ladder if ladder is not None else DEFAULT_LADDER)
+        steps = sorted(ladder if ladder is not None else build_ladder(timeout))
         started = self._now()
         result = PageResult(answered=False)
 
@@ -238,9 +255,10 @@ class Pager:
         if context:
             head += f"\n\n```\n{context[:1200]}\n```"
         result.channel_id = self.channel_id
-        result.message_id = self.send(self.channel_id, head)
-        result.escalations.append("post")
 
+        # DM first: it is the one that reliably reaches his lock screen. The channel
+        # post still has to happen - the reply watcher anchors on its message id and
+        # polls both places - it just is not what gets his attention first.
         dm = self.dm_channel()
         dm_anchor: str | None = None
         if dm:
@@ -249,6 +267,9 @@ class Pager:
                 result.escalations.append("dm")
             except PagerError:
                 dm = None
+
+        result.message_id = self.send(self.channel_id, head)
+        result.escalations.append("post")
 
         pending = [step for step in steps if step[1] != "post"]
         self._claim(True)

@@ -89,9 +89,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     ladder = None
     if args.no_siren:
-        from .pager import DEFAULT_LADDER
+        from .pager import build_ladder
 
-        ladder = [step for step in DEFAULT_LADDER if step[1] != "siren"]
+        span = 0.1 if args.no_wait else args.timeout
+        ladder = [step for step in build_ladder(span) if step[1] != "siren"]
 
     try:
         result = pager.page(

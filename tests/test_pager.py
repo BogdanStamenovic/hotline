@@ -10,7 +10,15 @@ from __future__ import annotations
 import pytest
 
 import hotline.pager as pager_module
-from hotline.pager import DEFAULT_LADDER, Pager, PagerError, PageResult
+from hotline.pager import (
+    DEFAULT_LADDER,
+    SPAM_EVERY,
+    SPAM_START,
+    Pager,
+    PagerError,
+    PageResult,
+    build_ladder,
+)
 
 
 class FakeDiscord:
@@ -137,11 +145,28 @@ def test_it_escalates_on_schedule_and_then_gives_up(discord: FakeDiscord) -> Non
     pager, fired = build(discord, clock)
     result = pager.page("question", timeout=1800)
     assert not result.answered
-    assert result.escalations.count("nudge") == 3
+    # Quiet for two minutes, then a mention every 30s for the rest of the page.
+    assert result.escalations.count("nudge") == int((1800 - SPAM_START) // SPAM_EVERY)
     assert result.escalations.count("siren") == 2
     assert len(fired) == 2
     # The last thing he sees is that nobody is waiting on him any more.
     assert "giving up" in discord.sent[-1][1]
+
+
+def test_the_dm_goes_out_before_the_channel_post(discord: FakeDiscord) -> None:
+    """The DM is what reaches his lock screen, so it must not queue behind the post."""
+    clock = Clock()
+    pager, _ = build(discord, clock)
+    result = pager.page("question", timeout=30)
+    assert result.escalations[:2] == ["dm", "post"]
+
+
+def test_the_spam_cadence_is_regular(discord: FakeDiscord) -> None:
+    steps = build_ladder(700)
+    mentions = [t for t, action in steps if action == "nudge"]
+    assert mentions[0] == SPAM_START
+    assert all(b - a == SPAM_EVERY for a, b in zip(mentions, mentions[1:]))
+    assert mentions[-1] < 700
 
 
 def test_a_broken_siren_is_recorded_not_fatal(discord: FakeDiscord) -> None:
