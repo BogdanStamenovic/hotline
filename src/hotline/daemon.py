@@ -279,10 +279,15 @@ def _relay_to(bot: Any, log: Callable[[str], None]) -> Callable[[str, str], Awai
 
 
 async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: bool) -> None:
+    # Only #general holds messages for confirmation. A per-agent channel is
+    # unambiguous by construction -- that channel *is* that agent -- so asking
+    # there would be ceremony with no question behind it.
+    general = os.environ.get("DISCORD_TEXT_CHANNEL_ID", "").strip()
     pool = SessionPool(
         router=Router(default_cwd=cwd),
         cwd=cwd,
         append_system_prompt=os.environ.get("HOTLINE_SYSTEM_PROMPT", CONVERSATIONAL_PREAMBLE),
+        confirm_keys={f"discord-{general}"} if general else set(),
     )
     pool.start()
     server = build_server(pool, host, port, verbose=verbose)

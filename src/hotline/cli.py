@@ -16,7 +16,6 @@ import contextlib
 import os
 import sys
 from collections.abc import Callable, Sequence
-from pathlib import Path
 from typing import NoReturn
 
 from . import __version__
@@ -28,9 +27,9 @@ from .config import load_env
 from .errors import HotlineError
 from .fresh import Event
 from .guard import install_guard
+from .revive import brief_for, rehome
 from .router import Route, Router, describe, parse_utterance
 from .stops import install_hook, stops_dir
-from .transcript import transcript_path
 
 
 class _UsageError(Exception):
@@ -425,15 +424,17 @@ def _live_key(prefix: str) -> str | None:
 
 
 def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str], None]) -> int:
-    """Bring a finished agent back from its handoff.
+    """Bring an agent back: a new session, seeded with what survives of the old.
 
     This is the counterweight to disposable channels. Deleting the channel on
     completion means the handoff is the only thing that survives, so there has to
-    be a way to turn that handoff back into a working agent -- otherwise "done"
-    is indistinguishable from "lost".
+    be a way to turn that back into a working agent -- otherwise "done" is
+    indistinguishable from "lost". And an agent that was killed never wrote a
+    handoff at all, which is why the transcript is the fallback rather than an
+    error.
 
     A new session, not the old one: the old process is gone. What continues is
-    the work, seeded with what the last agent wrote down about it.
+    the work.
     """
     from . import tmuxen
 
@@ -441,22 +442,8 @@ def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str],
     if agent is None:
         print(f"hotline: error: no agent called {name!r}. Try --agents.", file=sys.stderr)
         return 1
-    # A handoff is what an agent leaves when it finishes on purpose. An agent
-    # that was killed -- by a crash, an OOM, or a daemon restart taking its tmux
-    # server down -- never got the chance, and refusing to resume those makes
-    # exactly the agents that most need reviving the ones that cannot be. Its
-    # transcript is still on disk, so there is always something to resume from;
-    # the replacement reads it and reconstructs the state itself.
-    brief: str | None = None
-    handoff = Path(agent.handoff) if agent.handoff else None
-    if handoff is not None:
-        try:
-            brief = handoff.read_text()
-        except OSError as exc:
-            log(f"warning: cannot read {handoff}: {exc}; falling back to the transcript")
-            handoff = None
-    corpse = transcript_path(agent.session_id)
-    if brief is None and corpse is None:
+    brief = brief_for(agent)
+    if brief is None:
         print(
             f"hotline: error: {agent.name} left no handoff and its transcript is "
             "gone, so there is nothing to resume it from.",
@@ -470,57 +457,21 @@ def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str],
         print(f"hotline: error: could not start a session: {exc}", file=sys.stderr)
         return 1
     log(f"resumed {agent.name} as {session.name} (tmux: {tmuxen.tmux_name(agent.name)})")
+    if not brief.from_handoff:
+        log("no handoff -- seeded from its transcript; it will verify before trusting it")
 
-    # Re-register under the NEW session id. The old record is retired rather than
-    # edited, so the resumed agent gets its own retention clock.
-    registry.forget(agent.session_id)
-    revived = registry.declare(
-        # `agent.name`, not `session.name`: resuming by name and getting back
-        # something called `hotline-36` loses the identity you resumed.
-        session.session_id, agent.name, agent.task,
-        parent=agent.parent, wants_channel=agent.wants_channel, keep_days=agent.keep_days,
-    )
-
-    manager = channels_from_env()
-    if manager is not None and revived.wants_channel:
-        # An agent that was killed still owns a live channel, and it is the thread
-        # Bogdan has been reading. Minting a second one and leaving the first
-        # orphaned is the same mistake `--adopt` exists to prevent, so the old
-        # channel is only replaced when it is genuinely gone -- which is the case
-        # `--done` creates, and the one this branch was written for.
-        if agent.channel_id is not None and manager.exists(agent.channel_id):
-            revived.channel_id = agent.channel_id
-            registry.save()
-            log(f"kept its channel: #{channel_slug(revived.name)}")
-        else:
-            try:
-                revived.channel_id = manager.create_text(revived.name, topic=revived.task)
-                registry.save()
-                log(f"channel: #{channel_slug(revived.name)}")
-            except HotlineError as exc:
-                log(f"warning: could not recreate the channel: {exc}")
-
-    if brief is not None:
-        seed = (
-            f"You are resuming work that a previous session finished a stint on. "
-            f"Its task was: {agent.task}\n\n"
-            f"This is the handoff it left at {handoff}:\n\n{brief}\n\n"
-            "Read it, say in one sentence what you understand the state to be, and wait."
-        )
-    else:
-        seed = (
-            f"You are taking over work from a session that was KILLED before it "
-            f"could write a handoff, so there is no summary -- only the raw record.\n\n"
-            f"Its task was: {agent.task}\n\n"
-            f"Its full transcript is at {corpse}. Read it (it is JSONL and may be "
-            "large, so parse it with python rather than cat), and separately verify "
-            "the actual state of the system against what it *claimed* -- it died "
-            "mid-flight and its last actions may not have completed. Then write a "
-            "handoff of your own before continuing, so this cannot happen twice.\n\n"
-            "Say in one sentence what you understand the state to be, and wait."
-        )
+    had = agent.channel_id
     try:
-        reply = asyncio.run(Router().ask_session(session.name, seed, timeout=300.0))
+        revived = rehome(registry, agent, session.session_id, channels_from_env())
+    except HotlineError as exc:
+        log(f"warning: could not sort out its channel: {exc}")
+        revived = registry.declare(session.session_id, agent.name, agent.task)
+    if revived.channel_id is not None:
+        kept = revived.channel_id == had
+        log(f"{'kept its' if kept else ''} channel: #{channel_slug(revived.name)}")
+
+    try:
+        reply = asyncio.run(Router().ask_session(session.name, brief.seed, timeout=300.0))
     except HotlineError as exc:
         log(f"warning: session started but did not answer: {exc}")
         return 0

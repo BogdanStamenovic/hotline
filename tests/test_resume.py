@@ -1,4 +1,4 @@
-"""Reviving an agent that is no longer running.
+"""Reviving an agent whose session is gone.
 
 The interesting cases are the ones where the agent did NOT finish tidily. A
 session killed by a crash, an OOM or a daemon restart never writes a handoff,
@@ -9,13 +9,16 @@ and those are exactly the ones worth reviving -- so "no handoff" has to mean
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 
-from hotline import cli
+from hotline import revive
 from hotline.agents import Registry
-from hotline.ccsocks import LiveSession
+
+
+@pytest.fixture
+def registry(tmp_path: Path) -> Registry:
+    return Registry(path=tmp_path / "agents.json")
 
 
 class FakeChannels:
@@ -32,127 +35,151 @@ class FakeChannels:
         self.created.append(name)
         return 9999
 
-    def retopic(self, channel_id: int, topic: str) -> None:
-        pass
+
+# ---- what a replacement is handed ------------------------------------------
 
 
-@pytest.fixture
-def revive(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Any:
-    """Drive `_resume` with the tmux spawn and the model call stubbed out."""
-    seeds: list[str] = []
-
-    async def fake_spawn(key: str, cwd: str | None = None, **kw: Any) -> LiveSession:
-        return LiveSession(
-            pid=1, session_id="sid-new", cwd="/tmp", name=key,
-            socket_path="/tmp/x.sock", token="t", started_at=0,
-            kind="interactive", status="idle", entrypoint="cli", tmux=f"hl-{key}",
-        )
-
-    class FakeReply:
-        text = "understood"
-
-    class FakeRouter:
-        async def ask_session(self, name: str, seed: str, timeout: float = 0.0) -> Any:
-            seeds.append(seed)
-            return FakeReply()
-
-    from hotline import tmuxen
-    monkeypatch.setattr(tmuxen, "spawn", fake_spawn)
-    monkeypatch.setattr(cli, "Router", FakeRouter)
-
-    def run(registry: Registry, name: str, channels: FakeChannels | None) -> tuple[int, str]:
-        monkeypatch.setattr(cli, "channels_from_env", lambda: channels)
-        code = cli._resume(name, registry, None, lambda m: None)
-        return code, (seeds[-1] if seeds else "")
-
-    return run
-
-
-@pytest.fixture
-def registry(tmp_path: Path) -> Registry:
-    return Registry(path=tmp_path / "agents.json")
-
-
-def test_an_agent_killed_without_a_handoff_resumes_from_its_transcript(
-    registry: Registry, revive: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+def test_a_killed_agent_is_seeded_from_its_transcript(
+    registry: Registry, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """The case that matters: nothing was written down, but the record survives."""
     corpse = tmp_path / "sid-old.jsonl"
     corpse.write_text("{}\n")
-    monkeypatch.setattr(cli, "transcript_path", lambda sid: corpse)
-    registry.declare("sid-old", "data-f3", "mirror the ollama server")
+    monkeypatch.setattr(revive, "transcript_path", lambda sid: corpse)
+    agent = registry.declare("sid-old", "data-f3", "mirror the ollama server")
 
-    code, seed = revive(registry, "data-f3", None)
+    brief = revive.brief_for(agent)
 
-    assert code == 0
-    assert str(corpse) in seed
-    assert "KILLED" in seed, "the replacement must know it is reading a corpse"
-    assert "verify" in seed.lower(), "claims in a transcript are not results"
+    assert brief is not None
+    assert not brief.from_handoff
+    assert str(corpse) in brief.seed
+    assert "KILLED" in brief.seed, "the replacement must know it is reading a corpse"
+    assert "verify" in brief.seed.lower(), "claims in a transcript are not results"
 
 
-def test_a_handoff_is_still_preferred_when_there_is_one(
-    registry: Registry, revive: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+def test_a_handoff_is_preferred_when_there_is_one(
+    registry: Registry, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     corpse = tmp_path / "sid-old.jsonl"
     corpse.write_text("{}\n")
-    monkeypatch.setattr(cli, "transcript_path", lambda sid: corpse)
+    monkeypatch.setattr(revive, "transcript_path", lambda sid: corpse)
     handoff = tmp_path / "handoff.md"
     handoff.write_text("the state is X")
-    registry.declare("sid-old", "data-f3", "mirror the ollama server")
+    agent = registry.declare("sid-old", "data-f3", "mirror")
     registry.complete("sid-old", handoff=str(handoff))
 
-    code, seed = revive(registry, "data-f3", None)
+    brief = revive.brief_for(agent)
 
-    assert code == 0
-    assert "the state is X" in seed
-    assert str(corpse) not in seed
+    assert brief is not None and brief.from_handoff
+    assert "the state is X" in brief.seed
+    assert str(corpse) not in brief.seed
 
 
-def test_resuming_refuses_when_both_the_handoff_and_the_transcript_are_gone(
-    registry: Registry, revive: Any, monkeypatch: pytest.MonkeyPatch
+def test_an_unreadable_handoff_falls_back_to_the_transcript(
+    registry: Registry, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr(cli, "transcript_path", lambda sid: None)
-    registry.declare("sid-old", "data-f3", "mirror the ollama server")
-
-    code, _ = revive(registry, "data-f3", None)
-
-    assert code == 1
-
-
-def test_a_live_channel_is_kept_rather_than_duplicated(
-    registry: Registry, revive: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """A killed agent still owns the thread Bogdan has been reading."""
+    """A handoff path that no longer resolves must not make an agent unrevivable."""
     corpse = tmp_path / "sid-old.jsonl"
     corpse.write_text("{}\n")
-    monkeypatch.setattr(cli, "transcript_path", lambda sid: corpse)
-    agent = registry.declare("sid-old", "data-f3", "mirror the ollama server")
+    monkeypatch.setattr(revive, "transcript_path", lambda sid: corpse)
+    agent = registry.declare("sid-old", "data-f3", "mirror")
+    registry.complete("sid-old", handoff=str(tmp_path / "deleted.md"))
+
+    brief = revive.brief_for(agent)
+
+    assert brief is not None and not brief.from_handoff
+
+
+def test_nothing_to_resume_from_returns_none(
+    registry: Registry, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(revive, "transcript_path", lambda sid: None)
+    agent = registry.declare("sid-old", "data-f3", "mirror")
+
+    assert revive.brief_for(agent) is None
+
+
+# ---- which agents are offered ----------------------------------------------
+
+
+def test_a_live_agent_is_not_offered_for_resuming(
+    registry: Registry, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Something still running should be connected to, not resurrected."""
+    corpse = tmp_path / "c.jsonl"
+    corpse.write_text("{}\n")
+    monkeypatch.setattr(revive, "transcript_path", lambda sid: corpse)
+    registry.declare("alive", "runner", "still going")
+    registry.declare("dead", "corpse", "not going")
+
+    offered = [a.name for a in revive.resumable(registry, live_ids={"alive"})]
+
+    assert offered == ["corpse"]
+
+
+def test_the_offer_is_newest_first_and_capped(
+    registry: Registry, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    corpse = tmp_path / "c.jsonl"
+    corpse.write_text("{}\n")
+    monkeypatch.setattr(revive, "transcript_path", lambda sid: corpse)
+    for i in range(15):
+        agent = registry.declare(f"sid-{i}", f"agent-{i}", "work")
+        agent.declared_at = float(i)
+    registry.save()
+
+    offered = revive.resumable(registry, live_ids=set(), limit=10)
+
+    assert len(offered) == 10
+    assert offered[0].name == "agent-14"
+
+
+def test_an_agent_with_nothing_left_is_not_offered(
+    registry: Registry, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Offering a revive that cannot happen is worse than a shorter list."""
+    monkeypatch.setattr(revive, "transcript_path", lambda sid: None)
+    registry.declare("sid", "ghost", "work")
+
+    assert revive.resumable(registry, live_ids=set()) == []
+
+
+# ---- moving the record onto the new session --------------------------------
+
+
+def test_a_live_channel_is_carried_over_not_duplicated(registry: Registry) -> None:
+    """A killed agent still owns the thread Bogdan has been reading."""
+    agent = registry.declare("sid-old", "data-f3", "mirror")
     agent.channel_id = 4242
     registry.save()
     channels = FakeChannels(present={4242})
 
-    code, _ = revive(registry, "data-f3", channels)
+    revived = revive.rehome(registry, agent, "sid-new", channels)
 
-    assert code == 0
     assert channels.created == [], "it already had a channel"
-    assert registry.get("sid-new") is not None
-    assert registry.get("sid-new").channel_id == 4242  # type: ignore[union-attr]
+    assert revived.channel_id == 4242
+    assert revived.session_id == "sid-new"
+    assert registry.get("sid-old") is None, "the corpse must stop resolving"
 
 
-def test_a_deleted_channel_is_recreated(
-    registry: Registry, revive: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_a_deleted_channel_is_recreated(registry: Registry) -> None:
     """`--done` deletes the channel, so resuming a finished agent needs a new one."""
-    handoff = tmp_path / "handoff.md"
-    handoff.write_text("state")
-    monkeypatch.setattr(cli, "transcript_path", lambda sid: None)
-    agent = registry.declare("sid-old", "data-f3", "mirror the ollama server")
+    agent = registry.declare("sid-old", "data-f3", "mirror")
     agent.channel_id = 4242
-    registry.complete("sid-old", handoff=str(handoff))
+    registry.save()
     channels = FakeChannels(present=set())
 
-    code, _ = revive(registry, "data-f3", channels)
+    revived = revive.rehome(registry, agent, "sid-new", channels)
 
-    assert code == 0
     assert channels.created == ["data-f3"]
-    assert registry.get("sid-new").channel_id == 9999  # type: ignore[union-attr]
+    assert revived.channel_id == 9999
+
+
+def test_reviving_keeps_the_name_and_the_task(registry: Registry) -> None:
+    agent = registry.declare("sid-old", "data-f3", "mirror the ollama server")
+
+    revived = revive.rehome(registry, agent, "sid-new", None)
+
+    assert revived.name == "data-f3", "resuming by name must give back that name"
+    assert revived.task == "mirror the ollama server"
+    assert not revived.done, "a revived agent is working again"

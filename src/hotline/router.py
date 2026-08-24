@@ -117,6 +117,14 @@ _AGENTS = re.compile(
     r"everyone\s+doing)\s*[.?]?$", re.IGNORECASE
 )
 _HELP = re.compile(r"^(?:help|commands?|what\s+can\s+(?:you|i)\s+do)\s*[.?!]?$", re.IGNORECASE)
+# Bare `resume` lists what can be brought back; `resume <n|name>` brings one back.
+# The target form deliberately overlaps with attaching to a live session, and the
+# ambiguity is resolved where the data is: if it names something running, that is
+# a connect, and only otherwise is it a revive. Bogdan typed a bare "resume" in
+# #general expecting exactly this and got a brand new session instead, because
+# nothing matched it and it fell through as a question.
+_RESUME = re.compile(r"^(?:resume|revive|bring\s+back)(?:\s+(?:agent\s+)?(.+?))?\s*[.?]?$",
+                     re.IGNORECASE)
 _RESOURCES = re.compile(
     r"^(?:resources?|load|how\s+(?:much|is)\s+(?:ram|memory|vram|load)\S*)\s*[.?]?$", re.IGNORECASE
 )
@@ -143,6 +151,10 @@ def parse_utterance(utterance: str) -> Route:
     # whatever is on the other end of it.
     if _HELP.match(low):
         return Route("control", None, text, action="help")
+    resume = _RESUME.match(text)
+    if resume:
+        target = (resume.group(1) or "").strip()
+        return Route("control", target or None, text, action="resume")
     if _RESOURCES.match(low):
         return Route("control", None, text, action="resources")
     if _AGENTS.match(low):

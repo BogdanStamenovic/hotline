@@ -24,6 +24,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
+import re
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -36,6 +38,23 @@ from .errors import HotlineError, SessionNotFound
 from .fresh import Narrator, Reply
 from .router import Route, Router, Watch, describe, parse_utterance
 from .transcript import transcript_path
+
+log = logging.getLogger(__name__)
+
+# Answers to "send it?". Deliberately a small closed set: anything else is
+# treated as a NEW message replacing the held one, which is the safe reading --
+# a caller who types another instruction instead of answering has changed their
+# mind, and delivering the old text would be the exact failure this guards.
+_YES = re.compile(r"^(?:y|yes|yeah|yep|yup|ok|okay|sure|send(?:\s+it)?|go|do\s+it|"
+                  r"confirm(?:ed)?)\s*[.!]?$", re.IGNORECASE)
+def _clip(text: str | None, limit: int = 160) -> str:
+    """Echo the held message back short, so he can see WHAT he is confirming."""
+    flat = " ".join((text or "").split())
+    return flat if len(flat) <= limit else flat[: limit - 1] + "…"
+
+
+_NO = re.compile(r"^(?:n|no|nope|nah|cancel|stop|don'?t|drop\s+it|never\s*mind)\s*[.!]?$",
+                 re.IGNORECASE)
 
 # How long a background relay will wait for a busy session to get round to the
 # message it was handed. Generous: the sender has already been answered by the
@@ -73,6 +92,11 @@ class Conversation:
     # which is safe and still meant the connection did not stick. Session ids
     # survive both, so resolution prefers this and keeps the name for display.
     attached_id: str | None = None
+    # The agent names from the last `resume` listing shown to THIS conversation,
+    # so `resume 2` means the second line he was shown rather than the second
+    # line of a list computed fresh. Same reasoning as `last_listing`, and the
+    # same bug if it is skipped -- except a wrong pick here revives a stranger.
+    last_resume_listing: list[str] = field(default_factory=list)
     # The session names from the last `session list` shown to THIS conversation.
     # `connect 2` has to mean the second line of the list you were just shown, not
     # the second line of a list computed fresh -- sessions come and go, so the
@@ -85,6 +109,17 @@ class Conversation:
     # request timed out can rejoin the same turn instead of starting a new one or
     # throwing away the work.
     pending: asyncio.Task[tuple[Route, Reply]] | None = None
+    # A message held back until the caller confirms where it is going, and the
+    # target it is going to. Bogdan asked for this after messages of his reached
+    # sessions he did not mean: in #general he wants to be told who he is talking
+    # to *before* the message lands, not after.
+    held: str | None = None
+    held_for: str | None = None
+    # The target he has already confirmed. Asking on every single message would
+    # make the channel unusable, so the confirmation is per-target and sticky:
+    # once he has said yes to a session, messages flow until the target changes
+    # under him -- which is the event he actually wants to catch.
+    confirmed: str | None = None
     # Answers still owed to this caller by sessions that were busy when we wrote
     # to them.
     relays: set[asyncio.Task[None]] = field(default_factory=set)
@@ -106,6 +141,7 @@ class SessionPool:
         append_system_prompt: str | None = None,
         deliver: Deliver | None = None,
         use_standin: bool = True,
+        confirm_keys: set[str] | None = None,
     ) -> None:
         self.router = router or Router(default_cwd=cwd)
         self.idle_timeout = idle_timeout
@@ -117,6 +153,11 @@ class SessionPool:
         # stand-in can only ever promise a relay it cannot perform.
         self.deliver = deliver
         self.use_standin = use_standin
+        # Conversations where a message is held for confirmation before it is
+        # delivered. Only #general: a per-agent channel is unambiguous by
+        # construction -- that channel *is* that agent -- so asking there would be
+        # ceremony with no question behind it.
+        self.confirm_keys = confirm_keys or set()
         self.conversations: dict[str, Conversation] = {}
         # Why a conversation went away, kept until the caller is told. Bogdan had
         # five turns with a session, it vanished mid-message, and the reply came
@@ -305,12 +346,47 @@ class SessionPool:
         self._save_bindings()
         return was
 
-    async def _own_session(self, conv: Conversation) -> str:
+    async def _own_session(self, conv: Conversation, task: str = "") -> str:
         """The name of this conversation's own session, spawning one if needed."""
-        name = await self._spawn_own(conv)
+        name = await self._spawn_own(conv, task)
         return name
 
-    async def _spawn_own(self, conv: Conversation) -> str:
+    def _enrol(self, session_id: str, name: str, task: str) -> None:
+        """Register a session Bogdan created himself, and give it a channel.
+
+        Declaring used to be cooperative: an agent registered itself if it
+        thought to. That works for agents spawned from a script that tells them
+        to, and fails for exactly the ones Bogdan starts by talking -- they have
+        no idea they are supposed to, so they never get a channel and every one
+        of them narrates into #general instead. He asked for the opposite rule:
+        an agent he makes directly MUST have its own thread.
+
+        The task is provisional -- his opening message, which is the best guess
+        available before the agent has done anything. `--declare` retasks in
+        place, keeping the channel, so the agent can correct it once it knows
+        what the work actually is.
+
+        Never fatal. A session that is running is worth more than a tidy
+        registry, so a Discord failure here costs a channel, not the session.
+        """
+        from .agents import Registry
+        from .channels import from_env as channels_from_env
+
+        try:
+            registry = Registry()
+            if registry.get(session_id) is not None:
+                return
+            summary = " ".join(task.split())[:200] or "started from Discord; not yet declared"
+            agent = registry.declare(session_id, name, summary)
+            manager = channels_from_env()
+            if manager is None or not agent.wants_channel or agent.channel_id is not None:
+                return
+            agent.channel_id = manager.create_text(agent.name, topic=agent.task)
+            registry.save()
+        except Exception as exc:  # noqa: BLE001 - never take a session down over bookkeeping
+            log.warning("could not enrol %s: %s: %s", name, type(exc).__name__, exc)
+
+    async def _spawn_own(self, conv: Conversation, task: str = "") -> str:
         if conv.own:
             try:
                 self.router.resolve(conv.own)
@@ -329,6 +405,7 @@ class SessionPool:
                                      bypass=self.router.bypass)
         conv.own = session.name
         self._save_bindings()
+        self._enrol(session.session_id, session.name, task)
         return session.name
 
     # ---- control commands ------------------------------------------------
@@ -384,9 +461,18 @@ class SessionPool:
             lines = [a.describe() for a in known]
             return Reply(text="\n".join(lines), subtype="control")
 
+        if route.action == "resume":
+            handled = await self._resume(conv, route, live)
+            if handled is not None:
+                return handled
+            # Not a resumable agent and not a live session: let it be answered as
+            # an ordinary question rather than swallowed.
+            return None
+
         if route.action == "detach":
             was = conv.attached_to
             conv.attached_to = conv.attached_id = None
+            conv.confirmed = conv.held = conv.held_for = None
             if was:
                 return Reply(text=f"Detached from {was}. Back to your own session.",
                              subtype="control")
@@ -452,12 +538,115 @@ class SessionPool:
             session = target
             conv.attached_to = session.name
             conv.attached_id = session.session_id
+            # Re-arm the "send it?" question: the target just changed, so an
+            # earlier confirmation describes somewhere his next message is no
+            # longer going.
+            conv.confirmed = conv.held = conv.held_for = None
             return Reply(
                 text=f"Connected to {describe(session)}. Everything you say now goes there "
                      f'until you say "detach".',
                 subtype="control",
             )
         return None
+
+    async def _resume(
+        self, conv: Conversation, route: Route, live: list[LiveSession]
+    ) -> Reply | None:
+        """`resume` -- what can be brought back, and bringing one back.
+
+        Reviving means spawning a session and handing it a brief, and the brief
+        can be a whole handoff or a whole transcript to read. Waiting for that to
+        be understood would hold the Discord turn open for minutes, so the seed
+        is sent in the background and the reply comes back as soon as the session
+        exists. He gets the agent's own first words in its channel, where the
+        rest of that conversation belongs anyway.
+        """
+        from .agents import Agent, Registry
+        from .channels import from_env as channels_from_env
+        from .revive import brief_for, rehome, resumable
+
+        registry = Registry()
+        live_ids = {s.session_id for s in live}
+        offer = resumable(registry, live_ids)
+
+        if not route.target:
+            if not offer:
+                return Reply(
+                    text="Nothing to resume — every agent on record is still running.",
+                    subtype="control",
+                )
+            conv.last_resume_listing = [a.name for a in offer]
+            lines = ["Agents you can bring back, newest first:"]
+            for index, candidate in enumerate(offer, 1):
+                found = brief_for(candidate)
+                source = "handoff" if found and found.from_handoff else "transcript only"
+                state = "finished" if candidate.done else "killed"
+                lines.append(
+                    f"{index}. {candidate.name} — {candidate.task} [{state}; {source}]"
+                )
+            lines.append("")
+            lines.append('Say "resume 2" or "resume data-f3".')
+            return Reply(text="\n".join(lines), subtype="control")
+
+        # A name that belongs to something still running is a connect, not a
+        # revive -- resurrecting the living would fork the work in two.
+        spec = route.target.strip()
+        for session in live:
+            if session.name.lower() == spec.lower():
+                conv.attached_to = session.name
+                conv.attached_id = session.session_id
+                conv.confirmed = conv.held = conv.held_for = None
+                return Reply(
+                    text=f"{session.name} is still running — connected to it instead "
+                         f"of resurrecting it.",
+                    subtype="control",
+                )
+
+        agent: Agent | None = None
+        if spec.isdigit() and conv.last_resume_listing:
+            index = int(spec) - 1
+            if 0 <= index < len(conv.last_resume_listing):
+                agent = registry.by_name(conv.last_resume_listing[index])
+        if agent is None:
+            agent = registry.by_name(spec)
+        if agent is None or agent.session_id in live_ids:
+            return None
+
+        brief = brief_for(agent)
+        if brief is None:
+            return Reply(
+                text=f"{agent.name} left no handoff and its transcript is gone, so "
+                     "there is nothing to resume it from.",
+                subtype="control",
+            )
+        try:
+            session = await tmuxen.spawn(agent.name, cwd=self.cwd, name=agent.name)
+        except HotlineError as exc:
+            return Reply(text=f"Could not start a session for {agent.name}: {exc}",
+                         subtype="control")
+
+        had = agent.channel_id
+        name, task = agent.name, agent.task
+        try:
+            revived = rehome(registry, agent, session.session_id, channels_from_env())
+            channel = revived.channel_id
+        except HotlineError as exc:
+            log.warning("revived %s but could not sort its channel: %s", name, exc)
+            channel = had
+
+        async def seed() -> None:
+            with contextlib.suppress(Exception):
+                await self.router.ask_session(session.name, brief.seed, timeout=600.0)
+
+        self._seeding = asyncio.create_task(seed())
+
+        where = f" — reading it in <#{channel}> now" if channel else ""
+        source = "its handoff" if brief.from_handoff else "its transcript (it was killed, so there is no handoff)"
+        return Reply(
+            text=f"Brought **{name}** back as `{session.name}`, seeded from {source}"
+                 f"{where}.\n> {task}",
+            subtype="control",
+        )
 
     def _resolve_listed(
         self, conv: Conversation, spec: str, live: list[LiveSession]
@@ -498,8 +687,30 @@ class SessionPool:
         timeout: float = 300.0,
     ) -> tuple[Route, Reply]:
         """One turn of a conversation, routed the same way the CLI routes it."""
-        route = parse_utterance(utterance)
         conv = self._conversation(key)
+
+        # A held message is answered before anything is parsed, because "yes" is
+        # not a question for a model and routing it as one would deliver the word
+        # "yes" to a session instead of the message it was approving.
+        if conv.held is not None:
+            answer = utterance.strip()
+            if _YES.match(answer):
+                utterance, conv.confirmed = conv.held, conv.held_for
+                conv.held = conv.held_for = None
+            elif _NO.match(answer):
+                dropped, target = conv.held, conv.held_for
+                conv.held = conv.held_for = None
+                self._save_bindings()
+                return Route("control", target, utterance), Reply(
+                    text=f"Dropped. Nothing was sent to {target}.\n> {_clip(dropped)}",
+                    subtype="control",
+                )
+            else:
+                # Not an answer: he has moved on. Discard the held message rather
+                # than delivering something he has stopped meaning to send.
+                conv.held = conv.held_for = None
+
+        route = parse_utterance(utterance)
 
         if route.mode == "control":
             handled = await self._control(conv, route)
@@ -525,9 +736,28 @@ class SessionPool:
             if len(self.conversations) > self.max_sessions:
                 await self._evict_oldest()
             async with conv.lock:
-                target = await self._own_session(conv)
+                target = await self._own_session(conv, route.text)
             mode = "own"
             display = target
+
+        # Where it is going, said before it goes. Sticky per target: once he has
+        # confirmed a session, messages flow until the target changes underneath
+        # him, which is the event worth catching rather than every message.
+        if key in self.confirm_keys and display != conv.confirmed:
+            conv.held, conv.held_for = route.text, display
+            conv.last_used = time.monotonic()
+            self._save_bindings()
+            where = {
+                "attach": f"You are talking to **{display}** (connected).",
+                "own": f"This would start **{display}**, this channel's own session.",
+            }.get(mode, f"This would go to **{display}**.")
+            return Route("control", display, route.text), Reply(
+                text=(
+                    f"{where}\nSend it?  *yes* / *no* — or just type something else "
+                    f"to replace it.\n> {_clip(route.text)}"
+                ),
+                subtype="control",
+            )
 
         try:
             reply = await self._send(conv, target, route.text, narrator, timeout)
@@ -706,7 +936,13 @@ HELP_TEXT = """**Commands** (these are handled by hotline itself, not sent to a 
 `where am i` — which session you are bound to, and how to attach to it
 `resources` — RAM, VRAM, load
 `agents` — who is working on what, and who has finished
+`resume` — agents you can bring back, numbered; `resume 2` or `resume <name>`
 `new session` — close your session and start over
+
+In #general, a message is held and you are told where it is going before it goes
+— answer `yes` to send, `no` to drop, or just type something else to replace it.
+You are asked once per target, not once per message; connecting somewhere new
+asks again. Per-agent channels never ask: that channel *is* that agent.
 
 Anything else goes to a Claude session. `connect` accepts a number from the
 list, a session name, a directory (`uxonews`), or an ordinal (`the older one`).

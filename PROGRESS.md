@@ -1586,3 +1586,98 @@ It declined to page him at 00:19 for two non-blocking open questions, on the
 grounds that `hotline-page` is a siren and the task finished rather than
 stalled. That is the right reading of the escalation rules, and it left both
 defaults conservative: CUDA stays installed, ollama stays on `127.0.0.1`.
+
+## Three asks: forced channels, a confirmation step, and `resume`
+
+### 1. Agents he starts directly must have their own channel
+
+Declaring was cooperative — an agent registered itself if it thought to. That
+works for agents spawned from a script that tells them to, and fails for exactly
+the ones he starts by talking, which have no idea they are supposed to. So every
+such agent narrated into `#general`, which is the noise he complained about in
+the first place.
+
+`SessionPool._enrol` now registers a session at spawn and creates its channel.
+The task is provisional — his opening message, the best guess available before
+the agent has done anything — and `--declare` retasks in place, keeping the
+channel, once the agent knows what the work actually is. Never fatal: a running
+session is worth more than a tidy registry, so a Discord failure costs a channel,
+not the session.
+
+### 2. Say where a message is going before it goes
+
+In `#general` a message is now held and answered with the destination first.
+`yes` sends it, `no` drops it, and anything else is treated as a replacement —
+that last case matters, because a caller who types another instruction instead
+of answering has changed their mind, and delivering the old text would be the
+exact failure this exists to prevent. `yes` is intercepted before parsing, or it
+would be delivered to a session as the word "yes".
+
+Sticky per target rather than per message: asking on every message would make
+the channel unusable, and the event actually worth catching is the target
+changing underneath him. `connect` and `detach` both re-arm it. Per-agent
+channels never ask — that channel *is* that agent, so there is no question.
+
+Flagged to him that per-message is one line away if the sticky version reads as
+too loose.
+
+### 3. `resume`
+
+He made this conditional on the archive flow being finished, so I checked rather
+than assumed: declared a throwaway agent against the real guild, gave it a
+channel, marked it done, deleted the channel, and confirmed the record survives,
+expires at +3 days, and is still resumable. It is finished, so `resume` is built
+on it.
+
+Bare `resume` lists the last ten, numbered, each marked *finished* or *killed*
+and *handoff* or *transcript only* — the distinction matters, since an agent
+revived from a transcript is in a materially weaker position and hiding that
+would let it be trusted more than it deserves. `resume 2` uses the listing shown
+to *this* conversation, the same discipline `connect 2` needed after he reached
+the wrong session by number. Naming something still running connects to it
+instead of resurrecting it: forking live work in two is worse than either
+outcome.
+
+The revive logic moved into `revive.py` and both the CLI and the Discord command
+now share it, because they are the same operation reached from two places and a
+revive that keeps the channel from one entry point and orphans it from the other
+is worse than either behaviour consistently.
+
+Worth noting the parser gap this closes: bare `resume` matched nothing, so it
+fell through as an ordinary question — which is why his "Resume" in `#general`
+silently spawned a whole new agent instead of resuming anything. That agent was
+me.
+
+## The test suite was creating real Discord channels
+
+Bogdan asked whether the `agent-hl-*` channels in his server were mine. They
+were, and they were a bug of mine.
+
+`_enrol` calls `channels.from_env()`, which reads `os.environ` — and the `.env`
+credentials are exported in the shell hotline is developed from. So the test
+suite held a **live** Discord client, and every fake session the pool tests
+spawned created a real channel in the real guild, until Discord answered a plain
+channel listing with a 429.
+
+**What surfaced it was performance, not the channels.** The suite went from 8s
+to 190s and I went looking for the regression before he asked. Four tests at
+~58s each, fast in isolation and slow in the suite, which reads like cross-test
+interference and was actually real HTTP round-trips. It is 8.3s again now, and
+that number is the evidence the calls are gone.
+
+Fixed in `conftest.py`, autouse and unconditional: every Discord variable is
+deleted from the environment for every test, and `XDG_STATE_HOME` is redirected.
+Central rather than per-test on purpose — the tests that did the damage were the
+ones with no idea they were touching Discord at all, so a guard they have to opt
+into is a guard that would not have caught this. The same hole had also put four
+phantom agents in the live registry.
+
+Seven channels deleted, four registry records removed. `agent-data-f3` is also
+gone, but legitimately: data-f3 ran `--done` when it finished, which deletes the
+channel and keeps the handoff. That is the archive flow working.
+
+The honest version is that I wired a Discord call into a code path the tests
+exercise without first checking whether the tests had credentials. The
+environment was the thing I did not look at.
+
+308 tests, ruff and mypy clean.
