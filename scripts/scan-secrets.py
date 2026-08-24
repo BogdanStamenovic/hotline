@@ -11,7 +11,6 @@ because those differ exactly when it matters.
 """
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -42,7 +41,7 @@ def secrets() -> dict[str, str]:
 def staged_files() -> list[str]:
     out = subprocess.run(
         ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-        capture_output=True, text=True, cwd=ROOT,
+        capture_output=True, text=True, cwd=ROOT, check=False,
     )
     return [f for f in out.stdout.split("\n") if f]
 
@@ -54,7 +53,7 @@ def main() -> int:
     leaks: list[tuple[str, str]] = []
     for path in staged_files():
         blob = subprocess.run(
-            ["git", "show", f":{path}"], capture_output=True, cwd=ROOT
+            ["git", "show", f":{path}"], capture_output=True, cwd=ROOT, check=False
         ).stdout.decode("utf-8", "replace")
         leaks += [(name, path) for name, value in values.items() if value in blob]
 

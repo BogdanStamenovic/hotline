@@ -8,20 +8,23 @@ speaks a phrase through Piper, and hotline receives it over the real Discord voi
 transport, segments it, transcribes it on the GPU, routes it, and speaks the answer
 back.
 
-That exercises everything the real call does -- Opus, RTP, DAVE end-to-end
-encryption, the per-user sink, VAD segmentation, Whisper, the router, Piper -- with
-the single exception of a human larynx.
+That exercises everything a real call does -- Opus, RTP, DAVE end-to-end
+encryption, the per-user sink, VAD segmentation, Whisper, the router and Piper --
+with the single exception of a human larynx. It is also what found the py-cord
+receive bug: without two bots there was no way to put known audio in one end and
+look at what came out the other.
 
 Usage:
     scripts/voice-loopback-test.py ["a phrase to say" ...]
 
-It is a test harness, not part of the product, which is why it lives in scripts/
-and constructs its own clients rather than reaching into the running daemon.
+A test harness, not part of the product, which is why it lives in scripts/ and
+builds its own clients rather than reaching into the running daemon.
 """
 
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 import os
 import sys
@@ -30,13 +33,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-import discord  # noqa: E402
+import discord
 
-from hotline.audio import Speaker, Transcriber  # noqa: E402
-from hotline.config import load_env  # noqa: E402
-from hotline.pool import SessionPool  # noqa: E402
-from hotline.router import Router  # noqa: E402
-from hotline.voice import FRAME_BYTES, StreamSource, VoiceCall  # noqa: E402
+from hotline.audio import Speaker, Transcriber
+from hotline.config import load_env
+from hotline.pool import SessionPool
+from hotline.router import Router
+from hotline.voice import VoiceCall
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 log = logging.getLogger("loopback")
@@ -110,18 +113,19 @@ async def main(phrases: list[str]) -> int:
     talker_guild = talker.get_guild(guild_id)
     talker_channel = talker_guild.get_channel(voice_id)
     talker_vc = await talker_channel.connect()
-    source = StreamSource()
-    talker_vc.play(source)
-    log.info("talker joined and is transmitting")
+    log.info("talker joined")
     await asyncio.sleep(2)
 
     for phrase in phrases:
         log.info("SAYING: %r", phrase)
         pcm = await loop.run_in_executor(None, speaker.to_discord, phrase)
-        source.push(pcm)
-        # Wait for playback plus a beat of silence so the VAD closes the utterance,
-        # then give the turn time to run.
-        await asyncio.sleep(len(pcm) / (FRAME_BYTES * 50) + 3)
+        # One play() per utterance rather than pushing into an always-on silent
+        # stream. A play/stop cycle makes py-cord send the speaking transitions
+        # Discord uses to decide whether to forward a stream at all.
+        talker_vc.play(discord.PCMAudio(io.BytesIO(pcm)))
+        while talker_vc.is_playing():
+            await asyncio.sleep(0.2)
+        await asyncio.sleep(3)
         deadline = time.monotonic() + 90
         while time.monotonic() < deadline:
             if len(call.transcript) >= 2 and call.transcript[-1][0] == "claude":

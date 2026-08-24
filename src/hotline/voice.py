@@ -36,7 +36,7 @@ import discord
 import numpy as np
 from discord import sinks
 
-from .audio import Segmenter, Speaker, Transcriber, stereo48_to_mono16
+from .audio import SILENCE_TO_END, Segmenter, Speaker, Transcriber, stereo48_to_mono16
 from .errors import HotlineError
 from .fresh import Event
 from .pool import SessionPool
@@ -52,6 +52,57 @@ NARRATE_AFTER = 3.0
 # Minimum gap between spoken narration lines, so a burst of tool calls does not
 # become a stream of chatter.
 NARRATE_EVERY = 4.0
+
+_PATCHED = False
+
+
+
+def install_receive_fixes() -> None:
+    """Repair py-cord 2.8's inbound audio path. Idempotent; call before recording.
+
+    py-cord warns that "voice reception is currently broken due to Discord's DAVE
+    protocol" (their issue #3139). That is not what is wrong. DAVE negotiates and
+    the transport decrypts fine -- 54 of 56 packets in a real call. What is broken
+    is the last line of the AEAD decrypt:
+
+        return result[8:]
+
+    The 8 is an RTP extension preamble plus one extension word, and it is stripped
+    **unconditionally** -- including from packets with no extension at all, where
+    it eats the first eight bytes of the Opus payload. Discord sends ext=False for
+    ordinary speech, so every real audio packet decrypted perfectly and then
+    decoded to digital silence. Peak amplitude 0.0000, no error anywhere, and a
+    library warning pointing confidently at the wrong cause.
+
+    Stripping the extension only when there *is* one takes the same call from
+    silence to peak 0.99.
+
+    The second fix covers `cc > 0`: py-cord builds the AEAD associated data from
+    `data[:12]` and never includes the CSRC list, so any packet carrying CSRCs
+    fails to decrypt outright. Two packets in that same call. Rebuilt here from
+    the real header length.
+    """
+    global _PATCHED
+    if _PATCHED:
+        return
+
+    from discord.voice.receive import reader as _reader
+
+    def _decrypt(self, packet):  # type: ignore[no-untyped-def]
+        packet.adjust_rtpsize()
+        nonce = packet.nonce + b"\x00" * 20
+        header = bytes(packet.header)
+        if packet.cc and len(header) < 12 + 4 * packet.cc:
+            header = bytes(packet.raw[: 12 + 4 * packet.cc]) if hasattr(packet, "raw") else header
+        result = self.box.decrypt(packet.decrypted_data or packet.data, header, nonce)
+        if packet.extended:
+            packet.update_extended_header(result)
+            return result[8:]
+        return result
+
+    _reader.PacketDecryptor._decrypt_rtp_aead_xchacha20_poly1305_rtpsize = _decrypt  # type: ignore[method-assign]
+    _PATCHED = True
+    log.info("installed py-cord receive fixes (pycord#3139 is a red herring)")
 
 
 class StreamSource(discord.AudioSource):
@@ -161,10 +212,6 @@ class GatedSink(sinks.Sink):
         """
         self.packets += 1
         pcm = getattr(data, "pcm", None)
-        if self.packets <= 3 or self.packets % 500 == 0:
-            log.info("sink.write #%d data=%s user=%r pcm=%s", self.packets,
-                     type(data).__name__, user,
-                     len(pcm) if pcm is not None else None)
         if pcm is None and isinstance(data, (bytes, bytearray)):
             pcm = bytes(data)
         speaker = getattr(user, "id", user)
@@ -208,6 +255,8 @@ class VoiceCall:
         self._tasks: list[asyncio.Task[None]] = []
         self._busy = False
         self._speaking_since = 0.0
+        self._frames = 0
+        self._last_audio: dict[int, float] = {}
 
     # ---- lifecycle ------------------------------------------------------
 
@@ -221,9 +270,11 @@ class VoiceCall:
         # an AssertionError on the router thread, which then tears down recording
         # entirely -- and looks, from outside, exactly like the advertised DAVE
         # breakage.
+        install_receive_fixes()
         sink.init(self.client)
         self.client.start_recording(sink, self._on_recording_done)
         self._tasks.append(asyncio.create_task(self._consume()))
+        self._tasks.append(asyncio.create_task(self._close_stale_utterances()))
         self.log(f"joined {channel.name}; listening only to {sorted(self.allowed)}")
 
     async def leave(self) -> None:
@@ -254,7 +305,30 @@ class VoiceCall:
         self.log(f"ignoring audio from user {user} (not in the allowed set)")
 
     def _on_audio(self, user: int, pcm: bytes) -> None:
+        self._last_audio[user] = time.monotonic()
         self._queue.put_nowait((user, pcm))
+
+    async def _close_stale_utterances(self) -> None:
+        """End an utterance when the packets simply stop.
+
+        Discord does not keep sending silence once you stop talking -- the stream
+        goes away entirely. The segmenter ends an utterance on trailing *silence*,
+        so with nothing arriving it would wait forever holding a complete
+        sentence. This is what actually closes almost every real utterance.
+        """
+        while True:
+            await asyncio.sleep(0.2)
+            now = time.monotonic()
+            for user, segmenter in list(self.segmenters.items()):
+                if not segmenter.speaking:
+                    continue
+                if now - self._last_audio.get(user, 0.0) < SILENCE_TO_END:
+                    continue
+                utterance = segmenter.flush()
+                if utterance is not None:
+                    self._tasks.append(
+                        asyncio.create_task(self._handle(utterance.audio, utterance.seconds))
+                    )
 
     async def _consume(self) -> None:
         try:
@@ -274,6 +348,7 @@ class VoiceCall:
             mono = stereo48_to_mono16(pcm)
             if mono.size == 0:
                 continue
+            self._frames += 1
             segmenter = self.segmenters.setdefault(user, Segmenter())
 
             # Barge-in: any speech at all while we are talking stops us. Checked
