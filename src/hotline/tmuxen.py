@@ -93,26 +93,33 @@ async def spawn(
     cwd: str | None = None,
     bypass: bool = True,
     timeout: float = 90.0,
+    name: str | None = None,
 ) -> LiveSession:
     """Start a claude in its own tmux session and wait until it can be messaged.
 
     Returns only once the descriptor exists, which is also the point at which the
     socket is listening -- so callers never race the CLI's own startup.
     """
-    name = tmux_name(key)
-    if exists(name):
+    target = tmux_name(key)
+    if exists(target):
         # Reuse a live one; a dead pane left behind by a crash is replaced.
-        session = _by_tmux_session(name)
+        session = _by_tmux_session(target)
         if session is not None:
             return session
-        kill(name)
+        kill(target)
 
     argv = [CLAUDE_BIN]
     if bypass:
         argv += ["--permission-mode", "bypassPermissions"]
+    if name:
+        # The CLI's own display name, which is what `session list`, the session
+        # picker and the terminal title all show. Without it a resumed agent comes
+        # back as `hotline-36` and stops being recognisable as the thing you
+        # resumed -- which is the whole of its identity.
+        argv += ["--name", name]
     try:
         _tmux(
-            "new-session", "-d", "-s", name,
+            "new-session", "-d", "-s", target,
             *(("-c", cwd) if cwd else ()),
             # -e keeps this out of the tmux server's global environment, which is
             # shared with every pane Bogdan has open.
@@ -120,22 +127,22 @@ async def spawn(
             *argv,
         )
     except (subprocess.SubprocessError, OSError) as exc:
-        raise ClaudeLaunchFailed(f"could not start tmux session {name}: {exc}") from exc
+        raise ClaudeLaunchFailed(f"could not start tmux session {target}: {exc}") from exc
 
     deadline = monotonic() + timeout
     while monotonic() < deadline:
-        session = _by_tmux_session(name)
+        session = _by_tmux_session(target)
         if session is not None:
             return session
-        if not exists(name):
+        if not exists(target):
             raise ClaudeLaunchFailed(
-                f"{name} exited before registering. Pane said:\n{capture(name)}"
+                f"{target} exited before registering. Pane said:\n{capture(target)}"
             )
         await asyncio.sleep(0.25)
 
-    pane = capture(name)
-    kill(name)
+    pane = capture(target)
+    kill(target)
     raise ClaudeLaunchFailed(
-        f"{name} started but never registered a session descriptor within "
+        f"{target} started but never registered a session descriptor within "
         f"{timeout:.0f}s. Pane said:\n{pane}"
     )

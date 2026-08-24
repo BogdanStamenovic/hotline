@@ -12,14 +12,19 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import os
 import sys
 from collections.abc import Callable, Sequence
+from pathlib import Path
 from typing import NoReturn
 
 from . import __version__
 from .agents import DEFAULT_KEEP_DAYS, Registry
 from .ccsocks import discover
+from .channels import from_env as channels_from_env
+from .channels import slug as channel_slug
+from .config import load_env
 from .errors import HotlineError
 from .fresh import Event
 from .guard import install_guard
@@ -80,6 +85,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--agents", action="store_true", help="list known agents and exit")
     parser.add_argument(
+        "--resume", metavar="NAME",
+        help="bring a finished agent back: new session seeded from its handoff, "
+             "channel recreated, task re-declared",
+    )
+    parser.add_argument(
         "--session-id", metavar="ID",
         help="which session to act on (default $CLAUDE_CODE_SESSION_ID)",
     )
@@ -110,6 +120,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
     """`--declare`, `--done` and `--agents`, which never touch a model."""
+    # The daemon loads .env at startup; the CLI never did, because until now
+    # nothing in it needed a token. An agent runs these commands from its own
+    # shell, where the bot token is not exported -- without this, every agent
+    # would be told "no Discord configured" and quietly get no channel.
+    load_env()
     registry = Registry()
 
     if args.agents:
@@ -120,6 +135,9 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
         for agent in known:
             print(agent.describe())
         return 0
+
+    if args.resume:
+        return _resume(args.resume, registry, args.cwd, log)
 
     session_id = args.session_id or os.environ.get("CLAUDE_CODE_SESSION_ID")
     if not session_id:
@@ -141,6 +159,25 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             keep_days=args.keep_days if args.keep_days is not None else DEFAULT_KEEP_DAYS,
         )
         log(f"declared: {agent.describe()}")
+        if agent.wants_channel and agent.channel_id is None:
+            manager = channels_from_env()
+            if manager is None:
+                log("no Discord configured; skipping the channel")
+            else:
+                try:
+                    agent.channel_id = manager.create_text(agent.name, topic=agent.task)
+                    registry.save()
+                    log(f"channel: #{channel_slug(agent.name)}")
+                except HotlineError as exc:
+                    # The agent is registered either way. Losing its channel is
+                    # worth saying out loud, but it is not worth failing the
+                    # declaration and leaving the session unregistered.
+                    log(f"warning: could not create the channel: {exc}")
+        elif agent.channel_id is not None:
+            manager = channels_from_env()
+            if manager is not None:
+                with contextlib.suppress(HotlineError):
+                    manager.retopic(agent.channel_id, agent.task)
         return 0
 
     finished = registry.complete(session_id, handoff=args.handoff)
@@ -156,7 +193,93 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
         # outlives the work. Saying nothing when it is missing would let the whole
         # record of an agent vanish quietly.
         log("warning: finished with no --handoff; nothing will survive the channel")
+
+    manager = channels_from_env()
+    for attr in ("channel_id", "voice_channel_id"):
+        cid = getattr(finished, attr)
+        if cid is None or manager is None:
+            continue
+        try:
+            manager.delete(cid)
+            log(f"deleted its {'voice ' if attr.startswith('voice') else ''}channel")
+        except HotlineError as exc:
+            log(f"warning: could not delete channel {cid}: {exc}")
+        else:
+            setattr(finished, attr, None)
+    registry.save()
     log(f"done: {finished.name}")
+    return 0
+
+
+def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str], None]) -> int:
+    """Bring a finished agent back from its handoff.
+
+    This is the counterweight to disposable channels. Deleting the channel on
+    completion means the handoff is the only thing that survives, so there has to
+    be a way to turn that handoff back into a working agent -- otherwise "done"
+    is indistinguishable from "lost".
+
+    A new session, not the old one: the old process is gone. What continues is
+    the work, seeded with what the last agent wrote down about it.
+    """
+    from . import tmuxen
+
+    agent = registry.by_name(name)
+    if agent is None:
+        print(f"hotline: error: no agent called {name!r}. Try --agents.", file=sys.stderr)
+        return 1
+    if not agent.handoff:
+        print(
+            f"hotline: error: {agent.name} finished without a handoff, so there is "
+            "nothing to resume it from.",
+            file=sys.stderr,
+        )
+        return 1
+    handoff = Path(agent.handoff)
+    try:
+        brief = handoff.read_text()
+    except OSError as exc:
+        print(f"hotline: error: cannot read {handoff}: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        session = asyncio.run(tmuxen.spawn(agent.name, cwd=cwd or None, name=agent.name))
+    except HotlineError as exc:
+        print(f"hotline: error: could not start a session: {exc}", file=sys.stderr)
+        return 1
+    log(f"resumed {agent.name} as {session.name} (tmux: {tmuxen.tmux_name(agent.name)})")
+
+    # Re-register under the NEW session id. The old record is retired rather than
+    # edited, so the resumed agent gets its own retention clock.
+    registry.forget(agent.session_id)
+    revived = registry.declare(
+        # `agent.name`, not `session.name`: resuming by name and getting back
+        # something called `hotline-36` loses the identity you resumed.
+        session.session_id, agent.name, agent.task,
+        parent=agent.parent, wants_channel=agent.wants_channel, keep_days=agent.keep_days,
+    )
+
+    manager = channels_from_env()
+    if manager is not None and revived.wants_channel:
+        try:
+            revived.channel_id = manager.create_text(revived.name, topic=revived.task)
+            registry.save()
+            log(f"channel: #{channel_slug(revived.name)}")
+        except HotlineError as exc:
+            log(f"warning: could not recreate the channel: {exc}")
+
+    seed = (
+        f"You are resuming work that a previous session finished a stint on. "
+        f"Its task was: {agent.task}\n\n"
+        f"This is the handoff it left at {handoff}:\n\n{brief}\n\n"
+        "Read it, say in one sentence what you understand the state to be, and wait."
+    )
+    try:
+        reply = asyncio.run(Router().ask_session(session.name, seed, timeout=300.0))
+    except HotlineError as exc:
+        log(f"warning: session started but did not answer: {exc}")
+        return 0
+    print(reply.text)
     return 0
 
 
@@ -196,7 +319,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         log(f"spool: {stops_dir()}")
         return 0
 
-    if args.declare or args.done or args.agents:
+    if args.declare or args.done or args.agents or args.resume:
         return _agent_command(args, log)
 
     if args.list:

@@ -206,6 +206,29 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
     return server
 
 
+async def _sweep_forever(log: Callable[[str], None], every: float = 600.0) -> None:
+    """Delete the channels of agents whose three days are up.
+
+    Ten minutes is deliberately coarse. The deadline is measured in days, nothing
+    downstream cares about the difference between deleting a channel now and
+    deleting it at teatime, and each pass costs a Discord round trip.
+    """
+    from .agents import Registry
+    from .channels import from_env as channels_from_env
+
+    while True:
+        await asyncio.sleep(every)
+        try:
+            swept = await asyncio.to_thread(
+                lambda: Registry().sweep(channels_from_env(), log=log)
+            )
+        except Exception as exc:  # noqa: BLE001 - a sweep must never take the daemon down
+            log(f"agent sweep failed: {type(exc).__name__}: {exc}")
+            continue
+        if swept:
+            log(f"swept {len(swept)} expired agent(s): {', '.join(swept)}")
+
+
 def _relay_to(bot: Any, log: Callable[[str], None]) -> Callable[[str, str], Awaitable[None]]:
     """Route an unsolicited message to whichever transport its key belongs to.
 
@@ -260,9 +283,14 @@ async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: b
                 # Bogdan without him asking a second time.
                 pool.deliver = _relay_to(bot, log)
 
+    sweeper = asyncio.create_task(_sweep_forever(log))
+
     try:
         await server.serve_forever()
     finally:
+        sweeper.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await sweeper
         if bot_task is not None:
             bot_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):

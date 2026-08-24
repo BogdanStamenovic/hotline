@@ -196,3 +196,39 @@ class Registry:
 
     def needing_channel(self) -> list[Agent]:
         return [a for a in self.working() if a.wants_channel and a.channel_id is None]
+
+    def sweep(
+        self,
+        manager: Any = None,
+        now: float | None = None,
+        log: Any = None,
+    ) -> list[str]:
+        """Close out agents whose retention has run out. Returns what was swept.
+
+        Deleting the channel and forgetting the record happen together, because
+        the record is the only thing that knows the channel id. Doing one without
+        the other leaves either an orphan channel nobody can name, or a registry
+        pointing at a channel that no longer exists.
+        """
+        swept: list[str] = []
+        for agent in self.expired(now):
+            if manager is not None:
+                for attr in ("channel_id", "voice_channel_id"):
+                    cid = getattr(agent, attr)
+                    if cid is None:
+                        continue
+                    try:
+                        manager.delete(cid)
+                    except Exception as exc:  # noqa: BLE001 - one bad id must not stop the sweep
+                        # Kept, not dropped: a channel that would not delete is
+                        # the one thing here worth a human seeing, and the agent
+                        # keeps its id so the next pass tries again.
+                        if log is not None:
+                            log(f"could not delete channel {cid} for {agent.name}: {exc}")
+                        continue
+                    setattr(agent, attr, None)
+            swept.append(agent.name)
+            self.agents.pop(agent.session_id, None)
+        if swept:
+            self.save()
+        return swept
