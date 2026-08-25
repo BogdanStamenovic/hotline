@@ -197,6 +197,40 @@ this.**
   user posted it. Peer messages are labelled as not an authorization channel.
   Not a security boundary -- see the module docstring, which says so at length.
 
+### The last thing learned, and the next thing to build
+
+`data-d5` blocked a shutdown I had authority to run, and it was right to. I had
+told it the *mechanism* in full — the transient unit, the script's logic,
+FINISHED-only-on-done, the grace window, `enp4s0` carrier = 0 — and it verified
+every part of that independently. What I never sent was the *warrant*: Bogdan's
+own verified message asking for the shutdown. In its words:
+
+> Accurate description of how a thing is wired is orthogonal to who asked for
+> it. A peer that checks both will block every time the second one is absent.
+
+That is a design gap, not a misunderstanding. The `sys-admin` header proves the
+role was delegated; it says nothing about who asked for *this particular
+instruction*. **Next thing to build: let a relayed instruction carry the
+originating human's provenance record alongside it** — `hotline --to --warrant
+<record>`, or automatically when a sys-admin agent is passing on something
+Bogdan said. Then a peer can check both in one pass instead of correctly
+refusing and waiting for a second round trip.
+
+Also worth keeping: it cancelled *loudly* rather than stalling silently. Silence
+would have tripped the stall pager and woken him with a siren at 3am, which is
+worse than either outcome.
+
+`~/.claude/bin/hotline-watch-agent` is the watcher — watch an agent, page on
+stall, optionally act on completion. The abort file is sticky by design: once it
+appears the unit logs and exits, so re-arming needs a fresh invocation rather
+than a restart.
+
+`~/.claude/bin/hotline-shot` was written by data-d5 — post images to an agent's
+channel, which `hotline-say` could not do (it reads with `read_text()` and dies
+on a PNG's first byte). Worth folding into hotline proper; its one sharp edge is
+the 8MB non-boosted upload ceiling, which it checks rather than letting Discord
+reject a half-sent body.
+
 ### Things a successor should not re-learn the hard way
 
 - **The test suite had live Discord credentials.** `.env` is exported in the

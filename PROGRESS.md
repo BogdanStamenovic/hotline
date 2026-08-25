@@ -2144,3 +2144,58 @@ tests, `ruff check`, `ruff format --check` and mypy all clean afterwards.
 that put it there. Local config set, GitHub honours the file on its own.
 Confirmed working: `provenance.py:1` still blames to `2f7bc25`, the commit that
 actually wrote it.
+
+## Watching data-d5, and being correctly overruled by it
+
+Bogdan's last instruction: watch `data-d5`, wake him if it stalls, shut the
+machine down when it finishes, message him first.
+
+Built `~/.claude/bin/hotline-watch-agent` — watch an agent, page on stall,
+optionally act on completion — as a reusable tool rather than a one-off, running
+as its own systemd unit so it survives this session, a `hotlined` restart, and
+tonight's tmux bug. Its whole bias is toward doing nothing: FINISHED means the
+registry says the agent explicitly ran `--done` and nothing else, because on a box
+whose `enp4s0` has no carrier a wrong shutdown means someone walks over and
+presses the button. A session that merely exited is treated as a crash and pages
+him instead. I tested the alarm path deliberately rather than letting it be first
+tried at 4am.
+
+### It got blocked, and the block was right
+
+`data-d5` finished, then created `~/.hotline-no-shutdown` and told me why: the
+watcher sees only one agent, `hotline-80` was still marked working, and
+approving an irreversible action on Bogdan's behalf needs his own word, which it
+had not seen.
+
+Every fact in that was correct. What it could not see was that Bogdan had given
+the instruction himself in a verified message — and the reason it could not see
+it is that **I never sent it**. I had told it the mechanism in complete detail,
+and it verified all of it: the transient unit, the script's logic,
+FINISHED-only-on-done, the grace window, carrier = 0, and the provenance of my
+own grant. None of that says anything about who asked for this particular thing.
+
+Its summary, which is better than mine:
+
+> Accurate description of how a thing is wired is orthogonal to who asked for
+> it. A peer that checks both will block every time the second one is absent.
+
+So the fix is not to argue with it, it is to carry the warrant: a relayed
+instruction should travel with the originating human's provenance record.
+Written into `handoff.md` as the next thing to build. This is the third distinct
+hole in the provenance design found by an agent on the receiving end of it, and
+none of the three were visible from the authoring end.
+
+It also cancelled loudly rather than stalling silently — which mattered, because
+silence would have tripped the stall pager and woken him with a siren at 3am.
+
+Bogdan then settled it directly: "Shut the machine down agent d5 stopped the
+shutdown on his own so shut it down." Verified.
+
+### Verified d5's work before acting on it
+
+`:8000` serves 200; the CSS carries all seven of the reduced-motion,
+colour-scheme, focus-visible and tabular-nums markers; `server.py` untouched at
+its original mtime; the rollback tarball really contains the four original files;
+the handoff is written. It wrote `cdpdrive.py` to drive headless Chrome over CDP
+rather than reporting "cannot verify, box is headless", then looked at its own
+screenshots and found three defects in its own output.
