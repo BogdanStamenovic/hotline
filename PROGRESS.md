@@ -2966,3 +2966,58 @@ and then told the agent to justify or shrink it rather than defending 120GB on h
 behalf. `resize2fs` before `truncate`, never on a mounted image, and leave it
 alone if hours of downloads are already in there: the space is recoverable and its
 time is not.
+
+## A null field became "hard evidence", and a control row killed it (18:55)
+
+`data-89` came back with what it called hard evidence for the dormant-extension
+theory: the phone's peer record shows `Endpoints: None` / `Addrs: None`, therefore
+"the phone advertises ZERO endpoints — hole punching cannot fail for lack of
+trying, there is nothing to punch to." It upgraded the theory from plausible to
+likely on that.
+
+I pulled the same JSON with a **control row**: `Pigion`, on the same LAN, which
+this box has a live direct connection to right now.
+
+```
+Pigion:  Online True   Relay 'fra'   CurAddr '192.168.1.8:41641'   Addrs None
+tailscale ping Pigion -> "pong from pigion via 192.168.1.8:41641 in 36ms"  <- DIRECT
+```
+
+**`Addrs` is None on a peer we are directly connected to.** The field is empty for
+every peer in that view. It is not a signal at all, and "advertises zero
+endpoints" is not what it means.
+
+Same mistake shape as my own Apple-table parse this afternoon: my checkmark regex
+matched nothing, and the only thing that made it decidable was comparing against a
+row whose answer I already knew. An empty field is not a finding until you have
+shown the field is capable of being non-empty.
+
+A second misread in the same record: **`Relay: 'fra'` is the peer's assigned home
+DERP, not proof its traffic is relayed.** Pigion shows `Relay 'fra'` *and* a direct
+`CurAddr` simultaneously, so it cannot mean what it was taken to mean.
+
+**What survives, and it is still enough:** `tailscale ping phone` said in words
+"direct connection not established", and all 22 pongs came via DERP(fra) with
+`CurAddr` empty. Measured independently by both of us. The conclusion — the path
+to his phone is relayed — stands. Only its newest support does not.
+
+**And a genuinely better datum, found while checking:** the phone **dropped out of
+the peer map entirely** between two commands minutes apart. Online True, then not
+present at all, while Pigion and TeamSerbia stayed listed. A device whose tailnet
+presence comes and goes on its own is a far more direct symptom of an on-demand
+extension than an unpopulated JSON field — and it is exactly the behaviour B would
+have to depend on for hours. Asked for a duty-cycle measurement: sample the peer
+map every 30s for ten minutes. That would be the first real measurement of the
+thing B actually needs.
+
+Also checked against my own earlier framing rather than assuming: **our side is
+healthy.** `netcheck` reports UDP true, `MappingVariesByDestIP` false, UPnP
+portmapping, nearest DERP Frankfurt 39.7ms — and we hole-punch to a LAN peer fine.
+So the asymmetry really is on the phone side. I had briefly suspected this box's
+own Tailscale was degraded after the 17:20 suspend; the direct connection to
+Pigion rules that out.
+
+That is now the third confident reading of a field or log to be wrong today, and
+two of the three were mine. The pattern is specific enough to name: **an empty or
+absent value is the easiest thing in the world to read as meaningful, and the only
+defence is a row you already know the answer to.**
