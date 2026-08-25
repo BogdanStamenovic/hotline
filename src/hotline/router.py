@@ -25,6 +25,7 @@ import time
 from dataclasses import dataclass
 from time import monotonic
 
+from .agents import Registry
 from .ccsocks import LiveSession, discover, inject, status_of, terminate
 from .config import DEFAULT_REPLY_TIMEOUT, POLL_INTERVAL, QUIET_SECONDS, settings_path
 from .errors import (
@@ -383,6 +384,42 @@ class Router:
             exact = [s for s in live if s.name.lower() == candidate]
             if len(exact) == 1:
                 return exact[0]
+
+        # A REGISTERED agent name -- `hotline-80` -- is the identity that outlives
+        # the session carrying it, and until now it was the one name that did not
+        # work. Every provenance header says "this is from hotline-80"; the
+        # registry is keyed on it; the watchdog resolves the worker through it;
+        # it is the name Bogdan uses. But `--to hotline-80` failed, because only
+        # the *derived* session name (`hotline-2c`) was ever matched -- and that
+        # one changes on every respawn, which is precisely the opposite of a
+        # standing identity.
+        #
+        # Found by the agent on the receiving end of the first warranted message:
+        # it was told who the sender was, went to reply, and discovered the sender
+        # was not addressable by the name it had just been given. Third time in
+        # this project that a recipient found a hole the author could not see.
+        agent = None
+        for candidate in (want, want.replace(" ", "-"), want.replace(" ", "")):
+            agent = Registry().by_name(candidate)
+            if agent is not None:
+                break
+        if agent is not None:
+            bound = [s for s in live if s.session_id == agent.session_id]
+            if bound:
+                return bound[0]
+            # Deliberately distinct from "no such session". The name is real and
+            # the caller is not confused -- the agent is finished or its session
+            # died -- and saying "no live session matches" would send them looking
+            # for a typo that is not there.
+            raise SessionNotFound(
+                f"{agent.name!r} is a registered agent, but the session it is "
+                f"bound to ({agent.session_id[:8]}) is not live"
+                + (
+                    ". It has finished."
+                    if agent.done
+                    else ", so it died or was replaced without adopting."
+                )
+            )
 
         # The tmux session name is what `where am i` and `session list` hand the
         # caller ("tmux attach -t hl-final"), so it is the name they will say back.

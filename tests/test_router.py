@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from helpers import make_session
 
+from hotline.agents import Registry
 from hotline.ccsocks import discover
 from hotline.errors import AmbiguousSession, SessionNotFound
 from hotline.router import Router, parse_utterance
@@ -113,3 +114,82 @@ def test_ambiguous_phrasing_defaults_to_fresh() -> None:
     Guessing 'fresh' wrongly just costs a new subprocess."""
     for utterance in ("rejoin the party", "asking for a friend", "joins are slow in postgres"):
         assert parse_utterance(utterance).mode == "fresh"
+
+
+# ---- a registered agent name is an address ---------------------------------
+#
+# Found by the agent on the receiving end of the first warranted message: it was
+# told "this is from hotline-80", went to confirm back to it, and found that
+# hotline-80 was not addressable by the name it had just been handed. Only the
+# derived session name worked -- and that one is reminted on every respawn,
+# which is the exact opposite of what a standing identity is for.
+
+
+def test_a_registered_agent_name_resolves_to_whatever_session_holds_it(
+    fake_claude: Path,
+) -> None:
+    """The name in every provenance header, in the registry, and in the
+    watchdog's liveness check -- and, until this, the one name `--to` refused."""
+    three(fake_claude)
+    Registry().declare("bbb22222", "hotline-80", "the build")
+
+    assert Router().resolve("hotline-80").session_id == "bbb22222"
+
+
+def test_the_registered_name_survives_the_session_being_replaced(
+    fake_claude: Path,
+) -> None:
+    """The whole point of the role being standing rather than per-session: a
+    respawned worker adopts the record, and callers keep using one name."""
+    three(fake_claude)
+    registry = Registry()
+    registry.declare("bbb22222", "hotline-80", "the build")
+    # What a respawn actually does: `hotline --adopt` moves the identity, rather
+    # than declaring afresh and minting a second record beside the corpse.
+    registry.adopt("hotline-80", "ccc33333")
+
+    assert Router().resolve("hotline-80").session_id == "ccc33333"
+
+
+def test_a_registered_name_is_addressable_the_way_it_is_spoken(
+    fake_claude: Path,
+) -> None:
+    three(fake_claude)
+    Registry().declare("bbb22222", "hotline-80", "the build")
+
+    assert Router().resolve("hotline 80").session_id == "bbb22222"
+
+
+def test_a_live_session_of_the_same_name_wins_over_the_registry(
+    fake_claude: Path,
+) -> None:
+    """Exact match on something actually live beats a record pointing elsewhere.
+    A stale record must never hijack a name that resolves on its own."""
+    three(fake_claude)
+    Registry().declare("ccc33333", "data-13", "impersonating the live one")
+
+    assert Router().resolve("data-13").session_id == "bbb22222"
+
+
+def test_a_known_agent_whose_session_died_says_so_instead_of_no_such_session(
+    fake_claude: Path,
+) -> None:
+    """ "No live session matches" would send the caller hunting for a typo that is
+    not there. The name is real; the session behind it is gone."""
+    three(fake_claude)
+    Registry().declare("dead-one", "hotline-80", "the build")
+
+    with pytest.raises(SessionNotFound) as caught:
+        Router().resolve("hotline-80")
+
+    assert "registered agent" in str(caught.value)
+    assert "not live" in str(caught.value)
+
+
+def test_an_unknown_name_still_reports_the_live_sessions(fake_claude: Path) -> None:
+    three(fake_claude)
+
+    with pytest.raises(SessionNotFound) as caught:
+        Router().resolve("never-existed")
+
+    assert "data-13" in str(caught.value)
