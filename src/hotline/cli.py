@@ -30,7 +30,7 @@ from .fresh import Event
 from .guard import install_guard
 from .provenance import Origin, body_of, parse, verify
 from .revive import brief_for, rehome
-from .router import Route, Router, describe, parse_utterance
+from .router import Route, Router, describe, mid_turn, parse_utterance
 from .stops import install_hook, stops_dir
 
 
@@ -710,7 +710,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         if args.to:
-            log(f"-> {describe(router.resolve(args.to))}")
+            target = router.resolve(args.to)
+            log(f"-> {describe(target)}")
+            # Said before the wait, not after it. A message to a busy session is
+            # queued until its current turn ends, and a caller who is not told
+            # that reads the silence as a failure and resends -- which queues a
+            # second copy. This is the same fact the stand-in gives a Discord
+            # caller; the CLI simply never had it.
+            if mid_turn(target):
+                log("   (it is mid-turn; your message is queued behind that and "
+                    "will not be seen until it finishes. Do not resend.)")
             reply = asyncio.run(
                 router.ask_session(
                     args.to, text, narrator=narrate, timeout=args.timeout, origin=origin

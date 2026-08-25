@@ -26,7 +26,6 @@ import pytest
 
 from hotline.agents import Registry
 from hotline.provenance import SYSADMIN_SCOPE, Origin, parse, verify
-from hotline.revive import resumable
 
 GRANT = {
     "id": "grant-1",

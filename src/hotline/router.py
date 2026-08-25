@@ -19,13 +19,14 @@ a session is by where it is or when it started, not by a two-letter suffix.
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import time
 from dataclasses import dataclass
 from time import monotonic
 
 from .ccsocks import LiveSession, discover, inject, status_of, terminate
-from .config import DEFAULT_REPLY_TIMEOUT, POLL_INTERVAL, QUIET_SECONDS
+from .config import DEFAULT_REPLY_TIMEOUT, POLL_INTERVAL, QUIET_SECONDS, settings_path
 from .errors import (
     AmbiguousSession,
     ClaudeLaunchFailed,
@@ -220,6 +221,60 @@ def _split_target(tail: str) -> tuple[str, str]:
         return head.strip(), rest.strip()
     parts = tail.split(None, 1)
     return (parts[0].strip(), parts[1].strip() if len(parts) > 1 else "")
+
+
+def _why_no_reply(watch: Watch, session: LiveSession) -> str:
+    """Say why, and only say things that are true.
+
+    "Not in the transcript yet" has three different causes and the old message
+    asserted one of them. Twice tonight it told a caller the target was "most
+    likely being held" and to set `crossSessionInbound` -- which was already set,
+    on a session that had received the message and acted on it. The message was
+    queued behind a turn already in flight, which looks identical from outside
+    and needs the opposite response: wait, rather than change a setting.
+
+    Nothing here diagnoses. Each branch reports a condition it has actually
+    checked, and the last one admits it does not know.
+    """
+    if watch.saw_marker:
+        return (
+            "It did receive the message, so it is still working or it stopped "
+            "without answering."
+        )
+    if watch.was_busy or mid_turn(session):
+        return (
+            "It was mid-turn when the message arrived, so your message is "
+            "queued behind that turn: the CLI does not render a cross-session "
+            "message until the turn in front of it finishes. This is very likely "
+            "delivered-but-not-yet-seen rather than lost. Do not resend -- that "
+            "queues a second copy. Wait, or watch "
+            f"the pane with `tmux attach -t {session.tmux_session or '<no pane>'}`."
+        )
+    inbound = _inbound_setting()
+    if inbound != "accept":
+        return (
+            "The message never reached its transcript and the session was idle, "
+            f'so it is most likely being held (crossSessionInbound is {inbound!r}). '
+            'Set "crossSessionInbound": "accept" in ~/.claude/settings.json, or '
+            "approve it in that session's UI."
+        )
+    return (
+        "The message never reached its transcript, the session was idle, and "
+        '"crossSessionInbound" is already "accept" -- so the usual explanations '
+        "do not apply and I do not know why. Check the pane directly: "
+        f"`tmux attach -t {session.tmux_session or '<no pane>'}`."
+    )
+
+
+def _inbound_setting() -> str:
+    """What `crossSessionInbound` is actually set to, so advice is not given for
+    a setting that already has the value being recommended."""
+    try:
+        found = json.loads(settings_path().read_text())
+    except (OSError, ValueError):
+        return "unreadable"
+    value = found.get("crossSessionInbound") if isinstance(found, dict) else None
+    return str(value) if value is not None else "unset"
 
 
 def mid_turn(session: LiveSession, window: float = MID_TURN_WINDOW) -> bool:
@@ -458,14 +513,7 @@ class Router:
 
         raise ReplyTimeout(
             f"{describe(session)} did not produce a reply within {timeout:.0f}s. "
-            + (
-                "It did receive the message, so it is still working or it stopped "
-                "without answering."
-                if watch.saw_marker
-                else "The message never reached its transcript -- it is most likely "
-                'being held. Set "crossSessionInbound": "accept" in '
-                "~/.claude/settings.json, or approve it in that session's UI."
-            )
+            + _why_no_reply(watch, session)
         )
 
     async def ask_session(

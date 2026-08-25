@@ -2017,3 +2017,44 @@ message. `SYSADMIN_SCOPE` is one dict — if he wants the second list shortened,
 that is one edit and it should be his, out loud.
 
 358 tests, ruff and mypy clean.
+
+## Fixing the other bugs
+
+### The reply waiter was diagnosing, not reporting
+
+`hotline --to` told me twice tonight that a message "never reached its
+transcript -- it is most likely being held. Set `crossSessionInbound`: accept".
+Both times the setting was already `accept`, and both times the target had
+received the message and acted on it. Once was the very agent that found the
+provenance hole.
+
+The matching was never wrong. I checked the stored form of an injected message in
+my own transcript: the CLI prefixes `Another Claude session sent a message:\n`
+and leaves the body intact, so the marker is a clean substring. What was wrong was
+the explanation. "Not in the transcript yet" has three causes and the message
+asserted one of them:
+
+- the target was **mid-turn**, and a queued cross-session message is not rendered
+  until the turn in front of it finishes
+- the target was idle and the message really is **held for approval**
+- neither, and nothing here knows why
+
+They are indistinguishable from outside and need opposite responses — wait
+versus change a setting — so the message now reports a condition it has actually
+checked in each case, and the third branch says plainly that it does not know and
+points at the pane. It also reads the setting before recommending it, because
+being told to set something already set is worse than being told nothing.
+
+The same fact is now said *before* the wait as well as after: `--to` against a
+busy session prints "it is mid-turn; your message is queued behind that... Do not
+resend", because a caller who reads silence as failure resends, and resending
+queues a second copy. The Discord path has had this since the stand-in was built;
+the CLI simply never had it.
+
+Verified live against a busy session, and the test message came back carrying the
+sys-admin header — which incidentally confirmed the role wiring end to end in
+production rather than only in tests.
+
+This is the fourth time tonight that a confident reading of a signal was wrong,
+and the first time the wrong reading was one I had written into an error message
+for someone else to trust.
