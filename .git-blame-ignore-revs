@@ -1,0 +1,10 @@
+# Commits that are pure formatting. `git blame` should look straight through
+# them, or every line in the repo blames to a whitespace sweep instead of to the
+# change that actually put it there.
+#
+# Enable with:
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub honours this file automatically.)
+
+# Format the whole repo at its own line length
+78f946c4be6b168f3a7394610e3de2b48c77ed34
