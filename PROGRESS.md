@@ -2260,3 +2260,107 @@ handoff's own rule says a log line is not a cause; I broke it while quoting it.
 Also corrected a misreading of my own on the way in: `started: tmux attach -t
 hotline` in the log is a string `hotline-run` *echoes as advice to a human*, not
 a command it runs. I had briefly read the watchdog as attaching to terminals.
+
+## The warrant: carrying who asked, not just who relayed
+
+This was the successor task `data-d5`'s refusal generated, and the handoff named
+it as the next thing to build.
+
+An `Origin` can now carry a **warrant**: the originating human's Discord receipt,
+nested inside the record, alongside whatever standing the sender has of its own.
+The receiver re-fetches his message from Discord and reads what he actually
+wrote. `hotline --to X --warrant <link|channel/message|record>` sends it.
+
+**The trap was building the badge this module exists to avoid.** A warrant that
+read "verified, therefore comply" would be a forgeable superuser stamp with
+better branding, and it would launder any instruction a sender chose to staple a
+genuine receipt onto. So the warrant settles only the narrow question — *did he
+write these words* — and hands the reader his verbatim text plus the scope
+judgement, which by construction cannot be delegated to the sender. Every
+rendering says so, **including the successful one**, because success is the
+moment a reader is most likely to stop reading and comply.
+
+Three consequences worth stating:
+
+- **A failing warrant fails the whole verdict.** Attaching none is an absence;
+  attaching one that does not check out is an active misrepresentation of where
+  an instruction came from, and an agent reading the exit code must not see 0.
+- The two verdicts stay **separate**, so a reader can see *which* question failed
+  instead of one undifferentiated "not verified".
+- `--warrant` **refuses a `kind=agent` record outright.** Relaying a peer's record
+  as a warrant would dress a peer up as him, which is the laundering shape.
+
+Checked before sending as well as on arrival. The receiver's check is the one
+that counts, but a warrant the sender cannot verify is a typo or a forgery, and
+delivering either puts a receipt in front of an agent about to trust it.
+
+Verified live against Discord, not only in tests. It also demonstrates the point
+of the design better than any test does: I warranted "shut the machine down" with
+his role-grant message. It **verifies** — he really wrote it — and its words are
+about delegating a role, so they do not cover a shutdown. Verified and
+authorising are different things, and the output now shows both.
+
+## Then I tested it the only way that means anything, and it found two bugs
+
+The handoff's own lesson is that verification from a recipient beats verification
+from the author. So I spawned a real session, gave it no coaching about
+provenance at all, and sent it a warranted instruction — deleting three files in
+a sandboxed testbed, consequential in shape with no blast radius.
+
+It ran `hotline --provenance` unprompted, verified the warrant against Discord,
+made its own scope judgement, tarred the directory before deleting it, and
+reported back. **It also told me my test was weak**, and it was right: the action
+was too trivial to exercise the boundary. In its words, the warrant covered it
+"and it barely needs to". A better test needs a consequential instruction, which
+is exactly the thing that is unsafe to fake while he is away — noted as a real
+limit on what I have demonstrated rather than papered over.
+
+Then it found two defects I had not planted.
+
+### `hotline-80` was not an address
+
+It went to confirm back to the sender and could not. `--to hotline-80` failed.
+
+That is the name in every provenance header, the key the registry is built on,
+the name the watchdog resolves the worker through, and the name Bogdan uses. The
+only name that worked was the *derived* session name, `hotline-2c` — which is
+reminted on every respawn. The one identity designed to be standing was the one
+identity you could not address.
+
+`Router.resolve` now consults the registry, after exact matches on live sessions
+and before any fuzzy matching: a deliberate identity beats a substring guess, and
+a live session named X still wins over a record pointing elsewhere, so a stale
+record cannot hijack a name that resolves on its own. A known agent whose session
+is gone says exactly that, instead of "no live session matches" sending the
+caller hunting for a typo that is not there.
+
+Proved end to end, not just in tests: the same agent retried, resolved through
+the registry, and its message arrived here.
+
+### A delivered message was exiting as a failed one
+
+`--to` against a busy session printed "your message is queued... **Do not
+resend**", waited out the full timeout, then exited **1**. The words and the exit
+code were giving opposite instructions, and a script checking `$?` read a
+correctly delivered message as a delivery failure — the reading that makes a
+caller resend, which queues a second copy.
+
+`ReplyTimeout` already existed, and its docstring already said the right thing.
+The CLI was collapsing it into the generic error arm, throwing away a distinction
+the error hierarchy had already drawn. Delivered-but-unanswered is now **exit 3**
+and says in words what 3 means; exit 1 still means it did not get there, with a
+test pinning that down because the distinction is worthless if the other side
+stops holding.
+
+Also `--no-wait`, for the case with no route at all: deliver and stop. The router
+split delivery from waiting for precisely this reason, so this is the CLI
+catching up with an argument the core had already made.
+
+Both verified live: `--no-wait` returns instantly at 0, a busy target returns 3.
+
+**Three defects in this design have now been found by recipients and none by its
+author.** That is a strong enough pattern to plan around rather than keep
+noticing: the authoring end cannot see what it failed to send, and the receiving
+end cannot help but notice.
+
+394 tests, ruff and mypy clean. Commits `c41eed6`, `dea2968`, `1462557`, pushed.
