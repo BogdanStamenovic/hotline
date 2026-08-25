@@ -165,9 +165,13 @@ async def test_resuming_a_live_agent_by_its_agent_name_connects_instead(
     await p.ask("discord-general", "hello")
     live = discover()
     assert live, "the fake world should have left a session behind"
-    # The agent name deliberately differs from the session name it lives in --
-    # that difference is the whole bug.
-    Registry().declare(live[0].session_id, "hotline-80", "the build")
+    # Adopt rather than declare, which is how an agent really comes to have a
+    # name unlike its session's: `declare` derives the name from the session, so
+    # the difference only arises through adopt or resume. That difference is the
+    # whole bug.
+    registry = Registry()
+    registry.declare("some-older-session", "hotline-80", "the build")
+    registry.adopt("hotline-80", live[0].session_id)
 
     _, reply = await p.ask("discord-general", "resume hotline-80")
 

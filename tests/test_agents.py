@@ -225,3 +225,17 @@ def test_adoption_survives_a_reload(registry: Registry, tmp_path: Path) -> None:
     reloaded = Registry(path=tmp_path / "agents.json")
     assert reloaded.get("sid-new") is not None
     assert reloaded.get("sid-old") is None
+
+
+def test_retasking_does_not_rename(registry: Registry) -> None:
+    """The name is the identity Bogdan types. `declare` derives its `name` from
+    the session, so re-declaring an adopted agent used to rename `hotline-80`
+    back to `data-88` and orphan `connect hotline-80` along with it."""
+    registry.declare("sid-old", "hotline-80", "building")
+    registry.adopt("hotline-80", "sid-new")
+
+    retasked = registry.declare("sid-new", "data-88", "something else now")
+
+    assert retasked.name == "hotline-80"
+    assert retasked.task == "something else now"
+    assert registry.by_name("hotline-80") is retasked

@@ -127,7 +127,12 @@ class Registry:
         """
         existing = self.agents.get(session_id)
         if existing is not None:
-            existing.name = name or existing.name
+            # The name is deliberately NOT updated. It is the identity Bogdan
+            # types -- `connect hotline-80`, `resume hotline-80` -- and the
+            # caller's `name` here is derived from the session, so re-declaring
+            # an adopted or resumed agent would quietly rename it back to
+            # `data-88` and orphan every reference he has. A retask changes what
+            # it is doing, not who it is.
             existing.task = task
             existing.completed_at = None
             self.save()

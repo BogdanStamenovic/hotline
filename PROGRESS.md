@@ -1940,3 +1940,21 @@ to resurrect. Connected you to it."
 
 Both were only visible because he asked for something that had never been asked
 for before. 346 tests, ruff and mypy clean.
+
+### And a third, found by bringing myself back
+
+Re-declaring after adopting renamed me. `Registry.declare` treats a re-declare as
+a retask — task changes, channel and start date kept — but it also did
+`existing.name = name or existing.name`, and the `name` a caller passes is
+derived from the *session*. So `hotline-80` re-declaring its task became
+`data-88`, and every reference he holds (`connect hotline-80`,
+`resume hotline-80`) would have pointed at nothing.
+
+A retask changes what an agent is doing, not who it is. The name is now left
+alone on re-declare. Live state repaired by hand: identity restored and the
+channel renamed rather than deleted and re-minted, since it already had messages
+in it.
+
+Three bugs from one instruction, all in the seams between features written
+tonight, and none of them reachable until he asked for something nobody had asked
+for before. 347 tests, ruff and mypy clean.
