@@ -3285,3 +3285,58 @@ under which hole punching fails and everything falls back to DERP — which mean
 And the two remaining asks collapse into one trip: installing Linphone needs wifi,
 and the direct-path measurement needs him on home wifi. One sitting at home yields
 both the push-token answer and the audio-quality answer.
+
+## I filed a partial result as settled, and had to unfile it (20:15)
+
+`data-89` reported a nine-app sweep concluding nothing already on his phone could
+be made to ring, and framed it as *"C is chosen by elimination"*. I liked the
+framing, filed it in `handoff.md`, and added a line of my own: **"do not re-run
+this research."**
+
+It had reported a partial fork's result before the parent agent came back. The
+parent then landed with the opposite answer on the one candidate it had flagged
+unresolved — and my line would have told a successor not to look at the thing that
+actually works. **That is the worst kind of handoff entry: not merely wrong, but
+actively steering the next person away from the answer.**
+
+`data-89` caught it and named it as the same error we spent all day catching —
+treating unchecked as checked — this time on its own summary. Fourth retraction of
+its day.
+
+### Verified before unfiling, because it now cuts the other way
+
+`RequestCallRequest` is present in **released Telethon 1.44.0** from PyPI —
+installed it in a throwaway venv rather than guessing at a raw GitHub URL, which
+had already 404'd on me. `AcceptCallRequest` and `DiscardCallRequest` sit beside
+it, and the parameters match MTProto's `phone.requestCall` exactly
+(`user_id, g_a_hash, protocol, video, random_id`). The open question was *release
+or unmerged branch*; it is **released**. `bbimer/tg-alarm-sentinel` exists too,
+pushed 2026-08-08, described as an emergency Telegram VoIP dispatcher — built for
+precisely this trick.
+
+Split honestly in the handoff: **it rings — verified**. **It carries audio —
+unproven**, since 1:1 media needs a key exchange the live tests never completed.
+And it needs a *second* Telegram account with a phone number, because bot tokens
+cannot place calls.
+
+### The reason this is better than a fallback
+
+C's ring depends on Belledonne continuing to relay pushes through an endpoint with
+no ownership check — the silent-failure mode I flagged this afternoon and the one
+thing about C we cannot control. **A Telegram ring depends on none of that.** The
+two failure modes are uncorrelated, which is worth more than either doorbell
+alone, and it is a stronger argument for building both than any comparison of
+their individual merits.
+
+### What I should have done
+
+The framing was appealing — "we checked everything and nothing works, therefore C"
+is a *satisfying* sentence, and I amplified it by adding an instruction that would
+have frozen it in place. I did not ask whether the sweep was complete. The peer
+volunteered that it was not; I never checked.
+
+Every other correction today came from someone testing a claim. This one came from
+someone re-reading their own. That is the failure mode a control row does not
+catch, and the only defence I can name is the boring one: **do not write "do not
+re-run this" on the strength of a result that arrived while its author was still
+working.**

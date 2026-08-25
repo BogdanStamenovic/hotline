@@ -323,18 +323,54 @@ free" — so there are two free paths and they compose:
   Dies at the app layer: reboot (a sideloaded app cannot self-start), a routine
   incoming phone call killing the audio session, force-quit, 7-day cert expiry.
 
-**C is chosen by ELIMINATION, not by default.** `data-89` checked every app that
-already rings natively on his phone for whether Linux can trigger one for free.
-All dead: Signal (`signal-cli` is text-only), Messenger, Viber, Discord (bots join
-guild voice, nothing rings a DM), Zoom (paid licence), Google Meet (the API makes
-spaces, it does not ring), FaceTime (CallKit can join the native UI, not invoke
-FaceTime), Skype (retired 2025-05-05). WhatsApp's Business Calling API is the only
-survivor and needs Meta business verification, a WABA number and **the callee's
-prior opt-in** — not a cold-call API, and geo-blocked in several countries.
-**Do not re-run this research.** Three candidates are unresolved rather than
-cleared and are named in the brief as where to resume if C ever dies: Telegram
-(TDLib/pytgcalls — is 1:1 outgoing calling in a release or an unmerged branch?),
-iOS web push to a home-screen PWA, and Home Assistant critical alerts.
+**A SECOND, INDEPENDENT DOORBELL EXISTS: Telegram.** `data-89` first reported a
+nine-app sweep concluding nothing already on his phone can be made to ring, and I
+filed that with a "do not re-run this research" line. **Both were wrong** — it had
+filed a partial fork's result before the parent agent reported. Struck, and this
+is the corrected version.
+
+**Telegram 1:1 calling is real, free, headless and released.** Verified by me
+directly rather than relayed: `RequestCallRequest` is present in released
+**Telethon 1.44.0** from PyPI, with `AcceptCallRequest` and `DiscardCallRequest`
+alongside it and parameters matching MTProto's `phone.requestCall`
+(`user_id, g_a_hash, protocol, video, random_id`). That was the open question —
+release or unmerged branch — and it is released. `bbimer/tg-alarm-sentinel`
+(pushed 2026-08-08) exists for exactly this use case: triggering the native iOS
+incoming-call screen to wake a sleeping user.
+
+- **VERIFIED: it rings.** Telegram-iOS registers `PKPushRegistry` for `.voIP` and
+  reports to `CXProvider`; the ring fires on the bare call request without
+  completing key exchange.
+- **UNPROVEN: it carries audio.** 1:1 media needs a key exchange the live tests
+  did not complete. Treat "Telegram rings the phone" as fact and "Telegram carries
+  the conversation" as unproven.
+- **Costs:** needs a real Telegram account with a phone number to ring *from* —
+  bot tokens cannot call `phone.requestCall` — so he would need a second account.
+  Telegram's anti-abuse flood limits on automated calling are an unknown. And it
+  presumes Telegram is on his phone, **which nobody has asked him.**
+
+**Why this is worth having even if C ships:** it attacks C's single biggest
+durability risk. C depends on Belledonne continuing to relay pushes through an
+endpoint with no ownership check — a silent-failure mode outside our control. A
+Telegram ring depends on none of that. **The two failure modes are uncorrelated**,
+which is worth more than either doorbell alone.
+
+C remains primary because it is the one that carries a real conversation rather
+than only a ring. But "C by elimination" is **not** true and should not be said.
+
+Also verified from the same sweep, both genuine but both downgrades: Home
+Assistant critical alerts really do bypass DND and silent, triggerable by `curl`
+over Tailscale, free and self-hosted — but need the HA app installed and are an
+alert, not a call. iOS PWA web push needs no App Store and no Apple Developer
+account at all (standard VAPID) — but WebKit says it behaves as an ordinary
+notification and respects Focus, so it buzzes rather than rings.
+
+Still genuinely dead, so do not re-check these: Signal (`signal-cli` is text-only),
+Messenger, Viber, Discord (bots join guild voice; nothing rings a DM), Zoom (paid
+licence), Google Meet (the API makes spaces, it does not ring), FaceTime (CallKit
+can join the native UI, not invoke FaceTime), Skype (retired 2025-05-05).
+WhatsApp's Business Calling API rings but needs Meta business verification, a WABA
+number and the callee's prior opt-in — not a cold-call API.
 
 **Every rung below the ring is an alert, not a call**, and a critical alert is a
 louder fake call — which is the thing he asked to be rid of. When the system
