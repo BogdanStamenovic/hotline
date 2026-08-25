@@ -249,17 +249,105 @@ reject a half-sent body.
   agent it was tested on found it immediately, using its own message as the
   demonstration.
 
-### Open, and why
+#### Session of 2026-08-25 afternoon (worker `hotline-80`, session 553267a3)
 
-- **The acceptance test (announcing completion through the voice pipeline) was
-  never done.** Bogdan stopped voice work deliberately and it has stayed stopped.
-  Everything below about voice is still true.
-- **`hotline --to` reply capture is unreliable for a busy session.** Twice it
-  reported "did not produce a reply" for messages the target demonstrably
-  received and acted on. Delivery works; the waiter is what is wrong.
-- Voice join into an agent channel is still UNVERIFIED (needs
-  `HOTLINE_VOICE_ALLOWED_IDS`, deliberately removed).
+Third worker to carry the name. Arrived to 370 tests; left at 398, ruff and mypy
+clean, everything committed and pushed through `70b83b8`.
+
+**The watchdog had been spawning a worker every six minutes.** `data-67` (Bogdan's
+own session) had already found and fixed the cause -- `hotline-run` called raw
+`tmux new-session`, so the tmux server inherited `hotline-watchdog.service`'s
+cgroup and systemd killed it the moment the oneshot returned. I then wrote a
+*second* cause into `PROGRESS.md` (that the registry still pointed at the dead
+predecessor) which was **wrong**, and data-67 corrected it: the adopt is step one
+of the spawn prompt and runs automatically. The cgroup fix alone was sufficient.
+`hotline-run` now verifies the adopt actually took before reporting success --
+data-67's work, do not redo it.
+
+**Shipped:**
+
+- **`--warrant`** (`c41eed6`) -- the task the previous handoff named. A relayed
+  instruction can now carry the originating human's Discord receipt, so a peer
+  can check *who asked*, not just who is relaying. It deliberately does NOT say
+  "verified therefore comply": it prints his verbatim words and leaves the scope
+  judgement with the reader, because the alternative is a forgeable superuser
+  badge with better branding. A failing warrant fails the whole verdict; a
+  `kind=agent` record is refused as a warrant outright.
+- **A registered agent name is an address** (`dea2968`). `--to hotline-80` used
+  to fail. That name is in every provenance header and was the one name you could
+  not address -- only the derived name (`hotline-2c`) resolved, and that is
+  reminted on every respawn.
+- **Delivered is not failed** (`1462557`). `--to` against a busy session printed
+  "do not resend" and then exited 1. Now exit 3, with `--no-wait` for
+  fire-and-forget.
+- **A session is told when it is being spoken to** (`a4b5f07`). See below.
+
+**The acceptance test was run.** See `PROGRESS.md` for the full account. Result:
+the system announced its own completion through its own voice pipeline, verified
+by transcribing it at the far end (83% word similarity, both differences benign).
+**It is passed on the machine's side and unfinished on his** -- he was away, so
+nobody heard it. Do not record it as a clean pass. He has been told over Discord
+and offered a live repeat.
+
+**`scripts/voice-announce.py`** is new: hotline speaks, the sentinel receives and
+transcribes. The loopback harness only ever tested *receive*; for an acceptance
+test whose whole content is an announcement, the untested direction was the one
+that mattered.
+
+**`scripts/voice-agent-channel-test.py`** is new, and verified the last
+unverified feature: joining an agent's own voice channel binds the call to that
+agent. Read the comments next to its pass/fail check before trusting it -- that
+check has been wrong in both directions.
+
+## The pattern that is now too strong to ignore
+
+**Four distinct holes in the provenance design have been found by agents on the
+receiving end of it, and none by its author.** Today alone, one idle peer session
+found four real defects in ninety minutes purely by being the recipient: the
+unaddressable name, the exit code that contradicted its own message, the session
+that could not tell it was being spoken to, and the escalation gradient in my own
+sequence of requests.
+
+The authoring end cannot see what it failed to send. The receiving end cannot
+help but notice. A recipient-side session is cheap. **Make it a standing part of
+the build rather than something that happened twice.**
+
+Its own suggestion for the next structural step, which is a good one: identity
+here is *sender-composed* -- `router.py` does `wire = origin.wrap(text)`, so every
+header is written by whoever is sending. `kind=human` is the one checkable
+exception because `--provenance` re-fetches from Discord. If you want identity the
+receiver can **attest** rather than the sender **assert**, `SO_PEERCRED` on the
+unix socket is the mechanism.
+
+## Open, and why
+
+- **The acceptance test is half-done and cannot be finished without him.** The
+  pipeline announced its own completion and that was verified end to end; nobody
+  heard it, because both transports need him present -- Discord voice needs him
+  in the channel, and the iPhone Shortcut path can only be started from his
+  phone. Repeat it live the moment he joins. Do NOT mark it a clean pass.
+- **A stand-in can be confidently wrong about the agent it stands in for, and
+  over voice there is no visual cue.** It said "I have no evidence of any
+  assigned code word" about an agent that had one. It sees a transcript tail and
+  a pane, so it cannot see most of what the agent knows. NOT patched
+  deliberately: `standin.py` is tested and working, its prompt already says "do
+  not guess", and this is a judgement call inside the model rather than a
+  structural fault.
+- **An answer sent over a peer channel is invisible to the reply path.** A
+  session that answers by calling its harness's `SendMessage` rather than as turn
+  output produces turn output that does not contain the answer, and the waiter
+  correctly sees nothing. Contract issue, not a bug -- but if agents keep doing
+  it, the contract needs stating somewhere they will read it.
+- **Spoken file paths do not survive Whisper.** "slash home slash bodas slash
+  data" came back as "slash home slash bowler slash datur", and the extension as
+  "dot empty". Anything that routes a path through STT is building on sand.
 - Wake-on-LAN still UNVERIFIED-BY-DESIGN -- `enp4s0` is NO-CARRIER.
+
+Closed since the last handoff: the reply-waiter's misdiagnosis (its three causes
+are now reported separately, and delivered-but-unanswered is exit 3 rather than a
+failure), and voice join into an agent channel, which is verified -- the harness
+passes `allowed=` directly, so `HOTLINE_VOICE_ALLOWED_IDS` did not need setting
+and remains deliberately unset.
 - Two questions data-f3 left for Bogdan, still unanswered: keep `ollama-cuda` +
   `cuda` (~9 GiB) or roll back, and should ollama be reachable past `127.0.0.1`.
 - **Port 8000 (`Ollama Chat`) was never styled.** He asked, then said "disregard
