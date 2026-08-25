@@ -19,7 +19,16 @@ from pathlib import Path
 from typing import Any
 
 from .agents import Agent, Registry
+from .errors import HotlineError
 from .transcript import transcript_path
+
+
+class NoSuchAgent(HotlineError):
+    """No agent by that name is registered."""
+
+
+class NothingToResumeFrom(HotlineError):
+    """The agent exists, but left neither a handoff nor a readable transcript."""
 
 
 @dataclass
@@ -127,3 +136,88 @@ def rehome(
         revived.channel_id = manager.create_text(revived.name, topic=revived.task)
     registry.save()
     return revived
+
+
+@dataclass
+class Resumed:
+    """A revived agent: what came back, and everything a caller has to report.
+
+    Every field is something a caller would otherwise have to re-derive, and two
+    of them are things a caller must not quietly drop. `from_handoff` says
+    whether the replacement is working from a summary or from a corpse, and
+    `channel_error` says the channel could not be sorted out -- reporting the
+    resume as a plain success while either is unwelcome news is how a revived
+    agent ends up trusted more than it deserves.
+    """
+
+    agent: Agent
+    session: Any  # ccsocks.LiveSession
+    brief: Brief
+    tmux: str
+    kept_channel: bool
+    channel_error: str | None = None
+
+    @property
+    def from_handoff(self) -> bool:
+        return self.brief.from_handoff
+
+
+async def resume(
+    name: str,
+    registry: Registry,
+    *,
+    cwd: str | None = None,
+    channels: Any = None,
+) -> Resumed:
+    """Bring an agent back: a new session, seeded with what survives of the old.
+
+    This is the counterweight to disposable channels. Deleting the channel on
+    completion means the handoff is the only thing that survives, so there has
+    to be a way to turn that back into a working agent -- otherwise "done" is
+    indistinguishable from "lost". An agent that was *killed* never wrote a
+    handoff at all, which is why the transcript is the fallback rather than an
+    error.
+
+    A new session, not the old one: the old process is gone. What continues is
+    the work.
+
+    **It does not deliver the brief.** That is where the CLI and the daemon
+    genuinely differ -- the CLI waits up to five minutes for an answer and
+    prints it, while an HTTP request from a phone cannot -- and it is the only
+    thing they differ on. Everything above it is shared, because two copies of
+    "spawn, rehome, keep the channel" would be two chances to drift on what
+    resuming means.
+    """
+    from . import tmuxen
+
+    agent = registry.by_name(name)
+    if agent is None:
+        raise NoSuchAgent(f"no agent called {name!r}")
+    brief = brief_for(agent)
+    if brief is None:
+        raise NothingToResumeFrom(
+            f"{agent.name} left no handoff and its transcript is gone, "
+            "so there is nothing to resume it from"
+        )
+
+    session = await tmuxen.spawn(agent.name, cwd=cwd or None, name=agent.name)
+
+    had = agent.channel_id
+    channel_error: str | None = None
+    try:
+        revived = rehome(registry, agent, session.session_id, channels)
+    except HotlineError as exc:
+        # A Discord that will not answer must not cost him the session that is
+        # already running. The record is repaired without a channel and the
+        # failure is carried out rather than logged and forgotten.
+        channel_error = str(exc)
+        revived = registry.declare(session.session_id, agent.name, agent.task)
+
+    return Resumed(
+        agent=revived,
+        session=session,
+        brief=brief,
+        tmux=tmuxen.tmux_name(agent.name),
+        kept_channel=revived.channel_id is not None and revived.channel_id == had,
+        channel_error=channel_error,
+    )

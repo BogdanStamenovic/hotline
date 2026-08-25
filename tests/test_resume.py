@@ -183,3 +183,138 @@ def test_reviving_keeps_the_name_and_the_task(registry: Registry) -> None:
     assert revived.name == "data-f3", "resuming by name must give back that name"
     assert revived.task == "mirror the ollama server"
     assert not revived.done, "a revived agent is working again"
+
+
+# ---- the shared revive, which the CLI and the daemon both call --------------
+#
+# `tmuxen.spawn` is faked throughout. A test that really spawned would put a
+# `claude` on this box for every run of the suite, and the thing under test here
+# is the sequencing and what comes back, not tmux.
+
+
+class FakeSession:
+    def __init__(self, session_id: str = "sid-new", name: str = "data-f3"):
+        self.session_id = session_id
+        self.name = name
+        self.tmux = "hl-data-f3:@1.%1"
+
+
+@pytest.fixture
+def spawns(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
+    calls: list[dict] = []
+
+    async def spawn(key, cwd=None, bypass=True, timeout=90.0, name=None):
+        calls.append({"key": key, "cwd": cwd, "name": name})
+        return FakeSession()
+
+    import hotline.tmuxen as tmuxen_module
+
+    monkeypatch.setattr(tmuxen_module, "spawn", spawn)
+    return calls
+
+
+@pytest.fixture
+def corpse(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    path = tmp_path / "sid-old.jsonl"
+    path.write_text("{}\n")
+    monkeypatch.setattr(revive, "transcript_path", lambda sid: path)
+    return path
+
+
+async def test_resume_spawns_under_the_agents_own_name(
+    registry: Registry, spawns: list[dict], corpse: Path
+) -> None:
+    """The identity is the point of resuming. A session that comes back called
+    `hl-data-f3` has lost the thing you resumed it by."""
+    registry.declare("sid-old", "data-f3", "mirror the ollama server")
+
+    resumed = await revive.resume("data-f3", registry, cwd="/tmp")
+
+    assert spawns == [{"key": "data-f3", "cwd": "/tmp", "name": "data-f3"}]
+    assert resumed.agent.name == "data-f3"
+    assert resumed.agent.session_id == "sid-new"
+    assert resumed.tmux == "hl-data-f3"
+    assert registry.get("sid-old") is None, "the corpse must stop resolving"
+
+
+async def test_resume_reports_that_it_read_a_corpse(
+    registry: Registry, spawns: list[dict], corpse: Path
+) -> None:
+    """A replacement working from a transcript is in a materially weaker
+    position than one working from a handoff, and every caller has to be able to
+    say so rather than reporting a plain success."""
+    registry.declare("sid-old", "data-f3", "mirror")
+
+    resumed = await revive.resume("data-f3", registry)
+
+    assert not resumed.from_handoff
+    assert "KILLED" in resumed.brief.seed
+
+
+async def test_resume_carries_a_live_channel_over(
+    registry: Registry, spawns: list[dict], corpse: Path
+) -> None:
+    agent = registry.declare("sid-old", "data-f3", "mirror")
+    agent.channel_id = 4242
+    registry.save()
+
+    resumed = await revive.resume("data-f3", registry, channels=FakeChannels(present={4242}))
+
+    assert resumed.kept_channel
+    assert resumed.agent.channel_id == 4242
+    assert resumed.channel_error is None
+
+
+async def test_a_recreated_channel_is_not_reported_as_kept(
+    registry: Registry, spawns: list[dict], corpse: Path
+) -> None:
+    agent = registry.declare("sid-old", "data-f3", "mirror")
+    agent.channel_id = 4242
+    registry.save()
+
+    resumed = await revive.resume("data-f3", registry, channels=FakeChannels(present=set()))
+
+    assert not resumed.kept_channel
+    assert resumed.agent.channel_id == 9999
+
+
+async def test_a_discord_failure_keeps_the_session_and_says_so(
+    registry: Registry, spawns: list[dict], corpse: Path
+) -> None:
+    """The session is already running by then. Losing it because a chat service
+    would not answer would be the worse of the two outcomes by a distance."""
+
+    class Broken:
+        def exists(self, channel_id):
+            raise revive.HotlineError("discord said no")
+
+        def create_text(self, name, topic="", parent_id=None):
+            raise revive.HotlineError("discord said no")
+
+    agent = registry.declare("sid-old", "data-f3", "mirror")
+    agent.channel_id = 4242
+    registry.save()
+
+    resumed = await revive.resume("data-f3", registry, channels=Broken())
+
+    assert resumed.channel_error == "discord said no"
+    assert resumed.agent.session_id == "sid-new", "the record still moved onto the new session"
+
+
+async def test_resume_refuses_an_unknown_name(registry: Registry, spawns: list[dict]) -> None:
+    with pytest.raises(revive.NoSuchAgent):
+        await revive.resume("nobody", registry)
+    assert spawns == [], "nothing may be spawned before the name is known"
+
+
+async def test_resume_refuses_an_agent_with_nothing_left(
+    registry: Registry, spawns: list[dict], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Spawning first and discovering there is no brief afterwards would leave a
+    bare `claude` sitting in a pane with nothing to do."""
+    monkeypatch.setattr(revive, "transcript_path", lambda sid: None)
+    registry.declare("sid-old", "ghost", "work")
+
+    with pytest.raises(revive.NothingToResumeFrom):
+        await revive.resume("ghost", registry)
+    assert spawns == []

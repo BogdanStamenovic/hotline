@@ -29,7 +29,8 @@ from .errors import HotlineError, ReplyTimeout
 from .fresh import Event
 from .guard import install_guard
 from .provenance import MARKER, Origin, body_of, parse, verify
-from .revive import brief_for, rehome
+from .revive import NoSuchAgent, NothingToResumeFrom
+from .revive import resume as resume_agent
 from .router import Route, Router, describe, mid_turn, parse_utterance
 from .stops import install_hook, stops_dir
 
@@ -477,54 +478,43 @@ def _live_key(prefix: str) -> str | None:
 
 
 def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str], None]) -> int:
-    """Bring an agent back: a new session, seeded with what survives of the old.
+    """`--resume NAME` -- `revive.resume()` plus this command's own reporting.
 
-    This is the counterweight to disposable channels. Deleting the channel on
-    completion means the handoff is the only thing that survives, so there has to
-    be a way to turn that back into a working agent -- otherwise "done" is
-    indistinguishable from "lost". And an agent that was killed never wrote a
-    handoff at all, which is why the transcript is the fallback rather than an
-    error.
-
-    A new session, not the old one: the old process is gone. What continues is
-    the work.
+    The revive itself lives in `revive.py` because the daemon performs the same
+    one for the phone, and two implementations of "spawn, rehome, keep the
+    channel" would be two chances to disagree about what resuming means. What
+    stays here is what is genuinely a CLI's: stderr narration, exit codes, and
+    waiting up to five minutes for the first answer so it can be printed on
+    stdout -- which an HTTP request from a phone cannot do and must not pretend
+    to.
     """
-    from . import tmuxen
-
-    agent = registry.by_name(name)
-    if agent is None:
+    try:
+        resumed = asyncio.run(
+            resume_agent(name, registry, cwd=cwd or None, channels=channels_from_env())
+        )
+    except NoSuchAgent:
         print(f"hotline: error: no agent called {name!r}. Try --agents.", file=sys.stderr)
         return 1
-    brief = brief_for(agent)
-    if brief is None:
-        print(
-            f"hotline: error: {agent.name} left no handoff and its transcript is "
-            "gone, so there is nothing to resume it from.",
-            file=sys.stderr,
-        )
+    except NothingToResumeFrom as exc:
+        print(f"hotline: error: {exc}.", file=sys.stderr)
         return 1
-
-    try:
-        session = asyncio.run(tmuxen.spawn(agent.name, cwd=cwd or None, name=agent.name))
     except HotlineError as exc:
         print(f"hotline: error: could not start a session: {exc}", file=sys.stderr)
         return 1
-    log(f"resumed {agent.name} as {session.name} (tmux: {tmuxen.tmux_name(agent.name)})")
-    if not brief.from_handoff:
+
+    log(f"resumed {resumed.agent.name} as {resumed.session.name} (tmux: {resumed.tmux})")
+    if not resumed.from_handoff:
         log("no handoff -- seeded from its transcript; it will verify before trusting it")
-
-    had = agent.channel_id
-    try:
-        revived = rehome(registry, agent, session.session_id, channels_from_env())
-    except HotlineError as exc:
-        log(f"warning: could not sort out its channel: {exc}")
-        revived = registry.declare(session.session_id, agent.name, agent.task)
-    if revived.channel_id is not None:
-        kept = revived.channel_id == had
-        log(f"{'kept its' if kept else ''} channel: #{channel_slug(revived.name)}")
+    if resumed.channel_error:
+        log(f"warning: could not sort out its channel: {resumed.channel_error}")
+    if resumed.agent.channel_id is not None:
+        log(f"{'kept its' if resumed.kept_channel else ''} channel: "
+            f"#{channel_slug(resumed.agent.name)}")
 
     try:
-        reply = asyncio.run(Router().ask_session(session.name, brief.seed, timeout=300.0))
+        reply = asyncio.run(
+            Router().ask_session(resumed.session.name, resumed.brief.seed, timeout=300.0)
+        )
     except HotlineError as exc:
         log(f"warning: session started but did not answer: {exc}")
         return 0
