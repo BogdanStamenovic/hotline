@@ -2364,3 +2364,87 @@ noticing: the authoring end cannot see what it failed to send, and the receiving
 end cannot help but notice.
 
 394 tests, ruff and mypy clean. Commits `c41eed6`, `dea2968`, `1462557`, pushed.
+
+## The acceptance test
+
+His rule: when all five phases are done, do not just write it in PROGRESS.md and
+stop — announce completion **through the system itself**, over the real pipeline,
+not a synthetic wav and not a text message. "If the system cannot announce its own
+completion through itself, it is not complete."
+
+### First the pipeline had to be shown alive
+
+Ran the loopback harness. Everything came up: both bots, DAVE handshake, models
+warm in 3.4s, distil-large-v3 on the 4060. The sentinel spoke, hotline heard it
+**word-perfect with 0.36s of STT**, routed it, and answered in 4.7s. The voice
+stack has not rotted.
+
+### Then the first attempt at the announcement failed, informatively
+
+I asked the pipeline to read `handoff.md` aloud and report. Two things went wrong,
+both worth keeping:
+
+- **Spoken file paths do not survive Whisper.** "slash home slash bodas slash
+  data slash hotline slash handoff dot em dee" came back as "slash home slash
+  **bowler** slash **datur** slash hotline slash handoff dot **empty**". Anything
+  that routes a path through STT is building on sand.
+- **The answer that came back was a stand-in**, not an answer: "Your message is
+  queued for data-c7…". So a voice caller whose target is busy gets a meta-report
+  about a session instead of the thing they asked for. That is right for text,
+  where you can see it is a stand-in, and much worse when spoken aloud.
+
+### The direction that had never been tested
+
+The loopback harness only tests **receive** — sentinel talks, hotline listens.
+Nothing had ever tested what hotline *says* on the way out, which for an
+announcement is the only direction that matters. So `scripts/voice-announce.py`
+runs the loop the other way: hotline speaks through Piper into the real channel,
+the sentinel receives over the real transport and transcribes.
+
+**Two failed runs first, and both failures were mine, in the harness.**
+
+1. It silenced its own diagnostics: `on_rejected` was a no-op lambda and the
+   consumer was a bare `create_task` — the exact swallowed-exception trap
+   `voice.py` documents as "how a dead consumer looked like the audio never
+   arrived for an hour". I read that comment earlier in the session and then
+   reproduced the bug it warns about.
+2. With the diagnostics restored it reported **453 gated pcm chunks and still
+   heard nothing**, which located the fault exactly: transport fine, segmentation
+   stuck. Discord stops sending the instant a stream ends, and the segmenter ends
+   an utterance on trailing *silence*, so it sat on a complete sentence forever.
+   `VoiceCall._close_stale_utterances` exists for precisely this and my script had
+   not replicated it.
+
+"Nothing arrived" was wrong both times, and the audio was never the problem
+either time. That is the sixth confident misreading in this log, and the third of
+mine today.
+
+### Result
+
+```
+SAID:  Bogdan, this is hotline reporting through its own voice pipeline.
+       All five phases are built and passing. Three hundred and ninety four tests are green.
+HEARD: Bodden, this is hotline reporting through its own voice pipeline.
+       All five phases are built and passing. 394 tests are green.
+word similarity: 83%
+```
+
+Piper → Opus → RTP → DAVE → Discord → decrypt → decode → VAD → Whisper, and the
+words came out intact. Both differences are benign: Whisper does not know the name
+"Bogdan", and it normalised the spelled-out number to `394`, which is arguably
+more correct than what went in.
+
+### What this does and does not establish — stated plainly
+
+It establishes that the system **can** announce its own completion through its own
+voice pipeline, and that the announcement survives the real transport intelligibly.
+
+It does **not** establish that he heard it. He is away, and both transports need
+him present: Discord voice needs him in the channel, and the iPhone Shortcut path
+can only be initiated from his phone. Nobody was in the channel when this was
+spoken.
+
+So the acceptance test is **passed on the machine's side and unfinished on his**,
+and I am not going to record that as a clean pass. The honest form is: the
+pipeline announced it, into an empty room, and the recording of that is the
+evidence. He can have it repeated live the moment he joins the channel.
