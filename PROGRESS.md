@@ -1905,3 +1905,38 @@ hedge against, so it was hedged.
 
 The record survives its channel, which is what the three-day retention is for:
 `resume hotline-80` recreates a session and a channel from the handoff.
+
+## "Resume hotline-80" — two bugs, one of them the verifier catching me
+
+He typed it in `#general` and it arrived here as an ordinary message rather than
+being handled as the `resume` command. Running the check on it produced something
+better than a fix: **NOT VERIFIED — Discord has: 'Yes'**.
+
+### The receipt described the wrong message
+
+The confirmation flow holds a message, he answers `yes`, and the held text is
+released. The origin threaded down to delivery was the origin of the **`yes`**,
+not of the held message. So a genuine message from him travelled with a header
+saying he had written "Yes" while the body said "Resume hotline-80" — and the
+verifier correctly failed a message that was entirely authentic.
+
+Exactly the class of defect the feature exists to prevent, introduced by me while
+building the feature, and found by the feature pointed at itself. The held origin
+is now stashed with the held text and cleared everywhere the text is cleared,
+because a stale receipt outliving its message is how a later message inherits it.
+
+### `resume <agent>` fell through when the agent was alive
+
+`_resume` compares the target against live **session** names. An agent and its
+session have different names — the agent is `hotline-80`, the session it lives in
+is `data-88`. So the live check found nothing, the guard against resurrecting the
+living then declined to revive it, and the command fell through to being
+delivered as an ordinary message. His request to resume an agent was answered
+*by that agent*, with no explanation of why.
+
+It now matches the agent's session id as well, and says what is actually true:
+"**hotline-80** never stopped — it is running as `data-88`, so there is nothing
+to resurrect. Connected you to it."
+
+Both were only visible because he asked for something that had never been asked
+for before. 346 tests, ruff and mypy clean.

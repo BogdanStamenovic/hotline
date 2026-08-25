@@ -149,3 +149,27 @@ async def test_with_no_task_it_asks_rather_than_spawning(
 
     assert world.spawned == [], "nothing should have been started"
     assert "Say what it should work on" in reply.text
+
+
+async def test_resuming_a_live_agent_by_its_agent_name_connects_instead(
+    world: FakeWorld, guild: FakeChannels
+) -> None:
+    """An agent and the session it lives in have different names -- `hotline-80`
+    versus `data-88`. Matching only session names meant `resume hotline-80` found
+    nothing live, declined to revive something that was alive, and fell through
+    to being delivered as an ordinary message: Bogdan's request to resume an
+    agent was answered by that agent, with no explanation."""
+    from hotline.ccsocks import discover
+
+    p = SessionPool()
+    await p.ask("discord-general", "hello")
+    live = discover()
+    assert live, "the fake world should have left a session behind"
+    # The agent name deliberately differs from the session name it lives in --
+    # that difference is the whole bug.
+    Registry().declare(live[0].session_id, "hotline-80", "the build")
+
+    _, reply = await p.ask("discord-general", "resume hotline-80")
+
+    assert "never stopped" in reply.text
+    assert "nothing to resurrect" in reply.text

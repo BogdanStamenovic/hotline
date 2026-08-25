@@ -117,6 +117,12 @@ class Conversation:
     # to *before* the message lands, not after.
     held: str | None = None
     held_for: str | None = None
+    # The provenance of the HELD message, not of the "yes" that releases it.
+    # Without this the receipt travelling with a confirmed message describes the
+    # confirmation instead: the header said he wrote "Yes" while the body said
+    # "Resume hotline-80", and the check correctly failed on a message that was
+    # entirely genuine. Caught by the verifier, on itself.
+    held_origin: Origin | None = None
     # The target he has already confirmed. Asking on every single message would
     # make the channel unusable, so the confirmation is per-target and sticky:
     # once he has said yes to a session, messages flow until the target changes
@@ -480,7 +486,7 @@ class SessionPool:
         if route.action == "detach":
             was = conv.attached_to
             conv.attached_to = conv.attached_id = None
-            conv.confirmed = conv.held = conv.held_for = None
+            conv.confirmed = conv.held = conv.held_for = conv.held_origin = None
             if was:
                 return Reply(text=f"Detached from {was}. Back to your own session.",
                              subtype="control")
@@ -503,7 +509,7 @@ class SessionPool:
                     await asyncio.sleep(0.5)
                     closed = not tmuxen.exists(tmuxen.tmux_name(conv.key))
                 conv.own = None
-                conv.confirmed = conv.held = conv.held_for = None
+                conv.confirmed = conv.held = conv.held_for = conv.held_origin = None
                 self._save_bindings()
                 if was and not closed:
                     return Reply(
@@ -571,7 +577,7 @@ class SessionPool:
             # Re-arm the "send it?" question: the target just changed, so an
             # earlier confirmation describes somewhere his next message is no
             # longer going.
-            conv.confirmed = conv.held = conv.held_for = None
+            conv.confirmed = conv.held = conv.held_for = conv.held_origin = None
             return Reply(
                 text=f"Connected to {describe(session)}. Everything you say now goes there "
                      f'until you say "detach".',
@@ -667,15 +673,26 @@ class SessionPool:
 
         # A name that belongs to something still running is a connect, not a
         # revive -- resurrecting the living would fork the work in two.
+        #
+        # Match on the AGENT name as well as the session name, because they are
+        # different strings for the same thing: the agent is `hotline-80`, the
+        # session it lives in is `data-88`. Comparing only session names meant
+        # `resume hotline-80` found nothing live, declined to revive something
+        # whose session was alive, and fell through to being delivered as an
+        # ordinary message -- so Bogdan's request to resume an agent was
+        # answered *by that agent* with no explanation of why.
         spec = route.target.strip()
+        agent_alias = registry.by_name(spec)
+        wanted_ids = {agent_alias.session_id} if agent_alias else set()
         for session in live:
-            if session.name.lower() == spec.lower():
+            if session.name.lower() == spec.lower() or session.session_id in wanted_ids:
                 conv.attached_to = session.name
                 conv.attached_id = session.session_id
-                conv.confirmed = conv.held = conv.held_for = None
+                conv.confirmed = conv.held = conv.held_for = conv.held_origin = None
+                who = agent_alias.name if agent_alias else session.name
                 return Reply(
-                    text=f"{session.name} is still running — connected to it instead "
-                         f"of resurrecting it.",
+                    text=f"**{who}** never stopped — it is running as `{session.name}`, "
+                         f"so there is nothing to resurrect. Connected you to it.",
                     subtype="control",
                 )
 
@@ -774,10 +791,14 @@ class SessionPool:
             answer = utterance.strip()
             if _YES.match(answer):
                 utterance, conv.confirmed = conv.held, conv.held_for
+                # The receipt belongs to the message being released, not to the
+                # word that released it.
+                origin = conv.held_origin
                 conv.held = conv.held_for = None
+                conv.held_origin = None
             elif _NO.match(answer):
                 dropped, target = conv.held, conv.held_for
-                conv.held = conv.held_for = None
+                conv.held = conv.held_for = conv.held_origin = None
                 self._save_bindings()
                 return Route("control", target, utterance), Reply(
                     text=f"Dropped. Nothing was sent to {target}.\n> {_clip(dropped)}",
@@ -786,7 +807,7 @@ class SessionPool:
             else:
                 # Not an answer: he has moved on. Discard the held message rather
                 # than delivering something he has stopped meaning to send.
-                conv.held = conv.held_for = None
+                conv.held = conv.held_for = conv.held_origin = None
 
         route = parse_utterance(utterance)
 
@@ -823,6 +844,7 @@ class SessionPool:
         # him, which is the event worth catching rather than every message.
         if key in self.confirm_keys and display != conv.confirmed:
             conv.held, conv.held_for = route.text, display
+            conv.held_origin = origin
             conv.last_used = time.monotonic()
             self._save_bindings()
             where = {

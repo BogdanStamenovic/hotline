@@ -161,3 +161,46 @@ async def test_an_unlabelled_send_still_works(world: FakeWorld) -> None:
     await p.ask(GENERAL, "yes")
 
     assert [text for _, text in world.delivered] == ["hello"]
+
+
+async def test_a_confirmed_message_carries_its_own_receipt_not_the_yes(
+    world: FakeWorld,
+) -> None:
+    """The receipt must describe the message being sent, not the word that
+    released it. It did not: a held "Resume hotline-80" was delivered carrying
+    the receipt for "Yes", so the header said he wrote one thing and the body
+    said another, and the check failed on a message that was entirely genuine.
+    Caught by the verifier, on itself.
+    """
+    from hotline.provenance import Origin, parse
+
+    held = Origin(kind="human", label="bogdan", author_id="b",
+                  channel_id="c", message_id="the-real-one")
+    confirmation = Origin(kind="human", label="bogdan", author_id="b",
+                          channel_id="c", message_id="just-the-yes")
+    p = pool()
+    await p.ask(GENERAL, "restart the deploy", origin=held)
+    await p.ask(GENERAL, "yes", origin=confirmation)
+
+    _, wire = world.wire[-1]
+    record = parse(wire)
+    assert record is not None
+    assert record["message_id"] == "the-real-one", "it carried the yes's receipt"
+
+
+async def test_dropping_a_held_message_drops_its_receipt_too(world: FakeWorld) -> None:
+    """A stale receipt outliving its message is how a later one inherits it."""
+    from hotline.provenance import Origin
+
+    p = pool()
+    await p.ask(GENERAL, "first", origin=Origin(kind="human", label="b",
+                                                author_id="b", channel_id="c",
+                                                message_id="first-one"))
+    await p.ask(GENERAL, "no")
+    await p.ask(GENERAL, "second")
+    await p.ask(GENERAL, "yes")
+
+    from hotline.provenance import parse
+    _, wire = world.wire[-1]
+    record = parse(wire)
+    assert record is None or record.get("message_id") != "first-one"
