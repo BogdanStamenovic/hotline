@@ -18,7 +18,8 @@ import asyncio
 import json
 import traceback
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from urllib.parse import parse_qs
 
 MAX_LINE = 8192
 MAX_HEADERS = 64
@@ -47,6 +48,13 @@ class Request:
     headers: dict[str, str]
     body: bytes
     peer: str
+    # The query string, already parsed. It used to be split off the target and
+    # thrown away, so no handler could ever see a query parameter -- routing is on
+    # exact paths, which is right, but that meant `?since=41` was not merely
+    # unrouted, it was unreachable. Found by `hotline-ios`, which wanted a cursor
+    # on an event feed, could not get one, and worked around it rather than
+    # forking the server to carry two integers.
+    query: dict[str, str] = field(default_factory=dict)
 
     def json(self) -> dict[str, object]:
         if not self.body:
@@ -148,7 +156,11 @@ class Server:
         if len(parts) != 3:
             raise HttpError(400, "malformed request line")
         method, target, _version = parts
-        path = target.split("?", 1)[0]
+        path, _, raw_query = target.partition("?")
+        # `keep_blank_values` so `?verbose=` is present-and-empty rather than
+        # absent: a handler asking "was this flag passed" gets a different answer
+        # from one asking "what is its value", and dropping it conflates them.
+        query = {k: v[-1] for k, v in parse_qs(raw_query, keep_blank_values=True).items()}
 
         headers: dict[str, str] = {}
         for _ in range(MAX_HEADERS):
@@ -174,7 +186,7 @@ class Server:
             raise HttpError(400, "chunked bodies are not supported")
 
         body = await reader.readexactly(length) if length else b""
-        return Request(method.upper(), path, headers, body, peer)
+        return Request(method.upper(), path, headers, body, peer, query)
 
     async def _write_response(
         self, writer: asyncio.StreamWriter, status: int, payload: dict[str, object]
