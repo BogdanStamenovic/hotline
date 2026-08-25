@@ -95,8 +95,14 @@ class Route:
     target: str | None
     text: str
     # Only set for mode == "control": list | connect | detach | where | kill
-    #                               | help | resources
+    #                               | help | resources | resume | new_agent
     action: str | None = None
+    # The caller used an unambiguous command form -- `session kill X` rather than
+    # a bare `kill X`. It decides what happens when the target does not resolve:
+    # "kill the process on port 8080" should reach a session and be done, while
+    # `session kill data-d5` naming something that no longer exists must be
+    # reported, not quietly relayed as prose for a model to interpret.
+    explicit: bool = False
     # True when the target was inferred from phrasing rather than named. An
     # explicit `connect` beats an inference -- otherwise "what are you working
     # on?" would jump to the newest session even while you are deliberately
@@ -180,8 +186,11 @@ def parse_utterance(utterance: str) -> Route:
         return Route("control", None, text, action="list")
     kill = _KILL.match(text)
     if kill:
+        # group(2) is the `session kill X` form; group(1) is the bare `kill X`,
+        # which is also how someone asks for a process to be killed.
         target = kill.group(1) or kill.group(2) or ""
-        return Route("control", target.strip(), text, action="kill")
+        return Route("control", target.strip(), text, action="kill",
+                     explicit=bool(kill.group(2)))
     if _DETACH.match(low):
         return Route("control", None, text, action="detach")
     if _WHERE.match(low):
@@ -294,16 +303,26 @@ def mid_turn(session: LiveSession, window: float = MID_TURN_WINDOW) -> bool:
     and bound it by a window so a session abandoned mid-turn does not stay
     "working" forever.
     """
-    if session.status == "busy":
-        return True
     path = transcript_path(session.session_id)
     if path is None:
         return False
     try:
-        if time.time() - path.stat().st_mtime > window:
-            return False
+        recent = time.time() - path.stat().st_mtime <= window
     except OSError:
         return False
+    # The window is checked FIRST, and `busy` no longer short-circuits past it.
+    # It used to: `status == "busy"` returned True before anything else was
+    # consulted, so a descriptor whose status latched -- a session killed
+    # mid-turn, a crash between the write and the clear -- was permanently
+    # "working". Every route to it then produced a stand-in reporting on a turn
+    # that had ended long ago, and the caller never reached it at all.
+    #
+    # Nothing that has not touched its transcript within the window is mid-turn,
+    # whatever its descriptor says. A real turn writes constantly.
+    if not recent:
+        return False
+    if session.status == "busy":
+        return True
     return turn_in_flight(session.session_id)
 
 

@@ -105,3 +105,54 @@ def test_it_names_the_pane_so_the_caller_can_go_and_look(
     monkeypatch.setattr(router_module, "mid_turn", lambda s, **k: True)
 
     assert "tmux attach -t hl-target" in _why_no_reply(watch_for(session), session)
+
+
+# ---- a latched "busy" used to be permanent ---------------------------------
+#
+# `mid_turn` returned True the moment the descriptor said "busy", before
+# consulting anything else. A descriptor whose status latched -- a session killed
+# mid-turn, a crash between the write and the clear -- was therefore permanently
+# "working": every route to it produced a stand-in reporting on a turn that had
+# ended long ago, and the caller never reached it at all.
+
+
+def test_a_stale_busy_descriptor_is_not_mid_turn(session, fake_claude: Path) -> None:
+    """Nothing that has not touched its transcript in the window is mid-turn,
+    whatever its descriptor claims."""
+    import os
+    import time as time_module
+
+    from hotline.router import MID_TURN_WINDOW, mid_turn
+
+    # transcript_path globs `projects/*/<id>.jsonl` -- a project SUBDIRECTORY.
+    # Writing it one level up makes the path resolve to None, which is a
+    # different reason for the same answer and would let the stale-status test
+    # pass without exercising the fix at all.
+    transcript = fake_claude / "projects" / "-home-bodas" / "sid-target.jsonl"
+    transcript.parent.mkdir(parents=True, exist_ok=True)
+    transcript.write_text("{}\n")
+    stale = time_module.time() - (MID_TURN_WINDOW + 60)
+    os.utime(transcript, (stale, stale))
+
+    busy = session.__class__(**{**session.__dict__, "status": "busy"})
+
+    assert not mid_turn(busy), "a latched status must not outlive the turn"
+
+
+def test_a_busy_session_that_is_actually_writing_is_mid_turn(
+    session, fake_claude: Path
+) -> None:
+    """The fast path still has to work, or every live turn loses its stand-in."""
+    from hotline.router import mid_turn
+
+    # transcript_path globs `projects/*/<id>.jsonl` -- a project SUBDIRECTORY.
+    # Writing it one level up makes the path resolve to None, which is a
+    # different reason for the same answer and would let the stale-status test
+    # pass without exercising the fix at all.
+    transcript = fake_claude / "projects" / "-home-bodas" / "sid-target.jsonl"
+    transcript.parent.mkdir(parents=True, exist_ok=True)
+    transcript.write_text("{}\n")  # written just now
+
+    busy = session.__class__(**{**session.__dict__, "status": "busy"})
+
+    assert mid_turn(busy)

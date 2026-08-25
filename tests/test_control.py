@@ -288,3 +288,46 @@ async def test_connecting_to_a_number_whose_session_died_says_so(
     assert "has since exited" in reply.text
     assert pool.conversations["k"].attached_to is None
     await pool.close()
+
+
+# ---- a failed explicit command must not become a remark --------------------
+#
+# `session kill data-d5` arrived at a session as prose, twice, because the named
+# session no longer existed and the command fell through to chat. The session did
+# the helpful thing: it forwarded the instruction to the named target instead of
+# running it. The sender saw a plausible reply and believed the command had run.
+
+
+async def test_session_kill_naming_nothing_reports_instead_of_relaying(
+    world: FakeWorld,
+) -> None:
+    pool = SessionPool()
+    await pool.ask("k", "hello")
+    before = list(world.delivered)
+
+    _, reply = await pool.ask("k", "session kill data-d5")
+
+    assert "nothing was killed" in reply.text.lower()
+    assert world.delivered == before, "it must not be relayed to a session"
+
+
+async def test_it_says_what_is_actually_live(world: FakeWorld) -> None:
+    """So the caller can see immediately that they named a corpse."""
+    pool = SessionPool()
+    await pool.ask("k", "hello")
+
+    _, reply = await pool.ask("k", "session kill nonexistent")
+
+    assert "Live now:" in reply.text
+
+
+async def test_a_bare_kill_of_a_process_still_reaches_a_session(
+    world: FakeWorld,
+) -> None:
+    """The reason the fall-through exists: this is a job for a model, not a
+    control command, and swallowing it would be the opposite bug."""
+    pool = SessionPool()
+
+    await pool.ask("k", "kill the process listening on port 8080")
+
+    assert "kill the process listening on port 8080" in [t for _, t in world.delivered]

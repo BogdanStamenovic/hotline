@@ -552,7 +552,20 @@ class SessionPool:
             except SessionNotFound as exc:
                 return Reply(text=str(exc), subtype="control")
             if target is None:
-                return None  # not a session -- let it be answered as a question
+                if route.explicit:
+                    # `session kill X` naming something that does not exist is a
+                    # failed command, not a remark. Falling through relayed it to
+                    # a session as prose, and the session did the helpful thing --
+                    # it forwarded the instruction to the named target instead of
+                    # running it. The sender got a plausible reply and believed
+                    # the command had run. Twice.
+                    listing = ", ".join(s.name for s in live) or "none"
+                    return Reply(
+                        text=f"No live session called `{route.target}` — nothing "
+                             f"was killed. Live now: {listing}.",
+                        subtype="control",
+                    )
+                return None  # a bare "kill the process on port 8080" -- let it through
             session = target
             if conv.own == session.name:
                 conv.own = None

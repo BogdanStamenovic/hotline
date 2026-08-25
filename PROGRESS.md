@@ -2075,3 +2075,43 @@ deliberately has real ones because it is a live voice test.
 
 The harness now takes its own session, record and channel away when it finishes.
 No litter present right now to clean up.
+
+### A failed control command became a remark
+
+Found by a subagent re-reading this whole log for anything still open, and I had
+not been tracking it. Twice, `session kill data-d5` reached a session as prose
+rather than running: the named session no longer existed, so the command fell
+through to chat — and the session did the helpful thing, forwarding the
+instruction to the named target instead of executing it. The sender saw a
+plausible reply and believed the command had run.
+
+The fall-through itself is right and has to stay: "kill the process listening on
+port 8080" is a job for a model, and swallowing it as a control command would be
+the opposite bug. What was missing is that the two forms are distinguishable.
+`session kill X` is unambiguous; a bare `kill X` is not. So the route now carries
+whether the caller used the explicit form, and an explicit command naming
+something that does not exist is reported as a failed command — with the live
+sessions listed, so the caller can see immediately that they named a corpse —
+rather than relayed.
+
+### A latched "busy" was permanent
+
+`mid_turn` returned True the instant the descriptor said `busy`, before
+consulting anything else — in a function whose own docstring explains that the
+descriptor's status cannot answer this question. A status that latched (a session
+killed mid-turn, a crash between the write and the clear) made the session
+permanently "working": every route to it produced a stand-in reporting on a turn
+that had ended long ago, and the caller never reached it at all.
+
+The window check now comes first and `busy` no longer short-circuits past it.
+Nothing that has not touched its transcript within the window is mid-turn,
+whatever its descriptor claims — a real turn writes constantly. The fast path for
+genuinely active sessions is kept, and tested, because losing it would cost every
+live turn its stand-in.
+
+Worth noting how the second test nearly passed for the wrong reason: I wrote the
+fixture transcript to `projects/<id>.jsonl`, but `transcript_path` globs
+`projects/*/<id>.jsonl`. The path resolved to None, `mid_turn` returned False,
+and the stale-status test went green without touching the code under test.
+
+369 tests, ruff and mypy clean.
