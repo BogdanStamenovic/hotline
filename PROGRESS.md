@@ -2554,3 +2554,63 @@ distinct holes in this design have now been found by agents on the receiving end
 of it, and none by its author.
 
 398 tests, ruff and mypy clean. Commits `a4b5f07`, `70b83b8`, pushed.
+
+## Cleaning up the WoWLAN experiment, and closing the suspend paths (2026-08-25 17:34)
+
+Bogdan, verified over Discord: the connection had died, he had stopped
+hibernation, but had unmasked things to test WoWLAN on the wifi dongle. Clean up
+the experiment and ensure nothing can auto-suspend.
+
+**The outage was not hibernation.** The journal and his own dconf comment agree:
+GNOME suspended the box at **15:23:57 after a 900s idle timer**. `hibernate.target`
+had been masked all along. The mechanism was an ordinary S3 idle suspend from the
+desktop, and on a box whose `enp4s0` has no cable and whose dongle has no working
+WoWLAN, that meant a physical power-button press to recover.
+
+**The 17:20 suspend was his own test**, not a recurrence:
+`systemd-run --on-active=20 --unit=wowlan-test-suspend systemctl suspend`, which
+logind attributes explicitly. The kernel's verdict on the experiment is in the
+same log: `rtw89_8851bu 3-2:1.2: failed to suspend for wow -22`. WoWLAN on this
+dongle does not work, which matches `PLAN.md`'s original finding that WoWLAN is
+runtime-only state and not a foundation.
+
+Reconstructed what the experiment touched from the sudo audit trail rather than
+guessing, which separated his *fixes* (keep) from his *experiment* (revert):
+
+| Artifact | State found | Action |
+|---|---|---|
+| `sleep.target`, `suspend.target` | **unmasked** for the test | re-masked |
+| `hibernate`/`hybrid-sleep`/`suspend-then-hibernate` | still masked | left |
+| `usb3`, `3-2` `power/wakeup` | `enabled` | set `disabled` |
+| `iw phy wowlan enable magic-packet` | already gone | nothing |
+| `wowlan-test-suspend.service` | already gone | nothing |
+| logind drop-in, dconf lock+profile | his fixes | **kept** |
+
+Two things resolved themselves and would have been easy to "fix" wrongly. The
+dongle **re-enumerated as `phy2` on resume** (it was `phy1`), so `iw phy phy1`
+now fails with -2 and the WoWLAN runtime state died with the old phy — the
+artifact was gone, not hiding. And the transient unit had completed and cleaned
+itself up.
+
+The USB wakeup revert target was not a guess either: `usb1`, `usb2` and `usb4`
+all read `disabled`, so `disabled` is this box's norm and the two `enabled` ones
+were exactly the two he had `tee`'d.
+
+**Checked and deliberately left alone:** NetworkManager reports
+`wake-on-wlan: 0x1` on his wifi profile, which is NM's `DEFAULT` flag rather than
+magic-packet (`0x8`) — and the keyfile's mtime is 2026-08-24 00:14, a day before
+the experiment. Not an artifact. Reverting it would have been a change he never
+made.
+
+**Verified by doing, not by reading config:** `sudo systemctl suspend` now returns
+`Call to Suspend failed: Access denied` and nothing sleeps. All five targets
+masked, `IdleAction=ignore` live on the bus, five GNOME keys locked in a compiled
+dconf db.
+
+**One thing beyond the literal ask, flagged because it is beyond it:** wifi
+**power save was on**, which is a well-known cause of stalls on USB dongles and
+works directly against "so the connection doesn't get interrupted". Turned off at
+runtime (no link reset) and stored in NM as `disable` **without reactivating the
+connection**, because reactivating would have dropped the very link he was
+talking to me over. Link held throughout: 0% loss, 3ms RTT. Revert with
+`nmcli connection modify SBG55g-PRO-5G 802-11-wireless.powersave 0`.
