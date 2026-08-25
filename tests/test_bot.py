@@ -11,6 +11,8 @@ connection state, and none of that is what is under test.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import time
 from dataclasses import dataclass
 
@@ -341,3 +343,66 @@ def test_text_and_voice_channels_do_not_cross(registry) -> None:
     assert gate._agent_for_text(AGENT_CHANNEL + 1) is None
     assert gate._agent_for_voice(AGENT_CHANNEL + 1) is not None
     assert gate._agent_for_voice(AGENT_CHANNEL) is None
+
+
+class FakeGateway:
+    """A stand-in with py-cord's fatal property: close() is one-way.
+
+    `discord.Client.connect()` is a `while not self.is_closed()` loop, so once
+    `close()` latches `_closed` the client's `start()` returns immediately and
+    for ever. A supervisor that reuses the instance therefore spins on "exited
+    cleanly" and never reaches Discord again -- the 2026-08-25 boot failure.
+    """
+
+    def __init__(self, fail_first: int) -> None:
+        self.fail_first = fail_first
+        self.attempts = 0
+        self.closed = False
+        self.connected = False
+
+    async def start(self, token: str) -> None:
+        self.attempts += 1
+        if self.closed:  # the latch: no error, no connection, instant return
+            return
+        if self.attempts <= self.fail_first:
+            raise OSError("Temporary failure in name resolution")
+        self.connected = True
+        await asyncio.sleep(3600)  # a healthy gateway blocks
+
+    async def close(self) -> None:
+        self.closed = True
+
+
+@pytest.mark.asyncio
+async def test_run_bot_recovers_after_a_boot_time_dns_failure(monkeypatch) -> None:
+    """hotlined starts before wlan0 associates; Discord must still come up."""
+    monkeypatch.setattr(asyncio, "sleep", _no_wait(asyncio.sleep))
+    built: list[FakeGateway] = []
+
+    def rebuild() -> FakeGateway:
+        built.append(FakeGateway(fail_first=0))
+        return built[-1]
+
+    first = FakeGateway(fail_first=2)  # two DNS failures, as on the real boot
+    built.append(first)
+    task = asyncio.create_task(
+        bot_module.run_bot(first, "token", lambda _m: None, rebuild=rebuild)  # type: ignore[arg-type]
+    )
+    for _ in range(200):  # let the supervisor churn through its retries
+        await asyncio.sleep(0)
+        if any(g.connected for g in built):
+            break
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    assert any(g.connected for g in built), "bot never reconnected"
+    # The real bug: a closed client was handed back to start().
+    assert not any(g.attempts > 1 and g.closed for g in built if g.attempts > 1 and g.closed)
+
+
+def _no_wait(real):
+    async def sleep(delay, *a, **kw):
+        return await real(0, *a, **kw)
+
+    return sleep

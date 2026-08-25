@@ -305,12 +305,31 @@ async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: b
                 log("discord not configured (HOTLINE_BOT_TOKEN / DISCORD_USER_ID unset)")
             else:
                 token = os.environ["HOTLINE_BOT_TOKEN"]
-                bot_task = asyncio.create_task(run_bot(bot, token, log))
-                server.bot = bot  # type: ignore[attr-defined]
-                # Wired after construction because the pool has to exist first.
-                # This is how an answer from a session that was busy reaches
-                # Bogdan without him asking a second time.
-                pool.deliver = _relay_to(bot, log)
+
+                def adopt(current: Any) -> None:
+                    # Wired after construction because the pool has to exist
+                    # first. This is how an answer from a session that was busy
+                    # reaches Bogdan without him asking a second time.
+                    #
+                    # Re-run on every retry: run_bot hands over a brand new
+                    # client each time (a closed py-cord client can never
+                    # reconnect), and these two references are the only places
+                    # that hold one. Miss them and outbound relays keep talking
+                    # to the corpse.
+                    server.bot = current  # type: ignore[attr-defined]
+                    pool.deliver = _relay_to(current, log)
+
+                def rebuild() -> Any:
+                    fresh = build_bot(pool, log)
+                    if fresh is None:  # config cannot vanish mid-run
+                        raise RuntimeError("discord config disappeared")
+                    adopt(fresh)
+                    return fresh
+
+                adopt(bot)
+                bot_task = asyncio.create_task(
+                    run_bot(bot, token, log, rebuild=rebuild)
+                )
 
     sweeper = asyncio.create_task(_sweep_forever(log))
 

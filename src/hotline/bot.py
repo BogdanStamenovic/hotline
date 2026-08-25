@@ -509,24 +509,48 @@ def build_bot(pool: SessionPool, log: Callable[[str], None]) -> HotlineBot | Non
     )
 
 
-async def run_bot(bot: HotlineBot, token: str, log: Callable[[str], None]) -> None:
+async def run_bot(
+    bot: HotlineBot,
+    token: str,
+    log: Callable[[str], None],
+    rebuild: Callable[[], HotlineBot] | None = None,
+) -> None:
     """Keep the gateway up without ever taking the HTTP server down with it.
 
     py-cord reconnects on its own for transient trouble, but a token problem or a
     library bug raises out of `start()`. If that happens the phone path must
     survive, so this logs loudly and backs off rather than propagating.
+
+    Every retry needs a *fresh* client, which is what `rebuild` is for.
+    `Client.close()` latches `_closed`, and `connect()` is a
+    `while not self.is_closed()` loop, so a closed client's `start()` returns
+    instantly, forever: the supervisor spins on "exited cleanly" and never
+    reaches Discord again. That is what a boot-time DNS failure produced on
+    2026-08-25 -- hotlined starts before wlan0 associates, the first login
+    raises, and Discord was dead for the whole uptime while the HTTP path looked
+    perfectly healthy. `Client.clear()` is not a way out: it calls
+    `http.recreate()`, which raises when login never got far enough to build a
+    session, i.e. in exactly the DNS case that needs it.
     """
     delay = 5.0
     while True:
+        started = time.monotonic()
         try:
             await bot.start(token)
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001
-            log(f"discord bot died: {type(exc).__name__}: {exc}; retrying in {delay:.0f}s")
+            outcome = f"died: {type(exc).__name__}: {exc}"
         else:
-            log(f"discord bot exited cleanly; retrying in {delay:.0f}s")
+            outcome = "exited cleanly"
+        # A gateway session that actually stayed up is not part of a failure
+        # streak; without this the backoff only ever ratchets towards the cap.
+        if time.monotonic() - started > 120:
+            delay = 5.0
+        log(f"discord bot {outcome}; retrying in {delay:.0f}s")
         with contextlib.suppress(Exception):
             await bot.close()
         await asyncio.sleep(delay)
         delay = min(delay * 2, 300.0)
+        if rebuild is not None:
+            bot = rebuild()
