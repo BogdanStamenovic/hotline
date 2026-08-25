@@ -221,3 +221,41 @@ async def test_a_failing_tmux_is_raised_not_swallowed(
     monkeypatch.setattr(tmuxen, "_tmux", Failing())
     with pytest.raises(HotlineError, match="no such pane"):
         await tmuxen.interrupt("hl-agent:@1.%1")
+
+
+def test_the_session_list_is_one_call_not_one_per_agent(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A roster recomputes on every request and on every long-poll pass. One
+    `has-session` per agent per pass is a subprocess storm for a question
+    `list-sessions` answers once."""
+
+    class Listing:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def __call__(self, *args: str, check: bool = True):
+            self.calls += 1
+
+            class Result:
+                returncode = 0
+                stdout = "hl-one\nhl-two\n\n"
+
+            return Result()
+
+    fake = Listing()
+    monkeypatch.setattr(tmuxen, "_tmux", fake)
+    assert tmuxen.sessions() == {"hl-one", "hl-two"}
+    assert fake.calls == 1
+
+
+def test_no_tmux_server_is_no_sessions_not_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Failing:
+        def __call__(self, *args: str, check: bool = True):
+            class Result:
+                returncode = 1
+                stdout = ""
+                stderr = "no server running"
+
+            return Result()
+
+    monkeypatch.setattr(tmuxen, "_tmux", Failing())
+    assert tmuxen.sessions() == set()

@@ -95,6 +95,23 @@ def exists(name: str) -> bool:
     return _tmux("has-session", "-t", f"={name}", check=False).returncode == 0
 
 
+def sessions() -> set[str]:
+    """Every tmux session name currently on this box, in one call.
+
+    `exists()` is right for "am I about to act on this pane" and wrong for "which
+    of these twenty agents has a pane": a roster is recomputed on every request
+    and on every pass of a parked long-poll, and one `has-session` per agent per
+    pass is a subprocess storm to answer a question one `list-sessions` answers.
+
+    An empty set when tmux is not running, which is the truth rather than an
+    error -- no server means no sessions.
+    """
+    result = _tmux("list-sessions", "-F", "#{session_name}", check=False)
+    if result.returncode != 0:
+        return set()
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+
+
 def kill(name: str) -> bool:
     return _tmux("kill-session", "-t", f"={name}", check=False).returncode == 0
 
