@@ -83,8 +83,10 @@ class FreshSession:
     async def start(self) -> None:
         argv = [
             CLAUDE_BIN,
-            "--input-format", "stream-json",
-            "--output-format", "stream-json",
+            "--input-format",
+            "stream-json",
+            "--output-format",
+            "stream-json",
             "--verbose",
         ]
         if self.bypass:

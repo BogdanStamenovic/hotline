@@ -187,7 +187,9 @@ async def inject(session: LiveSession, text: str, timeout: float = 5.0) -> None:
             asyncio.open_unix_connection(session.socket_path), timeout
         )
     except (TimeoutError, OSError) as exc:
-        raise InjectFailed(f"cannot connect to {session.name} at {session.socket_path}: {exc}") from exc
+        raise InjectFailed(
+            f"cannot connect to {session.name} at {session.socket_path}: {exc}"
+        ) from exc
     try:
         writer.write(payload.encode())
         await asyncio.wait_for(writer.drain(), timeout)

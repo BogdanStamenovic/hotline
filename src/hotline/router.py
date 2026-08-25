@@ -113,16 +113,25 @@ class Route:
 # Control phrases, checked before anything else. Deliberately a small closed set
 # rather than fuzzy matching: "list the files in this directory" must reach a
 # session, not be swallowed as a control command.
-_LIST = re.compile(r"^(?:session\s*list|list\s+sessions?|sessions?|what\s+sessions?"
-                   r"(?:\s+are)?(?:\s+(?:there|running|live|open))?)\s*[:.?]?$", re.IGNORECASE)
+_LIST = re.compile(
+    r"^(?:session\s*list|list\s+sessions?|sessions?|what\s+sessions?"
+    r"(?:\s+are)?(?:\s+(?:there|running|live|open))?)\s*[:.?]?$",
+    re.IGNORECASE,
+)
 _CONNECT = re.compile(r"^(?:connect(?:\s+to)?|switch\s+to|use)\s+(.+?)\s*[.?]?$", re.IGNORECASE)
-_DETACH = re.compile(r"^(?:detach|disconnect|leave|never\s*mind|new\s+session)\s*[.?]?$", re.IGNORECASE)
-_WHERE = re.compile(r"^(?:where\s+am\s+i|who\s+am\s+i\s+talking\s+to|what\s+am\s+i"
-                    r"\s+connected\s+to)\s*[.?]?$", re.IGNORECASE)
+_DETACH = re.compile(
+    r"^(?:detach|disconnect|leave|never\s*mind|new\s+session)\s*[.?]?$", re.IGNORECASE
+)
+_WHERE = re.compile(
+    r"^(?:where\s+am\s+i|who\s+am\s+i\s+talking\s+to|what\s+am\s+i"
+    r"\s+connected\s+to)\s*[.?]?$",
+    re.IGNORECASE,
+)
 
 _AGENTS = re.compile(
     r"^(?:agents?|who(?:'?s| is)\s+working(?:\s+on\s+what)?|what(?:\s+is|'?s)\s+"
-    r"everyone\s+doing)\s*[.?]?$", re.IGNORECASE
+    r"everyone\s+doing)\s*[.?]?$",
+    re.IGNORECASE,
 )
 # Starting a NEW agent, as opposed to talking to this channel's own session.
 # These are different things and used to be impossible to say apart: the pane
@@ -142,8 +151,9 @@ _HELP = re.compile(r"^(?:help|commands?|what\s+can\s+(?:you|i)\s+do)\s*[.?!]?$",
 # a connect, and only otherwise is it a revive. Bogdan typed a bare "resume" in
 # #general expecting exactly this and got a brand new session instead, because
 # nothing matched it and it fell through as a question.
-_RESUME = re.compile(r"^(?:resume|revive|bring\s+back)(?:\s+(?:agent\s+)?(.+?))?\s*[.?]?$",
-                     re.IGNORECASE)
+_RESUME = re.compile(
+    r"^(?:resume|revive|bring\s+back)(?:\s+(?:agent\s+)?(.+?))?\s*[.?]?$", re.IGNORECASE
+)
 _RESOURCES = re.compile(
     r"^(?:resources?|load|how\s+(?:much|is)\s+(?:ram|memory|vram|load)\S*)\s*[.?]?$", re.IGNORECASE
 )
@@ -155,6 +165,7 @@ _KILL = re.compile(
     r"|^session\s+(?:kill|terminate|stop|end)\s+(.+?)\s*[.?]?$",
     re.IGNORECASE,
 )
+
 
 def parse_utterance(utterance: str) -> Route:
     """Work out what the caller wants from how they opened the call.
@@ -170,8 +181,7 @@ def parse_utterance(utterance: str) -> Route:
     # whatever is on the other end of it.
     new_agent = _NEW_AGENT.match(text)
     if new_agent:
-        return Route("control", new_agent.group(1).strip() or None, text,
-                     action="new_agent")
+        return Route("control", new_agent.group(1).strip() or None, text, action="new_agent")
     if _HELP.match(low):
         return Route("control", None, text, action="help")
     resume = _RESUME.match(text)
@@ -189,8 +199,7 @@ def parse_utterance(utterance: str) -> Route:
         # group(2) is the `session kill X` form; group(1) is the bare `kill X`,
         # which is also how someone asks for a process to be killed.
         target = kill.group(1) or kill.group(2) or ""
-        return Route("control", target.strip(), text, action="kill",
-                     explicit=bool(kill.group(2)))
+        return Route("control", target.strip(), text, action="kill", explicit=bool(kill.group(2)))
     if _DETACH.match(low):
         return Route("control", None, text, action="detach")
     if _WHERE.match(low):
@@ -199,7 +208,9 @@ def parse_utterance(utterance: str) -> Route:
     if connect:
         return Route("control", connect.group(1).strip(), text, action="connect")
 
-    match = re.match(r"^(?:please\s+)?(?:can you\s+)?(?:join|attach to|connect to|resume)\s+(.+)$", low)
+    match = re.match(
+        r"^(?:please\s+)?(?:can you\s+)?(?:join|attach to|connect to|resume)\s+(.+)$", low
+    )
     if match:
         target, rest = _split_target(text[match.start(1) :])
         return Route("attach", target, rest)
@@ -246,10 +257,7 @@ def _why_no_reply(watch: Watch, session: LiveSession) -> str:
     checked, and the last one admits it does not know.
     """
     if watch.saw_marker:
-        return (
-            "It did receive the message, so it is still working or it stopped "
-            "without answering."
-        )
+        return "It did receive the message, so it is still working or it stopped without answering."
     if watch.was_busy or mid_turn(session):
         return (
             "It was mid-turn when the message arrived, so your message is "
@@ -263,7 +271,7 @@ def _why_no_reply(watch: Watch, session: LiveSession) -> str:
     if inbound != "accept":
         return (
             "The message never reached its transcript and the session was idle, "
-            f'so it is most likely being held (crossSessionInbound is {inbound!r}). '
+            f"so it is most likely being held (crossSessionInbound is {inbound!r}). "
             'Set "crossSessionInbound": "accept" in ~/.claude/settings.json, or '
             "approve it in that session's UI."
         )
@@ -504,9 +512,9 @@ class Router:
             # a tmux-spawned session reports "waiting" for its entire life,
             # including mid-turn, so accepting it returned the model's opening
             # preamble as the answer eight seconds into a twenty-five second job.
-            quiet = (
-                monotonic() - last_change >= QUIET_SECONDS
-                and status_of(session.pid) in (None, "idle")
+            quiet = monotonic() - last_change >= QUIET_SECONDS and status_of(session.pid) in (
+                None,
+                "idle",
             )
             if not (stopped or quiet):
                 continue

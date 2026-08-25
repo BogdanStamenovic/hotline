@@ -26,8 +26,15 @@ from hotline.router import Watch, _why_no_reply
 
 @pytest.fixture
 def session(fake_claude: Path):
-    make_session(fake_claude, 4242, "target", "/home/bodas", "sid-target",
-                 started_at=1, tmux="hl-target:@0.%0")
+    make_session(
+        fake_claude,
+        4242,
+        "target",
+        "/home/bodas",
+        "sid-target",
+        started_at=1,
+        tmux="hl-target:@0.%0",
+    )
     found = [s for s in discover() if s.pid == 4242]
     assert found
     return found[0]
@@ -139,9 +146,7 @@ def test_a_stale_busy_descriptor_is_not_mid_turn(session, fake_claude: Path) -> 
     assert not mid_turn(busy), "a latched status must not outlive the turn"
 
 
-def test_a_busy_session_that_is_actually_writing_is_mid_turn(
-    session, fake_claude: Path
-) -> None:
+def test_a_busy_session_that_is_actually_writing_is_mid_turn(session, fake_claude: Path) -> None:
     """The fast path still has to work, or every live turn loses its stand-in."""
     from hotline.router import mid_turn
 

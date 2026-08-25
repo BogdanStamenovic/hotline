@@ -33,8 +33,9 @@ def world(fake_claude: Path, monkeypatch: pytest.MonkeyPatch) -> FakeWorld:
 @pytest.fixture
 def busy(world: FakeWorld, monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
     """A session that is mid-turn, and a stand-in that does not cost a real agent."""
-    make_session(world.home, 700, "data-13", "/home/bodas/data", "fff",
-                 started_at=7000, status="busy")
+    make_session(
+        world.home, 700, "data-13", "/home/bodas/data", "fff", started_at=7000, status="busy"
+    )
     world.busy.add("data-13")
     asked: list[tuple[str, str]] = []
 
@@ -91,9 +92,7 @@ async def test_the_real_answer_is_relayed_when_it_lands(
 
     conv = pool.conversations["k"]
     await asyncio.gather(*conv.relays)
-    assert relayed == [
-        ("k", "data-13 has finished the message you sent it:\n\nthe suite is green")
-    ]
+    assert relayed == [("k", "data-13 has finished the message you sent it:\n\nthe suite is green")]
     await pool.close()
 
 
@@ -119,8 +118,9 @@ async def test_an_idle_session_is_answered_directly_with_no_stand_in(
 ) -> None:
     """The stand-in is for busy sessions only. Putting one in front of every
     message would double the latency of the common case to solve the rare one."""
-    make_session(world.home, 800, "data-99", "/home/bodas/data", "ggg",
-                 started_at=8000, status="idle")
+    make_session(
+        world.home, 800, "data-99", "/home/bodas/data", "ggg", started_at=8000, status="idle"
+    )
     pool = SessionPool()
     await pool.ask("k", "connect data-99")
     _, reply = await pool.ask("k", "how is it going?")
@@ -268,16 +268,16 @@ async def test_a_binding_survives_the_session_getting_a_new_pid(
     a stranger -- which is the right safety and still meant his claim silently
     stopped working. Session ids survive a new pid; names and pids do not.
     """
-    make_session(world.home, 300, "builder", "/home/bodas/data", "stable-id",
-                 started_at=3000)
+    make_session(world.home, 300, "builder", "/home/bodas/data", "stable-id", started_at=3000)
     pool = SessionPool()
     await pool.ask("k", "connect builder")
     assert pool.conversations["k"].attached_id == "stable-id"
 
     # Same session, new process: different pid, and it even renames itself.
     (world.home / "sessions" / "300.json").unlink()
-    make_session(world.home, 999, "builder-renamed", "/home/bodas/data", "stable-id",
-                 started_at=3000)
+    make_session(
+        world.home, 999, "builder-renamed", "/home/bodas/data", "stable-id", started_at=3000
+    )
 
     route, reply = await pool.ask("k", "still there?")
     assert route.mode == "attach"
@@ -288,8 +288,7 @@ async def test_a_binding_survives_the_session_getting_a_new_pid(
 
 async def test_the_route_reports_the_name_not_the_id(world: FakeWorld) -> None:
     """Telling a caller it is attached to "stable-id" teaches them nothing."""
-    make_session(world.home, 301, "builder", "/home/bodas/data", "stable-id",
-                 started_at=3000)
+    make_session(world.home, 301, "builder", "/home/bodas/data", "stable-id", started_at=3000)
     pool = SessionPool()
     await pool.ask("k", "connect builder")
     route, _ = await pool.ask("k", "hello")
@@ -301,8 +300,7 @@ async def test_a_binding_to_a_session_that_really_died_is_still_reported(
     world: FakeWorld,
 ) -> None:
     """Binding by id must not weaken the tofix #8 guarantee."""
-    make_session(world.home, 302, "builder", "/home/bodas/data", "gone-id",
-                 started_at=3000)
+    make_session(world.home, 302, "builder", "/home/bodas/data", "gone-id", started_at=3000)
     pool = SessionPool()
     await pool.ask("k", "connect builder")
     (world.home / "sessions" / "302.json").unlink()

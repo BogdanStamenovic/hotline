@@ -89,9 +89,7 @@ def resumable(registry: Registry, live_ids: set[str], limit: int = 10) -> list[A
     # i do resume you are always on the top of the list" -- and the reasoning
     # holds independently: the sys-admin agent is the one that manages the
     # others, so it is the one to bring back before deciding anything else.
-    candidates.sort(
-        key=lambda a: (a.privileged, a.completed_at or a.declared_at), reverse=True
-    )
+    candidates.sort(key=lambda a: (a.privileged, a.completed_at or a.declared_at), reverse=True)
     return candidates[:limit]
 
 

@@ -101,9 +101,7 @@ def test_deleting_an_agent_channel(guild: FakeGuild, channels: Channels) -> None
     assert all(c["id"] != str(cid) for c in guild.channels)
 
 
-def test_refuses_to_delete_a_channel_it_does_not_own(
-    guild: FakeGuild, channels: Channels
-) -> None:
+def test_refuses_to_delete_a_channel_it_does_not_own(guild: FakeGuild, channels: Channels) -> None:
     """The guard that stands between a caller bug and #general."""
     with pytest.raises(HotlineError, match="not an agent channel"):
         channels.delete(1)
@@ -122,7 +120,8 @@ def test_owned_lists_only_our_channels(guild: FakeGuild, channels: Channels) -> 
     channels.create_text("one")
     channels.create_voice("two")
     assert sorted(c["name"] for c in channels.owned()) == [
-        f"{PREFIX}one", f"{PREFIX}two",
+        f"{PREFIX}one",
+        f"{PREFIX}two",
     ]
 
 

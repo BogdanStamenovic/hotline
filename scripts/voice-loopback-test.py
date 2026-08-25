@@ -170,8 +170,11 @@ def _clean_up(key: str) -> None:
     from hotline.channels import from_env as channels_from_env
 
     name = tmuxen.tmux_name(key)
-    ours = {s.session_id for s in discover(include_self=True, include_programmatic=True)
-            if s.tmux_session == name}
+    ours = {
+        s.session_id
+        for s in discover(include_self=True, include_programmatic=True)
+        if s.tmux_session == name
+    }
     registry = Registry()
     manager = channels_from_env()
     for session_id in ours:

@@ -9,6 +9,7 @@ amount of care replaces a check that actually runs.
 Installed as .git/hooks/pre-commit. Scans the staged content, not the worktree,
 because those differ exactly when it matters.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -41,7 +42,10 @@ def secrets() -> dict[str, str]:
 def staged_files() -> list[str]:
     out = subprocess.run(
         ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-        capture_output=True, text=True, cwd=ROOT, check=False,
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        check=False,
     )
     return [f for f in out.stdout.split("\n") if f]
 
@@ -58,12 +62,13 @@ def main() -> int:
         leaks += [(name, path) for name, value in values.items() if value in blob]
 
     if leaks:
-        print("REFUSING TO COMMIT -- a value from .env appears in staged content:",
-              file=sys.stderr)
+        print("REFUSING TO COMMIT -- a value from .env appears in staged content:", file=sys.stderr)
         for name, path in leaks:
             print(f"  {name} -> {path}", file=sys.stderr)
-        print("\nReplace it with a placeholder. Never commit these, even to a "
-              "private repo.", file=sys.stderr)
+        print(
+            "\nReplace it with a placeholder. Never commit these, even to a private repo.",
+            file=sys.stderr,
+        )
         return 1
     return 0
 

@@ -255,10 +255,14 @@ async def test_a_stale_tool_call_before_the_injection_does_not_block_forever(
     would never return anything again.
     """
     make_session(fake_claude, PID, "target-aa", "/home/bodas/data", SID)
-    write_transcript(fake_claude, SID, [
-        user_entry("an earlier question"),
-        assistant_entry("", tools=["Bash"]),  # last record before our offset
-    ])
+    write_transcript(
+        fake_claude,
+        SID,
+        [
+            user_entry("an earlier question"),
+            assistant_entry("", tools=["Bash"]),  # last record before our offset
+        ],
+    )
     monkeypatch.setattr(router_module, "inject", fake_reply(fake_claude, "ping", "pong", 0.05))
     reply = await Router().ask_session("target-aa", "ping", timeout=5.0)
     assert reply.text == "pong"

@@ -244,7 +244,9 @@ class Transcriber:
             self._model = WhisperModel(self.model_name, device="cpu", compute_type="int8")
         log.info(
             "transcriber %s ready on %s in %.1fs",
-            self.model_name, self.device, time.monotonic() - began,
+            self.model_name,
+            self.device,
+            time.monotonic() - began,
         )
 
     def unload(self) -> None:
@@ -271,8 +273,8 @@ class Transcriber:
         segments, _info = self._model.transcribe(  # type: ignore[attr-defined]
             audio,
             language=self.language,
-            beam_size=1,          # a spoken command is not worth a beam search
-            vad_filter=False,     # already segmented; doing it twice clips words
+            beam_size=1,  # a spoken command is not worth a beam search
+            vad_filter=False,  # already segmented; doing it twice clips words
             condition_on_previous_text=False,  # stops one bad turn poisoning the next
         )
         return " ".join(segment.text for segment in segments).strip()

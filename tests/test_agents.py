@@ -29,7 +29,7 @@ def test_an_agent_declares_itself(registry: Registry) -> None:
 
 
 def test_the_task_can_be_edited_whenever(registry: Registry) -> None:
-    """"its task which it can edit whenever" -- work turns out to be something
+    """ "its task which it can edit whenever" -- work turns out to be something
     else more often than not."""
     registry.declare("sid-1", "builder", "rewriting the voice decoder")
     agent = registry.retask("sid-1", "actually, fixing the key rotation")
@@ -80,7 +80,7 @@ def test_an_agent_still_working_never_expires(registry: Registry) -> None:
 
 
 def test_retention_is_overridable_per_agent(registry: Registry) -> None:
-    """"autodelete after 3 days except when stated differently"."""
+    """ "autodelete after 3 days except when stated differently"."""
     registry.declare("sid-1", "keeper", "worth keeping", keep_days=30)
     registry.complete("sid-1")
     assert registry.expired(now=time.time() + 4 * 86400) == []
@@ -88,7 +88,7 @@ def test_retention_is_overridable_per_agent(registry: Registry) -> None:
 
 
 def test_an_agent_can_ask_for_no_channel(registry: Registry) -> None:
-    """"they should become a channel except if explicitly asked" -- the exception
+    """ "they should become a channel except if explicitly asked" -- the exception
     is per-agent, because what gets suppressed is one noisy fan-out."""
     registry.declare("sid-1", "loud", "spawns forty subagents", wants_channel=False)
     registry.declare("sid-2", "normal", "ordinary work")

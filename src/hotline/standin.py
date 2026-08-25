@@ -166,11 +166,21 @@ async def report(
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            CLAUDE_BIN, "-p", prompt,
-            "--model", STANDIN_MODEL,
+            CLAUDE_BIN,
+            "-p",
+            prompt,
+            "--model",
+            STANDIN_MODEL,
             # No tools: everything it needs is in the prompt, and a stand-in that
             # goes exploring is a stand-in that arrives after the real answer.
-            "--disallowed-tools", "Bash", "Read", "Edit", "Write", "Glob", "Grep", "Task",
+            "--disallowed-tools",
+            "Bash",
+            "Read",
+            "Edit",
+            "Write",
+            "Glob",
+            "Grep",
+            "Task",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

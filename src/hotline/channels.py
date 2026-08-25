@@ -92,7 +92,9 @@ class Channels:
                     time.sleep(min(wait + 0.25, 30.0))
                     continue
                 detail = exc.read().decode(errors="replace")[:200]
-                raise HotlineError(f"discord {method} {path} failed ({exc.code}): {detail}") from exc
+                raise HotlineError(
+                    f"discord {method} {path} failed ({exc.code}): {detail}"
+                ) from exc
             except OSError as exc:
                 raise HotlineError(f"discord {method} {path} unreachable: {exc}") from exc
         raise HotlineError(f"discord {method} {path} rate-limited repeatedly")

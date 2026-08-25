@@ -62,62 +62,82 @@ def _build_parser() -> argparse.ArgumentParser:
     # writes nothing to its parent's transcript, so hotline cannot discover one
     # by looking. It has to be told.
     parser.add_argument(
-        "--declare", metavar="TASK",
+        "--declare",
+        metavar="TASK",
         help="register this session and what it is working on (editable; re-declare to retask)",
     )
     parser.add_argument(
-        "--parent", metavar="NAME",
+        "--parent",
+        metavar="NAME",
         help="with --declare: the agent that spawned this one, for subagents",
     )
     parser.add_argument(
-        "--no-channel", action="store_true",
+        "--no-channel",
+        action="store_true",
         help="with --declare: do not give this agent a channel of its own",
     )
     parser.add_argument(
-        "--keep-days", type=float, default=None, metavar="N",
+        "--keep-days",
+        type=float,
+        default=None,
+        metavar="N",
         help="with --declare: retention after completion (default 3)",
     )
     parser.add_argument(
-        "--done", action="store_true",
+        "--done",
+        action="store_true",
         help="mark this session finished; its channel is deleted and its record kept",
     )
     parser.add_argument(
-        "--handoff", metavar="PATH",
+        "--handoff",
+        metavar="PATH",
         help="with --done: the handoff this agent wrote, which becomes its only record",
     )
     parser.add_argument("--agents", action="store_true", help="list known agents and exit")
     parser.add_argument(
-        "--claim", nargs="?", const="discord", metavar="WHERE",
+        "--claim",
+        nargs="?",
+        const="discord",
+        metavar="WHERE",
         help="route a conversation to THIS session until released. "
-             "'discord' (default), 'voice', or an explicit conversation key. "
-             "--claim '' releases it.",
+        "'discord' (default), 'voice', or an explicit conversation key. "
+        "--claim '' releases it.",
     )
     parser.add_argument(
-        "--voice", action="store_true",
+        "--voice",
+        action="store_true",
         help="give this agent a voice channel (created on demand, not at declaration)",
     )
     parser.add_argument(
-        "--grant", nargs=3, metavar=("NAME", "ROLE", "MESSAGE_URL"),
+        "--grant",
+        nargs=3,
+        metavar=("NAME", "ROLE", "MESSAGE_URL"),
         help="give an agent a standing role, recording the Discord message where "
-             "Bogdan granted it. Pass the message link or 'channel_id/message_id'.",
+        "Bogdan granted it. Pass the message link or 'channel_id/message_id'.",
     )
     parser.add_argument(
-        "--provenance", metavar="RECORD", nargs="?", const="-",
+        "--provenance",
+        metavar="RECORD",
+        nargs="?",
+        const="-",
         help="check a relayed message's provenance against Discord. Pass the "
-             "record from its header, or '-' to read the whole message on stdin.",
+        "record from its header, or '-' to read the whole message on stdin.",
     )
     parser.add_argument(
-        "--adopt", metavar="NAME",
+        "--adopt",
+        metavar="NAME",
         help="take over a running agent's identity and channel, for a session "
-             "respawned to continue its work",
+        "respawned to continue its work",
     )
     parser.add_argument(
-        "--resume", metavar="NAME",
+        "--resume",
+        metavar="NAME",
         help="bring a finished agent back: new session seeded from its handoff, "
-             "channel recreated, task re-declared",
+        "channel recreated, task re-declared",
     )
     parser.add_argument(
-        "--session-id", metavar="ID",
+        "--session-id",
+        metavar="ID",
         help="which session to act on (default $CLAUDE_CODE_SESSION_ID)",
     )
     parser.add_argument("--list", action="store_true", help="list live sessions and exit")
@@ -127,7 +147,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="install the Stop hook that makes --to able to hear replies",
     )
     parser.add_argument(
-        "--timeout", type=float, default=300.0, metavar="SEC", help="give up after SEC (default 300)"
+        "--timeout",
+        type=float,
+        default=300.0,
+        metavar="SEC",
+        help="give up after SEC (default 300)",
     )
     parser.add_argument(
         "--no-guard",
@@ -139,7 +163,9 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="do not pass --permission-mode bypassPermissions to a fresh session",
     )
-    parser.add_argument("-v", "--verbose", action="store_true", help="narrate tool calls as they happen")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="narrate tool calls as they happen"
+    )
     parser.add_argument("-q", "--quiet", action="store_true", help="suppress non-error output")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
@@ -162,8 +188,9 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
         return _check_provenance(args.provenance)
 
     if args.agents:
-        known = sorted(registry.agents.values(),
-                       key=lambda a: (a.privileged, a.declared_at), reverse=True)
+        known = sorted(
+            registry.agents.values(), key=lambda a: (a.privileged, a.declared_at), reverse=True
+        )
         if not known:
             log("no agents have declared themselves")
             return 0
@@ -288,9 +315,7 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
     return 0
 
 
-def _control_command(
-    route: Route, router: Router, log: Callable[[str], None]
-) -> int | None:
+def _control_command(route: Route, router: Router, log: Callable[[str], None]) -> int | None:
     """`session list`, `session kill`, `resources`, `help` -- answered here.
 
     A thin re-implementation rather than a call into SessionPool: the pool owns
@@ -312,11 +337,7 @@ def _control_command(
             log("no live Claude sessions")
             return 0
         for index, session in enumerate(live, 1):
-            where = (
-                f"tmux attach -t {session.tmux_session}"
-                if session.tmux_session
-                else "no pane"
-            )
+            where = f"tmux attach -t {session.tmux_session}" if session.tmux_session else "no pane"
             print(f"{index}. {describe(session)} [{session.status or '?'}] ({where})")
         return 0
     if route.action == "kill" and route.target:
@@ -411,9 +432,7 @@ def _conversation_key(where: str) -> str | None:
     if plain == "discord":
         # The .env calls it DISCORD_TEXT_CHANNEL_ID; the older name is accepted
         # too. Guessing this wrong once already cost a debugging round.
-        channel = os.environ.get("DISCORD_TEXT_CHANNEL_ID") or os.environ.get(
-            "DISCORD_CHANNEL_ID"
-        )
+        channel = os.environ.get("DISCORD_TEXT_CHANNEL_ID") or os.environ.get("DISCORD_CHANNEL_ID")
         return f"discord-{channel}" if channel else _live_key("discord-")
     if plain == "voice":
         channel = os.environ.get("DISCORD_VOICE_CHANNEL_ID")
@@ -521,8 +540,7 @@ def _grant_role(
 
     env = load_env()
     verdict = verify(
-        {"kind": "sys-admin", "label": name,
-         "granted_by": message_id, "granted_in": channel_id},
+        {"kind": "sys-admin", "label": name, "granted_by": message_id, "granted_in": channel_id},
         token=env.get("HOTLINE_BOT_TOKEN"),
         gated_user_id=env.get("DISCORD_USER_ID"),
     )
@@ -569,8 +587,7 @@ def _check_provenance(record: str) -> int:
         except ValueError:
             found = parse(record)
         if not isinstance(found, dict):
-            print(f"hotline: error: {record[:80]!r} is not a provenance record.",
-                  file=sys.stderr)
+            print(f"hotline: error: {record[:80]!r} is not a provenance record.", file=sys.stderr)
             return 2
 
     env = load_env()
@@ -652,13 +669,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             log("PreToolUse guard: skipped (--no-guard)")
         else:
             guard, guard_changed = install_guard()
-            log(f"PreToolUse guard {'installed' if guard_changed else 'already registered'}: {guard}")
+            log(
+                f"PreToolUse guard {'installed' if guard_changed else 'already registered'}: {guard}"
+            )
         log(f"spool: {stops_dir()}")
         return 0
 
     if (
-        args.declare or args.done or args.agents or args.resume or args.voice
-        or args.adopt or args.provenance or args.grant
+        args.declare
+        or args.done
+        or args.agents
+        or args.resume
+        or args.voice
+        or args.adopt
+        or args.provenance
+        or args.grant
         or args.claim is not None
     ):
         return _agent_command(args, log)
@@ -718,8 +743,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             # second copy. This is the same fact the stand-in gives a Discord
             # caller; the CLI simply never had it.
             if mid_turn(target):
-                log("   (it is mid-turn; your message is queued behind that and "
-                    "will not be seen until it finishes. Do not resend.)")
+                log(
+                    "   (it is mid-turn; your message is queued behind that and "
+                    "will not be seen until it finishes. Do not resend.)"
+                )
             reply = asyncio.run(
                 router.ask_session(
                     args.to, text, narrator=narrate, timeout=args.timeout, origin=origin
@@ -731,8 +758,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 log(f"-> {route.mode} {route.target}")
                 reply = asyncio.run(
                     router.ask_session(
-                        route.target, route.text, narrator=narrate,
-                        timeout=args.timeout, origin=origin,
+                        route.target,
+                        route.text,
+                        narrator=narrate,
+                        timeout=args.timeout,
+                        origin=origin,
                     )
                 )
             else:

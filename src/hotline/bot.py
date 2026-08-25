@@ -292,8 +292,7 @@ class HotlineBot(discord.Bot):
         lines.append(f"\n**Pool**: {stats['conversations']} conversation(s)")
         for entry in stats["keys"]:
             lines.append(
-                f"· `{entry['key']}` — {entry['turns']} turns, "
-                f"idle {entry['idle_seconds']}s"
+                f"· `{entry['key']}` — {entry['turns']} turns, idle {entry['idle_seconds']}s"
             )
         await message.channel.send("\n".join(lines)[:MAX_MESSAGE])
 
@@ -487,6 +486,7 @@ class HotlineBot(discord.Bot):
             return True
         return channel.name.startswith(CHANNEL_PREFIX)
 
+
 def build_bot(pool: SessionPool, log: Callable[[str], None]) -> HotlineBot | None:
     """None when Discord is not configured -- the phone path must still work."""
     token = os.environ.get("HOTLINE_BOT_TOKEN")
@@ -530,4 +530,3 @@ async def run_bot(bot: HotlineBot, token: str, log: Callable[[str], None]) -> No
             await bot.close()
         await asyncio.sleep(delay)
         delay = min(delay * 2, 300.0)
-

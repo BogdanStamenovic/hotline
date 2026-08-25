@@ -43,18 +43,18 @@ PROSE = [
 
 # Real invocations, including the obvious ways of hiding one.
 REAL = [
-    "bWtmcy5leHQ0IC9kZXYvbnZtZTBuMXA5",                      # mkfs.ext4 /dev/nvme0n1p9
-    "c3VkbyBta2ZzLmV4dDQgL2Rldi9zZGE=",                      # sudo mkfs.ext4 /dev/sda
-    "L3NiaW4vbWtmcy5leHQ0IC9kZXYvc2Rh",                      # /sbin/mkfs.ext4 /dev/sda
-    "YmFzaCAtYyAibWtmcy5leHQ0IC9kZXYvc2RhIg==",              # bash -c "mkfs.ext4 /dev/sda"
-    "c2ggLWMgJ3JtIC1yZiAvJw==",                              # sh -c 'rm -rf /'
-    "Y2QgL3RtcCAmJiBzdWRvIHdpcGVmcyAtYSAvZGV2L3NkYQ==",      # cd /tmp && sudo wipefs -a /dev/sda
-    "cm0gLXJmIC8=",                                          # rm -rf /
-    "cm0gLXJmIC8q",                                          # rm -rf /*
-    "ZGQgaWY9L2Rldi96ZXJvIG9mPS9kZXYvc2RhIGJzPTFN",          # dd if=/dev/zero of=/dev/sda bs=1M
-    "ZWNobyB4ID4gL2Rldi9zZGE=",                              # echo x > /dev/sda
-    "c2dkaXNrIC0temFwLWFsbCAvZGV2L3NkYQ==",                  # sgdisk --zap-all /dev/sda
-    "c2hyZWQgLW4xIC9kZXYvc2Ri",                              # shred -n1 /dev/sdb
+    "bWtmcy5leHQ0IC9kZXYvbnZtZTBuMXA5",  # mkfs.ext4 /dev/nvme0n1p9
+    "c3VkbyBta2ZzLmV4dDQgL2Rldi9zZGE=",  # sudo mkfs.ext4 /dev/sda
+    "L3NiaW4vbWtmcy5leHQ0IC9kZXYvc2Rh",  # /sbin/mkfs.ext4 /dev/sda
+    "YmFzaCAtYyAibWtmcy5leHQ0IC9kZXYvc2RhIg==",  # bash -c "mkfs.ext4 /dev/sda"
+    "c2ggLWMgJ3JtIC1yZiAvJw==",  # sh -c 'rm -rf /'
+    "Y2QgL3RtcCAmJiBzdWRvIHdpcGVmcyAtYSAvZGV2L3NkYQ==",  # cd /tmp && sudo wipefs -a /dev/sda
+    "cm0gLXJmIC8=",  # rm -rf /
+    "cm0gLXJmIC8q",  # rm -rf /*
+    "ZGQgaWY9L2Rldi96ZXJvIG9mPS9kZXYvc2RhIGJzPTFN",  # dd if=/dev/zero of=/dev/sda bs=1M
+    "ZWNobyB4ID4gL2Rldi9zZGE=",  # echo x > /dev/sda
+    "c2dkaXNrIC0temFwLWFsbCAvZGV2L3NkYQ==",  # sgdisk --zap-all /dev/sda
+    "c2hyZWQgLW4xIC9kZXYvc2Ri",  # shred -n1 /dev/sdb
 ]
 
 # Ordinary work that must never be touched.
@@ -65,8 +65,8 @@ ORDINARY = [
     "Y2QgL3RtcC94ICYmIHJtIC1yZiAu",
     "Z2l0IHJlc2V0IC0taGFyZA==",
     "bHMgLWxhIC8=",
-    "ZGQgaWY9L2Rldi9zZGEgb2Y9L2JhY2t1cC9kaXNrLmltZw==",       # imaging a disk TO a file is fine
-    "cGFydGVkIC1s",                                            # parted -l just lists
+    "ZGQgaWY9L2Rldi9zZGEgb2Y9L2JhY2t1cC9kaXNrLmltZw==",  # imaging a disk TO a file is fine
+    "cGFydGVkIC1s",  # parted -l just lists
     "cnN5bmMgLWEgLyAvbW50L2JhY2t1cC8=",
 ]
 

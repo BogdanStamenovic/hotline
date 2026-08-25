@@ -120,8 +120,13 @@ class FakeWorld:
         self._pid += 1
         self.spawned.append(name)
         make_session(
-            self.home, self._pid, name, cwd or "/home/bodas",
-            session_id=f"sid-{self._pid}", started_at=self._pid, tmux=f"{name}:@0.%0",
+            self.home,
+            self._pid,
+            name,
+            cwd or "/home/bodas",
+            session_id=f"sid-{self._pid}",
+            started_at=self._pid,
+            tmux=f"{name}:@0.%0",
         )
         return next(s for s in discover() if s.pid == self._pid)
 
@@ -137,7 +142,10 @@ class FakeWorld:
         self.delivered.append((session.name, text))
         self.wire.append((session.name, wire))
         return Watch(
-            session=session, offset=0, stamp=0.0, marker=wire,
+            session=session,
+            offset=0,
+            stamp=0.0,
+            marker=wire,
             was_busy=session.name in self.busy,
         )
 
@@ -171,11 +179,13 @@ class FakeWorld:
         monkeypatch.setattr(pool_module.tmuxen, "spawn", self.spawn)
         monkeypatch.setattr(tmuxen_module, "exists", lambda name: name in self.spawned)
         monkeypatch.setattr(
-            Router, "deliver",
+            Router,
+            "deliver",
             lambda r, spec, text, origin=None: self.deliver(spec, text, origin),
         )
         monkeypatch.setattr(
-            Router, "collect",
+            Router,
+            "collect",
             lambda r, watch, narrator=None, timeout=300.0: self.collect(watch, narrator, timeout),
         )
         monkeypatch.setattr(Router, "kill_session", lambda r, spec: self.kill_session(spec))

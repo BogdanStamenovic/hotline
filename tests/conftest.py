@@ -28,9 +28,14 @@ def isolated_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     # in the tests that touch Discord, because the tests that did the damage
     # were the ones with no idea they were touching it at all.
     for name in (
-        "HOTLINE_BOT_TOKEN", "SENTINEL_BOT_TOKEN", "DISCORD_GUILD_ID",
-        "DISCORD_USER_ID", "DISCORD_TEXT_CHANNEL_ID", "DISCORD_VOICE_CHANNEL_ID",
-        "HOTLINE_VOICE_ALLOWED_IDS", "HOTLINE_API_KEY",
+        "HOTLINE_BOT_TOKEN",
+        "SENTINEL_BOT_TOKEN",
+        "DISCORD_GUILD_ID",
+        "DISCORD_USER_ID",
+        "DISCORD_TEXT_CHANNEL_ID",
+        "DISCORD_VOICE_CHANNEL_ID",
+        "HOTLINE_VOICE_ALLOWED_IDS",
+        "HOTLINE_API_KEY",
     ):
         monkeypatch.delenv(name, raising=False)
     return state

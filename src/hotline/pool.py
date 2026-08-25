@@ -47,16 +47,22 @@ log = logging.getLogger(__name__)
 # treated as a NEW message replacing the held one, which is the safe reading --
 # a caller who types another instruction instead of answering has changed their
 # mind, and delivering the old text would be the exact failure this guards.
-_YES = re.compile(r"^(?:y|yes|yeah|yep|yup|ok|okay|sure|send(?:\s+it)?|go|do\s+it|"
-                  r"confirm(?:ed)?)\s*[.!]?$", re.IGNORECASE)
+_YES = re.compile(
+    r"^(?:y|yes|yeah|yep|yup|ok|okay|sure|send(?:\s+it)?|go|do\s+it|"
+    r"confirm(?:ed)?)\s*[.!]?$",
+    re.IGNORECASE,
+)
+
+
 def _clip(text: str | None, limit: int = 160) -> str:
     """Echo the held message back short, so he can see WHAT he is confirming."""
     flat = " ".join((text or "").split())
     return flat if len(flat) <= limit else flat[: limit - 1] + "…"
 
 
-_NO = re.compile(r"^(?:n|no|nope|nah|cancel|stop|don'?t|drop\s+it|never\s*mind)\s*[.!]?$",
-                 re.IGNORECASE)
+_NO = re.compile(
+    r"^(?:n|no|nope|nah|cancel|stop|don'?t|drop\s+it|never\s*mind)\s*[.!]?$", re.IGNORECASE
+)
 
 # How long a background relay will wait for a busy session to get round to the
 # message it was handed. Generous: the sender has already been answered by the
@@ -412,8 +418,7 @@ class SessionPool:
                     "with none of the earlier conversation in it",
                 )
                 conv.own = None
-        session = await tmuxen.spawn(conv.key, cwd=conv.cwd or self.cwd,
-                                     bypass=self.router.bypass)
+        session = await tmuxen.spawn(conv.key, cwd=conv.cwd or self.cwd, bypass=self.router.bypass)
         conv.own = session.name
         self._save_bindings()
         self._enrol(session.session_id, session.name, task)
@@ -464,12 +469,11 @@ class SessionPool:
 
             known = sorted(
                 Registry().agents.values(),
-                key=lambda a: (a.privileged, a.declared_at), reverse=True,
+                key=lambda a: (a.privileged, a.declared_at),
+                reverse=True,
             )
             if not known:
-                return Reply(
-                    text="No agents have declared themselves.", subtype="control"
-                )
+                return Reply(text="No agents have declared themselves.", subtype="control")
             lines = [a.describe() for a in known]
             return Reply(text="\n".join(lines), subtype="control")
 
@@ -489,8 +493,9 @@ class SessionPool:
             conv.attached_to = conv.attached_id = None
             conv.confirmed = conv.held = conv.held_for = conv.held_origin = None
             if was:
-                return Reply(text=f"Detached from {was}. Back to your own session.",
-                             subtype="control")
+                return Reply(
+                    text=f"Detached from {was}. Back to your own session.", subtype="control"
+                )
             # "new session" means throw this one away and start over, so it ends
             # the session rather than falling through as chat. A bare "detach" is a
             # command and must be answered as one -- leaking it to the model as
@@ -515,21 +520,22 @@ class SessionPool:
                 if was and not closed:
                     return Reply(
                         text=f"**{was} did not close** — it is still running, and "
-                             f"because this channel's session is named after the "
-                             f"channel, your next message would reach it again "
-                             f"rather than something new.\nIf you want a genuinely "
-                             f"separate one, say `new agent <what it should do>` — "
-                             f"that gets its own session and its own channel. To "
-                             f"force this one down: `session kill {was}`.",
+                        f"because this channel's session is named after the "
+                        f"channel, your next message would reach it again "
+                        f"rather than something new.\nIf you want a genuinely "
+                        f"separate one, say `new agent <what it should do>` — "
+                        f"that gets its own session and its own channel. To "
+                        f"force this one down: `session kill {was}`.",
                         subtype="control",
                     )
                 return Reply(
                     text="Started over. Your previous session was closed; the next "
-                         "thing you say opens a fresh one.",
+                    "thing you say opens a fresh one.",
                     subtype="control",
                 )
-            return Reply(text="Not connected to anything — you are on your own session.",
-                         subtype="control")
+            return Reply(
+                text="Not connected to anything — you are on your own session.", subtype="control"
+            )
 
         if route.action == "where":
             if conv.attached_to:
@@ -537,12 +543,12 @@ class SessionPool:
             if conv.own:
                 return Reply(
                     text=f"On your own session {conv.own}, in tmux as "
-                         f"{conv.tmux_target} — `tmux attach -t {conv.tmux_target}`.",
+                    f"{conv.tmux_target} — `tmux attach -t {conv.tmux_target}`.",
                     subtype="control",
                 )
             return Reply(
                 text="Not connected to anything, and your own session has not been "
-                     "started yet — say anything and it will be.",
+                "started yet — say anything and it will be.",
                 subtype="control",
             )
 
@@ -562,7 +568,7 @@ class SessionPool:
                     listing = ", ".join(s.name for s in live) or "none"
                     return Reply(
                         text=f"No live session called `{route.target}` — nothing "
-                             f"was killed. Live now: {listing}.",
+                        f"was killed. Live now: {listing}.",
                         subtype="control",
                     )
                 return None  # a bare "kill the process on port 8080" -- let it through
@@ -594,7 +600,7 @@ class SessionPool:
             conv.confirmed = conv.held = conv.held_for = conv.held_origin = None
             return Reply(
                 text=f"Connected to {describe(session)}. Everything you say now goes there "
-                     f'until you say "detach".',
+                f'until you say "detach".',
                 subtype="control",
             )
         return None
@@ -617,8 +623,8 @@ class SessionPool:
         task = (route.target or "").strip()
         if not task:
             return Reply(
-                text='Say what it should work on — `new agent stylize the app on '
-                     'port 8000`. The task becomes its name and its channel topic.',
+                text="Say what it should work on — `new agent stylize the app on "
+                "port 8000`. The task becomes its name and its channel topic.",
                 subtype="control",
             )
         # Minted, not derived: two agents started a second apart must not collide,
@@ -634,15 +640,19 @@ class SessionPool:
         # Handed the task straight away rather than waiting to be spoken to: he
         # asked for an agent to do a thing, not for an idle session.
         with contextlib.suppress(HotlineError):
-            await self.router.deliver(session.name, task, Origin(
-                kind="system",
-                label="hotline, relaying the task this agent was created for",
-            ))
+            await self.router.deliver(
+                session.name,
+                task,
+                Origin(
+                    kind="system",
+                    label="hotline, relaying the task this agent was created for",
+                ),
+            )
         where = f" in <#{channel}>" if channel else " (no channel — Discord refused)"
         return Reply(
             text=f"Started **{session.name}**{where}, working on:\n> {task}\n"
-                 f"Talk to it there, or `connect {session.name}` from here. "
-                 f"`tmux attach -t {tmuxen.tmux_name(key)}` to take it over directly.",
+            f"Talk to it there, or `connect {session.name}` from here. "
+            f"`tmux attach -t {tmuxen.tmux_name(key)}` to take it over directly.",
             subtype="control",
         )
 
@@ -678,9 +688,7 @@ class SessionPool:
                 found = brief_for(candidate)
                 source = "handoff" if found and found.from_handoff else "transcript only"
                 state = "finished" if candidate.done else "killed"
-                lines.append(
-                    f"{index}. {candidate.name} — {candidate.task} [{state}; {source}]"
-                )
+                lines.append(f"{index}. {candidate.name} — {candidate.task} [{state}; {source}]")
             lines.append("")
             lines.append('Say "resume 2" or "resume data-f3".')
             return Reply(text="\n".join(lines), subtype="control")
@@ -706,7 +714,7 @@ class SessionPool:
                 who = agent_alias.name if agent_alias else session.name
                 return Reply(
                     text=f"**{who}** never stopped — it is running as `{session.name}`, "
-                         f"so there is nothing to resurrect. Connected you to it.",
+                    f"so there is nothing to resurrect. Connected you to it.",
                     subtype="control",
                 )
 
@@ -724,14 +732,15 @@ class SessionPool:
         if brief is None:
             return Reply(
                 text=f"{agent.name} left no handoff and its transcript is gone, so "
-                     "there is nothing to resume it from.",
+                "there is nothing to resume it from.",
                 subtype="control",
             )
         try:
             session = await tmuxen.spawn(agent.name, cwd=self.cwd, name=agent.name)
         except HotlineError as exc:
-            return Reply(text=f"Could not start a session for {agent.name}: {exc}",
-                         subtype="control")
+            return Reply(
+                text=f"Could not start a session for {agent.name}: {exc}", subtype="control"
+            )
 
         had = agent.channel_id
         name, task = agent.name, agent.task
@@ -749,10 +758,14 @@ class SessionPool:
         self._seeding = asyncio.create_task(seed())
 
         where = f" — reading it in <#{channel}> now" if channel else ""
-        source = "its handoff" if brief.from_handoff else "its transcript (it was killed, so there is no handoff)"
+        source = (
+            "its handoff"
+            if brief.from_handoff
+            else "its transcript (it was killed, so there is no handoff)"
+        )
         return Reply(
             text=f"Brought **{name}** back as `{session.name}`, seeded from {source}"
-                 f"{where}.\n> {task}",
+            f"{where}.\n> {task}",
             subtype="control",
         )
 
@@ -1091,9 +1104,7 @@ def describe_resources() -> str:
             for line in fh:
                 key, _, rest = line.partition(":")
                 meminfo[key] = int(rest.split()[0]) // 1024
-        lines.append(
-            f"RAM: {meminfo['MemAvailable']} MB available of {meminfo['MemTotal']} MB"
-        )
+        lines.append(f"RAM: {meminfo['MemAvailable']} MB available of {meminfo['MemTotal']} MB")
     except (OSError, KeyError, ValueError, IndexError):
         lines.append("RAM: unreadable")
 
@@ -1107,9 +1118,15 @@ def describe_resources() -> str:
     if shutil.which("nvidia-smi"):
         try:
             out = subprocess.run(
-                ["nvidia-smi", "--query-gpu=name,memory.used,memory.total",
-                 "--format=csv,noheader"],
-                capture_output=True, text=True, timeout=10, check=False,
+                [
+                    "nvidia-smi",
+                    "--query-gpu=name,memory.used,memory.total",
+                    "--format=csv,noheader",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
             ).stdout.strip()
             if out:
                 lines.append(f"GPU: {out}")

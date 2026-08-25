@@ -264,9 +264,7 @@ class Registry:
             # own sessions -- "you never really go away, you just recycle" -- and
             # a retention sweep quietly deleting it three days after one stint
             # ended would take the role with it.
-            if not a.privileged
-            and a.expires_at is not None
-            and moment >= a.expires_at
+            if not a.privileged and a.expires_at is not None and moment >= a.expires_at
         ]
 
     def needing_channel(self) -> list[Agent]:

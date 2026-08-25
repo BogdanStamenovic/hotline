@@ -54,9 +54,7 @@ def tmux_name(key: str) -> str:
 
 
 def _tmux(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["tmux", *args], capture_output=True, text=True, timeout=15, check=check
-    )
+    return subprocess.run(["tmux", *args], capture_output=True, text=True, timeout=15, check=check)
 
 
 def _detached_tmux(*args: str) -> subprocess.CompletedProcess[str]:
@@ -82,9 +80,11 @@ def _detached_tmux(*args: str) -> subprocess.CompletedProcess[str]:
     """
     try:
         return subprocess.run(
-            ["systemd-run", "--user", "--scope", "--collect", "--quiet", "--",
-             "tmux", *args],
-            capture_output=True, text=True, timeout=15, check=True,
+            ["systemd-run", "--user", "--scope", "--collect", "--quiet", "--", "tmux", *args],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=True,
         )
     except (FileNotFoundError, subprocess.CalledProcessError) as exc:
         log.warning("systemd-run unavailable (%s); starting tmux unscoped", exc)
@@ -106,9 +106,7 @@ def capture(target: str, lines: int = 60) -> str:
     thinking hard look identical from the outside, but the pane usually says which
     it is -- a spinner and a tool name, or a permission prompt nobody answered.
     """
-    result = _tmux(
-        "capture-pane", "-p", "-t", target, "-S", f"-{lines}", check=False
-    )
+    result = _tmux("capture-pane", "-p", "-t", target, "-S", f"-{lines}", check=False)
     if result.returncode != 0:
         return ""
     return "\n".join(line.rstrip() for line in result.stdout.splitlines()).strip()
@@ -154,11 +152,15 @@ async def spawn(
         argv += ["--name", name]
     try:
         _detached_tmux(
-            "new-session", "-d", "-s", target,
+            "new-session",
+            "-d",
+            "-s",
+            target,
             *(("-c", cwd) if cwd else ()),
             # -e keeps this out of the tmux server's global environment, which is
             # shared with every pane Bogdan has open.
-            "-e", "HOTLINE_SPAWNED=1",
+            "-e",
+            "HOTLINE_SPAWNED=1",
             *argv,
         )
     except (subprocess.SubprocessError, OSError) as exc:

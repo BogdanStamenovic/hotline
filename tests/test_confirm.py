@@ -139,8 +139,11 @@ async def test_the_origin_reaches_the_wire(world: FakeWorld) -> None:
     from hotline.provenance import Origin, parse
 
     origin = Origin(
-        kind="human", label="bogdan028304", author_id="bogdan-id",
-        channel_id="chan", message_id="999",
+        kind="human",
+        label="bogdan028304",
+        author_id="bogdan-id",
+        channel_id="chan",
+        message_id="999",
     )
     p = pool()
     await p.ask(GENERAL, "restart the deploy", origin=origin)
@@ -174,10 +177,12 @@ async def test_a_confirmed_message_carries_its_own_receipt_not_the_yes(
     """
     from hotline.provenance import Origin, parse
 
-    held = Origin(kind="human", label="bogdan", author_id="b",
-                  channel_id="c", message_id="the-real-one")
-    confirmation = Origin(kind="human", label="bogdan", author_id="b",
-                          channel_id="c", message_id="just-the-yes")
+    held = Origin(
+        kind="human", label="bogdan", author_id="b", channel_id="c", message_id="the-real-one"
+    )
+    confirmation = Origin(
+        kind="human", label="bogdan", author_id="b", channel_id="c", message_id="just-the-yes"
+    )
     p = pool()
     await p.ask(GENERAL, "restart the deploy", origin=held)
     await p.ask(GENERAL, "yes", origin=confirmation)
@@ -193,14 +198,19 @@ async def test_dropping_a_held_message_drops_its_receipt_too(world: FakeWorld) -
     from hotline.provenance import Origin
 
     p = pool()
-    await p.ask(GENERAL, "first", origin=Origin(kind="human", label="b",
-                                                author_id="b", channel_id="c",
-                                                message_id="first-one"))
+    await p.ask(
+        GENERAL,
+        "first",
+        origin=Origin(
+            kind="human", label="b", author_id="b", channel_id="c", message_id="first-one"
+        ),
+    )
     await p.ask(GENERAL, "no")
     await p.ask(GENERAL, "second")
     await p.ask(GENERAL, "yes")
 
     from hotline.provenance import parse
+
     _, wire = world.wire[-1]
     record = parse(wire)
     assert record is None or record.get("message_id") != "first-one"

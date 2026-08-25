@@ -77,7 +77,11 @@ def test_install_hook_preserves_existing_stop_hooks(fake_claude: Path) -> None:
     settings = fake_claude / "settings.json"
     settings.write_text(
         json.dumps(
-            {"hooks": {"Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "mine"}]}]}}
+            {
+                "hooks": {
+                    "Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "mine"}]}]
+                }
+            }
         )
     )
     install_hook()

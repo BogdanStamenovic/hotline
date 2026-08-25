@@ -147,9 +147,7 @@ def _is_real_user_turn(obj: dict) -> bool:
         return True
     if not isinstance(content, list):
         return False
-    return not any(
-        isinstance(b, dict) and b.get("type") == "tool_result" for b in content
-    )
+    return not any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content)
 
 
 def turn_in_flight(session_id: str, tail_bytes: int = 200_000) -> bool:

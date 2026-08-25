@@ -157,7 +157,7 @@ async def test_connect_to_something_that_is_not_a_session_is_just_a_question(
 
 
 async def test_new_session_really_starts_over(three: Path, world) -> None:
-    """"new session" means throw this one away. It now has a session to throw."""
+    """ "new session" means throw this one away. It now has a session to throw."""
     pool = SessionPool()
     await pool.ask("k", "hello")
     _, reply = await pool.ask("k", "new session")
@@ -197,7 +197,7 @@ async def test_the_connection_is_per_conversation(three: Path, world) -> None:
 
 
 async def test_an_explicit_connection_beats_an_inferred_target(three: Path, world) -> None:
-    """"what are you working on" infers the *newest* session. While deliberately
+    """ "what are you working on" infers the *newest* session. While deliberately
     connected to an older one, that inference must not hijack the message."""
     pool = SessionPool()
     await pool.ask("k", "connect data-d6")  # the oldest

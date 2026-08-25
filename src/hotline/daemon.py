@@ -42,9 +42,7 @@ DEFAULT_PORT = 8788
 DEFAULT_SOFT_TIMEOUT = 100.0
 DEFAULT_HARD_TIMEOUT = 900.0
 
-PENDING_REPLY = (
-    "Still working on that one. Ask me again in a moment and I'll have the answer."
-)
+PENDING_REPLY = "Still working on that one. Ask me again in a moment and I'll have the answer."
 
 # Appended to every pooled session's system prompt. hotline's answers get spoken by
 # a phone or read on a phone screen, and the default behaviour -- investigate
@@ -247,9 +245,7 @@ async def _sweep_forever(log: Callable[[str], None], every: float = 600.0) -> No
     while True:
         await asyncio.sleep(every)
         try:
-            swept = await asyncio.to_thread(
-                lambda: Registry().sweep(channels_from_env(), log=log)
-            )
+            swept = await asyncio.to_thread(lambda: Registry().sweep(channels_from_env(), log=log))
         except Exception as exc:  # noqa: BLE001 - a sweep must never take the daemon down
             log(f"agent sweep failed: {type(exc).__name__}: {exc}")
             continue
@@ -349,7 +345,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     logging.getLogger("discord").setLevel(os.environ.get("HOTLINE_DISCORD_LOG_LEVEL", "WARNING"))
     parser = argparse.ArgumentParser(prog="hotlined", description=__doc__.splitlines()[0])
     parser.add_argument("--host", default=os.environ.get("HOTLINE_HOST", "0.0.0.0"))
-    parser.add_argument("--port", type=int, default=int(os.environ.get("HOTLINE_PORT", DEFAULT_PORT)))
+    parser.add_argument(
+        "--port", type=int, default=int(os.environ.get("HOTLINE_PORT", DEFAULT_PORT))
+    )
     parser.add_argument("--cwd", default=os.environ.get("HOTLINE_CWD") or None)
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument(
