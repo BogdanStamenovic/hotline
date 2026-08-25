@@ -3389,3 +3389,78 @@ And the test it says it cares most about is the correct one to care most about:
 that, a fall-through chain does not degrade — it stops at the first silent failure
 and the call vanishes. That is precisely the failure mode this whole day was spent
 discovering we could not see.
+
+## He found the premise, not a better answer (20:45)
+
+Verified against Discord myself, msg `1541854587424735242`:
+
+> Okay so this is the idea: make your own app for delegation talking excetera
+> which i will sideload every week.
+>
+> Telegram for the ring. And we can fully scrap the talking voice rout. Thats
+> bassically a gimic
+
+**Every option the three of us costed assumed the thing that rings is the thing
+you talk through.** That single unexamined premise is what made both free paths
+fragile: B had to keep an app *alive* in order to ring, and paid for it with the
+audio-session keepalive; C had to borrow a stranger's app in order to ring, and
+inherited its UI and its ungated push endpoint.
+
+He decoupled them. Telegram rings, his own app talks, and the entire fragility
+catalogue we spent the evening building evaporates — no CallKit, no keepalive, no
+push entitlement, no reboot gap, no Belledonne. All of it existed only to keep a
+ringer alive.
+
+He did not find a better answer to our question. **He noticed the question had a
+premise.** Second time today the useful move was to find the assumption rather
+than optimise inside it — the first was `data-89` on my §2 chain, and I have named
+it as a pattern rather than a one-off in both the brief and the handoff.
+
+### Owner's ruling on the voice subsystem
+
+`data-89` correctly refused to decide alone whether "fully scrap the talking voice
+rout" means *delete* `voice.py`/`audio.py`/Whisper/Piper. It is my subsystem, so
+it is my call, and I adopted its conservative reading: **stop investing, build
+nothing new, delete nothing** — and asked him for an explicit sentence.
+
+The reasoning, on the record rather than as a preference: **deleting is
+irreversible and costs nothing to defer; keeping costs disk.** Those are not
+symmetric and the asymmetry settles it by itself. Beyond that, `voice.py` encodes
+six real py-cord receive bugs nobody upstream had documented, plus the transport
+key rotation py-cord never calls its own updater for. "The direction changed" is
+not the same sentence as "destroy it". If he says *delete the voice code*, it goes
+in one commit.
+
+### The distinction that a broad reading would have destroyed
+
+"Scrap the talking voice route" maps onto **three** things and only one is the
+gimmick:
+
+1. **Discord voice + Whisper + Piper on the GPU** — talking aloud to Claude. This
+   is the gimmick. Scrapped.
+2. **The iPhone Shortcut path** — "Hey Siri, Hotline", live since Phase 2 and in
+   daily use. **Not the same thing at all:** his *phone* does the speech
+   on-device, and this side only ever sees text over HTTP. No GPU, no Whisper, no
+   Piper. It costs nothing and it works today.
+3. **The new app** — text delegation, talking *to* agents.
+
+(2) is exactly what a broad reading sweeps up by accident, for zero benefit, and
+it is arguably the part he uses most. Flagged to him explicitly rather than
+assumed, and flagged to `data-89` for the brief, because whoever reads that
+document next will not have watched Phase 2 get built.
+
+### Standing down, without tearing out
+
+Told `hotline-ios` to **stop** `hotline-sipprobe.service` — C is not the plan and
+an open SIP port with no purpose should not be left to be forgotten, which it
+flagged itself. But **keep the capture and keep the code**: it is correct, it cost
+real work, and it is the branch we return to if Telegram is not on his phone.
+
+Which remains **the load-bearing unknown**: nobody has confirmed he has Telegram,
+and ringing him needs a second account with a real phone number, because bot
+tokens cannot call `phone.requestCall`. Asked directly.
+
+Also told him the two things I had asked him to do at home are **void** — the
+Linphone test answers a question nobody is asking, and the wifi measurement was
+about call-audio quality, which no longer exists as a concern. Better he does
+nothing than two obsolete chores because I asked an hour ago.
