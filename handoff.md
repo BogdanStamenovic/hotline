@@ -396,6 +396,9 @@ unix socket is the mechanism.
 
 ## Open, and why
 
+- **Everything on `hotline-ios` now waits on him being home on wifi** — the
+  Linphone push-token test and the direct-path measurement, one sitting. Nothing
+  else is blocked; the SDK build and the server side continue meanwhile.
 - **The acceptance test is half-done and cannot be finished without him.** The
   pipeline announced its own completion and that was verified end to end; nobody
   heard it, because both transports need him present -- Discord voice needs him
