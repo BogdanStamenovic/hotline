@@ -28,17 +28,32 @@ The other half of the problem (a mis-transcription that runs something merely
 
 from __future__ import annotations
 
+import os
 import re
 import shlex
+import stat
 
 # Prefixes that stand in front of the real command without being it.
 _PREFIXES = {"sudo", "doas", "env", "time", "nohup", "nice", "ionice", "command", "exec", "setsid"}
 _SHELLS = {"sh", "bash", "zsh", "dash", "ash", "ksh"}
 
-# Binaries that are catastrophic no matter what arguments they are given.
-_ALWAYS: dict[str, str] = {
-    "mkfs": "creating a filesystem (destroys the target device)",
-    "wipefs": "wiping filesystem signatures",
+# Binaries that are catastrophic when pointed at a block device -- which is what
+# they are normally pointed at, so the default here is to refuse.
+#
+# They used to be unconditional, and that was wrong in a way worth recording:
+# `mkfs.ext4 ./disk.img` builds a filesystem inside a REGULAR FILE. It is a
+# routine thing to do, it touches no device, and it is undone by deleting the
+# file. The guard blocked it anyway, because the rule keyed on the binary and
+# never looked at argv -- while `dd` and `shred`, two lines below, already did
+# exactly that check. Reported by `hotline-ios`, which hit it building a disk
+# image and correctly did not ask anyone to run it on its behalf.
+#
+# The asymmetry still holds, so the exception is narrow: a false negative here
+# destroys a disk and a false positive is an inconvenience. Anything that cannot
+# be shown to be a plain file is still refused.
+_DEVICE_EATERS: dict[str, str] = {
+    "mkfs": "creating a filesystem on a block device",
+    "wipefs": "wiping filesystem signatures from a block device",
 }
 
 _DEVICE = re.compile(r"/dev/(sd[a-z]|nvme\d|vd[a-z]|mmcblk\d|disk\d)", re.IGNORECASE)
@@ -47,6 +62,34 @@ _ROOT_PATH = re.compile(r"^/\*?$")
 # A redirect onto a raw device is not a command, so it is the one thing still
 # matched against the clause text rather than an argv.
 _REDIRECT_TO_DEVICE = re.compile(r">\s*/dev/(sd[a-z]|nvme\d|vd[a-z]|mmcblk\d)", re.IGNORECASE)
+
+
+def _only_plain_files(targets: list[str]) -> bool:
+    """True only when every target is demonstrably NOT a block device.
+
+    Deliberately biased toward saying False. No targets at all means the command
+    was not understood, and "I could not tell" must read as "refuse" here rather
+    than as "allow" -- which is the whole difference between this being a guard
+    and being decoration.
+
+    The `stat` is what catches the cases the path text cannot: a symlink into
+    /dev, or a device node living somewhere unexpected. It follows symlinks on
+    purpose. A path that does not exist yet is fine -- `mkfs.ext4 ./disk.img` on
+    a file about to be created is the case this exists to permit.
+    """
+    if not targets:
+        return False
+    for target in targets:
+        if target.startswith("/dev/") or _DEVICE.search(target):
+            return False
+        try:
+            if stat.S_ISBLK(os.stat(target).st_mode):
+                return False
+        except OSError:
+            # Does not exist, or cannot be stat-ed. Not evidence of a device, and
+            # refusing every not-yet-created image file would restore the bug.
+            continue
+    return True
 
 
 def _split_clauses(command: str) -> list[str]:
@@ -98,8 +141,11 @@ def _inspect(argv: list[str], clause: str, depth: int = 0) -> str | None:
                         return found
         return None
 
-    for name, reason in _ALWAYS.items():
+    for name, reason in _DEVICE_EATERS.items():
         if base == name or base.startswith(name + "."):
+            targets = [token for token in rest if not token.startswith("-")]
+            if _only_plain_files(targets):
+                return None
             return reason
 
     if base == "rm":

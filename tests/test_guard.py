@@ -17,6 +17,7 @@ import base64
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -144,3 +145,65 @@ def test_install_guard_is_idempotent_and_additive(tmp_path, monkeypatch) -> None
     commands = [h["command"] for e in entries for h in e["hooks"]]
     assert "someone-elses-hook" in commands
     assert len(entries) == 2
+
+
+# ---- mkfs on a file is not mkfs on a disk -----------------------------------
+#
+# Reported by `hotline-ios`, which hit it building a disk image. The rule keyed
+# on the binary and never looked at argv, while `dd` and `shred` in the same
+# function already did exactly that check. Destructive commands stay base64 here,
+# following the rest of this file: a test suite should not carry a literal
+# `mkfs.ext4 /dev/...` in plain text.
+
+DEVICE_MKFS = [
+    "bWtmcy5leHQ0IC9kZXYvbnZtZTBuMXA0",
+    "c3VkbyBta2ZzLmV4dDQgL2Rldi9zZGEx",
+    "bWtmcy5leHQ0IC9kZXYvZGlzay9ieS1sYWJlbC9kYXRh",
+    "bWtmcy5leHQ0IC9kZXYvbWFwcGVyL3ZnLXJvb3Q=",
+    "bWtmcy5leHQ0",
+    "bWtmcy5leHQ0IC1G",
+    "d2lwZWZzIC1hIC9kZXYvc2Rh",
+]
+
+
+@pytest.mark.parametrize("encoded", DEVICE_MKFS)
+def test_mkfs_at_anything_not_provably_a_file_is_still_blocked(encoded: str) -> None:
+    """Includes /dev paths the device regex does not know (by-label, mapper) and
+    the no-target case -- "I could not tell" has to read as refuse, or this is
+    decoration rather than a guard."""
+    assert check("Bash", {"command": decode(encoded)}) is not None
+
+
+def test_making_a_filesystem_in_a_regular_file_is_allowed(tmp_path: Path) -> None:
+    """`mkfs.ext4 ./disk.img` touches no device and is undone by deleting a file."""
+    image = tmp_path / "disk.img"
+    image.write_bytes(b"")
+
+    assert check("Bash", {"command": f"mkfs.ext4 {image}"}) is None
+
+
+def test_making_a_filesystem_in_a_file_that_does_not_exist_yet_is_allowed(
+    tmp_path: Path,
+) -> None:
+    """The usual case: the image is created by the command itself. Refusing a
+    path that is merely absent would restore the bug."""
+    assert check("Bash", {"command": f"mkfs.ext4 {tmp_path / 'new.img'}"}) is None
+
+
+def test_mkfs_through_a_symlink_into_dev_is_blocked(tmp_path: Path) -> None:
+    """The check the path text cannot do. A harmless-looking name pointed at a
+    real device node is still caught, because the stat follows symlinks."""
+    device = Path("/dev/nvme0n1")
+    if not device.exists():
+        pytest.skip("no /dev/nvme0n1 on this machine to point at")
+    link = tmp_path / "innocent.img"
+    link.symlink_to(device)
+
+    assert check("Bash", {"command": f"mkfs.ext4 {link}"}) is not None
+
+
+def test_wipefs_gets_the_same_treatment(tmp_path: Path) -> None:
+    image = tmp_path / "disk.img"
+    image.write_bytes(b"")
+
+    assert check("Bash", {"command": f"wipefs -a {image}"}) is None
