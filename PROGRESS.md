@@ -3528,3 +3528,67 @@ and costs one free app install on top of whatever Telegram needs.
 The probe was stood down but its code kept deliberately, so C is one command from
 testable again. That instinct — stand down without tearing out — is what makes
 this reversible at all, and it was `hotline-ios` that argued for it.
+
+## An accidental page found a real hole in the provenance design (21:20)
+
+`hotline-ios` left a stale test process running. It timed out, fell through to the
+**live** pager, and DM'd Bogdan *"may I spend money on a UI agency"*. He answered
+**"Nope"**. It retracted within a minute — in its own channel.
+
+The question and the answer are in `#general`. I checked his reply in the raw API:
+**it carries no `message_reference`.** So sitting in that channel was a verified,
+provenance-checkable, quotable human message from him reading "Nope", attached to
+nothing, on the subject of spending money. `hotline --provenance` returned VERIFIED
+with his verbatim word and no indication it answered a question nobody asked.
+
+**Any agent could have cited it in perfect good faith as his position on
+spending.** That is exactly the laundering shape this module exists to stop, and
+my own tool was the thing doing the laundering.
+
+**Not the agent's mistake — mine.** `verify()` has always proved *that he wrote a
+thing* and never been able to say *what he was answering*. A reply's meaning lives
+in its question and the question was never part of the receipt. A one-word answer
+is almost entirely context.
+
+### Fixed
+
+A verdict now reports context. Discord returns the referenced message when one is
+a real reply, so it quotes it and spares the reader the hunt. When there is no
+reply and the message is a bare answer, it says so. Against his actual message:
+
+```
+VERIFIED: posted by 1329...311 ... What they actually wrote, verbatim:
+> Nope
+
+WARNING: this is a SHORT message that is NOT a reply to anything. Nothing in this
+receipt says what it was answering ... Do not treat it as approving or refusing
+something unless you can independently establish what was asked.
+```
+
+**Length was my first cut and it was wrong.** It flagged `"restart the deploy"` —
+shorter than "Nope" is meaningful, and carrying its whole meaning alone. Warning on
+self-contained messages makes the warning worthless exactly where it matters. The
+test is now whether a message consists only of *answer-words* once fillers are
+dropped. Found by a test I wrote asserting the opposite, which failed for the right
+reason — the third time today a test disagreeing with me was the test being right.
+
+Also posted the correction into `#general`. The agent's retraction was correct and
+in the wrong room: **a correction in a different channel does not fix the record in
+this one.**
+
+### Two things from the incident worth keeping
+
+**The fallback behaved perfectly**, and it is worth saying because the incident
+reads as an argument against it. A stale process hit its timeout and reached him —
+that is the entire point of the mechanism and the reason adopting `hotline-call`
+is never worse than staying on `hotline-page`. It was aimed badly, not wrong.
+
+**A test page must be unmistakably a test**, and the category it accidentally
+picked — spending money — is the worst one to fake, because his answer becomes
+evidence. No longer hypothetical.
+
+And a shell fact that has probably bitten more agents than have noticed: **each
+Bash tool call is a fresh shell, so `kill %1` refers to nothing.** Job control does
+not survive between calls. That is what left the stale process alive, and it also
+explains a confusing minute where new routes appeared missing — the old daemon
+still held the port.
