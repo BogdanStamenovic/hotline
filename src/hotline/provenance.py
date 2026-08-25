@@ -314,6 +314,8 @@ class Verdict:
     # different questions, and a reader who cannot see which one failed is back
     # to guessing.
     warrant: Verdict | None = None
+    # What the message was replying to, or a warning that nothing establishes it.
+    context: str = ""
 
     def as_warrant(self) -> str:
         """This verdict rendered as the warrant on someone else's message.
@@ -348,6 +350,8 @@ class Verdict:
         out = f"{mark}: {self.summary}"
         if self.detail:
             out += f"\n{self.detail}"
+        if self.context:
+            out += "\n\n" + self.context
         if self.warrant is not None:
             out += "\n\n" + self.warrant.as_warrant()
         if self.added:
@@ -475,7 +479,107 @@ def _verify_claim(
         f"posted by {author} in channel {channel_id} at {when}. What they "
         f"actually wrote, verbatim:\n> " + "\n> ".join(quoted.splitlines()[:20]),
         added=added,
+        context=_context_of(original),
     )
+
+
+# Words that answer rather than say anything. A message built only from these is
+# almost entirely the question it replied to -- "Nope" means nothing on its own,
+# whereas "restart the deploy" is short and still carries its whole meaning. Length
+# alone was the first cut and it was wrong: it flagged short INSTRUCTIONS, which
+# are self-contained, and warning on those would make the warning worthless where
+# it matters.
+_ANSWER_WORDS = frozenset(
+    [
+        "yes",
+        "yeah",
+        "yep",
+        "yup",
+        "ok",
+        "okay",
+        "k",
+        "sure",
+        "fine",
+        "correct",
+        "right",
+        "agreed",
+        "approved",
+        "confirm",
+        "confirmed",
+        "do",
+        "it",
+        "go",
+        "ahead",
+        "proceed",
+        "send",
+        "ship",
+        "no",
+        "nope",
+        "nah",
+        "never",
+        "negative",
+        "dont",
+        "stop",
+        "cancel",
+        "denied",
+        "deny",
+        "refuse",
+        "wait",
+        "hold",
+    ]
+)
+# Carry no meaning either way; ignored when deciding if a message is a bare answer.
+_FILLER = frozenset(
+    ["the", "a", "an", "this", "that", "then", "now", "please", "thanks", "thank", "you", "i", "is"]
+)
+_MAX_ANSWER_WORDS = 5
+
+
+def _is_bare_answer(text: str) -> bool:
+    words = [w.strip(".,!?;:'\"()") for w in text.lower().split()]
+    words = [w for w in words if w and w not in _FILLER]
+    if not words or len(words) > _MAX_ANSWER_WORDS:
+        return False
+    return all(w in _ANSWER_WORDS for w in words)
+
+
+def _context_of(original: dict[str, Any]) -> str:
+    """What this message was replying to, or a warning that nothing says.
+
+    The gap this closes cost something real. An agent testing its pager left a
+    stale process running; it timed out, fell through to the live pager, and asked
+    Bogdan "may I spend money on a UI agency". He answered "Nope". The question was
+    never real -- but his answer is, and it sits in the channel as a **verified,
+    quotable human refusal about spending money, attached to nothing.** Any agent
+    could cite it in perfect good faith.
+
+    That is not the agent's mistake, it is this module's. `verify()` proves he
+    wrote the word. It has never been able to say what he was answering, because a
+    reply's meaning lives in its question and the question was not part of the
+    receipt. A one-word answer is almost entirely context.
+
+    Discord gives us the answer when a message is a real reply, so quote it. When
+    it is not -- as his was not -- say so rather than presenting a bare "Nope" as
+    though its meaning were established.
+    """
+    referenced = original.get("referenced_message")
+    if isinstance(referenced, dict):  # Discord knows the question; quote it.
+        body = str(referenced.get("content", "")).strip()
+        who = str((referenced.get("author") or {}).get("id", "?"))
+        if body:
+            head = "\n> ".join(body.splitlines()[:6])
+            return f"It is a reply to this message from {who}:\n> {head}"
+        return f"It is a reply to a message from {who} that carries no text."
+    if _is_bare_answer(str(original.get("content", ""))):
+        return (
+            "WARNING: this is a SHORT message that is NOT a reply to anything. "
+            "Nothing in this receipt says what it was answering, and a short "
+            "answer is almost entirely its question. Do not treat it as approving "
+            "or refusing something unless you can independently establish what "
+            "was asked -- find the question yourself, in the same channel, and "
+            "check that it is the one you think it is."
+        )
+    return ""
 
 
 def _added(body: str, posted: str) -> str:

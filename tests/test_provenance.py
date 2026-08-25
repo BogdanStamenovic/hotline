@@ -509,3 +509,73 @@ def test_verifying_a_spoken_turn_reports_that_there_is_nothing_to_check() -> Non
 
     assert not verdict.ok
     assert "carries a claim and no receipt" in str(verdict)
+
+
+# ---- a verified answer is only as meaningful as its question ----------------
+#
+# An agent testing its pager left a stale process running. It timed out, fell
+# through to the LIVE pager, and asked Bogdan "may I spend money on a UI agency".
+# He answered "Nope". The question was never real -- but his answer is, and it
+# sits in the channel as a verified, quotable human refusal about spending money,
+# anchored to nothing. Any agent could cite it in good faith.
+#
+# `verify` proved he wrote the word. It could not say what he was answering.
+
+
+def test_a_short_unanchored_answer_is_flagged_rather_than_presented_as_settled() -> None:
+    nope = {
+        "id": "888",
+        "content": "Nope",
+        "author": {"id": "bogdan-id"},
+        "timestamp": "2026-08-25T17:18:50+00:00",
+    }
+    verdict = verify(
+        {"kind": "human", "author_id": "bogdan-id", "channel_id": "chan", "message_id": "888"},
+        token="t",
+        gated_user_id="bogdan-id",
+        fetch=discord({"888": nope}),
+    )
+
+    assert verdict.ok, "he really did write it -- that part was never in doubt"
+    rendered = str(verdict)
+    assert "NOT a reply to anything" in rendered
+    assert "Do not treat it as approving" in rendered
+
+
+def test_a_real_reply_quotes_what_it_was_answering() -> None:
+    """When Discord knows the question, the reader should not have to go and find
+    it -- that is the whole of the fix."""
+    reply = {
+        "id": "889",
+        "content": "yes go ahead",
+        "author": {"id": "bogdan-id"},
+        "timestamp": "2026-08-25T17:20:00+00:00",
+        "referenced_message": {
+            "content": "shall I restart the daemon?",
+            "author": {"id": "agent-id"},
+        },
+    }
+    verdict = verify(
+        {"kind": "human", "author_id": "bogdan-id", "channel_id": "chan", "message_id": "889"},
+        token="t",
+        gated_user_id="bogdan-id",
+        fetch=discord({"889": reply}),
+    )
+
+    assert "It is a reply to this message from agent-id" in str(verdict)
+    assert "shall I restart the daemon?" in str(verdict)
+
+
+def test_a_short_instruction_is_not_nagged_about() -> None:
+    """ "restart the deploy" is shorter than "Nope" is meaningful, and it carries
+    its whole meaning on its own. Warning on self-contained messages would make
+    the warning worthless on the ones that need it -- which is why length was the
+    wrong test and answer-words are the right one."""
+    verdict = verify(
+        {"kind": "human", "author_id": "bogdan-id", "channel_id": "chan", "message_id": "999"},
+        token="t",
+        gated_user_id="bogdan-id",
+        fetch=discord({"999": REAL}),
+    )
+
+    assert "NOT a reply to anything" not in str(verdict)
