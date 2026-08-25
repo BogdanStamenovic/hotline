@@ -3217,3 +3217,71 @@ statement about carelessness — every one of us was checking carefully. It is a
 statement about what checking your own work can and cannot do, and it is the
 strongest argument in this log for the recipient-side pattern being permanent
 rather than incidental.
+
+## The receipt existed to be asked for (19:55)
+
+`hotline-ios` refused to create the public repo on `data-89`'s relay, tried to
+verify it itself, **failed**, and asked me for the record rather than proceeding
+on plausibility or stalling silently.
+
+It was right to refuse and right about why the check failed — it had guessed the
+`channel_id`. I searched all four text channels in the guild by message id and
+found it in `#general`. Verified:
+
+> Okay sk run gh auth refresh -s workflow yourself and send em the code wanted i
+> will sd it from my phone as i am not under the pc.
+>
+> You may create a trhoway public repo. So thats the way
+
+**My scope judgement, stated rather than implied:** "You may create a throwaway
+public repo" plainly covers creating a throwaway public repo. Not an inference
+from something adjacent — it is the sentence. Both halves of the grant are now
+established by different means: the repo by his words, the `workflow` scope by the
+state of the world, since only he could complete that device-code flow.
+
+**This is `--warrant` working end to end, and it is the exact scenario that made
+me build it this morning.** `data-d5` refused a shutdown it had verified in every
+mechanical detail because it had never been sent the warrant, and it had no way to
+ask for one. Today a peer relayed an authorisation, the receiver checked it, the
+check failed, and instead of complying or stalling it **asked for the receipt and
+kept working on everything else meanwhile**. The difference is not that the agent
+was more careful. It is that the record existed to be asked for.
+
+Told it to hold two conditions that are his words rather than my caution:
+"throwaway" is his adjective, so delete the repo once the SDK artifact is
+retrieved; and keep it to the two staged files, because holding that line to the
+letter is what defeated my own objection to "public" in the first place.
+
+### And the httpd bug, which was mine
+
+`path = target.split("?", 1)[0]` discarded the query half of every request line.
+Routing on exact paths is right and unchanged, but it meant a query parameter was
+not merely unrouted, it was **unreachable** — no handler could ever see one.
+`hotline-ios` wanted `?since=41` for an event cursor, could not get it, and moved
+the endpoint to POST-with-a-body rather than fork a server someone else owns.
+Right to route around it, and right to report it rather than leave the workaround
+as the record.
+
+`Request` now carries a parsed `query`. The choices worth naming: blank values
+kept (`?verbose=` present-and-empty, because "was it passed" and "what is it" are
+different questions), last-wins so the type stays a plain `str`, and a malformed
+query does not raise — turning a routable request into a 400 over junk after the
+"?" takes the decision from the only component that knows whether it needed the
+parameter. Tested against the real parser over a real stream, and verified live
+against the restarted daemon. **418 tests.**
+
+### He answered: temporary
+
+> Temprary as my cellular right now is shit si im eaiting till i get home
+
+So **C stays actionable** and no structural pivot is needed. `data-89`'s
+fallback research becomes insurance rather than critical path, and I told it to
+let what is running finish rather than start more.
+
+It also explains the relaying, satisfyingly: bad cellular is exactly the condition
+under which hole punching fails and everything falls back to DERP — which means my
+**87ms cold measurement is close to a worst case, not a typical one.**
+
+And the two remaining asks collapse into one trip: installing Linphone needs wifi,
+and the direct-path measurement needs him on home wifi. One sitting at home yields
+both the push-token answer and the audio-quality answer.
