@@ -1860,3 +1860,34 @@ a green tick does not make an irreversible action reversible on a box with no
 snapshots.
 
 343 tests, ruff and mypy clean.
+
+## Closing out
+
+Bogdan: "Perfect thank you for your service this is done." Verified against
+Discord — `VERIFIED: posted by <his user id> ... at 00:24:05`.
+
+`handoff.md` updated with the state of this session: what shipped, the three
+things a successor should not re-learn the hard way, and what is still open.
+The watchdog timer is disarmed, since respawning a worker with nothing to do is
+worse than no worker.
+
+Left deliberately undone, and recorded rather than quietly dropped:
+
+- **The acceptance test — announcing completion through the voice pipeline —
+  never happened.** He stopped voice work himself and it stayed stopped. That was
+  the original definition of complete, so by that definition hotline is not; it
+  is just that the definition was overtaken by other work he wanted first.
+- **Port 8000 (`Ollama Chat`) was never styled.** He asked, then said "disregard
+  the message you get", and never said which message. Not touched.
+- **`hotline --to` reply capture is unreliable against a busy session.** Twice
+  tonight it reported "did not produce a reply" for messages the target had
+  demonstrably received and acted on — including the test agent that found the
+  verifier bug. Delivery works; the waiter is wrong. Worth fixing next.
+
+The channel is left alive rather than closed with `--done`, because that delete
+is irreversible and takes the whole thread with it. `hotline --done --handoff
+/home/bodas/data/hotline/handoff.md` closes it whenever he wants, and
+`resume hotline-80` brings it back from the handoff.
+
+Ten commits: `22d7663` through `1c4f06f`. 343 tests, ruff and mypy clean, all
+pushed.

@@ -147,7 +147,91 @@ Do NOT email him just to ask for tokens — he already knows.
       way: the reply waiter consumed the Stop event and could hand a caller
       another turn's answer (226s, wrong question). See PROGRESS.md.
 
-### Still blocked on Bogdan, physically
+### Session of 2026-08-25 (worker `hotline-80`, session c1eada39)
+
+Picked up as the respawn after the original `hotline-80` was killed. Everything
+below is committed and pushed through `1c4f06f`. 343 tests, ruff and mypy clean.
+
+### The bug that had been killing every session on the box
+
+The tmux **server** was living inside `hotlined.service`'s cgroup -- whoever
+first runs `tmux new-session` when no server is listening becomes its parent and
+the server inherits that cgroup. With the default `KillMode=control-group`,
+every stop, restart or crash of the daemon killed the server, which SIGHUPs every
+pane. One `systemctl restart hotlined` destroyed four Claude sessions on
+2026-08-24, including the agent that had been told to issue the restart.
+`Restart=always` means a crash did the same.
+
+Fixed twice over: `KillMode=process` on the unit (protects a server already
+misplaced) and `tmuxen` spawning through `systemd-run --user --scope --collect`
+(stops the misplacement recurring). Verified in production across four daemon
+restarts since -- sessions survive. **Do not remove either without understanding
+this.**
+
+### Shipped this session
+
+- **`hotline --adopt NAME`** -- a respawned worker takes over its predecessor's
+  registry record and channel. The watchdog depends on it: it is what lets a
+  "moved" worker be told from a dead one.
+- **Watchdog rewritten.** It tested `tmux has-session -t hotline`, which is a
+  liveness test for one launcher rather than for the worker, so it manufactured
+  a duplicate every six minutes instead of recovering from crashes. Now resolves
+  the worker through the registry. Logs to `watchdog.log`, not `PROGRESS.md`.
+- **`--resume` works for an agent that was killed.** No handoff means the
+  replacement is seeded from its predecessor's transcript with an explicit
+  warning that it is reading a corpse. A still-live channel is kept rather than
+  duplicated. Shared with the Discord path via `revive.py`.
+- **Auto-enrolment.** A session Bogdan starts by talking is registered and given
+  its own channel; his opening message is the provisional task.
+- **Confirmation in #general.** A message is held and its destination named
+  before delivery -- `yes` / `no` / anything else replaces it. Sticky per target.
+- **`resume`** -- lists the last ten resumable agents, marked finished/killed and
+  handoff/transcript-only. `resume 2` or `resume <name>`.
+- **`new agent <task>`** -- a genuinely separate agent. A pane is named after the
+  conversation key, so a channel's session is a singleton and `new session` could
+  only ever hand back the same one; there was no route to a second agent at all.
+  This mints its own key, hence its own pane, record and channel.
+- **Provenance.** Every relayed message says where it came from. A Discord relay
+  carries channel/message/author ids and a body digest, and `hotline
+  --provenance` re-fetches the original **from Discord** to confirm the gated
+  user posted it. Peer messages are labelled as not an authorization channel.
+  Not a security boundary -- see the module docstring, which says so at length.
+
+### Things a successor should not re-learn the hard way
+
+- **The test suite had live Discord credentials.** `.env` is exported in the
+  development shell, so `channels.from_env()` handed the suite a real client and
+  the pool tests created real channels until Discord returned 429. `conftest.py`
+  now scrubs every Discord variable and redirects `XDG_STATE_HOME`, autouse. If
+  the suite is ever slow, suspect real network calls before suspecting the tests.
+- **A log line is not a cause.** Three times this session a confident reading of
+  a log was wrong: the lying "key rotated" message, my first answer for what
+  killed hotline-80, and ollama's `-ngl 0` "no usable GPU found" -- which was
+  data-f3's own `num_gpu:0` being honoured, and whose 500 was actually the tmux
+  bug killing the process mid-request.
+- **Verification is worth more from a recipient than from the author.** The
+  provenance verifier's containment check let text added in transit inherit
+  Bogdan's authority. I had the evidence on screen and missed it; the first
+  agent it was tested on found it immediately, using its own message as the
+  demonstration.
+
+### Open, and why
+
+- **The acceptance test (announcing completion through the voice pipeline) was
+  never done.** Bogdan stopped voice work deliberately and it has stayed stopped.
+  Everything below about voice is still true.
+- **`hotline --to` reply capture is unreliable for a busy session.** Twice it
+  reported "did not produce a reply" for messages the target demonstrably
+  received and acted on. Delivery works; the waiter is what is wrong.
+- Voice join into an agent channel is still UNVERIFIED (needs
+  `HOTLINE_VOICE_ALLOWED_IDS`, deliberately removed).
+- Wake-on-LAN still UNVERIFIED-BY-DESIGN -- `enp4s0` is NO-CARRIER.
+- Two questions data-f3 left for Bogdan, still unanswered: keep `ollama-cuda` +
+  `cuda` (~9 GiB) or roll back, and should ollama be reachable past `127.0.0.1`.
+- **Port 8000 (`Ollama Chat`) was never styled.** He asked, then said "disregard
+  the message you get", and never said which message. Untouched deliberately.
+
+## Still blocked on Bogdan, physically
 
 - Plug an ethernet cable into `enp4s0` (it is NO-CARRIER; nothing can wake it).
 - BIOS on the ASRock B550M-HVS SE (no IPMI, so this cannot be done remotely):
