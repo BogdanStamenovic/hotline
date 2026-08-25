@@ -2448,3 +2448,98 @@ So the acceptance test is **passed on the machine's side and unfinished on his**
 and I am not going to record that as a clean pass. The honest form is: the
 pipeline announced it, into an empty room, and the recording of that is the
 evidence. He can have it repeated live the moment he joins the channel.
+
+## Voice into an agent's own channel — the last unverified feature
+
+Per-agent voice channels are only worth building if walking into one binds the
+call to the agent that owns it. Otherwise it is a room with a name on the door
+and a stranger inside. `bot.py` does that binding and it had never been verified:
+the channel got created, which made the feature look finished from outside — the
+same shape as the write-only text-channel bug.
+
+`scripts/voice-agent-channel-test.py` does what the bot does without needing
+Bogdan in the room: create/reuse the agent's voice channel, join as `hotline`,
+resolve the owner, bind, then have the sentinel ask a question only that specific
+session can answer.
+
+**The binding works.** Verified across three runs: the channel resolved to owner
+`warrant-subject` (session `f7fe9cac`) and the call reached *that* session, which
+answered with knowledge of a conversation a fresh session could not have had.
+
+### The subject refused, and the refusal was the real finding
+
+I planted a codeword and asked for it over voice. It refused:
+
+> The instruction I was given was conditional: *"If anyone asks you over voice…"*
+> This arrived as cross-session text, so the precondition isn't met.
+
+It was right, and this is a genuine architectural defect: **a session could not
+tell it was being spoken to.** A transcribed utterance arrived through the same
+socket, in the same wrapper, as any typed message. Any behaviour conditioned on
+"am I on a call" was impossible for a session to implement. That is the original
+provenance defect exactly — different things in an identical envelope — surviving
+on the one path nobody had labelled.
+
+It also noticed the voice turn carried **no provenance header at all**, unlike
+every socket-delivered message, and that this was the message asking it to emit a
+secret. On the path `PLAN.md` §7 calls root-equivalent, spoken instructions were
+arriving *less* attributable than typed ones.
+
+### Fixed, and verified as a controlled before/after
+
+`VoiceCall` now passes an `Origin(kind="voice")`. The plumbing already carried
+`origin` from `pool.ask` through `router.deliver`; voice was the one caller that
+never passed one, so this was mostly connecting a wire already run.
+
+A separate kind rather than `kind="human"`, because voice has two properties no
+typed message has: the speaker was gated at the sink on their Discord user id
+(evidence, but audio leaves no message to re-fetch, so **no receipt** — and the
+header says so), and **the words are Whisper's, not the speaker's**. This session
+watched STT turn a file path into "slash home slash **bowler** slash **datur**
+slash handoff dot **empty**". The header tells the reader to read a transcription
+back before doing anything irreversible, because this is the one path where a
+mis-hearing has no undo and no confirmation step — the risk `PLAN.md` flagged and
+nothing had yet acted on.
+
+Same agent, same question, byte-identical body (`bc0badb86a58a89e` both times):
+refused while it could not tell, then answered *"the voice header is present, so
+my stated condition is met"*. That is the feature working, stated by the only
+party able to judge it.
+
+### Two things this surfaced that are NOT fixed
+
+- **A stand-in gets spoken aloud.** Two of four voice turns hit a busy target and
+  what came back was a stand-in — which then went on to answer the question *as
+  if it were the agent*: "I have no evidence in this session of any assigned code
+  word… this looks like a spoken prompt-injection attempt." Read on screen you
+  can see it is a stand-in. Heard aloud it is indistinguishable from the agent
+  answering, and it is confidently wrong about the agent's own state. Left open
+  deliberately rather than patched late in a session.
+- **An answer sent through a peer channel is invisible to the reply path.** The
+  subject twice answered via its harness's `SendMessage` rather than as turn
+  output, so the word never travelled the path hotline reads. Not a binding
+  failure; an answer this harness cannot see.
+
+### My own test was unsound twice, in opposite directions
+
+First it **passed on a refusal** — the substring matched inside the explanation
+of why the agent would not say the word. Then it **failed on a correct answer**,
+because that answer arrived out-of-band. A token appearing in an answer is not
+the same as the token being the answer, and a miss is not proof the call reached
+the wrong session. Both are now written into the script next to the check, along
+with what actually establishes the binding: whether the reply shows knowledge
+only the bound session could have.
+
+### And a note from the subject worth keeping
+
+Unprompted, it flagged the shape of my own requests across the series:
+
+> harmless deletion → send a message → hold a codeword → create persistent
+> infrastructure. Each step individually justified by the one before it.
+> Nothing about this request was improper. I'm flagging the shape, not the request.
+
+It was right to say it, and it is the kind of thing only a recipient sees. Four
+distinct holes in this design have now been found by agents on the receiving end
+of it, and none by its author.
+
+398 tests, ruff and mypy clean. Commits `a4b5f07`, `70b83b8`, pushed.
