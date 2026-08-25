@@ -32,7 +32,6 @@ import io
 import logging
 import os
 import sys
-import time
 from difflib import SequenceMatcher
 from pathlib import Path
 
@@ -153,7 +152,7 @@ async def main(message: str) -> int:
     # with 453 gated pcm chunks still reported that nothing arrived. The audio was
     # never the problem. Give the queue a moment to drain, then flush explicitly.
     await asyncio.sleep(4)
-    for user, segmenter in segmenters.items():
+    for segmenter in segmenters.values():
         leftover = segmenter.flush()
         if leftover is not None:
             text = await loop.run_in_executor(None, transcriber.transcribe, leftover.audio)

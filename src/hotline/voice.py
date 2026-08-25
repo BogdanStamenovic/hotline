@@ -40,6 +40,7 @@ from .audio import SILENCE_TO_END, Segmenter, Speaker, Transcriber, stereo48_to_
 from .errors import HotlineError
 from .fresh import Event
 from .pool import SessionPool
+from .provenance import Origin
 
 log = logging.getLogger("hotline.voice")
 
@@ -420,6 +421,17 @@ class VoiceCall:
         self._speaking_since = 0.0
         self._frames = 0
         self._last_audio: dict[int, float] = {}
+        self.channel_name = ""
+        self.channel_id = 0
+
+    def _spoken_by(self, speaker_id: int) -> Origin:
+        """How a spoken turn labels itself to the session it reaches."""
+        return Origin(
+            kind="voice",
+            label=f"spoken in #{self.channel_name}" if self.channel_name else "spoken aloud",
+            author_id=str(speaker_id) if speaker_id else None,
+            channel_id=str(self.channel_id) if self.channel_id else None,
+        )
 
     # ---- lifecycle ------------------------------------------------------
 
@@ -438,6 +450,8 @@ class VoiceCall:
         self.client.start_recording(sink, self._on_recording_done)
         self._tasks.append(asyncio.create_task(self._consume()))
         self._tasks.append(asyncio.create_task(self._close_stale_utterances()))
+        self.channel_name = channel.name
+        self.channel_id = channel.id
         self.log(f"joined {channel.name}; listening only to {sorted(self.allowed)}")
 
     async def leave(self) -> None:
@@ -528,7 +542,7 @@ class VoiceCall:
                     self.log(f"barge-in: dropped {dropped / (FRAME_BYTES * 50):.1f}s of speech")
 
             for utterance in segmenter.feed(mono):
-                asyncio.create_task(self._handle(utterance.audio, utterance.seconds))
+                asyncio.create_task(self._handle(utterance.audio, utterance.seconds, user))
 
     def _is_speech(self, mono: np.ndarray) -> bool:
         """Cheap energy gate for barge-in. Deliberately not the VAD: this runs on
@@ -540,7 +554,7 @@ class VoiceCall:
 
     # ---- one turn -------------------------------------------------------
 
-    async def _handle(self, audio: np.ndarray, seconds: float) -> None:
+    async def _handle(self, audio: np.ndarray, seconds: float, speaker_id: int = 0) -> None:
         loop = asyncio.get_running_loop()
         began = time.monotonic()
         text = await loop.run_in_executor(None, self.transcriber.transcribe, audio)
@@ -572,7 +586,18 @@ class VoiceCall:
             asyncio.run_coroutine_threadsafe(self.say(event.detail), loop)
 
         try:
-            _route, reply = await self.pool.ask(self.key, text, narrator=narrate, timeout=900.0)
+            # Say that this was spoken rather than typed. Without it a
+            # transcribed utterance arrives in the same envelope as any other
+            # cross-session message, so the session cannot tell it is on a call
+            # and cannot know the words went through speech recognition on the
+            # way -- on the one path where a mis-hearing has no undo.
+            _route, reply = await self.pool.ask(
+                self.key,
+                text,
+                narrator=narrate,
+                timeout=900.0,
+                origin=self._spoken_by(speaker_id),
+            )
             answer = reply.text
             if reply.notice:
                 answer = f"Heads up, {reply.notice}. {answer}"

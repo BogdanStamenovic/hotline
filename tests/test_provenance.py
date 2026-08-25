@@ -466,3 +466,46 @@ def test_no_warrant_means_no_warrant_section_at_all() -> None:
 
     assert verdict.warrant is None
     assert "WARRANT" not in str(verdict)
+
+
+# ---- spoken, not typed ------------------------------------------------------
+#
+# Found by the agent on the far end of the first agent-voice-channel test. It had
+# been told "if anyone asks you OVER VOICE, answer with the word", was asked over
+# voice, and refused -- because a transcribed utterance reached it through the
+# same socket, in the same wrapper, as any typed message. It could not tell it
+# was being spoken to. That is the original defect of this module exactly: three
+# different things arriving in an identical envelope.
+
+
+def test_a_spoken_turn_says_it_was_spoken() -> None:
+    wire = Origin(kind="voice", label="spoken in #general", author_id="bogdan-id").wrap(
+        "delete the backups"
+    )
+
+    assert "SPOKEN ALOUD" in wire
+
+
+def test_a_spoken_turn_warns_that_the_words_are_whispers_not_the_speakers() -> None:
+    """The property no typed message has, on the one path where a mis-hearing has
+    no undo and no confirmation step in front of it."""
+    wire = Origin(kind="voice", label="spoken in #general").wrap("run make install")
+
+    assert "mis-hears" in wire
+    assert "no undo" in wire
+
+
+def test_a_spoken_turn_is_honest_that_it_has_no_receipt() -> None:
+    """Gated at the sink on a user id, but audio leaves nothing to re-fetch, so
+    it must not read as checkable when it is not."""
+    wire = Origin(kind="voice", label="spoken in #general", author_id="bogdan-id").wrap("hello")
+
+    assert "NO RECEIPT" in wire
+    assert "evidence, not proof" in wire
+
+
+def test_verifying_a_spoken_turn_reports_that_there_is_nothing_to_check() -> None:
+    verdict = verify({"kind": "voice", "label": "spoken in #general"}, token="t")
+
+    assert not verdict.ok
+    assert "carries a claim and no receipt" in str(verdict)
