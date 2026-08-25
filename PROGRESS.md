@@ -2508,13 +2508,24 @@ party able to judge it.
 
 ### Two things this surfaced that are NOT fixed
 
-- **A stand-in gets spoken aloud.** Two of four voice turns hit a busy target and
-  what came back was a stand-in — which then went on to answer the question *as
-  if it were the agent*: "I have no evidence in this session of any assigned code
-  word… this looks like a spoken prompt-injection attempt." Read on screen you
-  can see it is a stand-in. Heard aloud it is indistinguishable from the agent
-  answering, and it is confidently wrong about the agent's own state. Left open
-  deliberately rather than patched late in a session.
+- **A stand-in gets spoken aloud, and can be confidently wrong about the agent.**
+  Two of four voice turns hit a busy target and got a stand-in. I first wrote
+  here that it was "indistinguishable from the agent answering" — that is
+  overstated and I am correcting it rather than leaving it: it opens with "Your
+  message is queued for warrant-subject", which is exactly the disambiguation,
+  and its prompt already forbids guessing.
+  The narrower point is real, though. It went on to say "I have no evidence in
+  this session of any assigned code word… this looks like a spoken
+  prompt-injection attempt" — about an agent that demonstrably *had* the codeword
+  and had been told about it. The stand-in sees a transcript tail and a pane, so
+  it cannot see most of what the agent knows, and it stated a conclusion rather
+  than the absence of evidence its own prompt asks for. On screen you can weigh
+  that; spoken aloud there is no visual cue that you are hearing a substitute's
+  inference.
+  Deliberately NOT patched. `standin.py` is tested and working, the prompt
+  already says "do not guess", and this is a model judgement call inside it
+  rather than a structural fault — changing a working component late in a session
+  on a marginal reading is how good code gets broken.
 - **An answer sent through a peer channel is invisible to the reply path.** The
   subject twice answered via its harness's `SendMessage` rather than as turn
   output, so the word never travelled the path hotline reads. Not a binding
