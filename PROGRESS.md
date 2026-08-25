@@ -3021,3 +3021,83 @@ That is now the third confident reading of a field or log to be wrong today, and
 two of the three were mine. The pattern is specific enough to name: **an empty or
 absent value is the easiest thing in the world to read as meaningful, and the only
 defence is a row you already know the answer to.**
+
+## The toolchain works, and the doorbell question moved to measurement (19:05)
+
+### This box can compile Swift — verified by running it, not by reading a claim
+
+`hotline-ios` reported the toolchain working. I checked rather than relayed:
+sourced its `env.sh`, `swift --version` → **6.3.3**, then compiled and executed a
+program, which printed `swift works: 4`. Private toolchain under `/mnt/iosbuild`,
+nothing installed system-wide.
+
+That is the most de-risking result of the day. **"No macOS, therefore no iOS app"
+is half-dead.** Everything works except Apple's SDK, and that is an *account*
+problem rather than a *machine* problem — a reframing that belongs in the brief in
+exactly those words.
+
+It also fixed the disk properly, unmounted and in the right order (`e2fsck -fp`,
+`resize2fs 30G`, `truncate`). Verified: 30G actual, `/mnt/windows` back to **556G
+free**, Windows intact. Its argument for small is better than mine was: **ext4
+grows online and shrinks only offline**, so sizing small is free and sizing large
+is not. It also admitted reading past its own `du` output showing 120G apparent
+*and* 120G actual — which is the same class of error I have made three times
+today, and I told it so rather than letting the standard look one-sided.
+
+**Approved its SIP-listener experiment on the spot.** RFC 8599 params ride in the
+REGISTER Contact header, so what the stock app actually emits against a
+third-party domain is *directly observable*. Twenty minutes with a socket settles
+what days of vendor-FAQ archaeology cannot. It needs no Apple account, no money
+and no decision from him, so it is inside what I can authorise. Told it to bind to
+the Tailscale interface only, and to log the raw header verbatim **including the
+case where `pn-prid` is absent** — the absence is the finding if C dies.
+
+### data-89 retracted, correctly, twice
+
+It reproduced my control itself rather than taking my word, then caught a *second*
+error of its own: it had mischaracterised `tailscale#11328`, relaying a reporter's
+paraphrase to me and `hotline-ios` as though it were a maintainer statement.
+
+Its replacement sources I checked the same way:
+
+- **`tailscale#17575` — VERIFIED, including the attribution it got wrong last
+  time.** Pulled the comments via the API: `nickoneill`, `author_association:
+  CONTRIBUTOR`, saying the delay is "largely driven by the timing around iOS
+  starting the VPN based on on-demand rules". A Tailscale person describing the
+  mechanism. Citable.
+- **Apple Developer Forums 756941 — COULD NOT VERIFY.** It 302s, and following
+  redirects yields a 202KB JavaScript loading shell: "packet tunnel", "locked",
+  "sleepWithCompletionHandler" and "Eskimo" are all absent from the served HTML,
+  and the only `100%` on the page is a CSS width. The quote may be real; I have
+  not seen it, and neither of us should present it as confirmed.
+
+That distinction is not pedantry, because the two claims differ in *strength*:
+
+    "not reliably up when locked/idle"  -> SUPPORTED (maintainer + both our measurements)
+    "suspended on lock, categorically"  -> what the Apple quote would establish
+
+and that is the difference between B being **fragile** and B being **dead**.
+
+**Told it not to chase the quote.** Its duty-cycle sampler — peer map every 30s
+for 20 minutes, which was my suggestion and its execution — settles this better
+than any forum post, and settles it on *his* device rather than the general case.
+Twenty minutes of sampling beats FAQ archaeology; that is the argument I made to
+`hotline-ios` an hour ago and it applies to me too.
+
+### And a correction to my own framing
+
+I told `data-89` the asymmetry "really is on the phone side". Right, but
+imprecise. What is verified is that **our** side is healthy — UDP true,
+`MappingVariesByDestIP` false, UPnP, and we hole-punch to a LAN peer on the same
+command that fails to the phone. What is *not* established is whether the cause is
+the phone, the carrier NAT it currently sits behind, or both. Until the home-wifi
+re-measurement lands, "phone side" should read "phone **or its current network**".
+
+### Four asks sent to Bogdan in one message
+
+`gh auth refresh -s workflow`; permission for a throwaway **public** repo holding
+only a hello-world app and a workflow (my earlier objection withdrawn — I was
+wrong to treat "the repo" as one thing, and a separate repo leaks no tailnet
+addressing); five minutes pointing Linphone at our listener; thirty seconds
+unlocked on home wifi. Batched rather than four pings, per his own rule about
+bringing the whole plan and the cost in one go. None costs money.
