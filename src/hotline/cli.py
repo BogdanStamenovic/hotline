@@ -25,7 +25,7 @@ from .ccsocks import discover
 from .channels import from_env as channels_from_env
 from .channels import slug as channel_slug
 from .config import load_env
-from .errors import HotlineError
+from .errors import HotlineError, ReplyTimeout
 from .fresh import Event
 from .guard import install_guard
 from .provenance import MARKER, Origin, body_of, parse, verify
@@ -122,6 +122,12 @@ def _build_parser() -> argparse.ArgumentParser:
         const="-",
         help="check a relayed message's provenance against Discord. Pass the "
         "record from its header, or '-' to read the whole message on stdin.",
+    )
+    parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="with --to: hand the message over and exit, without waiting for an "
+        "answer. Exits 0 once it is in the target's inbox.",
     )
     parser.add_argument(
         "--warrant",
@@ -847,6 +853,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "   (it is mid-turn; your message is queued behind that and "
                     "will not be seen until it finishes. Do not resend.)"
                 )
+            if args.no_wait:
+                # The fire-and-forget case, which had no route before: the caller
+                # wants the message delivered, not answered. Reusing the waiting
+                # path and ignoring its result would burn the whole timeout to
+                # learn something known in milliseconds.
+                asyncio.run(router.deliver(args.to, text, origin=origin))
+                log("   delivered; not waiting for an answer")
+                return 0
             reply = asyncio.run(
                 router.ask_session(
                     args.to, text, narrator=narrate, timeout=args.timeout, origin=origin
@@ -870,6 +884,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                 reply = asyncio.run(
                     router.ask_fresh(route.text, narrator=narrate, timeout=args.timeout)
                 )
+    except ReplyTimeout as exc:
+        # Distinct from a failure, because it is not one. The message was
+        # accepted; the answer did not arrive in time. Collapsing the two into
+        # exit 1 meant a script checking $? read a correctly delivered message as
+        # a failure -- and the accompanying text says "do not resend", so the
+        # exit code and the words were giving opposite instructions.
+        #
+        # Found by the agent on the far end of the first cross-session reply:
+        # queued delivery is reported twice, once as advice and once as an error.
+        print(f"hotline: error: {exc}", file=sys.stderr)
+        print(
+            "hotline: (exit 3 = delivered, not answered yet. It is NOT lost and "
+            "it is NOT a delivery failure. Do not resend.)",
+            file=sys.stderr,
+        )
+        return 3
     except HotlineError as exc:
         print(f"hotline: error: {exc}", file=sys.stderr)
         return 1

@@ -15,13 +15,30 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from helpers import make_session
 
 import hotline.router as router_module
-from hotline.ccsocks import discover
+from hotline.ccsocks import LiveSession, discover
+from hotline.errors import ReplyTimeout, SessionNotFound
 from hotline.router import Watch, _why_no_reply
+
+
+def _session() -> LiveSession:
+    """A target that resolves, so the CLI reaches its outcome handling."""
+    return LiveSession(
+        pid=4242,
+        session_id="sid-target",
+        cwd="/home/bodas",
+        name="data-13",
+        socket_path="/nonexistent.sock",
+        token="t",
+        started_at=1,
+        kind="interactive",
+        status="idle",
+    )
 
 
 @pytest.fixture
@@ -161,3 +178,69 @@ def test_a_busy_session_that_is_actually_writing_is_mid_turn(session, fake_claud
     busy = session.__class__(**{**session.__dict__, "status": "busy"})
 
     assert mid_turn(busy)
+
+
+# ---- delivered is not failed -----------------------------------------------
+#
+# Found by the agent on the far end of the first cross-session reply: `--to`
+# printed "your message is queued... Do not resend", waited out the whole
+# timeout, and then exited 1. The words and the exit code were giving opposite
+# instructions, and any script checking $? read a correctly delivered message as
+# a failure.
+
+
+def test_a_delivered_but_unanswered_message_does_not_exit_as_a_failure(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from hotline import cli as cli_module
+
+    async def timed_out(*args: Any, **kw: Any) -> Any:
+        raise ReplyTimeout("data-13 did not produce a reply within 20s")
+
+    monkeypatch.setattr(cli_module.Router, "ask_session", timed_out)
+    monkeypatch.setattr(cli_module.Router, "resolve", lambda self, spec: _session())
+
+    code = cli_module.main(["--to", "data-13", "--timeout", "1", "hello"])
+
+    assert code == 3, "exit 1 here is a delivery failure, which this is not"
+    assert "delivered, not answered yet" in capsys.readouterr().err
+
+
+def test_a_target_that_does_not_exist_is_still_a_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The distinction only means anything if the other side of it still holds."""
+    from hotline import cli as cli_module
+
+    def missing(self: Any, spec: str) -> Any:
+        raise SessionNotFound("no live session matches 'nope'")
+
+    monkeypatch.setattr(cli_module.Router, "resolve", missing)
+
+    assert cli_module.main(["--to", "nope", "hello"]) == 1
+
+
+def test_no_wait_hands_the_message_over_and_stops(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """It must not reach the waiting path at all -- burning a timeout to learn
+    something known in milliseconds is the behaviour this replaces."""
+    from hotline import cli as cli_module
+
+    handed: list[str] = []
+
+    async def deliver(self: Any, spec: str, text: str, origin: Any = None) -> Any:
+        handed.append(text)
+        return object()
+
+    async def must_not_run(*args: Any, **kw: Any) -> Any:
+        raise AssertionError("--no-wait waited for an answer")
+
+    monkeypatch.setattr(cli_module.Router, "deliver", deliver)
+    monkeypatch.setattr(cli_module.Router, "ask_session", must_not_run)
+    monkeypatch.setattr(cli_module.Router, "resolve", lambda self, spec: _session())
+
+    code = cli_module.main(["--to", "data-13", "--no-wait", "hello"])
+
+    assert code == 0
+    assert handed == ["hello"]
