@@ -3148,3 +3148,72 @@ accept, app ack — is reported unreachable rather than trusted. That is right i
 *both* worlds, so it needed no change. Only the sentence justifying it did. Worth
 separating those out loud, because "your citation is wrong" is very easily heard
 as "your design is wrong", and the second would have been false.
+
+## The doorbell CAN ride the tailnet, and my own evidence was wrong too (19:35)
+
+`data-89`'s duty-cycle measurement went against both of us: phone locked and idle,
+20/20 pings answered, 14/14 peer-map samples present. It rewrote the brief's spine
+an hour before sending, having built it on *"the doorbell cannot ride the tailnet,
+at any budget"* — a good sentence resting on a source neither of us could open.
+
+It flagged its own confound honestly: continuous probing is exactly the
+intervention that keeps the extension awake, per its own `tailscale#3363` citation
+that every DNS query wakes it. So a warm 14/14 cannot speak for a cold phone.
+
+### So I measured the cold case, and it is decisive
+
+Caught the phone genuinely cold — absent from the peer map, no traffic from us —
+and sent a **single** ping:
+
+```
+pong in 87ms.  Repeat trials: 81ms, 94ms.  All from a cold/absent state.
+```
+
+**No cold-start penalty. Not 5-10 seconds — under a tenth of one.** And it is an
+*inbound-initiated* packet, which is precisely the doorbell case. The tunnel
+delivers to his locked, idle phone essentially instantly.
+
+That settles it in the direction neither of us was leaning, and it means **the
+transport was never the weak link** — B's problems are all at the app layer:
+audio session, reboot, force-quit, cert. Both of us spent hours suspecting the
+wrong layer.
+
+### And the retraction that is mine
+
+I told `data-89` the phone vanishing from the peer map was *"far better evidence
+than a JSON field"* for the dormant-extension theory. **It is not evidence at
+all**, and I demonstrated it against myself:
+
+```
+trial 1: peer-map=ABSENT  ->  pong from phone in 81ms
+trial 2: peer-map=ABSENT  ->  pong from phone in 94ms
+```
+
+**It answers while absent.** Peer-map absence is a display artifact, not a
+reachability fact. That is precisely the error I caught `data-89` making two hours
+earlier — reading a status field as a signal without testing the thing the field
+supposedly indicates — committed by me, on the datum I had called *better
+evidence*, while correcting someone else for the same mistake.
+
+Its seven-minute sample failing to reproduce the absence was therefore not a gap
+in its method. The absence is real and recurring — I have seen it three times —
+and it simply does not mean what I said it meant.
+
+The Apple quote is now not merely unverifiable but **contradicted by his own
+device**, twice. Told it to drop the quote entirely rather than carry it as
+"reported": a claim that is both unopenable and contradicted belongs in an
+evidence ledger only as a retraction.
+
+Also verified rather than assumed: `gh` token scopes now include **`workflow`**
+alongside repo, gist, read:org and admin:public_key. The GitHub Actions SDK route
+is genuinely unblocked, with no 13GB Xcode.xip against his Apple ID.
+
+### The tally, which is the actual finding of the day
+
+**Five confident field-reads were wrong today across three agents. Two were mine.
+Every single one was caught by somebody other than its author.** Not one was
+caught by the person who made it, on re-reading, at any point. That is not a
+statement about carelessness — every one of us was checking carefully. It is a
+statement about what checking your own work can and cannot do, and it is the
+strongest argument in this log for the recipient-side pattern being permanent
+rather than incidental.
