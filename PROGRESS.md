@@ -2614,3 +2614,73 @@ runtime (no link reset) and stored in NM as `disable` **without reactivating the
 connection**, because reactivating would have dropped the very link he was
 talking to me over. Link held throughout: 0% loss, 3ms RTT. Revert with
 `nmcli connection modify SBG55g-PRO-5G 802-11-wireless.powersave 0`.
+
+## Spawning the iOS build agent (2026-08-25 18:00)
+
+Verified instruction from Bogdan: spawn an agent to build a sideloadable iOS app
+that replaces the fake `@mention` calls with a real ring, everything over
+Tailscale, it may spawn as many subagents as it wants, and tell him what it is
+up to every half hour.
+
+Done: `SPEC.md` in `/home/bodas/data/hotline-ios`, agent `hotline-ios` spawned
+(session `ce22dd12`), declared itself, has its own channel `#agent-hotline-ios`,
+and had already spawned a subagent on the entitlement question within four
+minutes.
+
+### The thing I refused to let it discover later
+
+**"Everything over Tailscale" cannot include the ring.** A push that wakes a
+sleeping iPhone has to traverse Apple's APNs; iOS will not let a sideloaded app
+hold a background socket open to wake itself. Everything *after* the ring — audio,
+control, transcripts, routing — is direct over Tailscale with no cloud in path.
+APNs is the doorbell, Tailscale is the house.
+
+That is a direct contradiction of what he asked for, so it went to him in the
+first message rather than surfacing in a demo. Telling him now costs a sentence;
+telling him after the build costs the build.
+
+### And the money question, asked early on purpose
+
+A real CallKit ring needs a PushKit VoIP push, which needs the `aps-environment`
+entitlement, which (to my strong understanding) free provisioning does not grant
+— paid Apple Developer Program, $99/yr. His own rule is that spending is his call
+and that the question belongs *near the top of planning*, "before the path gets
+built around an assumption either way".
+
+So he has three costed options — paid ADP (the thing he actually asked for),
+free provisioning (7-day re-sign, no ring when closed, which is the fake-call
+problem again), or free self-hosted SIP plus an existing iOS client that carries
+its own push (real ringing, not his app). The agent builds everything that does
+not depend on the answer meanwhile, and is verifying the entitlement claim
+against real sources rather than my memory of it — because I have been wrong
+about a confident recollection twice today already.
+
+### Reporting: `hotline-standup`
+
+New tool, `~/.claude/bin/hotline-standup`, on a templated systemd user timer
+(`hotline-standup@NAME.timer`, 30 min, `Persistent=true`).
+
+Deliberately **not the pager** — `hotline-page` blocks until he answers, and a
+status nobody is waiting on must not compete with a real block for his attention.
+Deliberately **not the agent's own job** either: an agent told to self-report on a
+schedule either forgets while deep in something or interrupts itself to remember,
+and the moments it would forget are exactly the interesting ones. This watches
+from outside, on a timer that does not care what the agent is doing.
+
+A cheap model summarises from evidence only (pane + transcript tail), is handed
+its own previous update and told not to repeat it, and an agent whose session has
+**died** is reported rather than skipped — a silent status timer and a dead agent
+look identical from a phone.
+
+Verified end to end: accurate first update, posted to the right channel, timer
+chained to 18:34.
+
+### Constraints handed over rather than discovered
+
+- No macOS, no Swift toolchain. The whole thing hinges on `xtool` (Swift + Darwin
+  SDK, no Xcode). Told it to prove or disprove that with a real built artifact
+  early, because that single result de-risks everything else — and to say so
+  plainly if it cannot, rather than manufacture a green build.
+- **Disk at 89%, 7.7 GB free**, against a multi-GB toolchain. Told it explicitly
+  NOT to clear `/var/cache/pacman/pkg` (5.1 GB) without asking: on an ext4 root
+  with no snapshots, that cache is the only package rollback this box has.
