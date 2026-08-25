@@ -2899,3 +2899,70 @@ decision for him, not a build detail.
 Deconflicted the two agents: `data-89`'s subagent does the build-options *survey*,
 `hotline-ios` owns the actual build *attempt*. An `.ipa` that exists settles what a
 survey cannot.
+
+## The tailnet path to his phone is the weakest link in every design (18:50)
+
+`data-89` measured something nobody had, and I re-measured it independently
+rather than relaying it. 22 probes from this box: **every one relayed via
+DERP(fra), and `tailscale ping` gave up with "direct connection not
+established"**. My latencies were tighter than its (76-121ms, mean ~91, against
+its 92-623ms with 172ms jitter) but the topology is identical.
+
+**His premise is already not true today.** "Everything over Tailscale, no cloud
+in the path" — every packet to his phone currently transits Tailscale's relay in
+Frankfurt, before either option is chosen. The honest form of the sentence is *no
+Apple in the path*, not *no cloud*.
+
+Two things I added to its finding:
+
+**The two findings are probably one finding.** It flagged `tailscale#11328` — the
+iOS extension going on-demand rather than staying alive. UDP hole punching needs
+both ends actively participating, so a dormant extension explains why direct
+never establishes *despite* our NAT being healthy (UDP yes,
+`MappingVariesByDestIP` false, UPnP). If that holds it is one cause with two
+symptoms, and it cuts against B twice, because B needs that same extension to
+hold a socket open for hours.
+
+**The ring and the audio have opposite tolerances and one number describes
+neither.** A doorbell does not care about 91ms, or 600ms. Real-time audio cares
+enormously about the **172ms jitter** — jitter is what makes a call sound broken,
+and a buffer deep enough to absorb it adds latency on top. Reporting one blended
+figure lets him conclude either "fine" or "fatal" and neither is true.
+
+And the caveat, so we do not overstate our own finding: measured with his phone
+wherever it is now, which given the relay is almost certainly cellular. On home
+WiFi both ends are on `192.168.1.0/24` and Tailscale should go direct at ~2ms. The
+honest claim is "relayed and jittery when he is out, probably good at home" — one
+thirty-second re-measurement on home WiFi is worth more than further research.
+
+### What I verified, and what I did NOT
+
+I confirmed C's server side at source: the `push_notification` route sits behind
+ordinary account middleware with **no admin tier**, and the controller builds the
+pusher from whatever `pn_param`/`pn_prid` it is handed with **no ownership
+check** — I read all 39 lines. Live endpoint returns 401 with
+`x-ratelimit-limit: 600`.
+
+**I verified nothing about the client.** `data-89` found a Linphone FAQ line
+suggesting third-party SIP accounts get no push. If that describes the *app*
+rather than their *service*, the mechanism dies at step 2 and my source
+verification of the server becomes irrelevant. I told it so plainly, and asked
+that my verification not be cited as covering a gap it does not cover — that is
+exactly how a checked fact becomes a laundered one.
+
+### And the 120GB image
+
+`hotline-ios` created `/mnt/windows/hotline-ios-build.img`, ext4 inside a file,
+loop-mounted — the right technique, since ntfs3 cannot do POSIX permissions,
+symlinks or case-sensitivity and a Swift toolchain needs all three. It is also
+what the guard fix earlier today made possible.
+
+But it is **120G apparent and 120G actual** — ntfs3 gave no sparse allocation, so
+it really consumed a quarter of the free space on the partition his Windows lives
+on, for a toolchain that is single-digit GB. Bogdan noticed and asked. I told him
+his Windows is untouched (verified: NTFS, UUID unchanged, `Windows/` and `Users/`
+present, partition table intact) and that deleting one file undoes all of it —
+and then told the agent to justify or shrink it rather than defending 120GB on his
+behalf. `resize2fs` before `truncate`, never on a mounted image, and leave it
+alone if hours of downloads are already in there: the space is recoverable and its
+time is not.
