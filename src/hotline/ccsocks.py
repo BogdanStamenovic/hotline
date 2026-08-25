@@ -210,6 +210,22 @@ async def inject(session: LiveSession, text: str, timeout: float = 5.0) -> None:
             pass
 
 
+def refuse_if_self(session: LiveSession, verb: str = "kill") -> None:
+    """Raise rather than let hotline act on its own process.
+
+    Refusing this is not paranoia -- every resolver here is fuzzy, and "stop the
+    hotline one" is an entirely natural thing to say to the process named
+    hotline. Factored out of `terminate()` so every destructive primitive shares
+    the one check instead of each growing its own copy: `tmuxen.interrupt` sends
+    a keystroke rather than a signal, but landing it on our own pane is the same
+    mistake with the same cause.
+    """
+    if session.pid == os.getpid() or session.pid == os.getppid():
+        raise HotlineError(
+            f"{session.name} is hotline itself (pid {session.pid}); refusing to {verb} it"
+        )
+
+
 async def terminate(session: LiveSession, grace: float = 8.0) -> str:
     """Stop a session: SIGTERM, wait, SIGKILL, then take its tmux pane with it.
 
@@ -220,12 +236,9 @@ async def terminate(session: LiveSession, grace: float = 8.0) -> str:
 
     Refusing to kill ourselves is not paranoia -- `session kill` resolves fuzzily,
     and "kill the hotline one" is an entirely natural thing to say to the process
-    named hotline.
+    named hotline. That check is `refuse_if_self`, shared with `tmuxen.interrupt`.
     """
-    if session.pid == os.getpid() or session.pid == os.getppid():
-        raise HotlineError(
-            f"{session.name} is hotline itself (pid {session.pid}); refusing to kill it"
-        )
+    refuse_if_self(session, "kill")
 
     def alive() -> bool:
         try:

@@ -30,9 +30,9 @@ import re
 import subprocess
 from time import monotonic
 
-from .ccsocks import LiveSession, discover
+from .ccsocks import LiveSession, discover, refuse_if_self
 from .config import CLAUDE_BIN
-from .errors import ClaudeLaunchFailed
+from .errors import ClaudeLaunchFailed, HotlineError, SessionNotFound
 
 log = logging.getLogger(__name__)
 
@@ -112,13 +112,110 @@ def capture(target: str, lines: int = 60) -> str:
     return "\n".join(line.rstrip() for line in result.stdout.splitlines()).strip()
 
 
-def _by_tmux_session(name: str) -> LiveSession | None:
-    for session in discover(include_programmatic=True):
+def _by_tmux_session(name: str, include_self: bool = False) -> LiveSession | None:
+    for session in discover(include_self=include_self, include_programmatic=True):
         target = session.tmux or ""
         # The descriptor stores "session:@window.%pane"; match the session part.
         if target.split(":", 1)[0] == name:
             return session
     return None
+
+
+# ---- typing at a live session ---------------------------------------------
+#
+# Everything below writes keystrokes into somebody's terminal. `_resolve` is the
+# only thing standing between that and a pane Bogdan is sitting in front of, so
+# it runs before every one of them, every time, rather than being hoisted by a
+# caller that then holds a stale answer.
+
+
+def _resolve(target: str) -> LiveSession:
+    """The live Claude behind a tmux target, or a refusal.
+
+    Three things have to hold before anything is typed, and all three are
+    checked here so no caller can skip one:
+
+    * the tmux session exists right now -- not when the roster was computed;
+    * a `claude` currently registers that session as its own pane, which is what
+      distinguishes an agent's pane from a shell of his that happens to be
+      named similarly. A target nothing claims gets a refusal, never a
+      best-effort keystroke;
+    * it is not hotline itself. `include_self=True` on the lookup is what makes
+      that check reachable at all -- `discover()` hides our own pid by default,
+      so without it the guard could never fire and would be decoration.
+    """
+    name = target.split(":", 1)[0]
+    if not name:
+        raise SessionNotFound("no tmux target given")
+    if not exists(name):
+        raise SessionNotFound(f"tmux session {name} is gone")
+    session = _by_tmux_session(name, include_self=True)
+    if session is None:
+        raise SessionNotFound(
+            f"no live Claude session claims tmux target {target}; refusing to type into it"
+        )
+    refuse_if_self(session, "interrupt")
+    return session
+
+
+async def interrupt(target: str) -> LiveSession:
+    """`tmux send-keys -t <target> Escape` -- cancel the current turn, keep the process.
+
+    The only confirmed in-band way to cancel. **Not a signal**: the spike behind
+    `SERVER-PLAN.md` found SIGINT terminates a session rather than cancelling its
+    turn, in both tmux and headless modes, so there is no signal to reach for
+    here and reaching for one would end the thing it is meant to spare.
+
+    This is deliberately the *only* place that knows how a cancel is performed.
+    Callers ask for it by name and know nothing of tmux or ptys, so the day
+    `ccsocks` grows a cancel message this becomes a one-function swap rather
+    than an audit of every endpoint.
+
+    Returns the session it acted on, so a caller can report which process it
+    actually reached instead of echoing the name it was given.
+    """
+    session = _resolve(target)
+    result = _tmux("send-keys", "-t", target, "Escape", check=False)
+    if result.returncode != 0:
+        raise HotlineError(
+            f"could not send Escape to {target}: {result.stderr.strip() or 'tmux failed'}"
+        )
+    return session
+
+
+# The CLI's slash-command autocomplete opens on `/` and Enter accepts what is
+# highlighted, so the two keystrokes cannot be one `send-keys` call: they need a
+# beat between them for the menu to settle on the command that was typed. This
+# is pacing a terminal UI, not waiting for work to finish -- the actual
+# completion signal is watched for separately and is never a timer.
+COMMAND_SETTLE = 0.4
+
+
+async def send_command(target: str, command: str, settle: float = COMMAND_SETTLE) -> LiveSession:
+    """Type a slash command into a session's pty and press Enter.
+
+    `ccsocks.inject()` cannot do this and it is not a near miss: injecting
+    `/compact` was observed landing as an ordinary peer user message, which the
+    model then explained it had no tool to act on. The pty goes through the
+    CLI's own input handling, which is what actually runs the command -- the
+    same channel `interrupt` uses, and the reason anything built on this is
+    limited to sessions that have a pane.
+    """
+    session = _resolve(target)
+    typed = _tmux("send-keys", "-t", target, command, check=False)
+    if typed.returncode != 0:
+        raise HotlineError(
+            f"could not type {command!r} into {target}: "
+            f"{typed.stderr.strip() or 'tmux failed'}"
+        )
+    await asyncio.sleep(settle)
+    entered = _tmux("send-keys", "-t", target, "Enter", check=False)
+    if entered.returncode != 0:
+        raise HotlineError(
+            f"typed {command!r} into {target} but could not press Enter: "
+            f"{entered.stderr.strip() or 'tmux failed'}"
+        )
+    return session
 
 
 async def spawn(
