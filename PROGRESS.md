@@ -2058,3 +2058,20 @@ production rather than only in tests.
 This is the fourth time tonight that a confident reading of a signal was wrong,
 and the first time the wrong reading was one I had written into an error message
 for someone else to trust.
+
+### The loopback harness left a session behind every run
+
+`pool.close()` deliberately leaves sessions running — that is right for the
+daemon, whose whole point is that a restart costs nobody their context, and wrong
+for a test. So every run of `scripts/voice-loopback-test.py` left an
+`hl-loopback-test` pane in Bogdan's session list looking like a real agent he had
+forgotten about.
+
+Auto-enrolment made it worse without anyone noticing: that pane now also gets a
+registry record and a real Discord channel in his server. It is the same bug the
+`conftest` guard was written for, one layer further out where that guard cannot
+reach — the pool tests are protected by scrubbing credentials, and this script
+deliberately has real ones because it is a live voice test.
+
+The harness now takes its own session, record and channel away when it finishes.
+No litter present right now to clean up.

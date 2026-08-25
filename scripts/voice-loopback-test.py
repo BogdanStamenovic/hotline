@@ -24,6 +24,7 @@ builds its own clients rather than reaching into the running daemon.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import io
 import logging
 import os
@@ -143,9 +144,47 @@ async def main(phrases: list[str]) -> int:
     await call.leave()
     await talker_vc.disconnect(force=True)
     await pool.close()
+    _clean_up("loopback-test")
     await listener.close()
     await talker.close()
     return 0 if call.transcript else 1
+
+
+def _clean_up(key: str) -> None:
+    """Take the harness's own session and channel away again.
+
+    `pool.close()` deliberately leaves sessions running -- that is right for the
+    daemon, whose whole point is that a restart costs nobody their context, and
+    wrong for a test. Every run of this harness used to leave an `hl-loopback-test`
+    pane behind, which showed up in Bogdan's session list looking like a real
+    agent he had forgotten about.
+
+    It got worse when sessions started auto-enrolling: the pane now also has a
+    registry record and a real Discord channel in his server. A test that
+    accumulates channels is the bug the conftest guard was written for, one layer
+    out, where that guard cannot reach.
+    """
+    from hotline import tmuxen
+    from hotline.agents import Registry
+    from hotline.ccsocks import discover
+    from hotline.channels import from_env as channels_from_env
+
+    name = tmuxen.tmux_name(key)
+    ours = {s.session_id for s in discover(include_self=True, include_programmatic=True)
+            if s.tmux_session == name}
+    registry = Registry()
+    manager = channels_from_env()
+    for session_id in ours:
+        agent = registry.get(session_id)
+        if agent is None:
+            continue
+        if agent.channel_id is not None and manager is not None:
+            with contextlib.suppress(Exception):
+                manager.delete(agent.channel_id)
+        registry.forget(session_id)
+        log.info("cleaned up registry record and channel for %s", agent.name)
+    if tmuxen.kill(name):
+        log.info("killed the harness session %s", name)
 
 
 if __name__ == "__main__":
