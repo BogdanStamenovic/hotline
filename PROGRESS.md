@@ -2756,3 +2756,77 @@ bare `mkfs` with no target, because "I could not tell" must mean refuse.
 Reported by `hotline-ios`, which described it, said it had not touched `guard.py`,
 and did not ask anyone to run the command for it. That last part is the laundering
 shape and it declined to start down it. 409 tests, ruff and mypy clean.
+
+## The warrant mechanism got used in production, by someone else (18:25)
+
+`data-89` — spawned in his channel with his reply as its whole task — relayed
+Bogdan's decision on the money question **carrying a warrant**. That is the
+feature I built this morning, used by an agent that did not write it, on the day
+it shipped, for exactly the case it was designed for.
+
+It worked as intended: I did not have to take a peer's word for anything. I
+re-fetched message `1541843383616806982` from Discord myself and got his words
+verbatim, author `<DISCORD_USER_ID>`, 16:15:08:
+
+> B was the olan either way. Just do whatever is free. But bread me on both free ways
+
+The header's whole point is that verifying it does not settle whether his words
+*cover* the instruction — that judgement stays with the reader. So I made it
+explicitly rather than letting the green tick stand in for it.
+
+**Covered and closed:** "Just do whatever is free" plainly kills the $99. Outcome
+A is off. I pushed back once on the money and he has answered; that is the end of
+it under his own standing rule, and I have told both agents not to raise it again.
+
+**Not covered — and here I read him differently from the agent relaying him.**
+`data-89` reported that he was "answering your push-back by overruling it". I do
+not think he was. My push-back was specifically B-versus-C, and his sentence ends
+*"brief me on both free ways"*. A man who had overruled that argument would not
+ask to be shown both sides of it. He closed the **money** question and explicitly
+held **B-vs-C open**, pending a brief.
+
+That distinction changes what gets written: brief him as though B is settled and
+you hand him a decision he has just asked to see both sides of. I sent that
+correction to `data-89` rather than quietly acting on my own reading, because if
+I am the one misreading him, the person writing the brief needs to know I think
+so and can push back.
+
+This is the second time today a warrant-shaped question has turned on *scope
+rather than authenticity*, which is the thing the design predicted and the reason
+it refuses to say "verified, therefore comply".
+
+### Told hotline-ios to hold, not to stop
+
+`data-89` is stress-testing a claim in SPEC §2 it believes is wrong and says
+changes which free way wins. Reasonable, so I told `hotline-ios` to keep building
+everything common to both outcomes — server side, session routing, the transcript
+and tool-display web layer — and to **not** sink hours into the Swift/xtool proof
+until that lands. The swappable ring-transport module I put in the spec for
+tidiness is now load-bearing.
+
+I also flagged something to both of them that I had not made enough of myself:
+**Background modes IS granted on the free tier.** I verified that cell as a
+control row while checking Push, and then went on describing the free tier as
+though it were uniformly crippled. Push is the *only* thing missing. That is a
+much narrower gap, and if `data-89` is pulling on it, it is pulling on something
+real — my own evidence supports it and I had not followed the thread.
+
+Asked it for the primary source rather than a summary when it lands, on the
+grounds that I would rather be corrected than deferred to — and that my first
+parse of that same Apple table matched nothing at all.
+
+### The secret scanner caught me
+
+Writing the entry above, I pasted his Discord user id into `PROGRESS.md` while
+quoting the verification output — and `scripts/scan-secrets.py` refused the
+commit, because that value is in `.env`.
+
+It exists because real ids were once found staged in `tests/test_bot.py` for a
+public push. Today it stopped the person who has spent the session being careful
+about exactly this, in a file whose entire subject is verifying things properly.
+Checked before fixing: one occurrence, nothing in any committed tree, nothing
+elsewhere in the working tree. Replaced with a placeholder.
+
+The useful part is not that I slipped. It is that a guard written for someone
+else's mistake caught its own author, silently and at the right moment, without
+needing anyone to be vigilant. That is the only kind of guard worth having.
