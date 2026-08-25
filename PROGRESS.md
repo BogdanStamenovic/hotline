@@ -2830,3 +2830,72 @@ elsewhere in the working tree. Replaced with a placeholder.
 The useful part is not that I slipped. It is that a guard written for someone
 else's mistake caught its own author, silently and at the right moment, without
 needing anyone to be vigilant. That is the only kind of guard worth having.
+
+## My §2 was fact, fact, assumption — and I said all three in the same voice (18:35)
+
+`data-89` took the scope correction, then produced the best catch of the day, and
+it is a correction to me.
+
+SPEC §2 reasoned: no `aps-environment` → PushKit cannot register → **therefore the
+app cannot ring when closed**. The first two links are sound. **The third does not
+follow.** In its framing:
+
+> A push is not the only way to ring. A push is how you WAKE a dead process. An
+> app that never died does not need waking.
+
+`UIBackgroundModes: audio` plus a silent `AVAudioSession` keeps the process alive
+→ it holds a socket open to archserver over Tailscale → the server writes to it →
+the app calls `CXProvider.reportNewIncomingCall()` **locally**. CallKit takes no
+entitlement; only PushKit does. And the iOS 13 rule everyone quotes — "you MUST
+report a call on receiving a VoIP push" — is an obligation on apps that *accept*
+such a push, not a prohibition on reporting calls that arrived another way.
+
+If it holds, **B rings a locked phone with no APNs in the path at all** — which is
+more "everything over Tailscale" than the $99 option ever was. Apple would not be
+in the doorbell path; nobody would.
+
+**I had the evidence for this on my own screen.** I verified the Background modes
+cell myself, as a control row, to prove the Push cell's blank was real — and then
+went on describing the free tier as uniformly crippled. I even flagged to both
+agents that Push was "the only thing missing" without following my own sentence to
+its conclusion. I stopped at the first plausible stopping point and wrote the stop
+down as a finding.
+
+### What I added, which is the part worth having
+
+Agreeing faster is not help. The failure modes, in the order they should be
+killed:
+
+1. **The reboot gap, which was in nobody's list and I think is the real one.** The
+   architecture needs a process that never died. A phone reboot kills it and a
+   sideloaded app cannot self-start. So after every reboot there is no ring until
+   he manually opens the app — **and the failure is silent**, indistinguishable
+   from nobody calling. Told `hotline-ios` to build the server so an absent client
+   socket is *detected* and degrades loudly to the Discord mention. That is worth
+   building whichever way this lands.
+2. Audio-session death: another app taking the session, a real call, music,
+   CarPlay, Low Power Mode. Test against his actual iOS version, not "iOS 18/26"
+   in the abstract.
+3. Battery. A permanently live audio session and open socket is the cost that gets
+   a working feature uninstalled in a week.
+4. The 7-day cert interacts with (1): an expired signature means the app will not
+   launch, so the ring dies weekly, silently.
+5. Tailscale's iOS Network Extension holding a background socket — "generally
+   persistent" is doing work in that sentence.
+
+### The bias warning I gave it, which matters more than the technical list
+
+`data-89` is about to hand him **the answer he already said he wanted**. He wrote
+"B was the olan either way" before any of this analysis existed. That is precisely
+when scrutiny should go up and precisely when it usually goes down. If B only
+works with an asterisk, the asterisk belongs in the brief's first paragraph. He
+should choose B knowing about the reboot gap, not discover it at 3am when nothing
+rings.
+
+Also flagged: free GitHub Actions macOS minutes are for **public** repos, and this
+one would carry his infrastructure layout and Tailscale addressing. That is a
+decision for him, not a build detail.
+
+Deconflicted the two agents: `data-89`'s subagent does the build-options *survey*,
+`hotline-ios` owns the actual build *attempt*. An `.ipa` that exists settles what a
+survey cannot.
