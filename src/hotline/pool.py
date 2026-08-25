@@ -463,7 +463,8 @@ class SessionPool:
             from .agents import Registry
 
             known = sorted(
-                Registry().agents.values(), key=lambda a: a.declared_at, reverse=True
+                Registry().agents.values(),
+                key=lambda a: (a.privileged, a.declared_at), reverse=True,
             )
             if not known:
                 return Reply(

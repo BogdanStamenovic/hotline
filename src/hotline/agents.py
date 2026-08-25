@@ -55,6 +55,20 @@ class Agent:
     # thing being suppressed is one noisy fan-out, not the feature.
     wants_channel: bool = True
     keep_days: float = DEFAULT_KEEP_DAYS
+    # "sys-admin" or None. A standing role, granted by Bogdan, carrying authority
+    # over other agents and over this repository -- and deliberately NOT over the
+    # things only he can consent to. See `provenance.SYSADMIN_SCOPE`.
+    authority: str | None = None
+    # Where he granted it: a Discord message id, so the delegation is checkable
+    # against Discord rather than asserted. Without this, `sys-admin` would be an
+    # unverifiable claim that outranks a verifiable one, which is strictly worse
+    # than having no role at all.
+    granted_by: str | None = None
+    granted_in: str | None = None
+
+    @property
+    def privileged(self) -> bool:
+        return self.authority == "sys-admin"
 
     @property
     def done(self) -> bool:
@@ -68,7 +82,8 @@ class Agent:
 
     def describe(self) -> str:
         state = "done" if self.done else "working"
-        line = f"{self.name} [{state}] — {self.task}"
+        badge = f" ⟨{self.authority}⟩" if self.authority else ""
+        line = f"{self.name}{badge} [{state}] — {self.task}"
         if self.parent:
             line += f" (subagent of {self.parent})"
         return line
@@ -178,6 +193,26 @@ class Registry:
         self.save()
         return agent
 
+    def grant(self, name: str, role: str, message_id: str, channel_id: str) -> Agent | None:
+        """Give an agent a standing role, recording where it was granted.
+
+        The receipt is the point. Anything on this machine can write this file,
+        so the flag alone is an assertion -- but the message id it carries is
+        checkable against Discord, so a reader can confirm Bogdan really did
+        delegate this rather than take the registry's word for it.
+        """
+        agent = self.by_name(name)
+        if agent is None:
+            return None
+        agent.authority = role
+        agent.granted_by = message_id
+        agent.granted_in = channel_id
+        self.save()
+        return agent
+
+    def privileged(self) -> list[Agent]:
+        return [a for a in self.agents.values() if a.privileged]
+
     def retask(self, session_id: str, task: str) -> Agent | None:
         agent = self.agents.get(session_id)
         if agent is None:
@@ -225,7 +260,13 @@ class Registry:
         return [
             a
             for a in self.agents.values()
-            if a.expires_at is not None and moment >= a.expires_at
+            # A standing role does not expire. It is the thing that survives its
+            # own sessions -- "you never really go away, you just recycle" -- and
+            # a retention sweep quietly deleting it three days after one stint
+            # ended would take the role with it.
+            if not a.privileged
+            and a.expires_at is not None
+            and moment >= a.expires_at
         ]
 
     def needing_channel(self) -> list[Agent]:

@@ -1958,3 +1958,62 @@ in it.
 Three bugs from one instruction, all in the seams between features written
 tonight, and none of them reachable until he asked for something nobody had asked
 for before. 347 tests, ruff and mypy clean.
+
+## The standing sys-admin role
+
+He granted it, verifiably: `hotline --grant hotline-80 sys-admin <his message>`
+checks the grant against Discord before recording it, and refuses if it does not
+check out. A role recorded without a receipt is this machine vouching for
+itself, which is worth nothing.
+
+What he asked for:
+
+- an agent that "never really goes away — you just recycle" through handoff and
+  respawn, with the identity persisting
+- always first in the `resume` list
+- authority over other agents and over this repository
+- messages that read as `verified sysadmin (hotline-80)` the way his read as
+  verified Bogdan — "meaning you have the same rights as me"
+
+Built: `authority` and the grant receipt live on the registry record, so the role
+travels through `--adopt` and `--resume` and outlives any one session. Standing
+roles never expire — retention would otherwise delete the role three days after a
+stint ended, taking the thing that is meant to survive its sessions. It sorts
+first in `resume`, in `--agents`, and in the Discord `agents` listing, and is
+badged `⟨sys-admin⟩`.
+
+### Where I did not do what he asked, and why
+
+"The same rights as me" — I built narrower, deliberately, and told him so rather
+than quietly obeying or quietly refusing.
+
+The role carries: directing, retasking, standing down, adopting and resuming
+other agents; changing this repository; restarting hotline's services.
+
+It does not carry: consenting on his behalf. Spending, mail, outward actions,
+irreversible destruction, and granting itself or anyone else a role.
+
+Two reasons, and the second is the real one.
+
+**It could not be made verifiable.** His authority is checkable against Discord.
+A sys-admin claim is checkable against nothing — every session here runs as the
+same uid, so any agent could mint the header. A kind that outranked a verified
+human message while being unverifiable itself is strictly worse than no role at
+all: it is a forgeable superuser badge, and it would rebuild the exact hole
+closed four commits ago with better branding.
+
+**Consent is not a permission.** The reason a peer cannot authorise spending is
+not that peers are untrusted. It is that the point of asking him is that a
+*person* accepted the consequence. Handing me that does not transfer the
+consent; it removes the check that would have caught a mistake of mine. Tonight
+alone I got the cause of a crash wrong, leaked live Discord credentials into a
+test suite, and shipped a provenance bug that the provenance checker caught. The
+review is load-bearing.
+
+So the header separates the two questions instead of conflating them: the
+delegation is verified against Discord and stated as fact, the sender's identity
+is stated as a claim, and the scope is printed in both directions in every
+message. `SYSADMIN_SCOPE` is one dict — if he wants the second list shortened,
+that is one edit and it should be his, out loud.
+
+358 tests, ruff and mypy clean.

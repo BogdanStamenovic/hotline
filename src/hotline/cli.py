@@ -97,6 +97,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="give this agent a voice channel (created on demand, not at declaration)",
     )
     parser.add_argument(
+        "--grant", nargs=3, metavar=("NAME", "ROLE", "MESSAGE_URL"),
+        help="give an agent a standing role, recording the Discord message where "
+             "Bogdan granted it. Pass the message link or 'channel_id/message_id'.",
+    )
+    parser.add_argument(
         "--provenance", metavar="RECORD", nargs="?", const="-",
         help="check a relayed message's provenance against Discord. Pass the "
              "record from its header, or '-' to read the whole message on stdin.",
@@ -149,11 +154,16 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
     load_env()
     registry = Registry()
 
+    if args.grant:
+        name, role, where = args.grant
+        return _grant_role(name, role, where, registry, log)
+
     if args.provenance:
         return _check_provenance(args.provenance)
 
     if args.agents:
-        known = sorted(registry.agents.values(), key=lambda a: a.declared_at, reverse=True)
+        known = sorted(registry.agents.values(),
+                       key=lambda a: (a.privileged, a.declared_at), reverse=True)
         if not known:
             log("no agents have declared themselves")
             return 0
@@ -489,6 +499,48 @@ def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str],
     return 0
 
 
+def _grant_role(
+    name: str, role: str, where: str, registry: Registry, log: Callable[[str], None]
+) -> int:
+    """`--grant NAME ROLE <message>` -- record a role and where it was granted.
+
+    The message is required, not optional. A role recorded without one is an
+    assertion this machine makes about itself, and the entire value of the role
+    is that a reader can check the delegation against Discord instead.
+    """
+    parts = [p for p in where.replace("https://discord.com/channels/", "").split("/") if p]
+    if len(parts) < 2 or not all(p.isdigit() for p in parts[-2:]):
+        print(
+            "hotline: error: pass the Discord message where he granted it -- a "
+            "message link, or 'channel_id/message_id'. A role with no receipt is "
+            "just this machine vouching for itself.",
+            file=sys.stderr,
+        )
+        return 2
+    channel_id, message_id = parts[-2], parts[-1]
+
+    env = load_env()
+    verdict = verify(
+        {"kind": "sys-admin", "label": name,
+         "granted_by": message_id, "granted_in": channel_id},
+        token=env.get("HOTLINE_BOT_TOKEN"),
+        gated_user_id=env.get("DISCORD_USER_ID"),
+    )
+    if not verdict.ok:
+        # Refuse rather than record-and-warn. A role that half-verified would be
+        # read as a role.
+        print(f"hotline: error: not granting it -- {verdict.summary}", file=sys.stderr)
+        return 1
+
+    agent = registry.grant(name, role, message_id, channel_id)
+    if agent is None:
+        print(f"hotline: error: no agent called {name!r}. Try --agents.", file=sys.stderr)
+        return 1
+    log(f"granted: {agent.describe()}")
+    print(verdict)
+    return 0
+
+
 def _check_provenance(record: str) -> int:
     """`--provenance` -- ask Discord whether a relayed message is what it says.
 
@@ -547,6 +599,19 @@ def _speaking_as() -> Origin:
         return Origin(kind="human", label="a shell on this machine")
     name = _session_name(session_id) or session_id[:8]
     registered = Registry().get(session_id)
+    if registered is not None and registered.privileged:
+        # The role travels with the record, so it survives a respawn: a
+        # replacement that adopts `hotline-80` speaks with the same standing as
+        # the session it replaced, which is the point of the role being standing
+        # rather than per-session.
+        return Origin(
+            kind="sys-admin",
+            label=f"{registered.name} ({registered.authority})",
+            session_id=session_id,
+            granted_by=registered.granted_by,
+            granted_in=registered.granted_in,
+            extra={"task": registered.task[:120]},
+        )
     return Origin(
         kind="agent",
         label=registered.name if registered else name,
@@ -593,7 +658,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if (
         args.declare or args.done or args.agents or args.resume or args.voice
-        or args.adopt or args.provenance
+        or args.adopt or args.provenance or args.grant
         or args.claim is not None
     ):
         return _agent_command(args, log)
