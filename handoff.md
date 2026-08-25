@@ -301,110 +301,87 @@ check has been wrong in both directions.
 
 ## THERE IS A SECOND PROJECT NOW: `hotline-ios`
 
-Started 2026-08-25 evening on his verified instruction. `/home/bodas/data/hotline-ios`,
-spec at `SPEC.md`, agent `hotline-ios` (own channel `#agent-hotline-ios`).
+`/home/bodas/data/hotline-ios`, spec at `SPEC.md`, agent `hotline-ios`, channel
+`#agent-hotline-ios`. **`SPEC.md` §2 is superseded — read this section instead.**
 
-**Goal:** a real ringing call on his iPhone, replacing the `@mention` he calls a
-fake call. He ruled out the $99 Apple Developer Program — "just do whatever is
-free" — so there are two free paths and they compose:
+### The architecture, after he decoupled it (2026-08-25 evening)
 
-- **C (recommended, actionable now):** stock App Store Linphone registers to a
-  self-hosted SIP domain on archserver over Tailscale. Its REGISTER carries RFC
-  8599 push params; our server calls Belledonne's free `/api/push_notification`;
-  their gateway holds the real APNs cert and wakes the closed app into CallKit.
-  **I verified the server half at source** — the route sits behind ordinary
-  account middleware with no admin tier, and the controller pushes to whatever
-  `pn_prid` it is handed with no ownership check. **The client half is unverified**
-  and is what his Linphone test settles.
-- **B (the upgrade):** his own sideloaded app, kept alive by a silent
-  `AVAudioSession`, holding a socket over Tailscale, ringing via a LOCAL
-  `CXProvider.reportNewIncomingCall`. No APNs at all. CallKit needs no
-  entitlement; `UIBackgroundModes` is an Info.plist key, not an entitlement.
-  Dies at the app layer: reboot (a sideloaded app cannot self-start), a routine
-  incoming phone call killing the audio session, force-quit, 7-day cert expiry.
+His words, verified: *"make your own app for delegation talking excetera which i
+will sideload every week. Telegram for the ring. And we can fully scrap the
+talking voice rout. Thats bassically a gimic"*
 
-**A SECOND, INDEPENDENT DOORBELL EXISTS: Telegram.** `data-89` first reported a
-nine-app sweep concluding nothing already on his phone can be made to ring, and I
-filed that with a "do not re-run this research" line. **Both were wrong** — it had
-filed a partial fork's result before the parent agent reported. Struck, and this
-is the corrected version.
+**The thing that RINGS is not the thing you TALK THROUGH.** Every option we costed
+before this assumed they were the same app, and that assumption is what made all
+of them fragile. Decoupled:
 
-**Telegram 1:1 calling is real, free, headless and released.** Verified by me
-directly rather than relayed: `RequestCallRequest` is present in released
-**Telethon 1.44.0** from PyPI, with `AcceptCallRequest` and `DiscardCallRequest`
-alongside it and parameters matching MTProto's `phone.requestCall`
-(`user_id, g_a_hash, protocol, video, random_id`). That was the open question —
-release or unmerged branch — and it is released. `bbimer/tg-alarm-sentinel`
-(pushed 2026-08-08) exists for exactly this use case: triggering the native iOS
-incoming-call screen to wake a sleeping user.
+- **The ring** — a doorbell only. It wakes him; he answers; it does nothing else.
+- **The app** — his own, sideloaded weekly, **text delegation** ("talking *to*
+  agents", not talking aloud). No CallKit, no audio, no push entitlement, no
+  keepalive, and the reboot gap stops mattering because he opens it deliberately.
+- **Voice (GPU speech)** — scrapped as a gimmick. See the freeze note below.
 
-- **VERIFIED: it rings.** Telegram-iOS registers `PKPushRegistry` for `.voIP` and
-  reports to `CXProvider`; the ring fires on the bare call request without
-  completing key exchange.
-- **UNPROVEN: it carries audio.** 1:1 media needs a key exchange the live tests
-  did not complete. Treat "Telegram rings the phone" as fact and "Telegram carries
-  the conversation" as unproven.
-- **Costs:** needs a real Telegram account with a phone number to ring *from* —
-  bot tokens cannot call `phone.requestCall` — so he would need a second account.
-  Telegram's anti-abuse flood limits on automated calling are an unknown. And it
-  presumes Telegram is on his phone, **which nobody has asked him.**
+### The ring: two options, both live, and they compose
 
-**Why this is worth having even if C ships:** it attacks C's single biggest
-durability risk. C depends on Belledonne continuing to relay pushes through an
-endpoint with no ownership check — a silent-failure mode outside our control. A
-Telegram ring depends on none of that. **The two failure modes are uncorrelated**,
-which is worth more than either doorbell alone.
+|  | costs him |
+|---|---|
+| **Linphone** | install one free app. That is the whole list. Depends on Belledonne's relay continuing not to check push-token ownership; if they tighten it, his phone silently stops ringing. |
+| **Telegram** | `api_id`/`api_hash` from *his* my.telegram.org login, **plus a second Telegram user account with its own phone number** — he cannot call himself. May cost money. No third-party dependency. |
 
-C remains primary because it is the one that carries a real conversation rather
-than only a ring. But "C by elimination" is **not** true and should not be said.
+**Bots cannot ring him.** Verified with a control: Telegram's docs mark bot-usable
+methods, `messages.sendMessage` has the marker, `phone.requestCall` does not, and
+`account.updateProfile` (user-only) does not either. His bot token is useful as a
+text channel and is NOT a ring — do not let it drift into looking like one.
 
-Also verified from the same sweep, both genuine but both downgrades: Home
-Assistant critical alerts really do bypass DND and silent, triggerable by `curl`
-over Tailscale, free and self-hosted — but need the HA app installed and are an
-alert, not a call. iOS PWA web push needs no App Store and no Apple Developer
-account at all (standard VAPID) — but WebKit says it behaves as an ordinary
-notification and respects Focus, so it buzzes rather than rings.
+**Build both if he will.** Their failure modes are uncorrelated — different
+company, different infrastructure, different way of breaking — and `RingChain`
+already falls through in order, so a second doorbell is configuration rather than
+a rewrite. Two doorbells that cannot fail together beat one better doorbell.
 
-Still genuinely dead, so do not re-check these: Signal (`signal-cli` is text-only),
-Messenger, Viber, Discord (bots join guild voice; nothing rings a DM), Zoom (paid
-licence), Google Meet (the API makes spaces, it does not ring), FaceTime (CallKit
-can join the native UI, not invoke FaceTime), Skype (retired 2025-05-05).
-WhatsApp's Business Calling API rings but needs Meta business verification, a WABA
-number and the callee's prior opt-in — not a cold-call API.
+**Privacy point he needs before handing over a number:** logging archserver into a
+second Telegram account means archserver can see that account's chats, and once an
+account is active elsewhere the login code arrives *inside Telegram on that
+phone*, not by SMS. Fine for a fresh number; not fine for someone's live account.
 
-**Every rung below the ring is an alert, not a call**, and a critical alert is a
-louder fake call — which is the thing he asked to be rid of. When the system
-degrades it must say which rung it landed on rather than quietly substituting a
-notification and letting it read as success.
+### Verified, so nobody re-derives it
 
-**`ConfirmedRing` arbitrates between them** and is the piece that matters most: a
-transport must produce positive evidence it rang — SIP 180, push accept, app ack —
-or the silence becomes `CallUnreachable` and degrades loudly to the pager. It
-**fails closed**: no confirmation channel means reported-unreachable, not trusted.
+- **Telethon 1.44.0 (released) has `RequestCallRequest`** with `Accept`/`Discard`
+  alongside — full 1:1 surface, not group voice. **It rings — verified.** **It
+  carries audio — UNPROVEN**, key exchange never completed in live tests.
+- **Swift 6.3.3 compiles and runs on this Arch box** from a private toolchain in
+  `/mnt/iosbuild`, nothing installed system-wide. The missing piece is Apple's SDK
+  and that is an **account problem, not a machine problem**.
+- **SDK route:** `BogdanStamenovic/darwin-sdk-build`, public, **he authorised it**
+  — audited by me to exactly two blobs with no addressing or credentials. A macOS
+  runner has Xcode preinstalled, so no Apple ID and no 13GB `Xcode.xip`.
+  **Download and verify the artifact BEFORE deleting the repo** — artifacts live
+  under the repository and die with it.
+- **`ConfirmedRing` is the load-bearing piece.** A transport must produce positive
+  evidence it rang or the silence becomes unreachable and degrades loudly. It
+  **fails closed**. Without it a fall-through chain does not degrade — it stops at
+  the first silent failure and the call vanishes.
+- **`RingChain` does not fall through on a DECLINE.** He saw it and said not now;
+  ringing him another way a second later is what he was declining.
+- **Every rung below the ring is an alert, not a call**, and a critical alert is a
+  louder fake call — the thing he asked to be rid of. Degrading must say which
+  rung it landed on rather than quietly substituting a notification.
+- `/mnt/windows/hotline-ios-build.img` is a FILE (ext4, loop-mounted at
+  `/mnt/iosbuild`). His Windows is untouched. Do **not** delete
+  `/mnt/windows/pacman-cache-archive-20260825` — moved package cache, this box's
+  only rollback.
+- `hotline-sipprobe.service` is **stood down but its code is kept**, so the
+  Linphone route is one command from testable again.
 
-**Do not "fix" this by sideloading Linphone.** He suggested it and it is the one
-idea that specifically cannot work: stock Linphone is valuable for its IDENTITY,
-not its code. `pn-param` is `<TEAMID>.org.linphone.phone.voip` — their team, their
-bundle, their cert. Re-signing it breaks all three legs at once and free
-provisioning could not obtain a push token anyway. Sideloading it turns C into B
-minus B's advantages.
+### The voice subsystem is FROZEN, not deleted
 
-**Toolchain, verified by running it:** Swift 6.3.3 compiles and executes on this
-Arch box from a private toolchain under `/mnt/iosbuild`, nothing installed
-system-wide. Only Apple's SDK is missing, and **that is an account problem, not a
-machine problem.** The route is a GitHub Actions macOS runner (Xcode preinstalled,
-so no Apple ID and no 13GB `Xcode.xip`) in a **throwaway public repo he explicitly
-authorised** — two files only, delete it once the artifact is out.
+He said "stop investing in it", confirmed. `voice.py`, `audio.py`, Whisper, Piper
+and their tests **stay**. Deleting is irreversible and costs nothing to defer;
+keeping costs disk. That code also encodes six py-cord receive bugs nobody
+upstream documented. Only an explicit "delete the voice code" changes this.
 
-`/mnt/windows/hotline-ios-build.img` is an ext4 image, loop-mounted at
-`/mnt/iosbuild`. It is a FILE. His Windows is untouched. Do not delete
-`/mnt/windows/pacman-cache-archive-20260825` — the moved package cache and this
-box's only rollback.
-
-**Blocked only on him, and only until he is home on wifi** (his cellular is bad,
-which is also why everything measured relayed): install Linphone and point it at
-the SIP probe on `100.72.2.62:5060`, and leave the phone unlocked on home wifi for
-thirty seconds so the direct-path measurement can run. One sitting, both answers.
+**Do not sweep up the iPhone Shortcut path with it.** "Hey Siri, Hotline" is a
+*different thing*: his phone does the speech on-device and this side only ever
+sees text over HTTP. No GPU, no Whisper, no Piper. It works today and costs
+nothing.
 
 ## Reporting to him automatically
 
@@ -434,6 +411,25 @@ A capabilities-table cell whose blankness only means something next to a row you
 already know the answer to. Each time the fix was the same: **probe the thing
 directly, or compare against a control whose answer you already know.**
 
+**A seventh error, and it is a different species — worth its own line because no
+control row catches it.** Twice on 2026-08-25 a conclusion was left standing after
+its premise had changed:
+
+- I filed a "do not re-run this research" instruction onto a sweep whose author
+  was still working. A wrong finding is one bad fact someone trips over; **an
+  instruction not to look again steers the next person away from the answer and
+  looks like diligence while doing it.** Never attach a do-not-revisit note to a
+  null result unless you can name who finished the search and when.
+- Both `data-89` and I went on costing option C under assumptions his decoupling
+  had already destroyed — we shelved it in the same hour it got cheaper. Neither
+  of us re-ran the conclusion after the premise moved, and `data-89` had *had* the
+  insight that moved it.
+
+The mechanical guard for the first is: before writing "we checked X and found
+nothing", confirm every agent that was checking X has actually reported. For the
+second there is no trick — **when a premise changes, walk the conclusions that
+rested on it**, especially the ones you just discarded.
+
 Related and separate: **four distinct holes in the provenance design have been
 found by agents on the receiving end of it, and none by its author.**
 
@@ -450,9 +446,10 @@ unix socket is the mechanism.
 
 ## Open, and why
 
-- **Everything on `hotline-ios` now waits on him being home on wifi** — the
-  Linphone push-token test and the direct-path measurement, one sitting. Nothing
-  else is blocked; the SDK build and the server side continue meanwhile.
+- **The ring is undecided and it is his call**: Linphone (one free app, Belledonne
+  dependency) or Telegram (api keys plus a second account with a phone number,
+  possibly money) — or both, which is cheap now and strictly better. Everything
+  else on `hotline-ios` continues meanwhile; nothing is blocked on the answer.
 - **The acceptance test is half-done and cannot be finished without him.** The
   pipeline announced its own completion and that was verified end to end; nobody
   heard it, because both transports need him present -- Discord voice needs him
