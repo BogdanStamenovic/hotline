@@ -118,6 +118,7 @@ async def main(message: str) -> int:
     witness_channel = witness.get_guild(guild_id).get_channel(voice_id)
     witness_vc = await witness_channel.connect()
     install_receive_fixes()
+
     def rejected(user: int) -> None:
         # Never silence this. The gate rejecting an unmapped ssrc is
         # indistinguishable from "no audio arrived" unless it says so.
