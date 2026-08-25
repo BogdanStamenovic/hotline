@@ -3464,3 +3464,67 @@ Also told him the two things I had asked him to do at home are **void** — the
 Linphone test answers a question nobody is asking, and the wifi measurement was
 about call-audio quality, which no longer exists as a concern. Better he does
 nothing than two obsolete chores because I asked an hour ago.
+
+## Decoupling made C cheaper, and we kept costing it under the old assumptions (21:00)
+
+He made a Telegram bot and sent the token, believing the ring was solved. It is
+not: **bots cannot place calls.** `data-89` caught it inside twenty minutes, which
+mattered — he would otherwise have stopped thinking about a solved problem.
+
+I confirmed it with a control rather than trusting an absence, which is the day's
+lesson applied to the day's last blocker. Telegram marks bot-usable methods
+explicitly:
+
+```
+messages.sendMessage    BOT-USABLE      <- control, known bot-usable
+messages.editMessage    BOT-USABLE      <- control
+account.updateProfile   no bot marker   <- control, known user-only
+phone.requestCall       no bot marker   <- the one that matters
+phone.acceptCall        no bot marker
+```
+
+The marker is capable of being present, so its absence is meaningful. Settled.
+
+Also verified the token handling myself, since it landed in **my** repo's `.env`:
+mode 0600, matched by `.gitignore:10`, zero commits in history contain it.
+
+### The thing we both missed
+
+`data-89` reported the Telegram ring needs three preconditions it had undersold:
+`api_id`/`api_hash` from *his* login, and **a second Telegram user account with
+its own phone number** to ring him from — he cannot call himself. That may cost
+money, which makes it his decision.
+
+But there is a better observation available, and neither of us made it until now:
+
+**His decoupling did not only rescue his own app. It removed the main objection to
+C — and we both stopped costing C at the exact moment it got cheaper.**
+
+The objection to Linphone was always *"the app that rings has someone else's name
+on it and you inherit its UI"*. That was true **when the ringer was the talker**.
+Under his design Linphone is only a doorbell: it rings, he answers, and the work
+happens in his own app. He barely looks at it. The objection evaporated — and it
+evaporated in the same message that made us shelve the option.
+
+    TELEGRAM ring: api keys (free, his login) + a second account with its own
+                   number (may cost money). No third-party relay dependency.
+    LINPHONE ring: install one free app. That is the entire list. No second
+                   account, no number, no keys, no money. Depends on Belledonne's
+                   relay continuing not to check token ownership.
+
+Told him directly, because he was about to buy a SIM or a virtual number and may
+not need to. I was explicit that **I told him the Linphone test was void an hour
+ago, that this was correct then and is wrong now**, and why — better he hears the
+reversal from me with its reason than finds the inconsistency himself.
+
+### And the good version is now cheap
+
+"Two uncorrelated doorbells beat one better doorbell" stopped being aspirational.
+`RingChain` already runs transports in order and falls through, so a second
+doorbell is **configuration, not a rewrite**. Different company, different
+infrastructure, different failure mode. If he will do both, that is strictly best
+and costs one free app install on top of whatever Telegram needs.
+
+The probe was stood down but its code kept deliberately, so C is one command from
+testable again. That instinct — stand down without tearing out — is what makes
+this reversible at all, and it was `hotline-ios` that argued for it.
