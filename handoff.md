@@ -323,6 +323,24 @@ free" — so there are two free paths and they compose:
   Dies at the app layer: reboot (a sideloaded app cannot self-start), a routine
   incoming phone call killing the audio session, force-quit, 7-day cert expiry.
 
+**C is chosen by ELIMINATION, not by default.** `data-89` checked every app that
+already rings natively on his phone for whether Linux can trigger one for free.
+All dead: Signal (`signal-cli` is text-only), Messenger, Viber, Discord (bots join
+guild voice, nothing rings a DM), Zoom (paid licence), Google Meet (the API makes
+spaces, it does not ring), FaceTime (CallKit can join the native UI, not invoke
+FaceTime), Skype (retired 2025-05-05). WhatsApp's Business Calling API is the only
+survivor and needs Meta business verification, a WABA number and **the callee's
+prior opt-in** — not a cold-call API, and geo-blocked in several countries.
+**Do not re-run this research.** Three candidates are unresolved rather than
+cleared and are named in the brief as where to resume if C ever dies: Telegram
+(TDLib/pytgcalls — is 1:1 outgoing calling in a release or an unmerged branch?),
+iOS web push to a home-screen PWA, and Home Assistant critical alerts.
+
+**Every rung below the ring is an alert, not a call**, and a critical alert is a
+louder fake call — which is the thing he asked to be rid of. When the system
+degrades it must say which rung it landed on rather than quietly substituting a
+notification and letting it read as success.
+
 **`ConfirmedRing` arbitrates between them** and is the piece that matters most: a
 transport must produce positive evidence it rang — SIP 180, push accept, app ack —
 or the silence becomes `CallUnreachable` and degrades loudly to the pager. It
