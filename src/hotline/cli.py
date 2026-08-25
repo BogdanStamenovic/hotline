@@ -17,7 +17,7 @@ import json
 import os
 import sys
 from collections.abc import Callable, Sequence
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from . import __version__
 from .agents import DEFAULT_KEEP_DAYS, Registry
@@ -28,7 +28,7 @@ from .config import load_env
 from .errors import HotlineError
 from .fresh import Event
 from .guard import install_guard
-from .provenance import Origin, body_of, parse, verify
+from .provenance import MARKER, Origin, body_of, parse, verify
 from .revive import brief_for, rehome
 from .router import Route, Router, describe, mid_turn, parse_utterance
 from .stops import install_hook, stops_dir
@@ -122,6 +122,14 @@ def _build_parser() -> argparse.ArgumentParser:
         const="-",
         help="check a relayed message's provenance against Discord. Pass the "
         "record from its header, or '-' to read the whole message on stdin.",
+    )
+    parser.add_argument(
+        "--warrant",
+        metavar="REF",
+        help="with --to: carry the originating human's receipt alongside the "
+        "instruction, so the receiver can check WHO ASKED for it and not just "
+        "who is relaying it. Pass the Discord message where he asked -- a link, "
+        "'channel_id/message_id', or the record from a header you were sent.",
     )
     parser.add_argument(
         "--adopt",
@@ -601,6 +609,85 @@ def _check_provenance(record: str) -> int:
     return 0 if verdict.ok else 1
 
 
+def _resolve_warrant(ref: str) -> dict[str, Any] | None:
+    """Turn `--warrant REF` into a checked receipt, or refuse to send one.
+
+    Accepts the two forms a caller actually has to hand: a Discord message link
+    (or bare `channel_id/message_id`) when a human is typing it, and a whole
+    provenance record when an agent is passing on a header it was itself sent.
+    The second form is what makes the warrant chain -- an agent relaying an
+    instruction copies the receipt it received rather than minting a new claim.
+
+    It is verified HERE, before sending, and a failure refuses the send. The
+    receiver checks it again on arrival and that check is the one that counts --
+    but a warrant that cannot be verified by the sender is either a typo or a
+    forgery, and in both cases delivering it would put a receipt in front of an
+    agent that is about to trust it. Better to fail in front of whoever typed it.
+    """
+    ref = ref.strip()
+    record: dict[str, Any] | None = None
+    if ref.startswith(("{", f"[{MARKER}")):
+        try:
+            record = json.loads(ref)
+        except ValueError:
+            record = parse(ref)
+        if not isinstance(record, dict):
+            print(f"hotline: error: {ref[:80]!r} is not a provenance record.", file=sys.stderr)
+            return None
+        # A warrant is a claim about what a HUMAN asked for. Relaying an agent's
+        # record as a warrant would launder a peer into an authority, which is
+        # the exact shape this module exists to stop.
+        if str(record.get("kind")) != "human":
+            print(
+                f"hotline: error: that record is kind={record.get('kind')!r}, not a "
+                "human message. Only a human's own message can warrant an "
+                "instruction -- an agent's record is a peer's claim, and relaying "
+                "it as a warrant would dress a peer up as him.",
+                file=sys.stderr,
+            )
+            return None
+        record = {
+            "kind": "human",
+            "channel_id": str(record.get("channel_id", "")),
+            "message_id": str(record.get("message_id", "")),
+            "author_id": str(record.get("author_id", "")),
+        }
+    else:
+        parts = [p for p in ref.replace("https://discord.com/channels/", "").split("/") if p]
+        if len(parts) < 2 or not all(p.isdigit() for p in parts[-2:]):
+            print(
+                "hotline: error: --warrant wants the Discord message where he "
+                "asked for this -- a message link, 'channel_id/message_id', or a "
+                "provenance record you were sent.",
+                file=sys.stderr,
+            )
+            return None
+        record = {"kind": "human", "channel_id": parts[-2], "message_id": parts[-1]}
+
+    if not record.get("channel_id") or not record.get("message_id"):
+        print(
+            "hotline: error: that record carries no Discord receipt, so there is "
+            "nothing for the receiver to check. A warrant with no receipt is just "
+            "this machine vouching for itself.",
+            file=sys.stderr,
+        )
+        return None
+
+    env = load_env()
+    gated = env.get("DISCORD_USER_ID") or os.environ.get("DISCORD_USER_ID")
+    verdict = verify(
+        record,
+        token=env.get("HOTLINE_BOT_TOKEN") or os.environ.get("HOTLINE_BOT_TOKEN"),
+        gated_user_id=gated,
+    )
+    if not verdict.ok:
+        print(f"hotline: error: not sending that warrant -- {verdict.summary}", file=sys.stderr)
+        return None
+    if gated and not record.get("author_id"):
+        record["author_id"] = str(gated)
+    return {k: v for k, v in record.items() if v}
+
+
 def _speaking_as() -> Origin:
     """Who this invocation is, as honestly as it can be established.
 
@@ -732,6 +819,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     # receiver is told what it is reading instead of having to guess, which is
     # the whole of the defect this closes.
     origin = _speaking_as()
+    if args.warrant:
+        if not args.to:
+            print(
+                "hotline: error: --warrant only means something with --to. A "
+                "warrant says who asked for an instruction being relayed; there "
+                "is nobody to relay it to here.",
+                file=sys.stderr,
+            )
+            return 2
+        origin.warrant = _resolve_warrant(args.warrant)
+        if origin.warrant is None:
+            return 1
+        log("   (carrying his receipt: the receiver can check who asked, not just who relayed)")
 
     try:
         if args.to:

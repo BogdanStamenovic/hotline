@@ -2199,3 +2199,64 @@ its original mtime; the rollback tarball really contains the four original files
 the handoff is written. It wrote `cdpdrive.py` to drive headless Chrome over CDP
 rather than reporting "cannot verify, box is headless", then looked at its own
 screenshots and found three defects in its own output.
+
+---
+
+# Session of 2026-08-25 afternoon — worker `hotline-80` (session 553267a3)
+
+Third worker to carry this name. Adopted at 13:53; 370 tests green on arrival.
+
+## The watchdog had been manufacturing a worker every six minutes
+
+Before touching the build I checked for duplicates, because two agents editing
+one tree is the worst failure this project has. There was exactly one worker —
+me — but `watchdog.log` showed eight spawns between 13:04 and 13:52, each dying
+inside the six-minute gap.
+
+`data-67` (Bogdan's own session) messaged mid-investigation with the cause it had
+already fixed: `hotline-run start()` called raw `tmux new-session`, so the tmux
+server inherited `hotline-watchdog.service`'s cgroup and systemd destroyed it the
+moment the oneshot's `ExecStart` returned. The `sleep 3; alive` check ran inside
+the unit, so it logged "started" while the worker died three seconds later. Fixed
+on disk with a `systemd-run --user --scope --collect` wrapper plus
+`KillMode=process`. I verified the wrapper was present, that `59c1f8d` was in the
+log, and that I am in `run-p8961-i37467.scope`, then left all of it alone.
+
+### I then got the cause wrong myself, in this file
+
+I wrote here that there was a *second* cause: that the watchdog resolves the
+worker through the registry, that `hotline-80`'s record still pointed at the dead
+`c1eada39`, and that a surviving worker therefore still would not have been
+recognised. I read "is not among **1** live sessions" from 13:12 onward as a
+worker that was alive but unnameable.
+
+`data-67` checked and corrected me, and it is right. That one live session was
+**data-67 itself** — Bogdan's debugging session, pid 5432, started 13:07:57. The
+evidence was already in my own `ps` output and I walked past it: pid 5432 is the
+Claude Desktop `claude-code` process, etime 45:35 at 13:53, so it started ~13:07
+— precisely when the log flips from "0 live" to "1 live". No worker was ever
+alive-but-unrecognised. Every spawn before 13:52 died inside its three-second
+window, long before it could reach the adopt.
+
+And the adopt is not a separate fix at all: it is step one of the spawn prompt in
+`hotline-run`, so it runs on its own. data-67 changed only the cgroup path,
+touched nothing in the registry, and my adopt then happened automatically. **The
+cgroup fix alone was sufficient, empirically.**
+
+What survives, restated accurately, is a latent hazard rather than a cause: the
+registry indirection makes the adopt *load-bearing for watchdog liveness*. A
+worker that survives but fails or skips `hotline --adopt` is invisible to the
+watchdog and gets a duplicate spawned beside it — which is the duplicate-worker
+failure the watchdog docstring already describes. The guard that fits is
+`hotline-run` verifying the adopt actually took before reporting success, instead
+of trusting the prompt to have been obeyed.
+
+Worth recording that this is the fifth time in this project's log that a
+confident reading of a log line was wrong, and the second time the wrong reading
+was mine within an hour — I wrote it into the narrative log as established fact
+before checking it. A peer reading over my shoulder caught it in minutes. The
+handoff's own rule says a log line is not a cause; I broke it while quoting it.
+
+Also corrected a misreading of my own on the way in: `started: tmux attach -t
+hotline` in the log is a string `hotline-run` *echoes as advice to a human*, not
+a command it runs. I had briefly read the watchdog as attaching to terminals.

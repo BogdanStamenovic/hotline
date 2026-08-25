@@ -192,3 +192,100 @@ def test_an_invented_grant_receipt_is_caught() -> None:
 
     assert not verdict.ok
     assert "no message Discord has" in verdict.summary
+
+
+# ---- --warrant: carrying who ASKED, alongside who is relaying ---------------
+
+
+def _resolve(ref: str, monkeypatch: pytest.MonkeyPatch, messages: dict[str, Any]) -> Any:
+    """Drive `_resolve_warrant` with a stubbed Discord and a stubbed .env.
+
+    The env has to be stubbed rather than read: the real `.env` holds live
+    credentials, and a test that picked them up would make real REST calls --
+    which is how this suite once created real channels until Discord returned
+    429.
+    """
+    from hotline import cli as cli_module
+    from hotline import provenance as provenance_module
+
+    monkeypatch.setattr(
+        cli_module, "load_env", lambda: {"HOTLINE_BOT_TOKEN": "t", "DISCORD_USER_ID": "bogdan-id"}
+    )
+    monkeypatch.setattr(provenance_module, "_fetch", discord(messages))
+    return cli_module._resolve_warrant(ref)
+
+
+ASKED = {
+    "id": "777",
+    "content": "shut the machine down when d5 finishes",
+    "author": {"id": "bogdan-id"},
+    "timestamp": "2026-08-25T03:00:00+00:00",
+}
+
+
+def test_a_message_link_becomes_a_checked_receipt(monkeypatch: pytest.MonkeyPatch) -> None:
+    got = _resolve(
+        "https://discord.com/channels/1541/1541610683240554527/777", monkeypatch, {"777": ASKED}
+    )
+
+    assert got == {
+        "kind": "human",
+        "channel_id": "1541610683240554527",
+        "message_id": "777",
+        "author_id": "bogdan-id",
+    }
+
+
+def test_a_bare_channel_and_message_pair_works_too(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _resolve("1541610683240554527/777", monkeypatch, {"777": ASKED}) is not None
+
+
+def test_a_received_header_can_be_passed_straight_back_in(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The form that makes warrants chain: an agent relaying an instruction
+    copies the receipt it was itself sent, instead of minting a fresh claim."""
+    received = Origin(
+        kind="human", label="bogdan", author_id="bogdan-id", channel_id="chan", message_id="777"
+    ).wrap("shut the machine down when d5 finishes")
+
+    got = _resolve(received, monkeypatch, {"777": ASKED})
+
+    assert got is not None and got["message_id"] == "777"
+
+
+def test_a_peers_record_is_refused_as_a_warrant(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The laundering shape, blocked at the door: relaying an agent's record as a
+    warrant would dress a peer up as him. Only a human's own message can warrant
+    an instruction."""
+    peer = '{"kind":"agent","label":"hotline-80","session_id":"abc","channel_id":"chan","message_id":"777"}'
+
+    assert _resolve(peer, monkeypatch, {"777": ASKED}) is None
+
+
+def test_a_warrant_the_sender_cannot_verify_is_not_sent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Checked before sending as well as on arrival. The receiver's check is the
+    one that counts, but a warrant that fails here is a typo or a forgery, and
+    delivering either puts a receipt in front of an agent about to trust it."""
+    assert _resolve("1541610683240554527/777", monkeypatch, {}) is None
+
+
+def test_a_warrant_naming_someone_elses_message_is_not_sent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    other = {
+        "id": "777",
+        "content": "shut it down",
+        "author": {"id": "someone-else"},
+        "timestamp": "2026-08-25T03:00:00+00:00",
+    }
+
+    assert _resolve("1541610683240554527/777", monkeypatch, {"777": other}) is None
+
+
+def test_nonsense_is_refused_with_the_forms_it_accepts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert _resolve("just some words", monkeypatch, {"777": ASKED}) is None

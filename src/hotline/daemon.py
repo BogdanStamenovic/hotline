@@ -327,9 +327,7 @@ async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: b
                     return fresh
 
                 adopt(bot)
-                bot_task = asyncio.create_task(
-                    run_bot(bot, token, log, rebuild=rebuild)
-                )
+                bot_task = asyncio.create_task(run_bot(bot, token, log, rebuild=rebuild))
 
     sweeper = asyncio.create_task(_sweep_forever(log))
 
