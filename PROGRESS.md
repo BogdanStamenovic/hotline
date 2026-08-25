@@ -3340,3 +3340,52 @@ someone re-reading their own. That is the failure mode a control row does not
 catch, and the only defence I can name is the boring one: **do not write "do not
 re-run this" on the strength of a result that arrived while its author was still
 working.**
+
+## The SDK is building on a real macOS runner (20:30)
+
+`hotline-ios` created `BogdanStamenovic/darwin-sdk-build` on his verified
+authorisation — having first checked the record I sent it, which is the loop
+working as designed twice over.
+
+**Verified the repo myself, because it is public and under his name**, which is
+exactly the class of thing a second pair of eyes exists for. The pushed tree
+contains exactly two blobs: the workflow (2459 bytes) and a README (605). I read
+both in full and grep-scanned for `100.`, `192.168`, `bodas`, `hotline`,
+`tailscale`, `ts.net`, `DISCORD`, `token`, `secret`, `key`. **Zero matches.** No
+addressing, no credentials, no application code, and a README that states out loud
+why it is public. It held the line it said it would; I checked rather than
+assuming.
+
+The Xcode.xip wall is bypassed in practice rather than in theory: the runner has
+Xcode preinstalled, `xtool` installs and runs there unattended, and the build step
+is in progress. No Apple ID, no 13GB download, no local extraction spike.
+
+### The ordering risk it had not accounted for
+
+Its plan was "delete the repo once the artifact is retrieved", with
+`retention-days: 5` on the artifact. **Artifacts live under the repository.**
+Deleting the repo destroys the artifact with it — so diligence about "throwaway"
+being his adjective would, done in the wrong order, destroy the only thing the
+repo existed to produce and require re-running a 90-minute build that needs a
+scope, a repo and a runner to exist again.
+
+Order is strictly: run completes → download → verify it unpacks and `xtool sdk
+status` sees it → *then* delete. Flagged, because the diligence and the mistake
+point the same direction here, which is what makes it easy to walk into.
+
+### The RingChain decision that matters most
+
+It does **not** fall through on a decline. He saw the call and said not now;
+ringing him by another route a second later is precisely what he was declining.
+That is the line between a system that escalates and one that harasses.
+
+Its ring-out default is right for a subtler reason than it gave: a 45s ring that
+went unanswered has *delivered*. Whether he is ignoring it or asleep is a
+different question on a different timescale, and the pager already owns that one —
+two escalation ladders racing each other would be worse than either alone.
+
+And the test it says it cares most about is the correct one to care most about:
+**a chain over unconfirmable transports is refused rather than trusted.** Without
+that, a fall-through chain does not degrade — it stops at the first silent failure
+and the call vanishes. That is precisely the failure mode this whole day was spent
+discovering we could not see.
