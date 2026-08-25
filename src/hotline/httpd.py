@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 import traceback
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs
 
@@ -79,8 +79,26 @@ Handler = Callable[[Request], Awaitable[tuple[int, dict[str, object]]]]
 
 
 class Server:
-    def __init__(self, host: str, port: int, log: Callable[[str], None] | None = None) -> None:
-        self.host = host
+    """`host` may be one address or several.
+
+    Several matters because "reachable from his phone" and "reachable from this
+    box" are different addresses and the answer is not `0.0.0.0`. Binding the
+    tailnet address alone left every local caller -- a hook, a CLI, the
+    statusline wrapper -- unable to reach a daemon running on the same machine;
+    binding the wildcard would have fixed that by also exposing it to whatever
+    wifi the machine is on. `asyncio.start_server` takes a list of hosts and
+    opens one listener per address in a single `asyncio.Server`, so two explicit
+    binds cost nothing and change no security posture.
+    """
+
+    def __init__(
+        self,
+        host: str | Sequence[str],
+        port: int,
+        log: Callable[[str], None] | None = None,
+    ) -> None:
+        self.hosts = [host] if isinstance(host, str) else list(host)
+        self.host = self.hosts[0] if self.hosts else ""
         self.port = port
         self.routes: dict[tuple[str, str], Handler] = {}
         self.log = log or (lambda _m: None)
@@ -94,8 +112,11 @@ class Server:
         return register
 
     async def start(self) -> None:
-        self._server = await asyncio.start_server(self._handle, self.host, self.port)
-        self.log(f"listening on http://{self.host}:{self.port}")
+        self._server = await asyncio.start_server(
+            self._handle, self.hosts if len(self.hosts) > 1 else self.host, self.port
+        )
+        where = ", ".join(f"http://{h}:{self.port}" for h in self.hosts)
+        self.log(f"listening on {where}")
 
     async def serve_forever(self) -> None:
         if self._server is None:
