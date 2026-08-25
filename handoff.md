@@ -299,14 +299,89 @@ unverified feature: joining an agent's own voice channel binds the call to that
 agent. Read the comments next to its pass/fail check before trusting it -- that
 check has been wrong in both directions.
 
+## THERE IS A SECOND PROJECT NOW: `hotline-ios`
+
+Started 2026-08-25 evening on his verified instruction. `/home/bodas/data/hotline-ios`,
+spec at `SPEC.md`, agent `hotline-ios` (own channel `#agent-hotline-ios`).
+
+**Goal:** a real ringing call on his iPhone, replacing the `@mention` he calls a
+fake call. He ruled out the $99 Apple Developer Program — "just do whatever is
+free" — so there are two free paths and they compose:
+
+- **C (recommended, actionable now):** stock App Store Linphone registers to a
+  self-hosted SIP domain on archserver over Tailscale. Its REGISTER carries RFC
+  8599 push params; our server calls Belledonne's free `/api/push_notification`;
+  their gateway holds the real APNs cert and wakes the closed app into CallKit.
+  **I verified the server half at source** — the route sits behind ordinary
+  account middleware with no admin tier, and the controller pushes to whatever
+  `pn_prid` it is handed with no ownership check. **The client half is unverified**
+  and is what his Linphone test settles.
+- **B (the upgrade):** his own sideloaded app, kept alive by a silent
+  `AVAudioSession`, holding a socket over Tailscale, ringing via a LOCAL
+  `CXProvider.reportNewIncomingCall`. No APNs at all. CallKit needs no
+  entitlement; `UIBackgroundModes` is an Info.plist key, not an entitlement.
+  Dies at the app layer: reboot (a sideloaded app cannot self-start), a routine
+  incoming phone call killing the audio session, force-quit, 7-day cert expiry.
+
+**`ConfirmedRing` arbitrates between them** and is the piece that matters most: a
+transport must produce positive evidence it rang — SIP 180, push accept, app ack —
+or the silence becomes `CallUnreachable` and degrades loudly to the pager. It
+**fails closed**: no confirmation channel means reported-unreachable, not trusted.
+
+**Do not "fix" this by sideloading Linphone.** He suggested it and it is the one
+idea that specifically cannot work: stock Linphone is valuable for its IDENTITY,
+not its code. `pn-param` is `<TEAMID>.org.linphone.phone.voip` — their team, their
+bundle, their cert. Re-signing it breaks all three legs at once and free
+provisioning could not obtain a push token anyway. Sideloading it turns C into B
+minus B's advantages.
+
+**Toolchain, verified by running it:** Swift 6.3.3 compiles and executes on this
+Arch box from a private toolchain under `/mnt/iosbuild`, nothing installed
+system-wide. Only Apple's SDK is missing, and **that is an account problem, not a
+machine problem.** The route is a GitHub Actions macOS runner (Xcode preinstalled,
+so no Apple ID and no 13GB `Xcode.xip`) in a **throwaway public repo he explicitly
+authorised** — two files only, delete it once the artifact is out.
+
+`/mnt/windows/hotline-ios-build.img` is an ext4 image, loop-mounted at
+`/mnt/iosbuild`. It is a FILE. His Windows is untouched. Do not delete
+`/mnt/windows/pacman-cache-archive-20260825` — the moved package cache and this
+box's only rollback.
+
+**Blocked only on him, and only until he is home on wifi** (his cellular is bad,
+which is also why everything measured relayed): install Linphone and point it at
+the SIP probe on `100.72.2.62:5060`, and leave the phone unlocked on home wifi for
+thirty seconds so the direct-path measurement can run. One sitting, both answers.
+
+## Reporting to him automatically
+
+`~/.claude/bin/hotline-standup` on `hotline-standup@NAME.timer` (30 min,
+`Persistent=true`). Watches from outside rather than asking the agent to
+self-report, summarises from pane + transcript only, is handed its previous update
+and told not to repeat it, and **reports a dead session rather than going quiet** —
+a silent timer and a dead agent look identical from a phone. Enabled for
+`hotline-ios`.
+
 ## The pattern that is now too strong to ignore
 
-**Four distinct holes in the provenance design have been found by agents on the
-receiving end of it, and none by its author.** Today alone, one idle peer session
-found four real defects in ninety minutes purely by being the recipient: the
-unaddressable name, the exit code that contradicted its own message, the session
-that could not tell it was being spoken to, and the escalation gradient in my own
-sequence of requests.
+**Five confident field-reads were wrong on 2026-08-25 across three sessions. Two
+were mine. Every single one was caught by somebody other than its author — not one
+by the person who made it, on re-reading, at any point.** All three of us were
+checking carefully. That is the point.
+
+Every one had the same shape, and it is worth memorising because it is the most
+transferable thing in this log:
+
+> **A status field read as a signal, without testing the thing the field
+> supposedly indicates.**
+
+An empty `Endpoints` column that is empty for every peer including one we hold a
+direct connection to. A phone missing from the peer map that answers pings anyway.
+A capabilities-table cell whose blankness only means something next to a row you
+already know the answer to. Each time the fix was the same: **probe the thing
+directly, or compare against a control whose answer you already know.**
+
+Related and separate: **four distinct holes in the provenance design have been
+found by agents on the receiving end of it, and none by its author.**
 
 The authoring end cannot see what it failed to send. The receiving end cannot
 help but notice. A recipient-side session is cheap. **Make it a standing part of
