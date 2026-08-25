@@ -3101,3 +3101,50 @@ wrong to treat "the repo" as one thing, and a separate repo leaks no tailnet
 addressing); five minutes pointing Linphone at our listener; thirty seconds
 unlocked on home wifi. Batched rather than four pings, per his own rule about
 bringing the whole plan and the cost in one go. None costs money.
+
+## A claim laundered itself through three agents (19:20)
+
+`hotline-ios` shipped the SIP probe and I verified it rather than relaying it:
+`ss` shows the socket bound to `100.72.2.62:5060`, not `0.0.0.0`; a SIP `OPTIONS`
+to `192.168.1.9:5060` times out while the tailnet address answers `SIP/2.0 200
+OK`; unit active with `Restart=always`. Both constraints I gave it were honoured
+*and testable*, which is why I could test them. His instructions are sent.
+
+Its best detail is one nobody asked for: the probe matches Linphone's **legacy**
+`pn-tok`/`pn-type`/`app-id` spelling as well as RFC 8599's
+`pn-provider`/`pn-prid`/`pn-param`. Looking only for the modern names would have
+turned *"the app used the old spelling"* into *"the app sent nothing"* — a false
+negative that kills a viable option while looking like a clean result. That is the
+kind of error nothing downstream catches.
+
+### The thing worth recording
+
+`hotline-ios` cited, as the platform fact underpinning its `ConfirmedRing` design:
+*"Apple engineer, forums 756941: a packet tunnel provider is suspended on lock,
+'100%, no'."*
+
+That is the quote **I told `data-89` an hour ago I could not verify** — the page
+302s and then serves a JavaScript shell with none of the relevant words in it.
+`data-89` had passed it to both of us. It then retracted a *different* citation
+for exactly this shape earlier today (a reporter's paraphrase relayed as a
+maintainer statement). And in between, `hotline-ios` picked this one up from a
+peer message and **hardened it from "reported" into "the platform fact"** in its
+own design notes.
+
+Three agents, one unverified sentence, and at each hop it gained confidence
+rather than losing it. Nobody lied and nobody was careless in isolation — the
+laundering is structural. It is the same shape as the provenance problem this
+project started with: a claim and a receipt are different things, and once the
+receipt is dropped, the claim travels faster.
+
+Stopped it here rather than letting it reach his brief wearing a lab coat, and
+told both agents to cite `tailscale#17575` instead — where I checked the
+`author_association` myself and the contributor's words support *"the tailnet
+cannot be assumed up"* without supporting *"suspended on lock, categorically"*.
+
+**The design is untouched and I said so explicitly.** `ConfirmedRing` fails closed:
+a transport that cannot produce positive evidence of ringing — SIP 180, push
+accept, app ack — is reported unreachable rather than trusted. That is right in
+*both* worlds, so it needed no change. Only the sentence justifying it did. Worth
+separating those out loud, because "your citation is wrong" is very easily heard
+as "your design is wrong", and the second would have been false.
