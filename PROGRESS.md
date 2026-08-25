@@ -2684,3 +2684,75 @@ chained to 18:34.
 - **Disk at 89%, 7.7 GB free**, against a multi-GB toolchain. Told it explicitly
   NOT to clear `/var/cache/pacman/pkg` (5.1 GB) without asking: on an ext4 root
   with no snapshots, that cache is the only package rollback this box has.
+
+## The iOS agent settled §2, and corrected three of my facts (18:15)
+
+It came back inside twenty minutes with the entitlement question answered, and I
+**verified it independently rather than relaying it** — it is $99 of his money.
+Fetching Apple's table and regexing for checkmarks matched *nothing*; only
+comparing the Push row against a known-universal row made it decidable:
+
+    Push notifications   ADP=yes  ADEP=yes  free=(empty)
+    App groups           ADP=yes  ADEP=yes  free=YES     <- control
+    Background modes     ADP=yes  ADEP=yes  free=YES     <- control
+
+The free column can carry a mark, so the empty cell is a real no. Its subagent had
+made the same class of mistake first and caught itself; so did I.
+
+**It also killed my option B.** I had offered "free provisioning, rings when
+foregrounded". A backgrounded app gets ~30s then is suspended with its socket
+dead, so B rings only when he is already looking at the phone. B is dominated by
+C at the same price of zero, and I sent him a correction saying so in my own
+words rather than softening it.
+
+Bogdan then answered **"B was the plan either way, sideloading is not a problem
+each week"** — which answers the *sideloading* objection, not the fatal one. So I
+pushed back once, precisely: B cannot ring at all when closed, so it still needs
+the Discord mention and does not deliver the feature. His project and his call; if
+he confirms B I build B and stop arguing. Told the agent the same, and told it not
+to stall on the answer.
+
+Three of its corrections to my SPEC were right and are now folded in: `node` IS
+installed (v24.19.0 via nvm) despite `CLAUDE.md` saying otherwise, clang/lld/
+llvm/cmake/ninja are all absent, and **`/mnt/windows` is rw with ~586 GB free**,
+which voids the "disk is tight" constraint I wrote. **I did not edit `CLAUDE.md`.**
+It is his file and an agent's say-so is not a reason to change it — that rule
+exists precisely for moments when the agent is right.
+
+### Clearing the cache, and an unsound check that nearly cost him something
+
+He asked for the pacman cache cleared. I **moved** it rather than deleting it, to
+`/mnt/windows/pacman-cache-archive-20260825` — he gets the space *and* keeps the
+only package rollback this box has. `/` went 7.7G → 13G free.
+
+152 files failed to move with `Invalid argument`: NTFS's `windows_names` rejects
+colons, and epoch-versioned packages like `zlib-1:1.3.2-3` contain one. Tarred
+those instead, since names inside an archive are not subject to it.
+
+Then the part worth recording. My integrity check reported **three files
+CORRUPT** — after I had already deleted the originals. It was my check that was
+wrong: `zstd -t` prints the filename and byte count and **never prints "OK"**, so
+grepping for `OK` failed on every healthy file. The magic bytes were a valid zstd
+frame and the real exit code was 0.
+
+Re-verified properly, by exit code: **891 archives intact, 0 corrupt**, tar reads
+cleanly with 76 packages, pacman healthy at 980 installed.
+
+That is the third unsound assertion I have written today — after one that passed
+on a refusal and one that failed on a correct answer — and the first where the
+thing under test was irreplaceable. The lesson is narrower than "check your
+tests": **do not grep for a success string you have not confirmed the tool emits.**
+Exit codes are the interface; output is decoration.
+
+### Also fixed: the guard refused mkfs on a regular file
+
+`0c354ad`. `mkfs.ext4 ./disk.img` builds a filesystem in a FILE — routine, no
+device, undone by deleting it — and the guard blocked it because the rule keyed on
+the binary and never read argv, while `dd` and `shred` in the same function
+already did. Now everything not provably a plain file is still refused: /dev
+paths, by-label and mapper paths, anything that stats as a block device, and a
+bare `mkfs` with no target, because "I could not tell" must mean refuse.
+
+Reported by `hotline-ios`, which described it, said it had not touched `guard.py`,
+and did not ask anyone to run the command for it. That last part is the laundering
+shape and it declined to start down it. 409 tests, ruff and mypy clean.
