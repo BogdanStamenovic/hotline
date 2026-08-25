@@ -2115,3 +2115,32 @@ fixture transcript to `projects/<id>.jsonl`, but `transcript_path` globs
 and the stale-status test went green without touching the code under test.
 
 369 tests, ruff and mypy clean.
+
+## The one-shot reformat
+
+He decided it: do it. Done as its own commit with nothing else in it.
+
+`pyproject.toml` has said `line-length = 100` since the start while the code was
+written at ruff's default 88, so the project had never been `ruff format`-clean
+under its own configuration. That made the formatter a trap rather than a tool:
+running it on a two-line change reflowed twenty files and buried the change in
+507 lines of churn. It had already cost one session real time, and left alone it
+would have done the same to everyone who touched the repo.
+
+**Verified empty rather than assumed.** Every module's AST was fingerprinted
+before and after. Three test files came back different, which is exactly the
+outcome that would be easy to wave through — so I looked instead of shrugging:
+ruff inserts a space after `"""` in a docstring that begins with a quotation
+mark, so `""""its task…` becomes `""" "its task…`, and that one character is a
+real change to the string constant. Benign, and it is why `""""` is worth
+avoiding in the first place.
+
+To be sure nothing else was hiding behind that, I compared the ASTs again with
+every string constant's whitespace normalised. No differences anywhere. 369
+tests, `ruff check`, `ruff format --check` and mypy all clean afterwards.
+
+**And `.git-blame-ignore-revs`**, because a formatting sweep otherwise makes
+`git blame` useless — every line blames to the sweep instead of to the change
+that put it there. Local config set, GitHub honours the file on its own.
+Confirmed working: `provenance.py:1` still blames to `2f7bc25`, the commit that
+actually wrote it.
