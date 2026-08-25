@@ -11,3 +11,4 @@ build/
 backups/
 .testbed/
 watchdog.log
+archive/

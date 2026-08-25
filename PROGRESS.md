@@ -1891,3 +1891,17 @@ is irreversible and takes the whole thread with it. `hotline --done --handoff
 
 Ten commits: `22d7663` through `1c4f06f`. 343 tests, ruff and mypy clean, all
 pushed.
+
+### Channel closed
+
+"Close the channel", verified against Discord. Done: `#agent-hotline-80` is
+deleted, `hotline-80` is marked complete with `handoff.md` as its record, and the
+guild is back to `general` plus the two category folders.
+
+Archived the 52 messages to `archive/agent-hotline-80.md` first — gitignored,
+because it carries his user id. The channel is disposable by design and the
+handoff is the real record, but the delete is irreversible and costs nothing to
+hedge against, so it was hedged.
+
+The record survives its channel, which is what the three-day retention is for:
+`resume hotline-80` recreates a session and a channel from the handoff.
