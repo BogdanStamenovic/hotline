@@ -350,7 +350,13 @@ phone*, not by SMS. Fine for a fresh number; not fine for someone's live account
 - **Swift 6.3.3 compiles and runs on this Arch box** from a private toolchain in
   `/mnt/iosbuild`, nothing installed system-wide. The missing piece is Apple's SDK
   and that is an **account problem, not a machine problem**.
-- **SDK route:** `BogdanStamenovic/darwin-sdk-build`, public, **he authorised it**
+- **THE DARWIN SDK IS BUILT AND INSTALLED. That wall is down.** The macOS-runner
+  build succeeded, the artifact was downloaded and unpacked, and it is installed at
+  `~/.swiftpm/swift-sdks/darwin.artifactbundle` with a copy at
+  `/mnt/iosbuild/sdk-dl/`. It is on disk and survives a reboot. Combined with the
+  Swift toolchain already proven here, **this box can now build an iOS app** —
+  nothing about that is blocked on Apple, an Apple ID, or a Mac any more.
+- **SDK route (historical, for how it was got):** `BogdanStamenovic/darwin-sdk-build`, public, **he authorised it**
   — audited by me to exactly two blobs with no addressing or credentials. A macOS
   runner has Xcode preinstalled, so no Apple ID and no 13GB `Xcode.xip`.
   **Download and verify the artifact BEFORE deleting the repo** — artifacts live
