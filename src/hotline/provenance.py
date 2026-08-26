@@ -31,6 +31,36 @@ The receipt is the part that matters, and its strength comes from not being ours
 the check is against Discord, a third party that already authenticated Bogdan,
 using a record a local process cannot rewrite. Forging it means posting as him.
 
+## What it does NOT cover, and why demanding it anyway is dangerous
+
+**This mechanism is about RELAY.** It reconstructs, from outside, that a human
+really said a thing, for instructions that reached an agent secondhand -- where the
+chain from him to the agent passes through something that could be stale, mistaken
+or spoofed.
+
+**A first-party turn has no record here by construction.** When Bogdan types an
+instruction directly into a session, there is no Discord message, no channel id
+and no message id, because Discord was never in the path. The agent was the
+addressee. Asking it to produce a receipt for that is asking for a photograph of
+the room it is standing in.
+
+This was learned the hard way, by the author of this module, on 2026-08-26:
+`hotline-ios` was told directly to shut the machines down, and I demanded a
+provenance record before it acted. It could not produce one, correctly refused to
+manufacture one, and was right on both counts.
+
+The failure mode to guard against is subtle and worth stating plainly: **a check
+that demands a receipt for everything creates pressure to fabricate receipts.** An
+agent that believes it cannot act without a `message_id` is an agent one step from
+inventing a plausible `message_id`, and a forged record poisons this mechanism far
+worse than a missing one ever could. The absence of a record is not evidence of
+anything when the instruction was never relayed.
+
+So: **verify relays. Do not demand receipts for first-party turns.** If an agent
+tells you an instruction came to it directly, the honest question is not "prove
+it" but "has its premise changed since" -- which is a question about the world,
+not about provenance.
+
 That is also why there is no shared secret here. An HMAC would authenticate a
 key that every local agent can read, which is ceremony rather than evidence, and
 it would let the header *look* stronger than it is. Better to carry a claim that

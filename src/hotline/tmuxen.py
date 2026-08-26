@@ -222,8 +222,7 @@ async def send_command(target: str, command: str, settle: float = COMMAND_SETTLE
     typed = _tmux("send-keys", "-t", target, command, check=False)
     if typed.returncode != 0:
         raise HotlineError(
-            f"could not type {command!r} into {target}: "
-            f"{typed.stderr.strip() or 'tmux failed'}"
+            f"could not type {command!r} into {target}: {typed.stderr.strip() or 'tmux failed'}"
         )
     await asyncio.sleep(settle)
     entered = _tmux("send-keys", "-t", target, "Enter", check=False)

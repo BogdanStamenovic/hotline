@@ -364,19 +364,21 @@ def _events_of(obj: dict) -> list[TranscriptEvent]:
     if kind == "system" and obj.get("subtype") == "compact_boundary":
         meta = obj.get("compactMetadata")
         meta = meta if isinstance(meta, dict) else {}
-        return [TranscriptEvent(
-            kind="compact",
-            text=str(obj.get("content") or "Conversation compacted"),
-            at=at,
-            is_sidechain=sidechain,
-            detail={
-                "trigger": meta.get("trigger"),
-                "pre_tokens": meta.get("preTokens"),
-                "post_tokens": meta.get("postTokens"),
-                "dropped_tokens": meta.get("cumulativeDroppedTokens"),
-                "duration_ms": meta.get("durationMs"),
-            },
-        )]
+        return [
+            TranscriptEvent(
+                kind="compact",
+                text=str(obj.get("content") or "Conversation compacted"),
+                at=at,
+                is_sidechain=sidechain,
+                detail={
+                    "trigger": meta.get("trigger"),
+                    "pre_tokens": meta.get("preTokens"),
+                    "post_tokens": meta.get("postTokens"),
+                    "dropped_tokens": meta.get("cumulativeDroppedTokens"),
+                    "duration_ms": meta.get("durationMs"),
+                },
+            )
+        ]
 
     message = obj.get("message")
     if not isinstance(message, dict):
@@ -390,8 +392,15 @@ def _events_of(obj: dict) -> list[TranscriptEvent]:
         if not _is_real_user_turn(obj) or _is_synthetic_user_turn(obj):
             return []
         text = _text_of(content)
-        return [TranscriptEvent(kind="user", text=text, at=at, is_sidechain=sidechain,
-                                parent_tool_use_id=parent)] if text else []
+        return (
+            [
+                TranscriptEvent(
+                    kind="user", text=text, at=at, is_sidechain=sidechain, parent_tool_use_id=parent
+                )
+            ]
+            if text
+            else []
+        )
 
     if kind != "assistant" or not isinstance(content, list):
         return []
@@ -401,23 +410,27 @@ def _events_of(obj: dict) -> list[TranscriptEvent]:
             continue
         if block.get("type") == "tool_use" and block.get("name"):
             arguments = block.get("input")
-            out.append(TranscriptEvent(
-                kind="tool",
-                tool=str(block.get("name")),
-                tool_use_id=block.get("id"),
-                parent_tool_use_id=parent,
-                is_sidechain=sidechain,
-                at=at,
-                detail=arguments if isinstance(arguments, dict) else {},
-            ))
+            out.append(
+                TranscriptEvent(
+                    kind="tool",
+                    tool=str(block.get("name")),
+                    tool_use_id=block.get("id"),
+                    parent_tool_use_id=parent,
+                    is_sidechain=sidechain,
+                    at=at,
+                    detail=arguments if isinstance(arguments, dict) else {},
+                )
+            )
         elif block.get("type") == "text" and str(block.get("text") or "").strip():
-            out.append(TranscriptEvent(
-                kind="assistant",
-                text=str(block["text"]).strip(),
-                parent_tool_use_id=parent,
-                is_sidechain=sidechain,
-                at=at,
-            ))
+            out.append(
+                TranscriptEvent(
+                    kind="assistant",
+                    text=str(block["text"]).strip(),
+                    parent_tool_use_id=parent,
+                    is_sidechain=sidechain,
+                    at=at,
+                )
+            )
     return out
 
 
@@ -438,12 +451,17 @@ def _scan(data: bytes, into: Slice, *, sidechain: bool) -> None:
         into.recognised += 1
         for event in _events_of(obj):
             into.events.append(
-                event if not sidechain
+                event
+                if not sidechain
                 else TranscriptEvent(
-                    kind=event.kind, text=event.text, tool=event.tool,
+                    kind=event.kind,
+                    text=event.text,
+                    tool=event.tool,
                     tool_use_id=event.tool_use_id,
                     parent_tool_use_id=event.parent_tool_use_id,
-                    is_sidechain=True, at=event.at, detail=event.detail,
+                    is_sidechain=True,
+                    at=event.at,
+                    detail=event.detail,
                 )
             )
 

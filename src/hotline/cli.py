@@ -508,8 +508,10 @@ def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str],
     if resumed.channel_error:
         log(f"warning: could not sort out its channel: {resumed.channel_error}")
     if resumed.agent.channel_id is not None:
-        log(f"{'kept its' if resumed.kept_channel else ''} channel: "
-            f"#{channel_slug(resumed.agent.name)}")
+        log(
+            f"{'kept its' if resumed.kept_channel else ''} channel: "
+            f"#{channel_slug(resumed.agent.name)}"
+        )
 
     try:
         reply = asyncio.run(
