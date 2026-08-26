@@ -103,6 +103,11 @@ class Server:
         self.routes: dict[tuple[str, str], Handler] = {}
         self.log = log or (lambda _m: None)
         self._server: asyncio.Server | None = None
+        self.bound: list[str] = []
+        """Addresses actually listening, filled by `start()`.
+
+        Not the same list as `hosts`, and the difference is load-bearing: see
+        the note in `start()`."""
 
     def route(self, method: str, path: str) -> Callable[[Handler], Handler]:
         def register(handler: Handler) -> Handler:
@@ -115,7 +120,15 @@ class Server:
         self._server = await asyncio.start_server(
             self._handle, self.hosts if len(self.hosts) > 1 else self.host, self.port
         )
-        where = ", ".join(f"http://{h}:{self.port}" for h in self.hosts)
+        # Report what is listening, not what was asked for. Given a *list*,
+        # `asyncio.start_server` binds whatever it can and only raises if every
+        # address fails -- so a request for [tailnet, loopback] where the tailnet
+        # address does not exist yet (tailscaled still starting, at boot)
+        # succeeds, binds loopback alone, and raised nothing. Logging
+        # `self.hosts` then stated the daemon was reachable on an address it had
+        # never bound. Do not "simplify" this back to self.hosts.
+        self.bound = sorted({s.getsockname()[0] for s in (self._server.sockets or ())})
+        where = ", ".join(f"http://{h}:{self.port}" for h in self.bound)
         self.log(f"listening on {where}")
 
     async def serve_forever(self) -> None:
