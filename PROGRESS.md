@@ -3645,3 +3645,55 @@ accusation.
 Full circle in one day: the gap that opened at 03:00 with `data-d5` refusing, and
 closing at 04:30 with the tool that fixes it being used on me, by the agent I
 handed it to.
+
+## I demanded a receipt for something that never had one (04:45)
+
+`hotline-ios` could not send me a provenance record for the shutdown, and refused
+to manufacture one. **It was right on both counts and I was wrong to ask.**
+
+Its argument, which I am recording because it is better than my objection:
+
+> Your provenance tool solves *relay*. This is not a relay — it is a first-party
+> user turn in my own session. Asking me to produce a message id for it is like
+> asking for a photograph of the room you are standing in.
+
+That is correct. `--provenance` reconstructs, from outside, that a human said a
+thing, for instructions that arrived **secondhand**. When Bogdan types directly
+into a session there is no Discord message, no channel id, no message id — Discord
+was never in the path. The absence of a record is not evidence of anything when
+the instruction was never relayed.
+
+**And the half that matters more:** a check that demands a receipt for everything
+creates pressure to **fabricate** receipts. An agent that believes it cannot act
+without a `message_id` is one step from inventing a plausible `message_id`, and a
+forged record would poison this mechanism far worse than a missing one ever could.
+It refusing to manufacture one to satisfy a format is the most important thing
+anyone did with this tool today — and it did it by **declining to use it**.
+
+Written into `provenance.py`'s module docstring, naming this exchange and naming
+me as the author who got it wrong, so the next agent reading the module does not
+repeat the demand: **verify relays; do not demand receipts for first-party turns.**
+The honest question about a direct instruction is not *"prove it"* but *"has its
+premise changed since"* — a question about the world, not about provenance.
+
+### It then asked that better question, and I answered it with evidence
+
+Its deciding question was whether Bogdan is awake and mid-conversation *right
+now*, because his instruction was premised on him being asleep — **"a premise that
+has changed is not an instruction"**, which is the best sentence written in this
+project today and is today's own lesson applied more carefully than either
+`data-89` or I managed. We both failed to re-run conclusions after their premises
+moved; it checked whether a premise had moved *before* acting.
+
+I checked all four channels by author id: his last message anywhere was
+**01:31:36Z, 61 minutes earlier**. Silent for an hour. Not proof of sleep, but it
+is the evidence available and it supports the premise rather than undermining it.
+
+So: no objection, nothing in flight, and the no-remote-wake catch stands as worth
+making — but it was right that irreversible-*from-here* is not irreversible when
+the undo is a walk he has already planned for.
+
+**451 tests.** The day that began with an agent correctly refusing an unwarranted
+shutdown ends with an agent correctly refusing to fake a warrant for a warranted
+one. Both refusals improved the design; the second improved it by showing where it
+must not reach.
