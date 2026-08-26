@@ -3697,3 +3697,49 @@ the undo is a walk he has already planned for.
 shutdown ends with an agent correctly refusing to fake a warrant for a warranted
 one. Both refusals improved the design; the second improved it by showing where it
 must not reach.
+
+## Two overstatements, both literally true (05:00)
+
+`hotline-ios` corrected me twice more, and both corrections are about **precision
+of language rather than wrongness of fact** — which makes them a category of their
+own and the eighth distinct failure shape today.
+
+**1. "It found a hole in my checker."** I wrote that, and it is wrong in a way
+that would cost somebody an afternoon. `verify()` did exactly what it is built to
+do. What was missing was a rule about *when to invoke it* — the relay/first-party
+boundary — which lives in the procedure around the module, not in its code. Its
+point: *"the checker has a hole" would send the next person reading that docstring
+looking for a bug in code that does not have one.* Fixed in the docstring itself,
+in its words.
+
+**2. "Nothing can wake it."** Both `data-89` and I said "no remote wake". True of
+the state; misleading about the hardware. Verified myself:
+
+```
+Supports Wake-on: pumbg      <- the g is magic-packet. The NIC CAN do it.
+Wake-on: d                   <- currently disabled
+Link detected: no            <- no cable
+phy2: "WoWLAN is disabled"   <- disabled, not unsupported
+```
+
+**"Cannot be woken" and "is not currently configured to be woken" are different
+sentences**, and the second is both true and actionable where the first is neither.
+It is a cable plus two settings — roughly twenty minutes that turns future
+overnight runs from one-way doors into something recoverable. Corrected in
+`handoff.md` with the evidence.
+
+I had `Supports Wake-on: pumbg` in my own terminal output earlier tonight and did
+not draw the distinction from it. That is the recurring shape of the whole day in
+miniature: **the evidence was on screen and the reading stopped one step short.**
+
+### The category
+
+Every earlier error was a false belief. These two were **true statements that
+lead a reader somewhere false** — an accurate description of a state, phrased as
+though it described a capability. No control row catches it, no verification
+catches it, because nothing in it is incorrect. The only defence is asking, of a
+sentence you are about to write into a handoff: *what will someone do after
+reading this, and is that what I want them to do?*
+
+Both are now filed. 451 tests, everything pushed, handoff current, SDK on disk,
+no objection to the shutdown.
