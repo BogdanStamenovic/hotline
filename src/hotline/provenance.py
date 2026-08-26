@@ -49,6 +49,13 @@ This was learned the hard way, by the author of this module, on 2026-08-26:
 provenance record before it acted. It could not produce one, correctly refused to
 manufacture one, and was right on both counts.
 
+To be precise about what was wrong, because it matters to anyone reading this
+looking for a bug: **the checker was not broken and is not the thing that was
+fixed.** `verify()` did exactly what it is built to do. What was missing was a
+rule about *when to invoke it* -- the boundary between relay and first-party --
+which lives in the procedure around this module rather than in its code. Its own
+words, and it was right to insist on the distinction.
+
 The failure mode to guard against is subtle and worth stating plainly: **a check
 that demands a receipt for everything creates pressure to fabricate receipts.** An
 agent that believes it cannot act without a `message_id` is an agent one step from

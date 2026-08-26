@@ -490,7 +490,15 @@ and remains deliberately unset.
 
 ## Still blocked on Bogdan, physically
 
-- Plug an ethernet cable into `enp4s0` (it is NO-CARRIER; nothing can wake it).
+- Plug an ethernet cable into `enp4s0`. **Careful with the wording here — the box
+  is not INCAPABLE of remote wake, it is UNCONFIGURED for it**, and those are
+  different sentences. Verified 2026-08-26: `Supports Wake-on: pumbg` (the `g` is
+  magic-packet) with `Wake-on: d` (disabled) and `Link detected: no`; the wifi
+  dongle reports WoWLAN *disabled*, not unsupported. So it is a cable plus two
+  settings, not a missing capability — roughly twenty minutes that turns future
+  overnight runs from one-way doors into something recoverable. `hotline-ios`
+  drew this distinction after `data-89` and I both said "no remote wake", which
+  was true of the state and misleading about the hardware.
 - BIOS on the ASRock B550M-HVS SE (no IPMI, so this cannot be done remotely):
   ErP / ErP Ready **disabled**, PCIE Devices Power On / PME Event Wake Up
   **enabled**. ErP is the one that bites — it cuts standby power to the NIC.
