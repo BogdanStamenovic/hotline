@@ -4529,3 +4529,80 @@ which has always carried the role. The two disagreeing was the whole defect.
 **475 tests, ruff and mypy clean, pushed.** The reply-contract work is still
 uncommitted and still untouched: `git diff` on it contains zero lines from any of
 today's work, verified rather than hoped.
+
+## He chose B, so the finish line moved — and it moved with his signature on it
+
+Verified against Discord (`1542452470528090182`, 08:35:26Z):
+
+> B. But do not shutdown until ios is finished. Also tell ios that right my laptop
+> is unreachable and to just buikd compile. And then when you and it finishes
+> shutdown.
+
+I had recommended A. He said B. That is the end of the argument.
+
+Both places that defined "done" now describe the text path — `PLAN.md`'s Phase 5
+milestone and the acceptance test in `handoff.md`, which had gone out of its way
+to rule out a text message. Both carry the reason and his message id **inline**,
+so the next reader does not "correct" them back to the old wording. And both now
+say explicitly that **the voice code stays**, because "the milestone no longer
+mentions voice" is precisely the true sentence somebody reads as permission to
+delete `voice.py`.
+
+### The acceptance test, run as far as it can honestly be run
+
+```
+archserver daemon   POST /api/v1/claude   HTTP 200 in 3.7s
+                    real auth, real router, real session, real answer
+                    replied exactly: HOTLINE TEXT PATH OK
+
+pigion front door   GET /health           ok, upstream_awake: true
+
+pigion -> archserver                      403 "not an allowed source address"
+```
+
+**The 403 is the gate working, and it is the interesting result.** Pigion's front
+door accepts his phone and not this box, which is exactly the posture it was built
+with. I could have added archserver to that allowlist and turned my own test
+green in thirty seconds. **I did not**, and that is deliberate: a test that passes
+because the thing it tests was weakened for it proves nothing, and the allowlist
+being hard to satisfy from here is the *feature*.
+
+So the half that answers is proven live today. The last link — his phone's client
+— is proven only by his own use of it at ~04:50 this morning, when a `kind:"phone"`
+relay reached the previous worker. **The exact sequence in the redefined milestone,
+wake then message from the app, has not been performed in one run.** He has been
+asked to send one message from the app, which takes him ten seconds and genuinely
+closes it. **Not recorded as passed until he does.**
+
+### The stale sentence that would have fired at the worst moment
+
+`hotline-watch-agent` warns him before powering the box off. That warning still
+read:
+
+> Worth knowing before it goes off: enp4s0 has NO-CARRIER, so Wake-on-LAN cannot
+> bring this box back. Once it is off it stays off until someone presses the button.
+
+False since 04:35 this morning, and false in the one direction that matters —
+it tells him a recoverable shutdown is a one-way door, **at the moment he is
+deciding whether to stop it.** Now corrected, and it hands him the actual command.
+The docstring's caution is deliberately *kept* rather than deleted: recoverable is
+not free, since waking it still needs him or Pigion to notice and act.
+
+## The thing I got wrong today, in full
+
+I told him at 10:16 that I had committed my fixes *around* the reply-contract work
+"so your one-checkout option survives intact". Ninety minutes later I ran
+`git add -A` in a command whose subject was the handoff, and committed **and
+pushed** the very thing I had promised to leave alone.
+
+Fixed properly rather than quietly: `efbd36e` takes those three files back out of
+HEAD and the work is in the working tree again, unstaged, verified — HEAD contains
+zero lines of it and today's real fixes all survived. He has been told plainly,
+because a promise that was briefly untrue is not made true by being repaired
+before he noticed.
+
+**Third time today** a bare `git checkout` or `git add -A` inside a command doing
+something else moved files I did not mean to move. In a tree that deliberately
+holds somebody else's uncommitted decision, `-A` is a wildcard over that decision.
+**Stage by path in this repo.** I wrote that lesson down after the first time and
+then did it twice more, which says the note was not the fix — the habit is.
