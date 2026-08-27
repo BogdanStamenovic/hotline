@@ -515,7 +515,15 @@ def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str],
 
     try:
         reply = asyncio.run(
-            Router().ask_session(resumed.session.name, resumed.brief.seed, timeout=300.0)
+            # By session id, NOT `resumed.session.name`. That name is captured
+            # from the descriptor at spawn time, and `spawn` passes `--name` so
+            # the session renames itself to the agent's identity a moment later
+            # -- after which the captured name resolves to nothing and the brief
+            # is never delivered. The agent comes up with no idea what it is
+            # resuming, and the resume still reports success, because "session
+            # started but did not answer" is indistinguishable from a slow one.
+            # The id is the one address that cannot go stale under a rename.
+            Router().ask_session(resumed.session.session_id, resumed.brief.seed, timeout=300.0)
         )
     except HotlineError as exc:
         log(f"warning: session started but did not answer: {exc}")

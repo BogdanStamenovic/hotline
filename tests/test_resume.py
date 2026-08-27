@@ -14,6 +14,7 @@ import pytest
 
 from hotline import revive
 from hotline.agents import Registry
+from hotline.errors import ReplyTimeout
 
 
 @pytest.fixture
@@ -318,3 +319,103 @@ async def test_resume_refuses_an_agent_with_nothing_left(
     with pytest.raises(revive.NothingToResumeFrom):
         await revive.resume("ghost", registry)
     assert spawns == []
+
+
+# ---- what `declare` drops on the way through -------------------------------
+#
+# `rehome` rebuilds the record by calling `registry.declare`, which constructs an
+# Agent from its own arguments. Every field not in that signature is dropped
+# silently. These pin the two that matter, because the damage from losing them
+# does not show up here -- it shows up one resume later, in a different session,
+# looking like something else entirely.
+
+
+def test_reviving_keeps_the_handoff_pointer(registry: Registry) -> None:
+    """Losing it makes the NEXT resume read a corpse instead of the handoff.
+
+    `brief_for` prefers `agent.handoff` and falls back to the raw transcript with
+    "you are taking over from a session that was KILLED". If the pointer is
+    dropped on the first revive, the second one takes that fallback while a
+    current handoff sits on disk unread -- and reports success either way.
+    """
+    agent = registry.declare("sid-old", "data-f3", "mirror")
+    agent.handoff = "/home/bodas/data/hotline/handoff.md"
+    registry.save()
+
+    revived = revive.rehome(registry, agent, "sid-new", None)
+
+    assert revived.handoff == "/home/bodas/data/hotline/handoff.md"
+
+
+def test_reviving_keeps_the_voice_channel(registry: Registry) -> None:
+    """Otherwise the channel keeps existing and nothing points at it any more."""
+    agent = registry.declare("sid-old", "data-f3", "mirror")
+    agent.voice_channel_id = 777
+    registry.save()
+
+    revived = revive.rehome(registry, agent, "sid-new", None)
+
+    assert revived.voice_channel_id == 777
+
+
+def test_the_carried_fields_survive_a_reload(registry: Registry) -> None:
+    """Set on the object but never saved is the same bug with a longer fuse."""
+    agent = registry.declare("sid-old", "data-f3", "mirror")
+    agent.handoff = "/tmp/h.md"
+    registry.save()
+
+    revive.rehome(registry, agent, "sid-new", None)
+
+    reloaded = Registry(registry.path)
+    assert reloaded.get("sid-new") is not None
+    assert reloaded.get("sid-new").handoff == "/tmp/h.md"
+
+
+# ---- who the brief is actually addressed to --------------------------------
+#
+# `resume` spawns with `--name <agent>`, so the session renames itself to the
+# agent's identity a moment after it starts. The `LiveSession` captured at spawn
+# still holds the name the descriptor had BEFORE that rename. Addressing the
+# brief to that stale name resolves to nothing, and the failure is silent in the
+# worst way: the agent comes up with no idea what it is resuming, while the
+# resume prints success, because "started but did not answer" is indistinguish-
+# able from a slow first turn.
+#
+# Found by `data-1e` when a resumed `hotline-ios` sat there having been told
+# nothing at all.
+
+
+def test_the_brief_is_addressed_to_something_that_survives_a_rename(
+    registry: Registry, monkeypatch: pytest.MonkeyPatch, corpse: Path
+) -> None:
+    """The agent renames itself, so the spawn-time display name is not an address."""
+    from hotline import cli as cli_module
+
+    # The rename, modelled: spawned as `data-9c`, comes up calling itself
+    # `hotline-ios`, which is the name the registry and Discord both use.
+    async def spawn(key, cwd=None, bypass=True, timeout=90.0, name=None):
+        return FakeSession(session_id="sid-new", name="data-9c")
+
+    import hotline.tmuxen as tmuxen_module
+
+    monkeypatch.setattr(tmuxen_module, "spawn", spawn)
+    registry.declare("sid-old", "hotline-ios", "building the iOS app")
+
+    asked: list[str] = []
+
+    async def capture(self, spec, text, *a, **kw):
+        asked.append(spec)
+        raise ReplyTimeout("never mind the answer; the address is the test")
+
+    monkeypatch.setattr(cli_module.Router, "ask_session", capture)
+    monkeypatch.setattr(cli_module, "channels_from_env", lambda: None)
+    monkeypatch.setattr(cli_module, "Registry", lambda: registry)
+
+    cli_module._resume("hotline-ios", registry, None, lambda m: None)
+
+    assert asked, "the brief must actually be sent somewhere"
+    assert asked[0] != "data-9c", (
+        "addressed to the pre-rename display name, which resolves to nothing -- "
+        "the agent would come up with no brief and the resume would report success"
+    )
+    assert asked[0] == "sid-new", "the session id is the address that cannot go stale"

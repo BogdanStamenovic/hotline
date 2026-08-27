@@ -128,6 +128,16 @@ def rehome(
         wants_channel=agent.wants_channel,
         keep_days=agent.keep_days,
     )
+    # `declare` builds a fresh record out of its own arguments, so every field
+    # not in its signature is silently dropped here. The handoff is the one that
+    # bites: without it the *next* resume finds `handoff=None`, falls through to
+    # the transcript branch, and tells the replacement it is reading a corpse --
+    # while a current, accurate handoff sits on disk unread. The failure is
+    # invisible at the point it happens and only shows up one resume later.
+    revived.handoff = agent.handoff
+    revived.voice_channel_id = agent.voice_channel_id
+    registry.save()
+
     if manager is None or not revived.wants_channel:
         return revived
     if old_channel is not None and manager.exists(old_channel):
