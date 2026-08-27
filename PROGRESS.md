@@ -4697,3 +4697,66 @@ I supplied is the connection and the timing argument — *ask him now, while he 
 still answering in minutes* — plus the observation that **"you can beam it there"
 is an offer of a machine he physically has**, which is the kind of opening that
 expires with his attention rather than on the 1st.
+
+## How it ended
+
+`hotline-ios` marked itself done at **10:48:31** and the watcher picked it up one
+second later, posted his warning, and started a 15-minute abort window. Box off at
+about 11:03, which is exactly what he asked for: *"do not shutdown until ios is
+finished... And then when you and it finishes shutdown."*
+
+**Checked before letting it run, rather than trusting the trigger:**
+
+```
+hotline-ios   done=True   handoff=/home/bodas/data/hotline-ios/handoff.md (9.1k, 10:47)
+              repo clean, everything pushed
+data-66       done=True   (had finished on its own)
+hotline-80    committed and pushed through 637ce4c
+~/.hotline-no-shutdown  absent
+```
+
+Nothing is being killed mid-work. `hotline-ios` also mirrored its sideload kit to
+**pigion** before finishing — *"which does not get powered off"* — which is the
+right instinct and nobody asked it to.
+
+### One last thing arriving after the trigger
+
+At 10:49:41, verified (`1542456056297553930`):
+
+> Its uncreachable right now as i am in a train but will br later today. But dont
+> beam anything right nwo
+
+Nothing was in flight, so there was nothing to stop. But it collides with the
+shutdown he ordered ten minutes earlier: **the laptop comes back later today and
+this box will be off when it does.** Told him, with the three reasons it is fine
+anyway — the artefact is already on pigion, WoL is verified so he can wake this
+box from his phone, and nothing is time-critical before then — and with the exact
+cancel if he disagrees.
+
+**Deliberately not cancelled on his behalf.** He gave the order, it is recoverable
+now in a way it was not two days ago, and *"shut it down"* plus *"the laptop comes
+back later"* being two decisions he made separately is a thing to **show** him, not
+a mandate to overrule him. Putting them side by side is the job; picking for him
+is not.
+
+### The pattern from today, which is the only thing worth carrying forward
+
+Six of the fixes were not really bugs in behaviour. They were **the system
+describing itself wrongly**:
+
+- a phone message announced as machine-generated
+- a page that looked like a conversation
+- a killed session told its work was safe
+- a resumed agent silently losing a role, with nothing saying so
+- a body able to wear a header the reader could not question
+- a shutdown watcher whose log said *armed* while the process was already dead
+
+Every one was discovered by **using the thing or by asking its recipient** — never
+by re-reading the code that produced it. The author cannot see what they failed to
+say. That is now seven holes in the provenance design found by a receiving end and
+none by an author, and the recipient-side review is a step in the build rather than
+an anecdote.
+
+And the counter-lesson, earned three times today: **I wrote that discipline down
+and then broke it twice more with `git add -A` and a bare `git checkout`.** Writing
+the note is not the fix. Staging by path is.
