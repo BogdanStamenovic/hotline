@@ -24,7 +24,7 @@ def state_dir(tmp_path, monkeypatch):
 
 
 def test_nothing_mirrored_yet_is_not_a_fault():
-    assert mirror.read_state() == {"delivered": 0, "failed": 0}
+    assert mirror.read_state() == {"delivered": 0, "failed": 0, "failing": 0}
 
 
 def test_a_failed_mirror_never_raises_and_is_counted():
@@ -82,4 +82,29 @@ def test_the_kill_switch_is_not_a_failure(monkeypatch):
     `mirror_degraded` is true for everyone who disabled it on purpose."""
     monkeypatch.setenv("HOTLINE_MIRROR", "0")
     assert mirror.mirror_sent("data-1e", "anything", url="http://127.0.0.1:1") is False
-    assert mirror.read_state() == {"delivered": 0, "failed": 0}
+    assert mirror.read_state() == {"delivered": 0, "failed": 0, "failing": 0}
+
+
+def test_a_success_clears_the_degraded_flag(monkeypatch):
+    """One transient refusal must not mark the mirror broken for good.
+
+    `mirror_degraded` on hotline's /health reads `failing`, so if that only
+    ever went up, a daemon restart would latch the flag true forever and the
+    field would stop meaning anything.
+    """
+    class Response:
+        status = 200
+
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    mirror.mirror_sent("data-1e", "lost", url="http://127.0.0.1:1")
+    assert mirror.read_state()["failing"] == 1
+
+    monkeypatch.setattr(mirror.urllib.request, "urlopen", lambda *a, **k: Response())
+    assert mirror.mirror_sent("data-1e", "landed", url="http://phone") is True
+
+    state = mirror.read_state()
+    assert state["failing"] == 0, "a delivery must clear the degraded flag"
+    assert state["failed"] == 1, "but the lifetime count is still the truth"
+    assert state["delivered"] == 1

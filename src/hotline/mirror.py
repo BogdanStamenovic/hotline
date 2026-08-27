@@ -46,7 +46,7 @@ def read_state() -> dict[str, object]:
     try:
         return json.loads(_state_path().read_text())
     except Exception:
-        return {"delivered": 0, "failed": 0}
+        return {"delivered": 0, "failed": 0, "failing": 0}
 
 
 def _record(ok: bool, error: str = "") -> None:
@@ -56,7 +56,16 @@ def _record(ok: bool, error: str = "") -> None:
         state = read_state()
         key = "delivered" if ok else "failed"
         state[key] = int(state.get(key, 0)) + 1
-        if not ok:
+        if ok:
+            # **`failing` is "not working now", not "once failed".** The first
+            # version counted cumulatively, so a single transient refusal --
+            # the daemon restarting, a two-second timeout on a busy box -- left
+            # `mirror_degraded` true for good. A health field that latches on
+            # forever stops meaning anything, which is the same defect as one
+            # that reads true while broken, just pointing the other way.
+            state["failing"] = 0
+        else:
+            state["failing"] = int(state.get("failing", 0)) + 1
             state["last_error"] = error[:200]
             state["last_failure_at"] = time.time()
         path.write_text(json.dumps(state))

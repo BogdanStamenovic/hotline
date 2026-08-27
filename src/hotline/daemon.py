@@ -119,7 +119,9 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
         return 200, {
             "ok": True,
             "uptime_seconds": round(time.monotonic() - started, 1),
-            "mirror_degraded": bool(state.get("failed")),
+            # Consecutive failures, not lifetime ones: this must go back to
+            # false when the mirror starts working again.
+            "mirror_degraded": bool(state.get("failing")),
         }
 
     @server.route("GET", "/api/v1/mirror")
