@@ -29,6 +29,7 @@ import time
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
+from . import mirror
 from .config import load_env
 from .errors import HotlineError
 from .fresh import Event
@@ -107,7 +108,25 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
     async def health(request: Request) -> tuple[int, dict[str, object]]:
         # Deliberately unauthenticated and free of detail: Pigion needs to know
         # whether this machine is awake before it has any reason to be trusted.
-        return 200, {"ok": True, "uptime_seconds": round(time.monotonic() - started, 1)}
+        #
+        # `mirror_degraded` is a bare boolean for that reason -- the counts and
+        # the error text are on `/api/v1/mirror`, behind the key. It is here at
+        # all because a mirror that fails silently lets the phone drift out of
+        # step with Discord with nothing to see; `ring_ready: true` sat beside a
+        # ring that never rang for long enough to make the lesson stick, and a
+        # field that reassures while broken is worse than no field.
+        state = mirror.read_state()
+        return 200, {
+            "ok": True,
+            "uptime_seconds": round(time.monotonic() - started, 1),
+            "mirror_degraded": bool(state.get("failed")),
+        }
+
+    @server.route("GET", "/api/v1/mirror")
+    async def mirror_state(request: Request) -> tuple[int, dict[str, object]]:
+        """How the send-to-the-phone mirror is doing. Counts and last error."""
+        authorise(request)
+        return 200, dict(mirror.read_state())
 
     @server.route("GET", "/api/v1/sessions")
     async def sessions(request: Request) -> tuple[int, dict[str, object]]:

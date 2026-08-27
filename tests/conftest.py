@@ -38,6 +38,15 @@ def isolated_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "HOTLINE_API_KEY",
     ):
         monkeypatch.delenv(name, raising=False)
+
+    # And no test may post to the phone. `mirror.mirror_sent` defaults to
+    # loopback, which on this machine is his LIVE hotline-ios daemon -- so the
+    # first suite run after the mirror was wired into `Pager.page` put sixteen
+    # fixture strings ("question", "may I push?", "sentence. sentence.") into
+    # his real app, under the pager's default source of "an agent". Same shape
+    # as the two failures above and found the same way: by looking, after the
+    # fact, at the live state the tests had no idea they were writing to.
+    monkeypatch.setenv("HOTLINE_MIRROR", "0")
     return state
 
 

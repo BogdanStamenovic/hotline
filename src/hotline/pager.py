@@ -31,6 +31,7 @@ import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from .mirror import mirror_sent
 from .config import page_claim
 from .text import chunk
 
@@ -293,6 +294,17 @@ class Pager:
 
         result.message_id = self.send(self.channel_id, head)
         result.escalations.append("post")
+
+        # **Both places, which is the point.** He reads Discord and he reads the
+        # phone; a message he chose to be sent should be in both. Mirrored here
+        # rather than in `send()` on purpose: `send()` also carries the pager's
+        # own machinery -- the "still blocked, 9 min in" nags and the "Got it --
+        # thanks" acknowledgement -- and those are mechanics, not the message.
+        # This mirrors what an agent actually said, once, with the source it
+        # said it as.
+        #
+        # It cannot fail this call. See `mirror.mirror_sent`.
+        mirror_sent(source, reason)
 
         if not wait:
             # Nobody is blocked on an answer, so there is no ladder to climb and
