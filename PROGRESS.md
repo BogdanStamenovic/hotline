@@ -4655,3 +4655,45 @@ Verified as a running unit rather than as a log line, which is the whole lesson:
 
 It also needed `import os`, which the patch used and the file did not have — caught
 by looking rather than by running it later at the moment it mattered.
+
+## A message of his reached no agent, and it was the one that changed the deadline
+
+Reading `#general` directly — not because anything routed it to me — turned up this,
+posted at 10:20 and verified against Discord (`1542448628751409152`):
+
+> I am comming back on the 9th but i got the arch laptop with me. You can beam it there
+
+**It was never delivered to anything.** The confirmation flow offered to send it to
+`data-66`, he answered `No`, and the bot recorded *"Dropped. Nothing was sent to
+data-66."* That is the flow behaving exactly as documented — and it means **"no,
+not to that agent" and "discard this entirely" are currently the same gesture**, so
+a fact he volunteers can evaporate while looking to him like it landed.
+
+Not changed: it is his confirmation flow, it does what it says on the tin, and
+widening it while he is away is not my call. Told him instead. But it is the third
+thing today that reported a state which was not real, and this one costs him
+information rather than a service.
+
+### The content, which is the part that bites
+
+```
+provisioning profile expires    1 September 22:53
+he is back                      9 September
+```
+
+**Eight days.** `hotline-ios` named the profile as its urgent item this morning and
+has been treating the deadline as "before he gets round to it". It is not — it is
+**before he is gone, and he is already gone.** With the signing laptop dead and his
+other laptop unreachable, the renewal route is not available in the gap either.
+
+Nobody had put those two dates side by side, because the fact that supplies one of
+them was dropped at a confirmation prompt and the agent that owns the other never
+saw it. This is the "walk the conclusions when a premise changes" rule again, and
+the premise here arrived through a channel nothing was watching.
+
+Sent to `hotline-ios` with his receipt attached, and to him. Deliberately **not**
+prescribed: it is that agent's deadline and it knows the signing constraints. What
+I supplied is the connection and the timing argument — *ask him now, while he is
+still answering in minutes* — plus the observation that **"you can beam it there"
+is an offer of a machine he physically has**, which is the kind of opening that
+expires with his attention rather than on the 1st.
