@@ -419,3 +419,33 @@ def test_the_brief_is_addressed_to_something_that_survives_a_rename(
         "the agent would come up with no brief and the resume would report success"
     )
     assert asked[0] == "sid-new", "the session id is the address that cannot go stale"
+
+
+def test_reviving_keeps_the_standing_role(registry: Registry) -> None:
+    """`adopt` keeps it and `resume` did not, and both are respawns.
+
+    A demoted `hotline-80` comes back with its name, its channel and its task,
+    and stops being sys-admin without anything announcing it -- so its headers
+    read as an ordinary peer to every recipient, and the standing role Bogdan
+    granted quietly stops applying halfway through its own life.
+    """
+    registry.declare("sid-old", "hotline-80", "the build")
+    registry.grant("hotline-80", "sys-admin", "msg-1", "chan-1")
+
+    revived = revive.rehome(registry, registry.by_name("hotline-80"), "sid-new", None)
+
+    assert revived.privileged
+    assert (revived.granted_by, revived.granted_in) == ("msg-1", "chan-1")
+
+
+def test_the_grant_receipt_travels_with_the_role(registry: Registry) -> None:
+    """A role without the message that granted it is the bare claim
+    `--provenance` exists to refuse -- worse than no role, because it looks
+    checkable and is not."""
+    registry.declare("sid-old", "hotline-80", "the build")
+    registry.grant("hotline-80", "sys-admin", "msg-1", "chan-1")
+
+    revived = revive.rehome(registry, registry.by_name("hotline-80"), "sid-new", None)
+
+    assert revived.authority == "sys-admin"
+    assert revived.granted_by, "a role with no receipt must not be resurrectable"

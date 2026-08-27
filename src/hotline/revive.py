@@ -136,6 +136,22 @@ def rehome(
     # invisible at the point it happens and only shows up one resume later.
     revived.handoff = agent.handoff
     revived.voice_channel_id = agent.voice_channel_id
+    # The standing role, for the same reason and by the same accident. `adopt`
+    # keeps it -- `test_the_role_survives_a_respawn` pins that, and its docstring
+    # says the identity "recycles through handoff and respawn". A resume IS a
+    # respawn, and it was quietly demoting the agent instead: `hotline-80` would
+    # come back with its name, its channel and its task, and stop being sys-admin
+    # without anything saying so. Its headers would then read as an ordinary peer
+    # to every recipient.
+    #
+    # This adds no escalation surface. Anyone who can call `--resume` can already
+    # call `--adopt`, which has always carried the role; the two disagreeing was
+    # the whole defect. The grant receipt travels too, because a role without the
+    # Discord message that granted it is exactly the bare claim `--provenance`
+    # exists to refuse.
+    revived.authority = agent.authority
+    revived.granted_by = agent.granted_by
+    revived.granted_in = agent.granted_in
     registry.save()
 
     if manager is None or not revived.wants_channel:
