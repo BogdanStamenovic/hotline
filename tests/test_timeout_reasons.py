@@ -244,3 +244,54 @@ def test_no_wait_hands_the_message_over_and_stops(
 
     assert code == 0
     assert handed == ["hello"]
+
+
+# ---- the same sentence, true in one branch and false in the other -----------
+#
+# "delivered, not answered yet. It is NOT lost. Do not resend." is exactly right
+# for --to: that session belongs to itself and keeps working after we give up.
+# It was also printed for a FRESH session, where it is the opposite of the truth
+# -- ask_fresh holds the subprocess in `async with`, so the timeout unwinds into
+# close(), which terminates and then kills it.
+#
+# Found by using it: a recipient-review session was killed at 300s having done
+# five minutes of work, and the CLI told me it was fine and not to resend.
+
+
+def test_a_killed_fresh_session_is_not_reported_as_merely_unanswered(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from hotline import cli as cli_module
+
+    async def timed_out(*args: Any, **kw: Any) -> Any:
+        raise ReplyTimeout("no result within 300s")
+
+    monkeypatch.setattr(cli_module.Router, "ask_fresh", timed_out)
+
+    code = cli_module.main(["--timeout", "1", "summarise this repo"])
+
+    err = capsys.readouterr().err
+    assert code == 3
+    assert "Do not resend" not in err, "resending is the ONLY way to get this work back"
+    assert "GONE" in err
+
+
+def test_a_message_to_a_live_session_still_says_it_is_not_lost(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The other half. A fix that made both branches say the same thing again,
+    in the other direction, would be the same bug wearing new words."""
+    from hotline import cli as cli_module
+
+    async def timed_out(*args: Any, **kw: Any) -> Any:
+        raise ReplyTimeout("data-13 did not produce a reply within 20s")
+
+    monkeypatch.setattr(cli_module.Router, "ask_session", timed_out)
+    monkeypatch.setattr(cli_module.Router, "resolve", lambda self, spec: _session())
+
+    code = cli_module.main(["--to", "data-13", "--timeout", "1", "hello"])
+
+    err = capsys.readouterr().err
+    assert code == 3
+    assert "It is NOT lost" in err
+    assert "GONE" not in err

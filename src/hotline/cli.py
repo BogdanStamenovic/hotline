@@ -839,6 +839,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         log("   (carrying his receipt: the receiver can check who asked, not just who relayed)")
 
+    # Which branch we took decides what a timeout MEANS, and the two answers
+    # are opposites. See the ReplyTimeout handler below.
+    went_to_a_fresh_session = False
+
     try:
         if args.to:
             target = router.resolve(args.to)
@@ -881,6 +885,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             else:
                 log("-> fresh session")
+                went_to_a_fresh_session = True
                 reply = asyncio.run(
                     router.ask_fresh(route.text, narrator=narrate, timeout=args.timeout)
                 )
@@ -894,11 +899,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         # Found by the agent on the far end of the first cross-session reply:
         # queued delivery is reported twice, once as advice and once as an error.
         print(f"hotline: error: {exc}", file=sys.stderr)
-        print(
-            "hotline: (exit 3 = delivered, not answered yet. It is NOT lost and "
-            "it is NOT a delivery failure. Do not resend.)",
-            file=sys.stderr,
-        )
+        if went_to_a_fresh_session:
+            # A fresh session is a subprocess owned by THIS process:
+            # `ask_fresh` holds it in `async with`, so the timeout unwinds
+            # into `close()`, which terminates and then kills it. The work
+            # really is gone and resending really is the only way to get it.
+            #
+            # Saying "it is NOT lost, do not resend" here was true of the
+            # other branch and false of this one -- one sentence, accurate
+            # in one place and actively misleading in the other. Found by
+            # watching a fresh session get killed at 300s having done five
+            # minutes of work, while being told it was fine.
+            print(
+                "hotline: (exit 3 = it ran out of time and the session was "
+                "killed with it. Its work is GONE. Re-run with a longer "
+                "--timeout, or use --to against a session that outlives you.)",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "hotline: (exit 3 = delivered, not answered yet. It is NOT lost and "
+                "it is NOT a delivery failure. Do not resend.)",
+                file=sys.stderr,
+            )
         return 3
     except HotlineError as exc:
         print(f"hotline: error: {exc}", file=sys.stderr)
