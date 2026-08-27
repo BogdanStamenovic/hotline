@@ -1519,3 +1519,57 @@ clean, ruff's 6 warnings pre-existing in `pigion/frontdoor.py`.
    reply-contract work, and the acceptance test. **Do not answer either for him.**
 4. Do not arm anything on an ambiguous time. "12" cost one round trip tonight and
    was worth it.
+
+### 23:20 — the row's buttons had never worked, and his instinct was the bug report
+
+`hotline-ios` got the reading with 40 minutes to spare, and it is worth recording
+with its own care intact:
+
+- **OBSERVED**, on a running simulator: a chip using the old `.onTapGesture` form
+  resolves at a valid on-screen frame, reports `isHittable false`, and is inert to
+  both a plain tap and a coordinate tap. The same chip wrapped in a `Button` is
+  hittable and fires. Same row, same position.
+- **INFERRED**, strongly but not witnessed: RETIRE and DELETE HISTORY failed for the
+  same reason and have been **dead since they shipped**. Nobody has watched either
+  actually fire.
+
+It asked me to carry that distinction to him rather than trusting me to remember it,
+and it was right to. **The difference between a finding and a story is exactly that
+line**, and this file's whole history is people collapsing it.
+
+> **He told us that row felt wrong twice, and both times it was read as a layout
+> opinion.** I read it that way myself and wrote "probably fewer, not four arranged
+> better". He was reporting a fault he could not name. **When he says something
+> feels wrong twice and cannot say why, treat it as an unlocalised bug report, not
+> a preference.**
+
+Recall the inversion, because it is the opposite of alarming: **he lost the ability
+to delete, not protection from deleting.** The purge sheet's 1500 ms hold was never
+bypassed — the chip never opened it.
+
+### The build shipped on observation, which is a first here
+
+`sha256 5948d2fd`, on the laptop, pigion and beam; rollback still pinned to
+`26669c8c`, **the build actually on his phone**, not the newest thing that existed.
+I verified the hash and checksums on the laptop myself before repeating them to him.
+
+It was held all evening and released only when a simulator run showed each claim
+true — default view hides tools and thinking, full view shows them, the toggle
+toggles, prose intact at 657 chars with newlines and no truncation, map close works.
+**The decision rule did not bend under the clock.** He had said "speed up a bit",
+which would have been easy to read as permission to ship; the rule stayed
+green-AND-toggled and happened to be met.
+
+**Two firsts landed on the same day and belong next to each other:** a server-side
+fix became the first change ever confirmed on his real phone ("it's a lot better this
+way"), and this became the first build shipped on observation rather than on "it
+compiles". Both are evidence classes this project had never had.
+
+### A self-caught error, which is rarer here than the other kind
+
+`hotline-ios` had told me the map CLOSE button was verified when only the grabber
+drag was. It volunteered the correction unprompted, at no benefit to itself, once it
+was actually true. **That is the only error caught by its own author today** — both
+of mine were caught by other people. Against nine holes found by recipients and
+almost none by authors, a counter-example to that pattern is worth more than another
+instance of it.
