@@ -4606,3 +4606,52 @@ something else moved files I did not mean to move. In a tree that deliberately
 holds somebody else's uncommitted decision, `-A` is a wildcard over that decision.
 **Stage by path in this repo.** I wrote that lesson down after the first time and
 then did it twice more, which says the note was not the fix — the habit is.
+
+## The watcher said it was armed and was not — and the docstring was the reason
+
+He ordered the box off once `hotline-ios` finishes, so I armed
+`hotline-watch-agent hotline-ios --on-finish poweroff`. The command did not return.
+Two minutes later the log said:
+
+```
+10:41:43 watch-agent: watching hotline-ios; on-finish=poweroff, stall after 20m
+```
+
+…and there was **no process**. `systemctl --user list-units --type=scope` showed
+nothing, `pgrep` showed nothing. The log line had been written and the watcher had
+died with the shell that started it.
+
+The cause is in the first paragraph of the file:
+
+> Runs detached, in its own systemd scope, so it outlives the session that started
+> it — the whole point is to still be watching after that session is gone.
+
+**There was no code doing that.** No `systemd-run`, no fork, no re-exec — the
+caller was silently expected to arrange it, and whoever wrote the sentence knew
+that and nobody since has. It is the same failure shape as the rest of today, in
+its purest form: **a status line that reports a state nothing established.** A
+caller who believes the docstring arms a watcher, walks away, and is protected by
+nothing.
+
+Note which direction this fails in. A watcher that never fires is *safe* — the box
+just stays on. A watcher that **reports itself armed while dead** is not, because
+the report is what stops anyone checking. His instruction would simply not have
+happened, and the log would have said it did.
+
+Fixed by making the sentence true rather than deleting it: the tool now re-execs
+itself through `systemd-run --user --collect --service-type=exec` unless it is
+already the detached copy. Deliberately a transient **unit**, not a `--scope` —
+`systemd-run --user --scope` runs in the *caller's* foreground, which is precisely
+what is being escaped, and that is the trap this repo already hit once with tmux.
+If the detach fails it **exits 1 rather than falling back** to watching in the
+foreground, because a silent fallback recreates the exact bug.
+
+Verified as a running unit rather than as a log line, which is the whole lesson:
+
+```
+● hotline-watch-hotline-ios.service   active (running)   Main PID: 12415
+  CGroup: /user.slice/.../app.slice/hotline-watch-hotline-ios.service
+```
+
+It also needed `import os`, which the patch used and the file did not have — caught
+by looking rather than by running it later at the moment it mattered.
