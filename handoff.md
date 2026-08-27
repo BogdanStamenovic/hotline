@@ -17,7 +17,15 @@
 >    profile expires **1 September 22:53**.
 > 6. **The reply-contract work is still uncommitted on purpose.** He was asked at
 >    10:16 whether to commit or drop it and had not answered as of this writing.
->    Do not commit it for him; check Discord for his answer first.
+>    Do not commit it for him; check Discord for his answer first. **Stage by
+>    explicit path in this repo — never `git add -A`.** I committed and pushed
+>    that work by accident doing exactly that, and had to take it back out.
+> 7. **A SHUTDOWN IS ARMED.** He ordered the box powered off once `hotline-ios`
+>    finishes: *"do not shutdown until ios is finished... And then when you and it
+>    finishes shutdown."* `hotline-watch-agent hotline-ios --on-finish poweroff`
+>    is watching. It fires only on an explicit `hotline --done`, warns him first,
+>    and `touch ~/.hotline-no-shutdown` cancels it. **If you are reading this on a
+>    fresh boot, that already happened and is not a fault.**
 >
 > *Newest material is at the BOTTOM of this file. This banner exists because the
 > top is what a new worker actually reads, and four of them in a row acted on
@@ -969,3 +977,37 @@ deleted; costs two minutes and touches no code) or **B** redefine the milestone
 around the text path he actually uses, rewriting `PLAN.md` rather than quietly
 marking the old one passed. **I recommended A.** Do not mark the acceptance test
 passed by moving the goalposts without his answer.
+
+### Where this session stopped, and what is armed
+
+**Everything on the "list for tomorrow" is done except the two items that are his.**
+466 → 475 tests, ruff and mypy clean, everything pushed through `eac9594`.
+
+**Open and genuinely his, neither blocking:**
+1. **Commit or drop the reply-contract work.** Asked at 10:16, unanswered. It is
+   in the working tree, unstaged, verified clean of everything else.
+2. **Close the acceptance test.** One message from the phone app, and it is done.
+   The server half passes live (`HTTP 200 in 3.7s`, real daemon, real router);
+   Pigion's front door correctly refuses this box with a 403, which is the gate
+   working. **Do not add archserver to that allowlist to make the test pass** —
+   that turns a real test into a decorative one.
+
+**Armed:** `hotline-watch-agent hotline-ios --on-finish poweroff`, at his order.
+Only an explicit `hotline --done` counts as finished; GONE and STALLED page him
+and act on nothing. `hotline-ios` has been told the exact command, because
+without it his shutdown instruction quietly would not have happened.
+
+**Corrected in `~/.claude/bin/hotline-watch-agent`:** the pre-shutdown warning
+still told him `enp4s0` has NO-CARRIER and the box could not be woken. False since
+04:35 today, and false in the direction that would have made him think a
+recoverable shutdown was a one-way door — while deciding whether to stop it. It
+now hands him `wakeonlan a8:a1:59:fd:4d:13`.
+
+**Also fixed today, outside the repo:** `hotline-say --file` no longer dies on a
+PNG (it delegates to `hotline-shot` rather than growing a second multipart
+encoder); verified by posting a real PNG and reading the attachment back off
+Discord.
+
+**Memory corrected:** the project memory said "SO_PEERCRED is the fix" for
+sender-composed identity. It is not, and that note now says why, because it was
+steering the next session at a dead end while looking like a lead.
