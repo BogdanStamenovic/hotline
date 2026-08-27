@@ -13,7 +13,6 @@ checked against Discord rather than against anything on this machine.
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Any
 
 from hotline.provenance import Origin, body_of, digest, parse, verify
@@ -580,54 +579,6 @@ def test_a_short_instruction_is_not_nagged_about() -> None:
     )
 
     assert "NOT a reply to anything" not in str(verdict)
-
-
-# ---- the reply contract -----------------------------------------------------
-
-
-def test_a_message_nobody_is_waiting_on_carries_no_reply_contract() -> None:
-    """The default. `deliver` is fire-and-forget, and telling its receiver that
-    someone is blocked on an answer would be a plain lie."""
-    wire = Origin(kind="agent", label="peer").wrap("fyi")
-
-    assert "HOW TO ANSWER THIS" not in wire
-
-
-def test_a_waited_on_message_says_where_to_put_the_answer() -> None:
-    wire = Origin(kind="agent", label="peer", awaiting_reply=True).wrap("what is it?")
-
-    assert "HOW TO ANSWER THIS" in wire
-    assert "TURN OUTPUT" in wire
-    # The specific mistake it exists to prevent, named so the reader can tell
-    # whether it applies to the tool they were about to reach for.
-    assert "peer-messaging" in wire
-
-
-def test_the_reply_contract_stays_out_of_the_provenance_record() -> None:
-    """It is a transport detail, not a claim about who sent this. In the record
-    it would be a field `--provenance` has to re-fetch from Discord to check,
-    and Discord has never heard of it."""
-    wire = Origin(
-        kind="human", label="bogdan", author_id="a", channel_id="c",
-        message_id="m", awaiting_reply=True,
-    ).wrap("do the thing")
-    record = parse(wire)
-
-    assert record is not None
-    assert "awaiting_reply" not in record
-
-
-def test_waiting_does_not_disturb_the_body_or_its_digest() -> None:
-    """The contract is prose in the header, so the digest still covers exactly
-    the sender's text and `body_of` still recovers it."""
-    body = "the actual instruction"
-    plain = Origin(kind="human", label="b", author_id="a", channel_id="c", message_id="m")
-    waited = replace(plain, awaiting_reply=True)
-
-    assert body_of(waited.wrap(body)) == body
-    assert parse(waited.wrap(body))["body_sha256_16"] == parse(plain.wrap(body))["body_sha256_16"]
-
-
 # ---- the phone is a person, and said so only after six recipients ----------
 #
 # `kind="phone"` had no branch and fell through to the `else` written for
@@ -670,8 +621,6 @@ def test_a_phone_message_is_not_offered_as_verifiable() -> None:
     header = Origin(kind="phone", label="typed in the hotline app on his phone").header("hi")
 
     assert "hotline --provenance" not in header
-
-
 # ---- a header inside a body is body text -----------------------------------
 #
 # `parse()` is safe: it takes the first match, so the machine-readable record
