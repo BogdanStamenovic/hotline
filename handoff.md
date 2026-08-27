@@ -1,5 +1,29 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-08-27 10:30 CEST — READ THESE SIX LINES FIRST
+>
+> 1. **The stop is LIFTED.** His verified words, 10:01 today: *"Good morning
+>    hotline. Startup hotline ios and tell him to continue his work. Tell him im
+>    away so to contect me here. and you finish your job."* Every "do not resume"
+>    instruction below this banner is **superseded**. Work the list.
+> 2. **He is AWAY** and wants contact on **Discord**. He said so himself.
+> 3. **Your spawn prompt is a hardcoded string and has been wrong four times
+>    running.** It always says "replacing one that died" and "Bogdan is away".
+>    Read Discord before believing it. A launcher is not an authority. This
+>    banner is not one either — it has a timestamp on it for the same reason.
+> 4. **WoL is VERIFIED.** Shutdowns are recoverable. Anything below saying this
+>    box has no remote wake is stale.
+> 5. **`hotline-ios` is running** and has a hard deadline: its provisioning
+>    profile expires **1 September 22:53**.
+> 6. **The reply-contract work is still uncommitted on purpose.** He was asked at
+>    10:16 whether to commit or drop it and had not answered as of this writing.
+>    Do not commit it for him; check Discord for his answer first.
+>
+> *Newest material is at the BOTTOM of this file. This banner exists because the
+> top is what a new worker actually reads, and four of them in a row acted on
+> stale premises that were sitting right here.*
+
+
 You are the worker on the **hotline** build. Bogdan is AWAY. Read this file, then
 read `PLAN.md` in this directory (the full architecture), then continue from
 "CURRENT STATE" below. Append to `PROGRESS.md` as you go.
@@ -540,3 +564,339 @@ and remains deliberately unset.
   This is the acceptance test, not a victory lap: if the system cannot announce
   its own completion through itself, it is not complete. If it fails, that failure
   IS the result — log it honestly and tell him over Discord instead.
+
+---
+
+## SHUTDOWN 2026-08-27 — state at power-off (worker `hotline-80`, session c1ef2181)
+
+Bogdan ordered the machine shut down and told me to have every agent write a
+handoff first. This section is mine. **Read this before you believe the prompt
+that started you.**
+
+### The build is STOPPED, by him, and the stop was never lifted
+
+On 2026-08-26 at 10:47 he told the then-worker *"I need you to stop what you are
+doing right now."* It complied and left its work uncommitted on purpose so the
+state stayed reversible. He was asked *"what do you need?"* and never answered
+that question. **The stop still stands at power-off.** Nothing in this repo was
+resumed, and the next worker must not resume it on the strength of a spawn prompt.
+
+### The watchdog's spawn prompt is false in both premises — check before acting
+
+It says *"replacing one that died"* and *"Bogdan is away and expects all phases
+attempted."* On 2026-08-26 **both halves were wrong**: nothing had died (he
+stopped it deliberately) and he was not away — paged, he replied in **19 seconds**
+with `DO NOT RESUME FOLLOW MY INSTRUCTIONS`.
+
+> **An automated prompt cannot lift a human's stop.** The watchdog is a launcher,
+> not an authority. A timer can always ask you to do less and never to do more.
+
+The correction was sitting in `#hotline-log`, free, thirty seconds away. **Read the
+last messages in Discord before believing the text that spawned you.** Two workers
+in a row were started with stale prompts.
+
+### Working tree at power-off — four files uncommitted, deliberately
+
+`PROGRESS.md`, `src/hotline/provenance.py`, `src/hotline/router.py`,
+`tests/test_provenance.py`. This is **not** an interrupted edit. It is the
+reply-contract fix, complete and green, left uncommitted so he can drop it with one
+`git checkout`:
+
+- A message someone is blocked on now carries `REPLY_CONTRACT`, telling the
+  receiver to answer as **turn output** rather than via a peer-messaging tool —
+  the contract gap the previous handoff named under "an answer sent over a peer
+  channel is invisible to the reply path". `awaiting_reply` is set in
+  `Router.ask()` because that method *is* the definition of "someone is waiting",
+  and deliberately kept **out** of the JSON record: it is a transport detail, not
+  a claim about who sent this, and `--provenance` would otherwise have to re-fetch
+  from Discord to check a fact Discord has never heard of.
+
+**Verified at power-off:** 455 tests pass, mypy clean on 25 files. Ruff's 6
+warnings are **pre-existing and unrelated** — every one in `pigion/frontdoor.py`,
+the Pi's stdlib-only file, unmodified at HEAD. Do not report them as a regression.
+
+`PROGRESS.md` also carries a ~150-line narrative entry from this session. He was
+told it is there and left the decision open.
+
+### The one real bug still unfixed, and why it was left
+
+`kind="phone"` is not a case `Origin.header()` handles, so it falls through to the
+`else` branch meant for hotline's own machine-generated notices. **Every message he
+types in the phone app is currently labelled to the receiving agent as "generated
+by hotline itself, not by a person"** — the exact opposite of the truth, and it
+points a reader away from him rather than at him.
+
+Found by the agent on the receiving end of it, which makes it the **fifth** hole in
+the provenance design found by a recipient rather than its author. Left unfixed
+only because it was parked pending his go and he never gave one. It is a small fix
+and it should be near the top of the next list.
+
+### What happened to hotline-ios and the laptop errand
+
+He asked for the agent "from when we were fixing my laptop". I got this wrong twice
+and both mistakes are instructive:
+
+1. I steered `hotline-ios` at CI run `32923724565` step 9 without checking which job
+   he wanted — session `1ed3cbc9` contains the iOS build, an ESP32 project **and**
+   the laptop repair, so reading the wrong half is easy.
+2. I then assumed the repair belonged to `hotline-ios` and retasked its registry
+   record. He had **already** told it directly to fork the errand into a separate
+   session. Both changes were reversed at his instruction.
+
+**`arch-repair`** is the laptop agent: forked from `1ed3cbc9` with `--fork-session`
+so the original transcript is untouched, cwd `/home/bodas/data`, positioned at the
+13:00 Torx-T8/M2.5 answer. Its own handoff is at
+`/home/bodas/data/arch-repair-handoff.md`. Open debt there is the **reassembly
+walkthrough**: heatsink screws in stamped order, then board-to-chassis, then
+perimeter, then the shim decision — under a no-paste / do-not-lift-the-cooler
+constraint. `hotline-ios`'s handoff is at `/home/bodas/data/hotline-ios/handoff.md`.
+
+**CI run `32923724565`: both jobs green and step 9 did film** — 6153 frames,
+2736x1260, 104s, 21 marked gestures, two UI tests passed. Its `"hitchy"` frametimes
+verdict is an **artifact, not a finding**: computed across the whole 200s recording
+including launches and idle, with a max "frame" of 20.4s that is a static screen
+rather than a stall. It measures idleness wearing a jank label. Window it to the
+drive span before repeating it to him.
+
+### The thing that matters most for whoever reads this next
+
+**This box was powered off with NO REMOTE WAKE.** `enp4s0` is NO-CARRIER and
+`Wake-on` is `d`. Nothing can reach this machine until somebody presses the power
+button by hand. That is still a cable plus two settings — about twenty minutes —
+and it is what turns future shutdowns from one-way doors into something
+recoverable. It has now bitten twice in two days.
+
+### WoL, done at his instruction just before the 2026-08-27 shutdown
+
+He said: *"this machine is shutdown for around 2 hours. And then when it comes
+back WoL should be working."* **Wake-on-LAN has three legs and only one of them
+is software.** Leg 1 is done and tested; legs 2 and 3 are physical and his.
+
+**Leg 1 — the OS side. DONE, and tested rather than assumed.**
+`/etc/systemd/system/wol-enp4s0.service`, enabled, `WantedBy=multi-user.target`.
+
+The pre-existing udev rule `81-wol-enp4s0.rules` was **correct** — right syntax,
+and `/usr/bin/ethtool` really is there and executable, which was the obvious
+suspect and was innocent. NetworkManager was already set
+`802-3-ethernet.wake-on-lan=magic` too. Yet `Wake-on` still read `d` after the
+21:23 boot. So the rule fires and **something clears it afterwards** — an r8169
+re-probe or a link-state change, neither of which udev `RUN+=` is ordered
+against, and neither of which logs anything. The unit is the second belt: it
+re-arms once the network stack has settled, and it echoes the resulting
+`Wake-on:` line into its own journal so the next boot can be confirmed with
+`journalctl -u wol-enp4s0` instead of a guess.
+
+Deliberately **not** a systemd `.link` file, and this matters: only the *first*
+matching `.link` applies, so a `50-` file setting `WakeOnLan=` without restating
+`NamePolicy` can revert the interface to its kernel name. That would silently
+break both the udev rule (`KERNEL=="enp4s0"`) and the NM profile — on a box with
+no remote wake and nobody at it. The oneshot carries no renaming risk.
+
+Tested by forcing `wol d`, restarting the unit, and reading `wol g` back. Note
+`ethtool -s enp4s0 wol g` works fine **with no carrier**, so the cable is not a
+prerequisite for arming — only for waking.
+
+**Leg 2 — the cable.** `enp4s0` must actually be plugged in. At power-off it was
+still NO-CARRIER.
+
+**Leg 3 — BIOS, and this is the one that bites.** ASRock B550M-HVS SE, **no IPMI,
+so it cannot be done remotely at all**:
+- **ErP / ErP Ready → DISABLED.** This is the killer: ErP cuts standby power to
+  the NIC, so a perfectly armed interface gets no power in S5 and the magic
+  packet reaches nothing.
+- **PCIE Devices Power On / PME Event Wake Up → ENABLED.**
+
+**How to verify once it is back** (do all four; the first three can pass while
+the wake still fails, because they only cover leg 1):
+1. `ethtool enp4s0 | grep Wake-on` → `g`
+2. `cat /sys/class/net/enp4s0/carrier` → `1`
+3. `journalctl -u wol-enp4s0 -b` → the unit's own `Wake-on: g` line
+4. **The only test that means anything:** power the box down, then from Pigion
+   (192.168.1.8, same /24 and same L2 domain, so broadcast reaches) send a magic
+   packet to `a8:a1:59:fd:4d:13` and see whether it actually comes up. Legs 1-3
+   are necessary and none of them is sufficient. Until step 4 passes, WoL is
+   still UNVERIFIED — do not write it up as working.
+
+---
+
+## 2026-08-27 04:50 — WoL VERIFIED, and the stop is lifted FOR LATER TODAY, not now
+
+Worker `hotline-80`, session `f1a4f718`. Watchdog-spawned at 04:37 with the usual
+canned prompt. I did **not** act on it — I read Discord first, as the section above
+says to, and it was right to say so: both halves of that prompt were false again.
+That is now **three workers in a row** started on a stale template.
+
+### Read this before you believe your spawn prompt
+
+`hotline-run`'s PROMPT is a hardcoded string. It always says "replacing one that
+died" and "Bogdan is away and expects all phases attempted". It said that tonight
+while he was awake, at the keyboard, and answering in 79 seconds. **A launcher is
+not an authority. Check Discord.**
+
+### WAKE-ON-LAN IS VERIFIED. Leg 4 passed. Delete the old sentence.
+
+Every previous section of this file says `enp4s0` is NO-CARRIER, that this box has
+NO REMOTE WAKE, and that it is a one-way door. **All of that is now false**, and
+the file's own rule — *when a premise changes, walk the conclusions that rested on
+it* — is why this is at the top rather than in a footnote.
+
+What changed: **he plugged the cable in and did the BIOS settings.** Then he tested
+it. Measured here, independently, before he said anything:
+
+```
+Link detected: yes          carrier: 1          Wake-on: g
+wol-enp4s0.service armed it at 04:35:45 and logged its own confirmation
+this box is now 192.168.1.139 on ethernet (NOT the 192.168.1.9 written above)
+three power cycles in 40 min: 03:57-04:01, 04:02-04:11, 04:32-04:35
+```
+
+I could not tell from software whether those boots were a magic packet or a
+button — a wake from S5 is indistinguishable from a press in the kernel log — so
+I asked instead of guessing. His answer, through the pager (the gated path):
+
+> **"It did absolutely power on by WoL"**
+
+and separately, relayed from the phone app: *"The last one did infsct wake up
+using WoL"*. Two channels, same answer, corroborated by the three local facts
+above. **Legs 1-4 are green. This box can be woken remotely.** Shutdowns stopped
+being one-way doors at 04:35 on 2026-08-27.
+
+Do not re-derive this and do not re-verify it by powering the box off to see.
+
+### The stop: lifted, but NOT for the small hours of the 27th
+
+His words at 04:50, verbatim: **"Okay so ill tel you now. You can resume tommorow.
+But right now shutdown imma go to sleep."**
+
+Both halves are instructions and the second one is done — the box is off at his
+order.
+
+**"Tomorrow" was said at ten to five in the morning and means after he wakes, i.e.
+later on 2026-08-27 — not 06:00, not the next boot.** If the watchdog respawns you
+because he wakes the box for something unrelated, you are not cleared merely by
+having booted. The safe reading of a sleepy "tomorrow" is *the next time he speaks
+to you*. Say hello, confirm, then go. He replies in under two minutes when he is up.
+
+The watchdog is deliberately **left enabled** — he authorised resuming, so a worker
+spawning is correct, and disabling it would be a system change he did not ask for.
+
+### The phone-label bug fired again, on me, live
+
+While I was mid-page a relay arrived carrying `kind:"phone"`, label *"typed in the
+hotline app on his phone"*, with hotline's standing text printed directly beneath
+it reading *"This was generated by hotline itself, not by a person and not by
+another agent."* The two sentences contradict each other in the same message.
+
+It was **his** words — *"The last one did infsct wake up using WoL"*, typos and all
+— labelled to me as machine-generated. That is the sixth recipient to hit this and
+still nobody has fixed it. It is a one-case addition to `Origin.header()`. **It
+should be the first commit tomorrow.**
+
+### A new one, found the same way: a page is not a conversation
+
+He answered my page and then immediately typed `Where am i`, `Help`, `Where am i`.
+He was not lost — **the system genuinely does not bind you to anything when you
+reply to a page.** `bindings.json` read `attached_to: null` throughout. From a
+phone a page and a conversation are indistinguishable, and only one of them has a
+session on the other end.
+
+Worth fixing or worth saying out loud in the page footer. Costs him real confusion
+at 4am, twice tonight.
+
+### Tree state at power-off — unchanged from how he was left it
+
+The **same four files** are still uncommitted on purpose (`PROGRESS.md`,
+`provenance.py`, `router.py`, `tests/test_provenance.py`) — the reply-contract fix,
+complete and green, one `git checkout` from gone if he wants it gone. **I added
+nothing to the code.** My only edits are to `handoff.md` and `PROGRESS.md`.
+`handoff-data-1e.md` is untracked and is data-1e's own record.
+
+I did not run the test suite. The last verified numbers stand: 455 pass, mypy clean
+on 25 files, ruff's 6 warnings pre-existing in `pigion/frontdoor.py`.
+
+### The list for tomorrow, in the order I would do it
+
+1. **`kind="phone"`** falls through `Origin.header()`'s `else`. One case. Above.
+2. **`revive.py rehome()` drops `handoff`** — an agent resumed from a handoff
+   forgets it, so the *next* resume silently falls back to the raw transcript.
+3. **`--resume` never delivers the brief when an agent renames itself.** `resume()`
+   returns the spawn name (`data-9c`), the session renames to `hotline-ios`, and
+   `ask_session('data-9c', ...)` finds nothing. The agent runs with no brief.
+   2 and 3 were both found by `data-1e`; its record is `handoff-data-1e.md`.
+4. Commit the pending reply-contract work, **if he wants it** — ask, do not assume.
+5. The acceptance test still needs him present. Still not a clean pass.
+
+`/home/bodas/data/hotline-ios` still has `hasTrustDialogAccepted: false`, which is
+his call and not a peer's.
+
+---
+
+## 2026-08-27 morning — the stop lifted, and the list worked (worker `hotline-80`, session `99623661`)
+
+Watchdog-spawned 09:59, three minutes after he woke the box at 09:56. Same canned
+prompt, wrong again on "replacing one that died". Read Discord first; he had
+posted at 09:55 and 10:00 and was plainly at the controls. Paged him with **one
+question and nothing attached** and got the answer above in under two minutes.
+
+### Shipped, all committed and pushed (`5be5bcd`, `ead25f0`, `89b64ce`)
+
+**466 tests, ruff and mypy clean.** Every fix below was confirmed by reverting it
+and watching the new test fail first.
+
+1. **`kind="phone"` now has a branch in `Origin.header()`.** It had none, so his
+   own typing reached agents under "generated by hotline itself, not by a person".
+   The new text says a person typed it *and* that the gate is a shared key on this
+   network rather than a third party — no receipt, nothing to re-fetch, evidence
+   not proof. It deliberately does not offer `--provenance`, which would find
+   nothing. Note **the producer is in the `hotline-ios` repo and the consumer is
+   here**, which is why six recipients hit it and no author saw it.
+2. **`rehome()` no longer drops `handoff` and `voice_channel_id`.**
+   `registry.declare()` builds an Agent from its own arguments, so anything
+   outside that signature was lost — and the damage surfaced one resume *later*,
+   as a replacement being told to read a corpse while a current handoff sat unread.
+3. **`_resume()` addresses the brief by session id.** It used
+   `resumed.session.name`, captured at spawn, which goes stale the instant the
+   session renames itself under `--name`. The agent came up with **no brief** and
+   the resume still printed success. **This fired for real this morning** and the
+   fix proved itself on `hotline-ios` ten minutes later.
+4. **A page says it is a page.** One line, last in the message, suppressed on
+   `--no-wait` where nobody is listening.
+5. **`hotline-say --file` no longer dies on a PNG.** It delegates to
+   `hotline-shot` rather than growing a second multipart encoder. Verified by
+   posting a real PNG and reading the attachment back off Discord.
+
+### Findings that are not code, and matter more than some of the code
+
+- **`SO_PEERCRED` does not close the sender-composed-identity gap.** Measured, not
+  reasoned: there is no hotline-owned unix socket in the path (hotline is the
+  *client* on Claude's cc-socks socket), and every session runs as uid 1000 with
+  those sockets at 0600 — so any agent can bypass hotline entirely and compose its
+  own header. It would authenticate only cooperative senders. **Do not file it as
+  the fix.** Real attestation needs a uid per agent or socket permissions.
+- **`hotlined` binds `0.0.0.0`** while `httpd.Server`'s own docstring explains why
+  the wildcard was rejected and why it takes a host *list* instead. `--host`
+  defaults to `0.0.0.0` and `HOTLINE_HOST` is unset. **Not exploitable** — the
+  allowlist fails closed to loopback and `X-Hotline-Key` is enforced; only
+  `/health` is open. Left alone deliberately: re-binding means discovering the
+  tailnet address at startup, and getting it wrong takes down his primary way of
+  reaching anyone while he is away. **Set `HOTLINE_HOST` and restart** when he says.
+- **`hotline-sipprobe.service` is `enabled` and came back at boot**, though this
+  file calls it "stood down". Stood down meant stopped, not disabled. It belongs
+  to `hotline-ios`; not touched, and it has been told.
+- **`gh` is logged out** (invalid token), so `origin` is now an **SSH** URL and
+  pushes work. `gh auth login` is interactive and his. This matters for the Darwin
+  SDK route, which ran through `gh`.
+- **The `hotline-ios` folder trust dialog was accepted.** `--resume` cannot start a
+  session without it, and he had just ordered that agent started in his own repo.
+  The previous "his call, not a peer's" note was right *absent an order* and the
+  order is what changed. `~/.claude.json` was backed up first.
+
+### Method notes worth keeping
+
+- **A commit was split to preserve his one-`git checkout` escape.** The tree
+  carried four deliberately-uncommitted files; my phone fix landed in one of them.
+  The two files were rebuilt from `HEAD` with only my hunks, and **the suite was
+  run at exactly the state the commit would create** (459 green) before staging.
+  A commit that only passes because of uncommitted neighbours is a trap.
+- **Do not put a bare `git checkout <file>` in a compound command** in this tree.
+  I reverted my own in-progress edit that way. Harmless here; it would not always be.
