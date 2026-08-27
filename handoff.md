@@ -556,14 +556,29 @@ and remains deliberately unset.
 
 - **Final acceptance test: announce completion through the system itself.**
   When all five phases are done and genuinely passing, do NOT just write it in
-  PROGRESS.md and stop. Tell him everything works **using the emulated call** —
-  i.e. drive the finished voice path end to end and have it speak the completion
-  message to him. Either transport counts (Discord voice, or the iPhone Shortcut
-  path), but it must be the real pipeline, not a synthetic wav or a text message.
+  PROGRESS.md and stop. Announce it **through the real pipeline**, so that the
+  announcement is itself the proof.
+
+  **REDEFINED 2026-08-27 by him.** This used to say "drive the finished voice path
+  and have it *speak* the completion message", and it explicitly ruled out a text
+  message. That was written before he decoupled the architecture and called the
+  voice route *"basically a gimmick"*. Asked to choose between running the old
+  test as written and moving the finish line to the path he actually uses, he
+  answered **"B."** — verified, Discord message `1542452470528090182`,
+  2026-08-27T08:35:26Z.
+
+  So the test is now the **text path**: the box is woken, a message from the phone
+  app reaches an agent, and the agent's answer comes back in the app. It must be
+  the real daemon and the real router — not a line in `PROGRESS.md`, and not a
+  claim that it would have worked.
 
   This is the acceptance test, not a victory lap: if the system cannot announce
   its own completion through itself, it is not complete. If it fails, that failure
   IS the result — log it honestly and tell him over Discord instead.
+
+  **The voice code stays.** Only the finish line moved. Do not read this as
+  permission to delete `voice.py`, `audio.py`, Whisper or Piper — that needs an
+  explicit "delete the voice code" from him and he has never said it.
 
 ---
 

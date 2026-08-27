@@ -373,8 +373,28 @@ and barge-in.
 Sentinel bot, magic packet, boot units (`loginctl enable-linger bodas`, system
 unit with `User=bodas`, `After=network-online.target tailscaled.service`,
 `Wants=` not `Requires=`), NM `wake-on-lan magic` + a udev rule as belt and braces.
-- **Milestone:** archserver powered off. Join the voice channel. It wakes, the
-  bot joins, you talk. **That is the whole thing working.**
+- **Milestone (REDEFINED 2026-08-27, by him — see below):** archserver powered
+  off. Wake it and send it a message from the phone app. It wakes, an agent
+  answers you in the app. **That is the whole thing working.**
+
+> **Why this changed, so nobody restores the old one.** This milestone used to be
+> *"join the voice channel... you talk"*, and the acceptance test in `handoff.md`
+> matched it: the system had to announce its own completion through the voice
+> pipeline. He then decoupled the architecture and called the voice route
+> *"basically a gimmick"*, freezing `voice.py`, `audio.py`, Whisper and Piper —
+> kept on disk, not invested in further.
+>
+> Nobody walked that premise change, so for several days the project's own
+> definition of *finished* was a live test of the one subsystem he had scrapped,
+> and it sat open waiting for him to join a channel he had no reason to join.
+>
+> Asked to choose between running the old test as written (voice still works;
+> it costs two minutes and touches no code) and redefining the milestone around
+> the text path he actually uses, **he chose to redefine it.** Verified against
+> Discord: message `1542452470528090182`, 2026-08-27T08:35:26Z, *"B."*
+>
+> The voice code stays. Only the finish line moved, and it moved because he said
+> so rather than because it was easier to reach.
 
 ### Sleep policy
 Default to **S5 poweroff**, not suspend. `nvidia-suspend/resume/hibernate`
