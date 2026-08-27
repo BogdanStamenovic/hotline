@@ -205,6 +205,32 @@ def _warrant_standing(warrant: dict[str, Any]) -> str:
     )
 
 
+# Stated in the header because the header is the one place the receiver is
+# guaranteed to read, and it is already written for a language model rather than
+# a parser. The failure it prevents is not hypothetical: a session answered a
+# relayed question by calling its own harness's SendMessage instead of answering
+# as turn output. That is a perfectly reasonable thing for an agent to do -- it
+# had a peer-messaging tool and a peer to message -- but the waiter reads the
+# TRANSCRIPT, so the turn it produced contained no answer and the caller timed
+# out while a correct reply sat in a channel nobody was watching.
+#
+# Nothing is broken on either side: the sender waited where replies appear, the
+# receiver replied where replies go. They simply never agreed which was which,
+# and neither could see the other's half. That is a contract gap, and the fix
+# for a contract gap is to state the contract to the party that has to keep it.
+REPLY_CONTRACT = (
+    "HOW TO ANSWER THIS: the sender is blocked waiting for your reply, and it is "
+    "reading your TURN OUTPUT to find it -- the ordinary text you produce when "
+    "you finish this turn.\n"
+    "Put the answer there, in the turn you write after reading this. Do NOT "
+    "answer by calling a peer-messaging or agent-messaging tool instead: those "
+    "deliver to a channel the waiter is not reading, so the sender sees an empty "
+    "turn, concludes you never answered, and times out -- while your reply sits "
+    "somewhere it will not be found. By all means use those tools as well if it "
+    "helps, but the turn output is the one that is actually being read."
+)
+
+
 @dataclass
 class Origin:
     """Where a message came from, as the relay understood it."""
@@ -229,6 +255,12 @@ class Origin:
     # nested kind="human" record. See `_warrant_standing` for what it does and
     # does not establish -- the distinction is the whole point of the field.
     warrant: dict[str, Any] | None = None
+    # True when the sender is blocked waiting for an answer to this message.
+    # Deliberately NOT part of the JSON record below: it says nothing about who
+    # sent this or whether they are who they claim, which is all that record is
+    # for, and putting a transport detail in there would mean `--provenance`
+    # re-fetching from Discord to check a fact Discord has never heard of.
+    awaiting_reply: bool = False
     extra: dict[str, Any] = field(default_factory=dict)
 
     def header(self, body: str) -> str:
@@ -373,6 +405,8 @@ class Origin:
             )
         if self.warrant:
             standing += "\n\n" + _warrant_standing(self.warrant)
+        if self.awaiting_reply:
+            standing += "\n\n" + REPLY_CONTRACT
         standing += _nested_marker_warning(body)
         return f"[{MARKER} {line}]\n{standing}\n\n--- message follows ---\n"
 

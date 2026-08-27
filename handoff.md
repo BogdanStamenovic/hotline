@@ -900,3 +900,57 @@ and watching the new test fail first.
   A commit that only passes because of uncommitted neighbours is a trap.
 - **Do not put a bare `git checkout <file>` in a compound command** in this tree.
   I reverted my own in-progress edit that way. Harmless here; it would not always be.
+
+### Round two, same morning — what a recipient found, and one question for him
+
+**The recipient-side review is now a step in the build, not an anecdote.** I showed
+the header I had just written to a fresh session as its intended reader and asked
+what it concluded, without saying what I hoped. It found three things I had not.
+That is now **seven holes in this design found by the receiving end and none by an
+author.** Do this every time you touch `provenance.py`.
+
+Fixed from that review (`f740a80`):
+
+- **A body can carry its own `[hotline-provenance ...]` block and its own
+  `--- message follows ---`.** `parse()` is safe — it takes the first match, and a
+  test now pins that — but the *reader* is not: top to bottom the message reads as
+  a nested relay, with a forged "VERIFIABLE relay from Bogdan" three lines under a
+  genuine "this is from ANOTHER AGENT". The header now counts them and says only
+  the top block is hotline's. **The body is deliberately not rewritten**: agents
+  here quote provenance records constantly, so defanging would corrupt ordinary
+  traffic to stop a forgery that announcing catches anyway.
+- **My own overclaim.** "so it is gated, and it is not anonymous" is not what a
+  shared key establishes. It now says *authenticated as a key-holder, which is not
+  the same as authenticated as him*. I had written the SO_PEERCRED note an hour
+  earlier saying every session shares a uid, and still failed to apply it to my own
+  sentence — the insight was about somebody else's mechanism.
+- **The standing role now survives `--resume`.** `adopt` kept it, `rehome` dropped
+  it, both are respawns, and `test_the_role_survives_a_respawn` only ever covered
+  `adopt`. A resumed `hotline-80` was silently demoted to an ordinary peer in every
+  header it sent. No new escalation surface: `--resume` and `--adopt` need the same
+  access and `--adopt` always carried it.
+
+**Not fixed, deliberately, and worth knowing:** the `body_sha256_16` digest is
+unkeyed and travels with the body, so a forger just recomputes it. For
+`kind="human"` it *is* load-bearing, because `--provenance` re-fetches from Discord
+and compares against something off this machine; for every other kind it is
+decorative and mostly makes the block look cryptographic. HMAC does not fix this
+either — the key would sit in a file every agent can read, same as the uid problem.
+
+**A harness bug found by dying in it** (`afeb40e`): `exit 3 = ... It is NOT lost ...
+Do not resend` was printed for fresh sessions too, where the timeout kills the
+subprocess and the work really is gone. Both branches are now pinned by tests.
+
+### THE ONE OPEN QUESTION, and it is his
+
+**`PLAN.md`'s milestone and the acceptance test both define "done" as a voice
+call** — "join the voice channel... that is the whole thing working". **He has since
+called the voice route a gimmick and frozen it.** Nobody walked that premise change,
+which is why the acceptance test has been open for days waiting on him to join a
+channel for a subsystem he scrapped.
+
+He was asked at 10:53 to choose: **A** run it as written (voice is frozen, not
+deleted; costs two minutes and touches no code) or **B** redefine the milestone
+around the text path he actually uses, rewriting `PLAN.md` rather than quietly
+marking the old one passed. **I recommended A.** Do not mark the acceptance test
+passed by moving the goalposts without his answer.

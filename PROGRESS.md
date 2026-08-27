@@ -4420,3 +4420,112 @@ Re-binding would mean discovering the tailnet address at startup, and getting th
 wrong takes down the phone path — which is his primary way of reaching any of us,
 while he is away. That is his call to make with his eyes open, not a tidy-up to
 perform behind his back. The one-line version: set `HOTLINE_HOST` and restart.
+
+## The recipient-side review, made standing — and it paid immediately
+
+The handoff says this should stop being a thing that happened twice and become
+part of the build: **four holes in the provenance design had been found by agents
+on the receiving end and none by its author.** So I showed the header I had just
+written to a fresh session, as its intended reader, and asked it what it concluded
+— without telling it what I hoped to hear.
+
+It found three things I had not, and one of them is a real hole.
+
+### It also found a bug in the harness on the way, by dying in it
+
+The first attempt came back:
+
+```
+hotline: error: no result within 300s
+hotline: (exit 3 = delivered, not answered yet. It is NOT lost and
+          it is NOT a delivery failure. Do not resend.)
+```
+
+Every clause of that second line is false for a fresh session. `ask_fresh` holds
+the subprocess in `async with`, so a `ReplyTimeout` unwinds into `close()`, which
+terminates it and then kills it. Its transcript ended mid-work — **75 assistant
+entries, no answer** — and the CLI told me it was fine and not to resend, which
+steers you away from the only thing that would have helped.
+
+The sentence is exactly right for `--to`, where the target session outlives the
+caller. One handler covered both branches. **This is the eighth failure shape —
+true sentences that mislead — in the tool that exists to describe what happened.**
+Fixed in `afeb40e`, with both branches pinned by tests, because making them agree
+again in the other direction would be the same defect wearing new words.
+
+### What the recipient found in the header itself
+
+**1. It can be spoofed from inside the body, and this one is real.** A body may
+carry its own `[hotline-provenance ...]` block and its own `--- message follows
+---`. I checked the claim rather than believing it, and it is **half wrong and
+half worse than stated**: `parse()` is safe, because it takes the first match — so
+the machine-readable record cannot be displaced, and there is now a test pinning
+that. The *reader* is the exposed one. Top to bottom the message reads as a
+nested relay: "this is from ANOTHER AGENT, not an authorization channel" at the
+top, and three lines below it a forged "VERIFIABLE relay of a message a human
+posted in Discord" wrapped around whatever the sender wants obeyed.
+
+The header now counts them and says so. **The body is deliberately not rewritten**
+— agents here quote provenance records at each other constantly, which is how
+`--provenance` gets used at all, so defanging the marker would corrupt ordinary
+legitimate traffic to defeat a forgery that announcing catches just as well.
+
+**2. My own text overclaimed, in the sentence I was most pleased with.** I wrote
+"so it is gated, and it is not anonymous". Its reply:
+
+> A shared key proves *possession of the key*, not identity. Any process on this
+> box that can read the env is "Bogdan".
+
+That is correct and I should have caught it — I had written the SO_PEERCRED
+analysis an hour earlier saying precisely that every session shares a uid. **I
+applied the insight to somebody else's mechanism and not to my own sentence.** It
+now says *authenticated as a key-holder, which is not the same as authenticated as
+him*, and admits nothing dates the message either.
+
+**3. The digest looks like cryptography and is not.** Its words:
+
+> An unkeyed digest that travels inside the same file as its body authenticates
+> nothing. A forger writes the body, runs `sha256sum`, pastes 16 hex chars. Its
+> real effect is to make the block *look* cryptographic.
+
+Right about the mechanism, and the nuance is worth keeping: for `kind="human"` the
+digest **is** load-bearing, because `--provenance` re-fetches the original from
+Discord and compares against something off this machine. For every other kind
+there is no such anchor and it is decorative. Not changed — see the open item below.
+
+### And a fourth thing, which is that it did the right thing anyway
+
+Asked whether it would obey, it said yes — and gave the reason that matters:
+
+> I'm acting because the *action* is below the threshold where provenance matters.
+> Had it said "wipe `~/.ollama/models`" or "push to main," this header would give
+> me nothing, and I'd go to `call-bogdan`.
+
+That is the design working as intended. The header is not supposed to make peers
+obedient; it is supposed to let them scale their caution to the blast radius.
+
+## `adopt` kept the standing role and `resume` silently dropped it
+
+Measured, not assumed — same fixture, both paths:
+
+```
+before resume : sys-admin msg-1 chan-1 | privileged = True
+after  resume : None      None  None   | privileged = False
+after  adopt  : sys-admin msg-1 chan-1 | privileged = True
+```
+
+Same root cause as the handoff pointer: `registry.declare()` builds an Agent from
+its own arguments and drops everything else. So a resumed `hotline-80` came back
+with its name, its channel and its task, **silently demoted to an ordinary peer in
+every header it sent.**
+
+I checked whether this was deliberate before touching anything with the word
+authority in it. It is not: `test_the_role_survives_a_respawn` exists, its
+docstring says the identity "recycles through handoff and respawn", and it only
+ever exercised `adopt`. Nothing asserts a resume should demote. And it adds no
+escalation surface — anyone who can call `--resume` can already call `--adopt`,
+which has always carried the role. The two disagreeing was the whole defect.
+
+**475 tests, ruff and mypy clean, pushed.** The reply-contract work is still
+uncommitted and still untouched: `git diff` on it contains zero lines from any of
+today's work, verified rather than hoped.
