@@ -70,6 +70,22 @@ DEFAULT_LADDER: list[tuple[float, str]] = build_ladder()
 DEFAULT_TIMEOUT = 1800.0
 POLL_SECONDS = 8.0
 
+# A page and a conversation are indistinguishable from a phone, and only one of
+# them has a session on the other end. Bogdan answered a page at 4am, then typed
+# "Where am i", "Help", "Where am i" -- and he was not lost. The system really
+# does bind him to nothing when he replies to a page: `bindings.json` read
+# `attached_to: null` the whole time, so "not connected to anything" was a
+# truthful answer to a question he had no reason to think he was asking.
+#
+# One line, and deliberately at the END of the page: the lesson from the same
+# night is that anything wrapped around the question gets answered instead of
+# the question. It says what replying does, what it does not do, and the one
+# command that changes it.
+PAGE_FOOTER = (
+    "-# Replying here answers this page. It does not attach you to a session \u2014 "
+    "say `session list` if you want to carry on talking to one."
+)
+
 
 class PagerError(Exception):
     """Raised when a page could not be delivered at all."""
@@ -255,6 +271,12 @@ class Pager:
         head = f"<@{self.user_id}> **{source} needs you.**\n\n{reason}"
         if context:
             head += f"\n\n```\n{context[:1200]}\n```"
+        if wait:
+            # Only when something is actually listening. On a `--no-wait` page
+            # nobody is waiting for a reply, and inviting one would send it to
+            # the text bridge as a fresh instruction to a Claude session --
+            # promising an audience that does not exist.
+            head += f"\n\n{PAGE_FOOTER}"
         result.channel_id = self.channel_id
 
         # DM first: it is the one that reliably reaches his lock screen. The channel

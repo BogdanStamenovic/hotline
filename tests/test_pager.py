@@ -262,3 +262,57 @@ def test_send_returns_the_first_part_as_the_reply_anchor(discord: FakeDiscord) -
     ids = sorted(int(i) for i in [first])
     assert int(first) == 1001  # the first POST of the batch
     assert ids
+
+
+# ---- a page is not a conversation ------------------------------------------
+#
+# He answered a page at 4am and then typed "Where am i", "Help", "Where am i".
+# He was not lost and the system was not broken: replying to a page really does
+# attach you to nothing, so "not connected to anything" was a truthful answer to
+# a question he had no reason to think he was asking. From a phone the two are
+# indistinguishable and only one of them has a session on the other end.
+
+
+def test_a_page_says_that_replying_does_not_attach_you(discord: FakeDiscord) -> None:
+    clock = Clock()
+    pager, _fired = build(discord, clock)
+    discord.replies["chan-1"] = [reply_from("user-1", "yes")]
+
+    pager.page("may I push?", timeout=600)
+
+    page_text = discord.sent[0][1]
+    assert "does not attach you to a session" in page_text
+    assert "session list" in page_text, "saying what is wrong without the fix is half a message"
+
+
+def test_the_footer_comes_after_the_question(discord: FakeDiscord) -> None:
+    """Anything wrapped around the question gets answered instead of the question.
+
+    That happened twice in one night -- two pages that buried the ask under a
+    screenful of context and got the last thing he read answered both times. The
+    footer is an aside, so it goes last or it becomes the same bug.
+    """
+    clock = Clock()
+    pager, _fired = build(discord, clock)
+    discord.replies["chan-1"] = [reply_from("user-1", "yes")]
+
+    pager.page("may I push?", timeout=600)
+
+    page_text = discord.sent[0][1]
+    assert page_text.index("may I push?") < page_text.index("does not attach you")
+
+
+def test_a_no_wait_page_does_not_invite_a_reply(discord: FakeDiscord) -> None:
+    """Nobody is listening on a --no-wait page.
+
+    It posts and exits, so a reply falls through to the text bridge and is
+    delivered to a Claude session as a fresh instruction. Inviting one would
+    promise an audience that does not exist.
+    """
+    clock = Clock()
+    pager, _fired = build(discord, clock)
+
+    pager.page("just so you know", wait=False)
+
+    assert discord.sent, "it still posts"
+    assert all("Replying here" not in text for _c, text in discord.sent)
