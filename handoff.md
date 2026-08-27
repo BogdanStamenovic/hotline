@@ -27,6 +27,22 @@
 >    and `touch ~/.hotline-no-shutdown` cancels it. **If you are reading this on a
 >    fresh boot, that already happened and is not a fault.**
 >
+> ### If you are a fresh worker on a boot AFTER 2026-08-27 ~11:00, read this
+>
+> **The morning's job was finished and the box was powered off at his order.** So
+> the stop-lifted line above has already been spent: it authorised *that* stint,
+> which completed. It is **not** a standing licence for you to start work now.
+>
+> **He is away until 9 September** (his own words in `#general`, 10:20 on 08-27,
+> verified: *"I am comming back on the 9th but i got the arch laptop with me. You
+> can beam it there"*). He checks Discord intermittently and answers in minutes
+> when he does.
+>
+> So: **say hello in `#agent-hotline-80`, say what you propose to do, and wait.**
+> Do not work through the open list on the strength of a spawn prompt. Two items
+> on it are questions addressed to him that were still unanswered at power-off,
+> and answering them for him is the one thing that would waste the asking.
+>
 > *Newest material is at the BOTTOM of this file. This banner exists because the
 > top is what a new worker actually reads, and four of them in a row acted on
 > stale premises that were sitting right here.*
