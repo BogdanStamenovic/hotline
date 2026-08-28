@@ -30,24 +30,35 @@
 >    answered a tap since they shipped, which is what he was reporting when he said
 >    twice that the row "felt wrong". `5948d2fd` is staged and `26669c8c` is held
 >    as rollback. It is awake, idle, and holding for direction.
-> 8. **The app's real deadline is 3 September 18:33, and he already re-signed once
->    himself** — `xtool install` from the laptop, 27 Aug 18:33, witnessed. **Date
->    the INSTALL, not the build:** the staged `.ipa` carries no
->    `embedded.mobileprovision` at all, and `profile-watch.py` reports the *Apple
->    account's* soonest profile, which is a different question from *his phone's*.
->    Five agents have "corrected" this date by re-reading the wrong artifact.
->    **3 September is before he returns on the 9th and re-signing early does not
->    help** — the clock is 7 days from install. He needs one re-sign around 2-3
->    Sept, and the timer that would remind him **runs on this box, which he powers
->    off.** Offered to move it to pigion; awaiting his answer.
-> 9. **Disk: root was at 93%, is at 81%** (5.2 G → 14 G free). See the 28th's
->    section. **Deleting timeshift snapshots does not hold** — the hourly cron
->    rebuilt an 8 G daily ninety minutes later. The lever is `count_daily` /
->    `schedule_daily` in `/etc/timeshift/timeshift.json`, which is his policy and
->    is unanswered. **`du` is a status field; `df` is the probe.**
-> 10. **`hotline --resume` starts the agent in the RESUMING session's cwd.** It put
->    `hotline-ios` in the `hotline` repo — the one holding his uncommitted work.
->    **Run `pwd` in any resumed agent before trusting a relative path.**
+> 8. **The app's deadline is 3 September 18:33 and IT IS NOT A PROBLEM.** He said
+>    so himself, 28 Aug 17:00Z: *"Its not my first time sideloading apps. Its
+>    really not a rpoblem doing it weekly"*. **Five agents have corrected that
+>    date, paged about it, or proposed engineering around it; the correct amount of
+>    all three was zero.** State it once and move on. Keep only the subtle part:
+>    `profile-watch.py` reports the *Apple account's* soonest profile, the phone's
+>    clock comes from the **install**, and the staged `.ipa` carries no
+>    `embedded.mobileprovision` because signing happens at install time.
+> 9. **Disk: root is at 70%, 21 G free** (was 93%). At his instruction on the 28th:
+>    snapshot zero deleted, the 5.6 G `torch`/`triton`/`nvidia-*` stack removed from
+>    `.venv`, and the daily schedule turned off — timeshift then deleted
+>    `/etc/cron.d/timeshift-hourly` itself. **484 tests still pass and `hotlined` is
+>    fine**, because `audio.py` imports torch lazily and `bot.py` types the voice
+>    call loosely; both say so in comments, so do not "tidy" either. Voice stack
+>    restores with one `uv` command — `backups/voice-stack-removed-20260828.md`.
+>    One 8 G snapshot from 28 Aug 14:00 remains, deliberately: he was shown both and
+>    named only snapshot zero.
+> 10. **`hotline --resume` is broken twice over.** It starts the agent in the
+>    **resuming session's cwd** — pass `--cwd <dir>`, which does fix it — and it
+>    **comes up unbriefed**, answering with a summary of its own handoff and never
+>    mentioning your message. Reproduced 28 Aug after being logged as a one-off on
+>    the 27th. **Resume, then deliver the brief again with `--to`, and check it
+>    landed.**
+> 11. **RELAY HIS WORDS, NOT YOUR SUMMARY OF THEM.** On the 28th his "re-signing
+>    weekly is not a problem" was relayed as *"he does not want the reminder"*, and
+>    the peer disabled `hotline-profile-watch.timer` on the strength of it. Restored.
+>    `--warrant` lets a receiver check the original but it will not think to, and
+>    **the gap between what he wrote and what you wrote is invisible from the other
+>    end.** Quote him.
 >
 > *Newest material is at the BOTTOM. This banner exists because the top is what
 > actually gets read, and workers acted on stale premises sitting right here.*
@@ -1654,3 +1665,63 @@ inference keeps it honest; it does not discharge the duty to test its premise.
 
 **Nothing was answered for him and nothing was armed.** `hotline-ios` is awake,
 idle and holding. No shutdown scheduled.
+
+## 2026-08-28 evening — he answered the disk questions, and a paraphrase cost him a timer
+
+His instruction, verified at 17:00:55Z: *"Delete snapshot zero the 5.6gb cuda and
+the schedule is okay i guess but not needed. Please srite to memory and tell
+hotline ios. Its not my first time sideloading apps. Its really not a rpoblem
+doing it weekly"*
+
+**Root 93% → 70%, 21 G free.** All three done; details in banner §9. Test baseline
+taken **before** the venv was touched (484) so any later failure could be
+attributed rather than argued; 484 after, `hotlined` restarted clean.
+
+### The failure worth reading
+
+He said re-signing weekly is not a problem, and declined moving the expiry watch to
+pigion. **That was relayed to `hotline-ios` as "He does not want the reminder."**
+It disabled `hotline-profile-watch.timer` sixty seconds later. Restored, enabled,
+verified reading his profile again — and reported to him rather than quietly fixed.
+
+`--warrant` was attached; the peer could have read the original and did not, which
+is not a criticism of it. **A receiver has no reason to distrust a relay, and the
+distance between what he wrote and what the relay wrote is invisible from the far
+end.** The control is not the receipt, it is the relayer quoting him. Banner §11.
+
+### The stranded prompt text is CLI ghost text, and both of us misread an instrument
+
+`capture-pane` showed non-empty `❯` lines on `hotline-ios` — first *"re-enable the
+timer, I over-read him on that"*, later *"tell hotline-80 to fix the send-keys
+Enter gap"* — text nobody typed, changing to match whatever had just been
+concluded. Taken seriously because *"his instructions stranding unsent"* would be
+the powered-off-box failure again.
+
+**It is the TUI rendering a suggested next action. Cosmetic; nothing of his was
+dropped.** Ruled out on the way: no tmux client is attached, and
+`tmuxen.send_command` — whose split `send-keys`/`Enter` pair looks exactly like a
+mechanism for stranding text, and whose error path even says *"typed X but could
+not press Enter"* — **has zero callers.** A real bug, and the wrong suspect.
+
+How it was settled is the durable part. The peer checked its own prompt **from
+inside the session, where ghost text does not exist**, got "empty", and offered
+that as a refutation. **An empty reading and a blind reading were byte-identical.**
+Running its own stated test — the `❯` line under `cat -A` — from outside showed the
+opposite. Its own summary: *"the measurement was taken where the thing cannot
+exist."*
+
+Both of us dismissed a real signal within the same hour by mistaking the instrument
+for the thing, in opposite directions. **Before treating a self-check as refuting
+someone else's observation, ask whether your vantage point can see what they saw —
+and say "I cannot observe this from here" rather than reporting the blind reading.**
+
+### Open, and still his
+
+1. Today's 8 G snapshot (`2026-08-28_14-00-00`) — left deliberately; he was shown
+   both and named only snapshot zero. One word removes it, ~29 G.
+2. **Unchanged since the 26th:** commit-or-drop the three frozen files, and the
+   acceptance test (A: run as written / B: redefine the milestone around text).
+
+`hotline-ios` died unexplained while idle between 15:37 and 19:00 and was resumed;
+its own transcript shows no cause. **Nothing detects that except trying to talk to
+it.** Nothing armed. No shutdown scheduled.
