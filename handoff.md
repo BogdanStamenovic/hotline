@@ -1,42 +1,53 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-08-27 23:05 CEST — THIS BANNER REPLACES THE 10:30 ONE
+> ## STATUS AS OF 2026-08-28 15:40 CEST — THIS BANNER REPLACES THE 27th's 23:05 ONE
 >
-> 1. **YOU ARE AN OPERATOR, NOT A BUILDER.** He said so himself at 20:52 today:
+> 1. **YOU ARE AN OPERATOR, NOT A BUILDER.** His own words, 2026-08-27 20:52:
 >    *"the point of you is exactly this kind of work administration checking
->    shutting down controlig other sessions."* Run the agents: know which are alive
->    and whether each is healthy, stuck or finished; carry his instructions to them
->    and their answers back; start, resume, retask and shut them down; keep him to
->    ONE voice. **`PLAN.md` is background, not a task list.** The spawn prompt now
->    says all of this — it was rewritten today and no longer lies.
-> 2. **He is REACHABLE and answers in minutes.** He was active until ~23:00 on the
->    27th. He is travelling and back on **9 September**, but "away" has not meant
->    "unreachable" once. **Read Discord before believing anything, including this
->    banner** — it is dated for the same reason its predecessor was.
-> 3. **A SHUTDOWN IS EXPECTED around "12"** — his word, 21:01Z, and ambiguous
->    between midnight on the 27th and noon on the 28th. I asked; if you are reading
->    this on a fresh boot, it happened and **it is not a fault**. **Nothing was
->    armed by me.** WoL is VERIFIED (leg 4 passed 04:35 on the 27th), so
->    `wakeonlan a8:a1:59:fd:4d:13` brings this box back. Shutdowns stopped being
->    one-way doors — every note below saying otherwise is stale.
-> 4. **Messages sent while the box is OFF reach nothing.** They are never delivered,
->    queued or acknowledged. His 15:08 instruction on the 27th was lost that way and
->    only channel history recovered it. **After any boot, scan the messages sent
->    during the downtime** before concluding nothing was asked of you.
-> 5. **Do not spam him.** He said *"Please stop spamming me"* at 14:21Z on the 27th
->    after a `hotline-call` fell through to the pager's nudge ladder. One
->    consolidated message beats five. If he says call and not page, pass
->    **`--no-fallback`**. `/health` saying `ring_ready: true` does **not** mean his
->    phone rings — measured, not reasoned.
-> 6. **Still uncommitted on purpose:** `provenance.py`, `router.py`,
->    `tests/test_provenance.py`, `PROGRESS.md` — the reply-contract work, complete
->    and green, one `git checkout` from gone. He was asked on the 26th and has never
->    answered. **Do not commit it for him. Stage by explicit path in this repo,
->    never `git add -A`.**
-> 7. **`hotline-ios` is holding an app build deliberately** — the FULL TRANSCRIPT
->    button ignores a tap and it will not ship an install it cannot explain. Its
->    profile expires **3 September 16:24**. The app on his phone works; a rollback
->    sits beside it on his laptop.
+>    shutting down controlig other sessions."* Run the agents; do not grind a
+>    checklist. **`PLAN.md` is background, not a task list.** The spawn prompt says
+>    all of this and no longer lies.
+> 2. **He is REACHABLE but not always fast.** He answered within 36 minutes on the
+>    28th and then went quiet for over two hours with questions outstanding.
+>    Neither is a fault, and neither is a reason to act for him. **Read Discord
+>    before believing anything, including this banner.**
+> 3. **The 27th's midnight poweroff happened, cleanly.** The box came back
+>    **12:47 on the 28th** — no timer here or on pigion did that, so someone woke
+>    it; almost certainly him. **The ethernet cable is IN now** (`enp4s0` LOWER_UP,
+>    `Wake-on: g`), so `wakeonlan a8:a1:59:fd:4d:13` is real. Every note in this
+>    file saying the cable is unplugged, or that a shutdown is one-way, is stale.
+> 4. **Messages sent while the box is OFF reach nothing.** Scan channel history
+>    after any boot. *(On the 28th there were none — checked, not assumed.)*
+> 5. **Do not spam him.** One consolidated message beats five. If he says call and
+>    not page, pass **`--no-fallback`**. `/health` `ring_ready: true` is not proof
+>    his phone rings.
+> 6. **Still uncommitted on purpose — and it is THREE files, not four:**
+>    `provenance.py`, `router.py`, `tests/test_provenance.py`, frozen at 27 Aug
+>    10:35. `PROGRESS.md` is also uncommitted but it is the **live operator log**,
+>    not a pending decision. Asked on the 26th, still unanswered. **Do not commit
+>    it for him. Stage by explicit path here, never `git add -A`.**
+> 7. **`hotline-ios` SHIPPED that build** — the header row's chips had never
+>    answered a tap since they shipped, which is what he was reporting when he said
+>    twice that the row "felt wrong". `5948d2fd` is staged and `26669c8c` is held
+>    as rollback. It is awake, idle, and holding for direction.
+> 8. **The app's real deadline is 3 September 18:33, and he already re-signed once
+>    himself** — `xtool install` from the laptop, 27 Aug 18:33, witnessed. **Date
+>    the INSTALL, not the build:** the staged `.ipa` carries no
+>    `embedded.mobileprovision` at all, and `profile-watch.py` reports the *Apple
+>    account's* soonest profile, which is a different question from *his phone's*.
+>    Five agents have "corrected" this date by re-reading the wrong artifact.
+>    **3 September is before he returns on the 9th and re-signing early does not
+>    help** — the clock is 7 days from install. He needs one re-sign around 2-3
+>    Sept, and the timer that would remind him **runs on this box, which he powers
+>    off.** Offered to move it to pigion; awaiting his answer.
+> 9. **Disk: root was at 93%, is at 81%** (5.2 G → 14 G free). See the 28th's
+>    section. **Deleting timeshift snapshots does not hold** — the hourly cron
+>    rebuilt an 8 G daily ninety minutes later. The lever is `count_daily` /
+>    `schedule_daily` in `/etc/timeshift/timeshift.json`, which is his policy and
+>    is unanswered. **`du` is a status field; `df` is the probe.**
+> 10. **`hotline --resume` starts the agent in the RESUMING session's cwd.** It put
+>    `hotline-ios` in the `hotline` repo — the one holding his uncommitted work.
+>    **Run `pwd` in any resumed agent before trusting a relative path.**
 >
 > *Newest material is at the BOTTOM. This banner exists because the top is what
 > actually gets read, and workers acted on stale premises sitting right here.*
@@ -1573,3 +1584,73 @@ was actually true. **That is the only error caught by its own author today** —
 of mine were caught by other people. Against nine holes found by recipients and
 almost none by authors, a counter-example to that pattern is worth more than another
 instance of it.
+
+## 2026-08-28 — operator `hotline-80`, session `80b109c7`: boot, disk, and a date five people got wrong
+
+Watchdog-spawned 12:49, two minutes after the box came up. Adopted, read this file,
+read Discord. **Nothing had been sent while the box was off** — checked all six
+channels; newest message anywhere predated the poweroff. Said hello and waited
+rather than starting work, and he answered 36 minutes later.
+
+### His instruction, verified before acting because it deletes things
+
+`hotline --provenance` → VERIFIED, 11:30:38Z:
+
+> *"Wake it back up. But first i need you to bassically delete snapshotd timeshifts
+> old stuffe xceters so we get as much as possible of disk usage bsck"*
+
+### Root: 93% → 69%, then back to 81% by itself
+
+Freed 16.8 G (`df`, not `du`): timeshift dailies 8.8, caches 6.6, coredumps 1.2,
+journals 0.2. **Ninety minutes later the hourly timeshift cron rebuilt an 8 G
+daily**, because deleting the snapshots did not change the schedule that makes
+them. Settled at 14 G free and should hold — tomorrow's daily hardlinks against
+today's.
+
+**Kept deliberately:** snapshot zero (8.7 G, the only rollback this ext4 root has),
+the venv's CUDA stack (5.6 G — `hotlined` runs from that venv and the voice path is
+frozen, not deleted), `.swiftpm`, `.hermes`. All four are his call and are asked.
+
+**`~/.cache/uv` measured 7.8 G and freeing it moved `df` by nothing.** uv hardlinks
+into venvs and `du` bills shared inodes to whichever path it walks first; the bytes
+just re-attributed to `.venv`. Verified the venv still imports `hotline` and
+`torch` afterwards. **Report `df` deltas, never a sum of `du`.**
+
+### The profile date, which is two clocks and not one
+
+`profile-watch.py` takes `min(expiry)` over profiles Apple lists ACTIVE. That is
+**"the soonest profile in his account"**, read as **"when his phone stops
+launching"**. Same question only while the newest signed build is the installed one.
+
+`hotline-ios` dated the *install* instead of the build and I verified it over SSH:
+`arch:~/.cache/xtool/tmp-staging-210CCF31…` at **27 Aug 18:33:08**, the minute Apple
+issued `2S56P3Z95Z` bound to his phone's UDID. **He re-signed it himself**, five
+hours before the newest `.ipa` existed. The recurring "16:24" is
+`~/.config/xtool/data` — his **login**, never an install. The staged `.ipa` has no
+`embedded.mobileprovision` at all; signing happens at install time.
+
+**I had told him, labelled as inference, that his phone still carried the 2 Sept
+clock. It was wrong, and one `ssh` would have caught it.** Labelling a claim as
+inference keeps it honest; it does not discharge the duty to test its premise.
+
+### Two defects found, neither fixed
+
+- **`hotline --resume` inherits the resuming session's cwd.** It put `hotline-ios`
+  in the `hotline` repo, one `git add -A` from his uncommitted work. Corrected by
+  message; the tool is unchanged. Memory: `hotline-resume-inherits-wrong-cwd`.
+- **Snapshot zero is tagged `O D`** and so sits inside a keep-3 daily rotation.
+  Evidence says the ondemand tag exempts it (four dailies coexisted under keep-3 on
+  the 27th) but that is one observation, not a reading of the pruning code.
+
+### Open, and all his
+
+1. Snapshot zero: delete for 8.7 G, or keep the only rollback?
+2. The 5.6 G CUDA stack in the venv?
+3. Turn timeshift's daily schedule down, or the disk refills?
+4. Move the profile-expiry watch to pigion, so the warning does not depend on this
+   box being awake while he is abroad?
+5. **Unchanged from the 26th:** commit-or-drop the three frozen files, and the
+   acceptance test (A: run as written / B: redefine the milestone around text).
+
+**Nothing was answered for him and nothing was armed.** `hotline-ios` is awake,
+idle and holding. No shutdown scheduled.
