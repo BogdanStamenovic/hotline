@@ -38,15 +38,22 @@
 >    `profile-watch.py` reports the *Apple account's* soonest profile, the phone's
 >    clock comes from the **install**, and the staged `.ipa` carries no
 >    `embedded.mobileprovision` because signing happens at install time.
-> 9. **Disk: root is at 70%, 21 G free** (was 93%). At his instruction on the 28th:
->    snapshot zero deleted, the 5.6 G `torch`/`triton`/`nvidia-*` stack removed from
->    `.venv`, and the daily schedule turned off — timeshift then deleted
->    `/etc/cron.d/timeshift-hourly` itself. **484 tests still pass and `hotlined` is
->    fine**, because `audio.py` imports torch lazily and `bot.py` types the voice
->    call loosely; both say so in comments, so do not "tidy" either. Voice stack
->    restores with one `uv` command — `backups/voice-stack-removed-20260828.md`.
->    One 8 G snapshot from 28 Aug 14:00 remains, deliberately: he was shown both and
->    named only snapshot zero.
+> 9. **Disk: root is at 48%, 36 G free** (was 93% this morning). At his instruction
+>    on the 28th: both snapshots deleted, the 5.6 G `torch`/`triton`/`nvidia-*`
+>    stack removed from `.venv`, and **all scheduled snapshotting turned off** —
+>    timeshift deleted `/etc/cron.d/timeshift-hourly` itself. **484 tests still
+>    pass and `hotlined` is fine**, because `audio.py` imports torch lazily and
+>    `bot.py` types the voice call loosely; both say so in comments, so do not
+>    "tidy" either. Voice stack restores with one `uv` command —
+>    `backups/voice-stack-removed-20260828.md`.
+> 9a. **THERE ARE NOW ZERO SNAPSHOTS AND NO AUTOMATIC ONES WILL APPEAR.** His rule,
+>    verbatim: *"Snapshots should be made only if a core part is changed"*. So
+>    **before touching anything that boots this machine** — kernel, bootloader,
+>    initramfs, display stack, `pacman -Syu`, boot-critical `/etc` — take one:
+>    `sudo timeshift --create --comments "before <thing>" --tags O`. First one needs
+>    **15.5 G**; check `df` first. Tag `O`, not `D`. Ordinary work does not qualify.
+>    Verified off by running cron's own command: `timeshift --check --scripted`
+>    answers *"Scheduled snapshots are disabled - Nothing to do!"*
 > 10. **`hotline --resume` is broken twice over.** It starts the agent in the
 >    **resuming session's cwd** — pass `--cwd <dir>`, which does fix it — and it
 >    **comes up unbriefed**, answering with a summary of its own handoff and never
@@ -1725,3 +1732,25 @@ and say "I cannot observe this from here" rather than reporting the blind readin
 `hotline-ios` died unexplained while idle between 15:37 and 19:00 and was resumed;
 its own transcript shows no cause. **Nothing detects that except trying to talk to
 it.** Nothing armed. No shutdown scheduled.
+
+### 20:00 — snapshots off entirely, and a rule to replace them
+
+Verified at 17:59:32Z: *"Stop daily snapshoting please and delete that snapshot.
+Snapshots should be made only if a core part is changed"*.
+
+Deleted `2026-08-28_14-00-00`. **21 G → 36 G free; root 70% → 48%**, and 93% →
+48% across the day. That one snapshot released 15 G on its own because it held
+every byte the two deleted earlier had shared with it — another reason the running
+total from `du` never matched `df`.
+
+**I did not trust the config field I had set.** `schedule_daily: false` is a claim;
+the probe is running what cron ran. `timeshift --check --scripted` now answers
+*"Scheduled snapshots are disabled - Nothing to do!"* and creates nothing, the
+cron entry is gone, and there is no systemd unit. That is the difference between
+"I set the flag" and "the mechanism is off".
+
+**His third sentence is a standing rule, not a one-off**, and it replaces a safety
+net that no longer exists. Recorded in banner §9a and in memory
+`snapshot-only-before-core-changes`, and passed to `hotline-ios`, which also makes
+system-level changes. Note that it supersedes the CLAUDE.md line claiming this root
+has *no* snapshot capability — it has one, it is simply manual now.
