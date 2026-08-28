@@ -1,6 +1,6 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-08-28 15:40 CEST — THIS BANNER REPLACES THE 27th's 23:05 ONE
+> ## STATUS AS OF 2026-08-28 23:07 CEST — WRITTEN AT POWER-OFF, REPLACES ALL EARLIER BANNERS
 >
 > 1. **YOU ARE AN OPERATOR, NOT A BUILDER.** His own words, 2026-08-27 20:52:
 >    *"the point of you is exactly this kind of work administration checking
@@ -1754,3 +1754,54 @@ net that no longer exists. Recorded in banner §9a and in memory
 `snapshot-only-before-core-changes`, and passed to `hotline-ios`, which also makes
 system-level changes. Note that it supersedes the CLAUDE.md line claiming this root
 has *no* snapshot capability — it has one, it is simply manual now.
+
+## SHUTDOWN 2026-08-28 — state at power-off (operator `hotline-80`, session `80b109c7`)
+
+**At his instruction**, typed directly: *"i need you to shutdown the pc tell ios to
+setup handoff.md excetera"*.
+
+**Sequenced his way: `hotline-ios` first, box second. Nothing was armed and no timer
+ran.** The 27th's shutdown was time-based and took agents mid-turn; this one waited
+for the peer to declare itself finished, which it did — `dff93d1`, clean, zero
+unpushed, nothing mid-flight. **Waiting is why nothing was cut short.** Note the
+trade recorded on the 27th and still true: completion-based waits can hang forever
+if an agent never reports; time-based cannot hang and cannot wait. With one live
+peer that answers, waiting was clearly right.
+
+### State
+
+- **Root 48%, 36 G free** (93% this morning). **Zero snapshots, all scheduling off**,
+  proven by running cron's own command, not by reading the config back.
+- `hotline-profile-watch.timer` **enabled and active**, next run 10:01.
+- 484 tests passing. `hotlined`, `hotline-ios`, `hotline-beam`, `hotline-sipprobe`
+  healthy at last check.
+- `handoff.md` committed and pushed through `5695756`. **His three frozen files and
+  `PROGRESS.md` stay uncommitted on purpose** — the one-`git checkout` escape is his.
+- `hotline-ios` left **registered, not `--done`**: `--done` deletes its channel and
+  takes the history with it, and it is coming back. Its own handoff is at
+  `/home/bodas/data/hotline-ios/handoff.md`.
+
+### Two fragilities the peer surfaced, worth more than most of today
+
+- **`~/.local/state/hotline/hotline-ios.db`** holds the app's entire history — 6775
+  events, not in git. It survives a reboot, but its **WAL is 4.2 MB against a 2.3 MB
+  database**, so much of the recent history is uncheckpointed. SQLite replays it on
+  open. **Deleting the `-wal` by hand is the one way to actually lose it.**
+- **The toolchain image is a file on NTFS.** Clean shutdowns are fine; an unclean one
+  can leave it dirty and unmountable by `ntfs3` until Windows chkdsks, taking the
+  toolchain and the beam with it. **Never pull power on this box.**
+
+### For whoever boots next
+
+1. **Read Discord first, including anything sent while the box was off.** Nothing was
+   lost that way today — because it was checked, not assumed.
+2. **Do not resume the build on the strength of having booted.** A launcher can ask
+   for less, never more.
+3. **Two things are still his and still unanswered since the 26th:** commit-or-drop
+   the three frozen files, and the acceptance test (A or B). **Do not answer either.**
+4. **One question is with him from tonight:** his global `CLAUDE.md` still says this
+   root has *"no filesystem snapshot capability"*, which is wrong in both directions
+   now. He was asked; the file is his and neither agent should edit it unasked.
+
+**Recoverable:** cable in, `Wake-on: g` on `enp4s0`, `wakeonlan a8:a1:59:fd:4d:13`
+from pigion or his phone.
