@@ -1,6 +1,38 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-08-28 23:07 CEST — WRITTEN AT POWER-OFF, REPLACES ALL EARLIER BANNERS
+> ## STATUS AS OF 2026-08-29 12:20 CEST — REPLACES ALL EARLIER BANNERS
+>
+> 0. **THE BANNER BELOW WAS WRITTEN AT A POWER-OFF AND WENT STALE IN 34 MINUTES.**
+>    It was dated *28 Aug 23:07, "written at power-off, replaces all earlier
+>    banners"* — and the box came back at **23:41**, ran a full session
+>    (`a030b832`), and was shut down by him at **01:34**. Everything that session
+>    did is in `PROGRESS.md` and was in **no** banner: `piccolo-gorgone:9b` on
+>    ollama, the q8_0 KV bridge, and the TurboQuant/llama.cpp build. **A handoff
+>    written at shutdown is only current until the machine comes back.** Read the
+>    watchdog log (`watchdog.log`) and `grep -n "^## " PROGRESS.md | tail` before
+>    believing any banner's claim to be newest — including this one.
+> 0a. **Where the night actually landed (28→29 Aug):**
+>    - `piccolo-gorgone:9b` is installed on ollama and is **his live model** —
+>      OpenHands on `100.103.46.118` points at `:11434`. Serving 100% GPU at 64k
+>      context via `/etc/systemd/system/ollama.service.d/30-kv-quant.conf`
+>      (`OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`). Survives reboots.
+>    - **The model's real trained context is 40960**, not the 262144 the GGUF
+>      advertises (`rope scaling = linear`, no YaRN). Beyond ~40k is extrapolation.
+>    - **TurboQuant works and is not needed here.** turbo3 KV built, served and
+>      proven coherent at `~/data/llama-turbo3` (460 MB), but fp16 and q8_0 already
+>      cover this model's whole 40k window on the 4060, so its benefit is moot
+>      until a model actually trained past 100k. Kept deliberately.
+>    - **It answers into `reasoning`, not `content`.** A short `max_tokens` returns
+>      `content: ""` with `finish_reason: length` — a working endpoint that reads
+>      as dead. Do not diagnose the server for that.
+> 0b. **He shut the box down himself both times** — `sudo shutdown now` on pts/1,
+>    01:34 on the 29th. No agent, nothing armed, no crash. The long gaps are him
+>    asleep, not a detection failure.
+>
+> *(Everything below was the 28 Aug 23:07 banner and is still true except where §0
+> above corrects it.)*
+>
+> ## STATUS AS OF 2026-08-28 23:07 CEST — SUPERSEDED BY §0, OTHERWISE CURRENT
 >
 > 1. **YOU ARE AN OPERATOR, NOT A BUILDER.** His own words, 2026-08-27 20:52:
 >    *"the point of you is exactly this kind of work administration checking
@@ -1805,3 +1837,56 @@ peer that answers, waiting was clearly right.
 
 **Recoverable:** cable in, `Wake-on: g` on `enp4s0`, `wakeonlan a8:a1:59:fd:4d:13`
 from pigion or his phone.
+
+## 2026-08-29 12:05 — operator `hotline-80` (session `3dfbfa74`): boot sweep, and the banner that was a session behind
+
+Watchdog-spawned 12:05, two minutes after boot (12:03). Adopted, read this file,
+read Discord across all six channels.
+
+### What the previous handoff did not say
+
+The banner said *"written at power-off, replaces all earlier banners"* and was
+dated 28 Aug 23:07. The box came back at **23:41** — 34 minutes later — and ran
+`a030b832` until **01:34**, when he powered it down himself. That session installed
+his model, built the q8_0 bridge and built TurboQuant, and **none of it was in any
+banner.** It is now, as §0/§0a at the top. **A shutdown-time handoff expires when
+the machine comes back**, and the only things that catch it are `watchdog.log` and
+the section index of `PROGRESS.md`.
+
+### Nothing stranded, nothing armed
+
+- **No Discord message arrived while the box was off.** Enumerated every channel by
+  last-message timestamp; newest anywhere predates the poweroff.
+- **His overnight instructions went into the session, not Discord** — four of them,
+  all answered, the last (*"Why is generation so much slower…"*) diagnosed and fixed
+  at 01:26, eight minutes before his `shutdown now`.
+- **Nothing armed:** no `at` (not installed), no `/run/systemd/shutdown`, no
+  watch-agent, no poweroff job. Stock Arch system timers; user timers are watchdog,
+  profile-watch and the ios standup.
+- Root **50%, 35 G free**; zero snapshots, scheduling still off. `hotlined` ok,
+  mirror not degraded; `hotline-ios`/`beam`/`sipprobe` active. HEAD `e3cdd0b`.
+  **His three frozen files untouched**, mtime still 27 Aug 10:35.
+- **Only live session is me.** `hotline-ios` is registered-not-done and went down
+  with the reboot; **not resumed uninvited** — offered to him instead.
+
+### The live model was probed, not read off a field
+
+`ollama ps` → `piccolo-gorgone:9b`, **100% GPU**, 6.6 G, context 65536; this boot's
+load log shows `n_ctx = 65536` and `flash_attn = enabled`, so the drop-in re-applied
+itself; `/v1/chat/completions` answers. His own calls are landing from
+`100.103.46.118`. Last night's stale-estimator wedge did not survive the reboot.
+
+**Do not misread an empty `content`.** The model fills `reasoning` first; a low
+`max_tokens` returns `content: ""` with `finish_reason: length` on a perfectly
+healthy endpoint. Caught here on my own first probe.
+
+### Open, and all his — unchanged
+
+1. Resume `hotline-ios`, or leave it down.
+2. Keep or delete the 460 MB `~/data/llama-turbo3` build tree.
+3. **Since the 26th:** commit-or-drop the three frozen files; the acceptance test
+   (A: run as written / B: redefine the milestone around text).
+4. **Since the 28th:** the `CLAUDE.md` line claiming this root has no snapshot
+   capability, now wrong in both directions.
+
+**Nothing needed operating; nothing was invented.** Reported and held.
