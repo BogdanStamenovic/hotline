@@ -1,6 +1,45 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-08-29 12:20 CEST — REPLACES ALL EARLIER BANNERS
+> ## STATUS AS OF 2026-08-31 16:30 CEST — REPLACES ALL EARLIER BANNERS
+>
+> **AND IT HAPPENED AGAIN: the banner below was a session behind, and two of its
+> headline facts were reversed by work done four hours after it was written.**
+> The 29th's afternoon (still in `PROGRESS.md` only, now summarised in the last
+> section of this file) found that the previous night's measurements were taken
+> against a **hardcoded ollama blob hash that belonged to a different model**.
+> So, corrected and re-verified by direct probe on this boot (31 Aug 16:20):
+>
+> - **`n_ctx_train = 262144` is NATIVE and REAL.** §0a below says the real
+>   trained context is 40960. **That is wrong** — it was measured on
+>   `JOSIEFIED-Qwen3:8b` (blob `sha256-1de498fe…`). His model is blob
+>   `sha256-18b2ed08…`, `general.name = Heretic_Manual_Merged`, `arch qwen35`,
+>   `n_ctx_orig_yarn = 262144`.
+> - **turbo3 is NOT moot — it is the only reason 262k fits on the 4060.**
+>   §0a below says its benefit is moot here. **Also wrong.** At the full 262144:
+>   f16 KV 8192 MiB → OOM, q8_0 4352 MiB → OOM, **turbo3 1600 MiB loads and
+>   serves.** `~/data/llama-turbo3` is now 670 MB and is load-bearing, not spare.
+>
+> Also landed on the 29th and in no banner until now: the `gh` token is stored
+> **plaintext in `~/.config/gh/hosts.yml` (chmod 600)** because this headless box
+> has no unlocked keyring — the token was never expiring; his public fork
+> `BogdanStamenovic/turbo3-cuda` and upstream PR `Madreag/turbo3-cuda#2` are open;
+> and `hotline-standup@hotline-ios.timer` was killed at his instruction
+> (**verified still disabled+inactive after this boot**, not assumed).
+>
+> **The lesson is now three-for-three: this file's top banner has been a session
+> behind on the 29th, the 28th and today.** Do not trust it. `watchdog.log`,
+> `last -x`, and `grep -n "^## " PROGRESS.md | tail` are what actually tell you
+> where things stand.
+>
+> **31 Aug boot:** he ran `sudo shutdown now` himself at 15:38 over ssh from
+> `100.103.46.118`; box back **16:14**, him poking it over ssh again by 16:18.
+> Nothing armed, no agent involved, no Discord message stranded — newest message
+> anywhere is still 29 Aug 13:39Z.
+>
+> *(Everything below is the 29 Aug 12:20 banner, kept for its own history and
+> corrected above where it is now wrong.)*
+>
+> ## STATUS AS OF 2026-08-29 12:20 CEST — SUPERSEDED BY THE BLOCK ABOVE
 >
 > 0. **THE BANNER BELOW WAS WRITTEN AT A POWER-OFF AND WENT STALE IN 34 MINUTES.**
 >    It was dated *28 Aug 23:07, "written at power-off, replaces all earlier
@@ -1890,3 +1929,83 @@ healthy endpoint. Caught here on my own first probe.
    capability, now wrong in both directions.
 
 **Nothing needed operating; nothing was invented.** Reported and held.
+
+## 2026-08-29 afternoon — what never reached this file (session `3dfbfa74`)
+
+The 29 Aug 12:20 banner was written at 12:10. The same session then ran until
+20:30 and did the four things below; **none of them were in any banner until
+31 Aug.** Full narrative is in `PROGRESS.md` at *"the public fork, and last
+night's headline finding was measured on the wrong model"*.
+
+- **`gh`'s token was never expiring.** `gh auth status` says *"the token in
+  default is invalid"* because `gh` keeps it in the system keyring and this box
+  boots headless with no unlocked keyring. SSH to GitHub worked the whole time,
+  but repo creation needs the API and there is no create-on-push over SSH.
+  Fixed by **GitHub device flow** against gh's own public client id, token now
+  **plaintext in `~/.config/gh/hosts.yml`, chmod 600**. Survives reboots.
+  This is the blocker that had `hotline-ios` stuck on CI screenshots for days.
+- **The headline model finding was measured on the wrong model.** turbo3
+  benchmarks used a hardcoded blob hash `sha256-1de498fe…` = `JOSIEFIED-Qwen3:8b`.
+  His model is `sha256-18b2ed08…`. Every conclusion drawn from it was void. One
+  `general.name` check would have caught it; the load log said
+  `Josiefied Qwen3 8B Abliterated v1` the entire time. See the top banner for
+  what the numbers actually are.
+- **The two CUDA-13 "patches" from the 28th were the wrong fix.** Forcing two
+  CCCL version guards to `#if 0` built green while silently dropping CUB's
+  optimized `argsort` and `DeviceTopK::MaxPairs` onto slower fallbacks. The real
+  cause: CCCL 3.4 stopped pulling `cuda::` iterator factories in transitively
+  through `<cub/cub.cuh>`. **One `#include <cuda/iterator>` per file** compiles
+  both with the fast paths on. Trap worth knowing: `GGML_CUDA_USE_CUB` is defined
+  in `common.cuh`, not on the command line, so it never appears in
+  `compile_commands.json` — a naive single-file repro compiles clean and proves
+  nothing.
+- **Public fork + upstream PR, both at his instruction and both verified
+  logged-out.** `BogdanStamenovic/turbo3-cuda` public; PR
+  `Madreag/turbo3-cuda#2` open, trimmed to the fix alone (2 files, +8/−0).
+- **`hotline-standup@hotline-ios.timer` killed at his instruction** (13:37:36Z,
+  *"Kill him"*). It had been posting *"hotline-ios is no longer running"* every
+  half hour to a corpse.
+
+## 2026-08-31 16:17 — operator `hotline-80` (session `f63b1d6e`): boot sweep
+
+Watchdog-spawned 16:17, three minutes after boot. Adopted, read this file, read
+all six Discord channels, then probed rather than read fields.
+
+- **He shut it down himself and brought it back himself.** `sudo shutdown now`
+  at **15:38:06** from a one-shot ssh session (`100.103.46.118`, his laptop),
+  six seconds after logging in; box back at **16:14**; seven more short ssh
+  logins from the same host 16:17–16:18. 39 ssh logins across the 30th–31st.
+  No agent, nothing armed, no crash. **The two-day "gap" was idle, not lost** —
+  the previous session's last act was at 20:30 on the 29th.
+- **Nothing stranded on Discord.** The newest message in any of the six channels
+  is still 29 Aug 13:39:08Z. Nothing arrived during the 36-minute power-off, and
+  nothing arrived on the 30th or 31st. His four instructions on the 29th all
+  landed and were all answered.
+- **Nothing armed.** No `at` (not installed), no `/run/systemd/shutdown`, no
+  watch-agent, no crontab, no systemd jobs. Exactly two user timers: watchdog
+  (5 min, posts nothing) and profile-watch (daily). **`hotline-standup@…` came
+  back `disabled` + `inactive` after the reboot** — checked, because a boot is
+  precisely when a disable would silently fail to stick.
+- **The model was probed, not read off `ollama ps`.** A real
+  `/v1/chat/completions` generation: 33/33 layers on GPU, `n_ctx = 65536`,
+  `flash_attn = enabled`, drop-in re-applied itself this boot. It answered with
+  `content: ""`, `finish_reason: length`, and 400 tokens in **`reasoning`** —
+  the documented trap, hit on the first probe again. Nobody else has called it
+  this boot.
+- Root **50%, 35 G free**. GPU was 2 MiB before my probe, i.e. free for him.
+  `hotlined` active, `/health` `{"ok": true, "mirror_degraded": false}`.
+  HEAD `8b18afd`. **His three frozen files untouched, mtime still 27 Aug 10:35.**
+  `hotline-ios` still down since the 29th's reboot and **not resumed uninvited.**
+
+### Open, and all his — unchanged since the 29th
+
+1. Resume `hotline-ios`, or leave it down.
+2. Keep or delete `~/data/llama-turbo3` (**now 670 MB** — and per the corrected
+   banner it is load-bearing for 262k, so this is a real decision, not cleanup).
+3. **Since the 26th:** commit-or-drop the three frozen files; the acceptance test
+   (A: run as written / B: redefine the milestone around text).
+4. **Since the 28th:** the `CLAUDE.md` line claiming this root has no snapshot
+   capability, now wrong in both directions.
+
+**Nothing needed operating; nothing was invented.** Fixed the banner, reported,
+and held.

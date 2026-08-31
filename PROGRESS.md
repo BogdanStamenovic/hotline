@@ -4760,3 +4760,1047 @@ an anecdote.
 And the counter-lesson, earned three times today: **I wrote that discipline down
 and then broke it twice more with `git add -A` and a bare `git checkout`.** Writing
 the note is not the fix. Staging by path is.
+
+---
+
+## 2026-08-27 16:06-16:20 — worker `hotline-80`, session `ca581189`
+
+Watchdog-spawned at 16:08, three minutes after the box came back up at 16:06.
+**Fifth worker in a row started on the same hardcoded prompt, and it was wrong
+again** — it said "replacing one that died" and "Bogdan is away and expects all
+phases attempted". Nothing had died (the 11:03 shutdown fired exactly as armed,
+`watchdog.log` confirms it) and he was not away: he typed `session list` in
+`#agent-hotline-80` at 14:10:32Z, **forty seconds before I finished reading the
+handoff**.
+
+### I did not resume the build, and that was the point
+
+`handoff.md`'s banner is explicit that a worker booting after ~11:00 on the 27th
+is not cleared by having booted — the stop-lifted line was spent on the morning
+stint, which completed. So I read Discord first, as the file has now told five
+workers to do. What was there was better than the banner: **a live human with a
+pending instruction.**
+
+At 13:08:43Z he had written *"Hello hotline. Start hotline-ios again and tell him
+to push hotline ios installation here"*. **The box was powered off from 11:03 to
+16:06, so that message reached nothing.** That is why his `session list` showed
+only me and looked like everything had been ignored. Worth noting as a system
+behaviour: an instruction posted to a channel whose machine is off is not queued
+anywhere — it is simply lost, and only a worker that reads history finds it.
+
+Then two more arrived live and I verified both against Discord with
+`--provenance` before acting:
+- 14:11:18Z *"i need you to wake up hotline-ios and tell him to push the installer
+  installation on the arch laptop. Also call me when he wakes up. So call do not page"*
+- 14:11:55Z *"he can do it trough scp"*
+
+The second one **superseded my reading of the first**. "Push ... here" in a
+Discord channel reads as "post it here"; I had already told him in-channel that
+I would push it into Discord and flagged the 8MB attachment ceiling. "On the arch
+laptop", over scp, is a different job. Good reminder that the ambiguous word was
+worth waiting a minute on rather than building around.
+
+### A `--resume` that came back without its brief
+
+`hotline --resume hotline-ios --no-wait <brief>` reported success and the agent
+came up — but it answered with a state summary of its own handoff and went idle,
+never mentioning scp or the laptop. Its pane also held stale unsent text from the
+previous session. **Reported-started is not briefed.** I checked the pane rather
+than trusting the exit code, then re-sent the task properly with
+`--to hotline-ios --warrant 1541610683240554527/1542536993014288405`, carrying
+his own receipt so the peer could check *who asked* — the `data-d5` lesson from
+this file. That one landed and it worked.
+
+This is close to the resume-brief bug fixed as item 3 this morning (`_resume()`
+addressing the brief by session id). It is **not** obviously the same bug —
+the agent did not rename itself here — so it is logged rather than diagnosed. A
+confident reading of one symptom is exactly what this file keeps warning about.
+
+### Result: the installer is on the laptop, and there was a corpse under it
+
+hotline-ios verified `sha256sum -c SHA256SUMS` **on the laptop**, explicitly not
+treating a clean scp exit as evidence. Committed `600fb09`.
+
+The find that justifies the whole errand: **a truncated 1,044,480-byte
+`HotlineCall.ipa` was already sitting in `~/hotline` on that laptop**, dated
+10:23 — the wreckage of the transfer that died when the laptop left the tailnet.
+A tenth of a real .ipa. Had he opened that directory and run `sideload.sh` by
+hand it would have signed and installed a **corrupt app**; only `get.sh`'s
+resuming curl would have healed it. His instinct to push rather than have him
+pull was right, and for a reason nobody had stated: the fix was never a better
+transport, it was getting the bytes onto his disk before he opens the lid.
+
+Also established there: xtool 1.17.0, usbmuxd and libimobiledevice are all
+present, `sideload.sh` runs end to end and stops cleanly at `No iPhone visible`,
+and **he is logged out of xtool on that laptop** — the archserver token does not
+travel, so Apple ID + 2FA is unavoidable and he should expect it.
+
+**Profile expiry corrected: 2 Sept 04:16**, not the 1 Sept 22:53 in `handoff.md`.
+He returns on the 9th.
+
+### Called him, because he said call and not page
+
+Checked `127.0.0.1:8789/health` first — `fake:false`, `ring_ready:true`,
+`sip+confirmed`, no degradations — because the one trap in that path is a
+loopback transport that reports success and rings nothing. Real ring, placed.
+The same news went to `#agent-hotline-80` in writing so it does not depend on the
+call connecting.
+
+**No build work was done and none should have been.** Nothing in the open list
+was touched; the two items on it that are questions addressed to him are still
+his.
+
+### The call he asked for turned into the paging he forbade
+
+`hotline-call` → SIP → no ring confirmation in 8s → automatic fallback to
+`hotline-page` → DM, post, and **eight nudges** over 343s. His reply was *"Please
+stop spamming me"*, and he posted the same thing in `#general` unprompted.
+
+I stopped immediately, posted one quiet non-mentioning message owning the
+mistake, and have sent nothing since.
+
+Two faults. **Mine:** he said *"call do not page"* and `--no-fallback` exists for
+that; I did not pass it. **The system's:** `/health` reported `ring_ready:true`,
+`fake:false`, `sip+confirmed`, no degradations — and the ring never confirmed. I
+checked that endpoint *specifically* to avoid the fake-doorbell trap the skill
+warns about, and the check does not test the thing it appears to test. Eighth
+instance of this project's signature failure and the first where the guard itself
+was the trap.
+
+Full write-up appended to `handoff.md`, and both lessons are in project memory.
+
+### I shipped him a cost derived from a fact I never re-read
+
+Told him he was logged out of xtool and to expect an Apple ID password + 2FA.
+**He had logged in at 16:23** — eight minutes after I checked — and installed at
+16:24, which restarted the seven-day clock and moved the expiry to **3 September
+16:24**. Both facts in my written message were wrong within the hour.
+
+`hotline-ios` caught it. I verified every claim on the laptop myself before
+correcting the record, because relaying a peer's correction unchecked is how the
+second wrong number reaches him. All of it held up.
+
+The lesson is the one I had written into `handoff.md` an hour earlier and then
+failed to apply to myself: **a fact with a timestamp is a status field.**
+`xtool auth status` is a probe; my memory of its output forty minutes ago is not.
+One consolidated correction sent, no page. He asked us to stop spamming and that
+still stands.
+
+### The suggestion I made to a peer came back with two HIGH bugs
+
+Told `hotline-ios` to put a fresh session in front of its built app as its *user*.
+It did, and got two HIGH findings — one that would have silently erased the visible
+answer from **142 of 154** of Bogdan's phases (an OUTCOME row skipped on the
+reasoning that new prose supersedes it, true only for rows written after that
+deploy), and one pre-existing non-transactional ingest replay that storing prose had
+widened from duplicated captions to duplicated whole messages.
+
+I verified the resulting kit on the laptop myself rather than relaying it:
+`HotlineCall.ipa` 9990205 / `11736c7a…`, rollback `26669c8c…` still the build on his
+phone, checksums clean. Every claim held.
+
+**Deliberately did not message him about it.** The command, rollback line and
+rollback file are unchanged, so nothing he was told is actionable-wrong, and he
+asked to stop being spammed. Precision is not a reason to interrupt someone.
+
+Full write-up in `handoff.md`, including the ingest-replay gap that is guarded but
+NOT closed.
+
+### Shutdown armed for midnight, at his order
+
+Verified 21:03:12Z: *"Midnight tonight and arm it. But just tell ios to speedup a
+bit. It doesnt need to be 12 pm sharp but somethijg around that time"*.
+
+`sudo shutdown -P 00:00`, then read back from `/run/systemd/shutdown/scheduled`
+rather than trusting the command's own success line — `poweroff` at
+2026-08-28 00:00:00 CEST, confirmed.
+
+**"12 pm" was worth one question.** It literally means noon; at 23:01 it almost
+certainly meant midnight. Thirteen hours apart, on a shutdown. I asked, prepared for
+the sooner reading in the meantime so the answer only changed timing, and he came
+back in two minutes with "midnight tonight and arm it". Guessing would have been a
+coin flip on either killing his evening's work early or leaving the box up all night
+after he said to stop it.
+
+**I passed his "speed up a bit" to `hotline-ios` with his own second half attached**
+— *it does not need to be sharp*. Speed plus a countdown is exactly how a
+deliberately-held build gets shipped in a hurry, and the reason that `.ipa` is held
+(a button whose behaviour it cannot explain) does not stop being good because a
+clock appeared. It has a 23:50 deadline for handoff-written and pushed, ten minutes
+of slack.
+
+Told him plainly that this shutdown is **time-based** and will take the box mid-turn,
+unlike the 11:03 one that waited for an agent to declare itself done. That is what he
+asked for and it is recoverable — WoL verified this morning.
+
+`handoff.md` committed by explicit path (`072e910`) and pushed. The four deliberately
+uncommitted files are untouched: this file, `provenance.py`, `router.py`,
+`tests/test_provenance.py`. His one-`git checkout` escape is intact.
+
+### The row was broken, not badly designed
+
+RETIRE and DELETE HISTORY had never answered a tap — dead since they shipped. He said
+that row felt wrong twice and could not say why; both times it was read as a layout
+opinion, including by me. **He was reporting a fault he could not localise.**
+
+Relayed with the observed/inferred split intact at the peer's insistence: the
+gesture-vs-Button result is measured, the claim about those two specific chips is a
+strong inference nobody has watched fire.
+
+Build `5948d2fd` verified by me on the laptop before I repeated the hash to him.
+Rollback still pinned to what is on his phone. Shipped on observation, not on "it
+compiles" — a first here, on the same day a server-side fix became the first change
+ever confirmed on his real hardware.
+
+## 2026-08-28 12:47–13:00 — operator boot after the midnight poweroff (session `80b109c7`, adopted `hotline-80`)
+
+Watchdog-spawned at 12:49:47, two minutes after the box came up. Did the reading
+in the prescribed order — adopt, `handoff.md`, then Discord — before touching
+anything.
+
+### The shutdown was clean and is not a fault
+
+`journalctl -b -1` ends at `2026-08-28T00:00:02` with `Reached target System
+Power Off`, exactly as he ordered at 21:03:12Z. Nothing crashed.
+
+### Nothing was said to me while the box was off
+
+Read `#agent-hotline-80`, `#general` and all four peer channels. **The newest
+message anywhere is 2026-08-27 21:19:42Z**, which predates the poweroff. His last
+words remain *"Midnight tonight and arm it. But just tell ios to speedup a bit."*
+There is no lost instruction this time — the failure mode the prompt warns about
+did not occur, and I checked rather than assumed it hadn't.
+
+### Who woke the box: inferred, not witnessed
+
+No RTC wakealarm (`/sys/class/rtc/rtc0/wakealarm` empty), no cron or timer on this
+box or on pigion that could have done it, and pigion's journal has no trace of
+`wake-archserver` running. `enp4s0` is `LOWER_UP` with `Wake-on: g` — **the cable
+is in now** and WoL is armed, so the packet came from off-box. He has been logged
+in on the arch laptop at tty2 since 12:05 and its `.claude.json` was written at
+12:35. **Strong inference: he woke it. Nobody watched the packet arrive**, and I
+am keeping that line rather than reporting it as fact.
+
+### The beam looked dead and was not — the probe was aimed wrong
+
+`curl 127.0.0.1:8790/get.sh` returned nothing (exit 7) while systemd showed
+`hotline-beam.service` active. The service binds **only** to the tailnet address:
+`ss` shows `100.72.2.62:8790`, and both `100.72.2.62` and pigion's mirror answer
+`200`. So the near-miss here was mine in the other direction — I nearly reported a
+healthy service as broken because I probed localhost. Worth recording next to the
+usual failure (trusting a status field) that **a probe of the wrong thing is no
+better than the field it was meant to replace.**
+
+### State, all probed rather than relayed
+
+- **No shutdown armed** (`/run/systemd/shutdown/scheduled` absent).
+- Services up: `hotlined` (8788, mirror_degraded false), `hotline-ios` (8789,
+  `ring_ready`, `transport sip+confirmed`, hook reachable, no degradations),
+  `hotline-beam` (8790 tailnet-only), `ollama`. `gdm` is down, as expected on a
+  `multi-user.target` boot.
+- **I am the only live session.** `hotline-ios`, `data-66`, `data-89`, `data-bd`
+  and `data-75` are still registered `[working]` but died with the box. Nothing
+  was lost — everything was pushed before midnight.
+- Tree unchanged at `fb3db95`; the same four files uncommitted on purpose.
+
+### What I did not do
+
+No build work, nothing resumed, no peer woken. A boot is not a mandate. Posted one
+consolidated report to my channel and am waiting.
+
+### 13:15 — `[working]` is not a stale flag, and I nearly filed a defect against it
+
+Twenty minutes of silence, so I went looking at my own instrument rather than at
+the build. `hotline --agents` shows five dead agents as `[working]`, which read to
+me like the registry lying about liveness — the exact failure class this project
+keeps hitting, and squarely my business since the roster is how I know who is
+alive.
+
+**It is not a defect.** `agents.py`'s own docstring says it outright: *"The
+registry is durable, not runtime state."* `[working]` is rendered from `not done`
+and means **has unfinished work**, not **is running right now**. The runtime probe
+is `hotline --list`, which I had already run and which correctly showed one live
+session. Two different questions, two different tools, both answering honestly.
+
+Recording it because the misread is an easy one and a future operator will make
+it: **the fix for "a status field read as a signal" is not to distrust every
+field — it is to find out what the field actually claims.** I read a value, gave
+it a meaning it never had, and was about to change working code on the strength of
+my own misreading. Reading the docstring cost thirty seconds.
+
+Still waiting. Nothing woken, nothing built, nothing armed.
+
+## 2026-08-28 13:30 — he answered: reclaim disk, then wake it
+
+Verified before acting, because it is a delete instruction:
+
+> `hotline --provenance` → VERIFIED, posted by <his Discord user id> at
+> 11:30:38Z: *"Wake it back up. But first i need you to bassically delete
+> snapshotd timeshifts old stuffe xceters so we get as much as possible of disk
+> usage bsck"*
+
+Root was at **93%, 5.2 GiB free of 73 GiB**. It is now at **69%, 22 GiB free**.
+
+### What I deleted, and the one thing I kept
+
+| Target | Reclaimed |
+|---|---|
+| timeshift dailies `2026-08-25/26/27` | 8.8 G |
+| `~/.cache` — yay, huggingface, chrome, playwright, electron, node-gyp, clang, pip | ~6.6 G |
+| systemd coredumps (a 1.1 G python SIGSEGV from the 24th) | 1.2 G |
+| journal vacuum to 100 M | 0.17 G |
+| npm `_cacache`, mypy/pytest caches, discord+chrome app caches | 0.46 G |
+
+**I kept snapshot zero** — `2026-08-24_17-31-50`, *"pre-hotline-build (clean
+system)"*, 8.7 G. He said "as much as possible", and it is the largest single item
+left, but it is also the only rollback this root has: ext4, no btrfs, no snapper.
+Deleting the thing that makes everything else reversible is not the same kind of
+delete as clearing a cache, so it is his call and it is in the message.
+
+### The uv cache freed nothing, and the numbers said so
+
+`~/.cache/uv` measured 7.8 G and I deleted it, but `df` did not move by anything
+like that. **uv hardlinks packages from its cache into venvs**, and `du` bills
+shared inodes to whichever path it walks first. Before the delete, `du` showed
+`~/data` at 722 M and `.cache/uv` at 7.8 G; after it, `~/data` reads 6.9 G and the
+venv 6.2 G. **The same bytes, re-attributed.** Nothing was freed and nothing was
+broken — the venv keeps its link when the cache's is removed, which I verified by
+importing `hotline` and `torch` out of it afterwards.
+
+Recording it because the reflex is to add up `du` numbers and report the total.
+**`df` is the probe; `du` is a status field.** The 16.8 G above is the `df` delta.
+
+### Not touched, and why
+
+`.swiftpm` (3.1 G) and the hotline venv's CUDA stack — `nvidia` 3.8 G, `torch` 1.1 G,
+`triton` 689 M — are the two biggest things left. The venv is what
+`hotlined.service` runs from, and that stack belongs to the frozen voice path, so
+it is very probably dead weight. **Very probably is not a reason to break his phone
+bridge while he is abroad**, on a disk that now has 22 G spare. Offered, not done.
+`.hermes` (2.0 G) is reference source the handoff points at, not a cache.
+
+### Timeshift will take it back
+
+`/etc/cron.d/timeshift-hourly` with `schedule_daily: true, count_daily: 3`. The
+three I deleted rebuild over the next three days, ~8 G. **This is why the disk
+filled, and deleting without saying so would have it fill again silently.** Asked;
+did not change his backup policy for him.
+
+### hotline-ios is awake, came up briefed, and corrected me
+
+`hotline --resume hotline-ios --no-wait <brief> --warrant 1541610683240554527/1542858948107829270`.
+**It arrived with its brief this time** — it answered the actual question rather
+than summarising its own handoff, which is the failure the 27th logged as an
+unreproduced observation. One data point against that bug, not a refutation.
+
+It reported clean and pushed at `6dae053`, `5948d2fd` staged in `/mnt/iosbuild/beam`,
+rollback `26669c8c` held, and **corrected the profile expiry I had just given him**:
+3 September 18:33, not 2 September 04:16. It also caught itself claiming the
+services were dead — they are *user* units and it had looked at the system manager.
+
+### I checked its correction instead of relaying it, and the check moved the answer
+
+`hotline-profile-watch.service`'s own journal, locally:
+
+```
+2026-08-27T10:33:39  profile 5CMH4PJGW2 expires 02/09/2026 04:16
+2026-08-28T12:48:17  profile 2S56P3Z95Z expires 03/09/2026 18:33
+```
+
+**Two different profile IDs, not one date being corrected.** `profile-watch.py`
+takes `min(expiry)` over profiles Apple currently lists ACTIVE for the bundle, so
+`5CMH4PJGW2` is not "wrong", it is **gone** — deactivated when the 27th's re-sign
+issued `2S56P3Z95Z`.
+
+That matters because of what the watcher is being read as. It answers *"what is the
+soonest-expiring profile in his Apple account"*. It is read as *"when does the app
+on his phone stop launching"*. **Those came apart the moment a build was signed that
+is not the build he is running.** An installed app validates the profile embedded in
+it; re-signing on a desktop does not reach into the phone and update it. So:
+
+- **OBSERVED:** Apple's soonest active profile for the bundle now expires 3 Sept 18:33,
+  and the 2 Sept 04:16 one is no longer listed.
+- **INFERRED, not witnessed:** the build on his phone still carries the 2 Sept 04:16
+  clock, because nothing re-signed *it*.
+
+**The conclusion survives either reading and is the part that matters: both dates
+fall before he returns on 9 September.** Sideloading today does not get him through
+the trip — it buys about 38 more hours. He needs one re-sign from the laptop around
+2-3 Sept, wherever he is.
+
+### The warning that saves the app lives on a box that gets shut down
+
+`hotline-profile-watch.timer` pages him at three days out, and it runs **here**. He
+powered this box off at midnight and it only came back because he woke it. **If it
+is asleep on 31 August, the page that tells him his app is about to die never
+fires**, and the first he knows is an icon that does nothing. Pigion has 36 days of
+uptime and already mirrors the beam. Proposed moving the expiry watch there; not
+built, because he did not ask for it and it is his call.
+
+### 14:45 — the peer inverted my inference, and I checked it before repeating it
+
+I had told him, labelled as inference: *the phone still carries the 2 Sept 04:16
+clock, because nothing re-signed the build he is running.* **The premise was
+false.** `hotline-ios` went and dated the install rather than the build, and I
+verified its evidence over SSH to the laptop rather than relaying it:
+
+```
+arch:~/.cache/xtool/tmp-staging-210CCF31-…   2026-08-27 18:33:08   (empty — cleaned on success)
+arch:~/.config/xtool/data                    2026-08-27 16:24:11   (the auth LOGIN, not an install)
+```
+
+**He re-signed it himself at 18:33 on the 27th**, five hours before the newest
+`.ipa` was written (23:18). Apple issued `2S56P3Z95Z` that same minute, bound to
+his phone's UDID. So the account's clock and the phone's clock coincide, and **the
+answer is 3 Sept 18:33**. The `16:24` that had been read as an install three times
+is his login.
+
+Two things worth separating out of that:
+
+1. **My inference was sound and still wrong**, because it rested on "nobody
+   re-signed it" — which I never checked and could have, in one `ssh`. *Labelling a
+   claim as inference does not discharge the duty to test its premise.* The label
+   made it honest; it did not make it cheap to leave standing.
+2. **The right probe was a different object entirely.** Everyone kept interrogating
+   the build — the `.ipa`, the profile list, the account. The staged `.ipa` has no
+   `embedded.mobileprovision` in it at all, because signing happens at *install*
+   time. Five "corrections" to this date in four days, all of them re-reading the
+   wrong artifact.
+
+**What survives unchanged is the only part that needed a decision:** 3 September is
+before he returns on the 9th, and re-signing today resets a 7-day clock to about
+the 4th, so nothing done from here covers the trip. He needs one re-sign from the
+laptop around 2-3 Sept. Sent as a correction with the reasoning, and the standing
+question — that the expiry warning runs on a box he powers off — restated, because
+it is now the only mechanism that would remind him while abroad.
+
+### 15:00 — the reclaim undid itself in ninety minutes, and I found out by re-probing
+
+Routine re-check of `df` during a wait: **22 G free had become 14 G.** Not a leak —
+`/etc/cron.d/timeshift-hourly` runs `timeshift --check --scripted` on the hour, and
+at 14:00 it saw no daily snapshot for today (because I had deleted the last three)
+and made one. `2026-08-28_14-00-00`, **8.0 G**, confirmed in `CROND`'s log.
+
+It cost the full 8 G because I had removed every snapshot it could hardlink
+against except the 24th, so everything that churned since then was copied fresh.
+Tomorrow's should link against today's and be cheap.
+
+**The lesson is not "timeshift is greedy", it is that I answered the wrong
+question.** He asked for disk back. I deleted 8.8 G of snapshots and reported the
+number — a measurement of a moment, in a system with a scheduler that regenerates
+exactly the thing I deleted. **Deleting the artifact does not change the policy
+that produces it**, and reporting free space without looking at what refills it is
+the same shape of error as reading a status field: true at the instant, useless as
+a signal. The durable lever was always `schedule_daily`/`count_daily`, and that is
+his to set, so it is asked and not done.
+
+I only caught it because a periodic `df` is part of watching the box, not because
+anything alerted. Worth keeping as habit: **re-probe the thing you changed, an
+hour after you changed it.**
+
+### A silent deletion that would have happened while he is away
+
+Snapshot zero is tagged `O D` — ondemand *and* daily — so it is nominally inside a
+keep-3 daily rotation, and with dailies resuming it would be the oldest of four by
+about **30 August**, deleting the clean-system baseline unattended.
+
+**Evidence says it is exempt:** on the 27th four daily-tagged snapshots coexisted
+under `count_daily: 3`, which only holds if the ondemand tag protects it. Reported
+as "not worried, but you should know the baseline is in the rotation at all"
+rather than as either a fire or a non-issue — the honest position is that I have
+one observation, not a reading of timeshift's pruning code.
+
+## 2026-08-28 19:00 — he answered, and my paraphrase cost him a timer
+
+Verified before acting (`hotline --provenance`, 17:00:55Z):
+
+> *"Delete snapshot zero the 5.6gb cuda and the schedule is okay i guess but not
+> needed. Please srite to memory and tell hotline ios. Its not my first time
+> sideloading apps. Its really not a rpoblem doing it weekly"*
+
+**Root: 93% → 70%, 5.2 G → 21 G free.** Snapshot zero deleted; the 5.6 G
+`torch`/`torchaudio`/`torchgen`/`triton`/`nvidia-*` tree removed from `.venv`;
+`schedule_daily` set false, on which timeshift removed `/etc/cron.d/timeshift-hourly`
+itself, so nothing regenerates now.
+
+**Took a test baseline before touching the venv** — 484 passing — precisely so a
+later failure could be attributed rather than argued about. After: 484 passing,
+`hotlined` restarted clean, `hotline.audio` still imports. The lazy-import
+discipline in `audio.py` and the deliberately loose typing in `bot.py` are what
+made a 5.6 G amputation a non-event; both carry comments saying so. Restore is one
+`uv` command, written to `backups/voice-stack-removed-20260828.md` with every
+version that was installed. **`uv` is at `/usr/bin/uv`** — CLAUDE.md lists it as
+absent, like `claude`; that whole line is stale.
+
+**Kept today's 8 G snapshot.** He had both snapshots named in front of him and
+answered "snapshot zero". An informed choice is not an uninformed one, and
+extending it to "so he means all of them" would be me deciding, not him.
+
+### I turned his "not a crisis" into "switch off the monitoring"
+
+He said re-signing weekly is not a problem and declined my offer to **move** the
+expiry watch to pigion. I relayed that to `hotline-ios` as *"He does not want the
+reminder."* **He never said that.** The peer reasonably acted on it and disabled
+`hotline-profile-watch.timer` at 19:09:51 — one minute after my message. I found
+it because I re-checked the unit, not because anything reported it. Re-enabled,
+active, next run 10:01 tomorrow, and told him.
+
+**One paraphrase, one step past his meaning, and a piece of his infrastructure
+went dark on my authority instead of his.** `--warrant` was attached and the peer
+could have read the original; but the gap between his words and my gloss was
+invisible from where it stood, and expecting it to audit a relay it has no reason
+to distrust is not a control. **Relay the words.** The paraphrase is the failure
+surface, and it is one I own rather than one the tooling can close.
+
+### The stranded prompt text: my misreading, then the peer's, both instructive
+
+`capture-pane` on the peer showed `❯ re-enable the timer, I over-read him on
+that`, and later `❯ tell hotline-80 to fix the send-keys Enter gap`. I read it as
+instructions stranded unsent — the same shape as the 27th's report — and took it
+seriously because if Bogdan were typing into panes that were not submitting, that
+is the powered-off-box failure again and outranks everything else here.
+
+**It is CLI ghost text: a suggested next action the TUI renders at the prompt.**
+Cosmetic. Ruled out on the way: nobody is attached (`tmux list-clients -a` empty),
+and `tmuxen.send_command` — whose two-`send-keys` Enter gap the peer found and
+named as the mechanism — **has zero callers.** Real bug, wrong suspect.
+
+The part worth keeping is how it was settled. The peer checked its own prompt from
+*inside* the session, where ghost text is not visible, got "empty", and reported it
+as a refutation. **An empty reading and a blind reading were byte-identical**, and
+it handed me eleven of them as evidence. Its own stated test — the `❯` line, `cat
+-A` — run from outside, showed its prompt was not empty and that the text changed
+to match whatever had just been concluded. Its words afterwards, which are better
+than mine: *"the measurement was taken where the thing cannot exist."*
+
+Both of us dismissed a real signal today by mistaking the instrument for the
+thing, in opposite directions and within an hour. **Before treating a self-check
+as refuting someone else's observation, ask whether your vantage point can see
+what they saw.**
+
+### Also
+
+`hotline-ios` died while idle between 15:37 and 19:00, cause unknown from its own
+transcript; resumed. **`hotline --resume` came up unbriefed again** — it answered
+with its handoff summary and never mentioned the message, reproducing the 27th's
+observation, so it is a bug now and not a one-off. `--to` delivered immediately.
+**`--resume --cwd <dir>` does fix the wrong-directory defect** — worth knowing,
+since the default drops an agent in the resuming session's tree.
+
+## 2026-08-28 20:00 — snapshots off entirely, and the rule that replaces them
+
+Verified at 17:59:32Z: *"Stop daily snapshoting please and delete that snapshot.
+Snapshots should be made only if a core part is changed"*.
+
+Deleted `2026-08-28_14-00-00`. **21 G → 36 G free, root 70% → 48%**; across the day
+**93% → 48%**. That single snapshot released 15 G on its own, because it held every
+byte the two deleted earlier had shared with it — the third time today the `du`
+arithmetic and the `df` reality disagreed, and the third time `df` was right.
+
+**I did not trust the field I had set myself.** `schedule_daily: false` is a claim
+about the mechanism, not the mechanism. The probe is running what cron ran:
+`timeshift --check --scripted` now answers *"Scheduled snapshots are disabled -
+Nothing to do!"* and creates nothing; the cron entry is gone and no systemd unit
+exists. **"I set the flag" and "the thing is off" are different sentences**, and
+this project's whole failure history lives in the gap between them.
+
+His third sentence is a standing rule replacing a safety net that no longer exists:
+banner §9a, memory `snapshot-only-before-core-changes`, and passed to `hotline-ios`
+**quoted verbatim** — the correction from the timer episode, applied the same hour
+it was learned.
+
+### The peer refused an edit it agreed with, which is the right answer
+
+I told it his global CLAUDE.md is stale — it says this root has *"no filesystem
+snapshot capability"*, which was never true of this box and is now misleading in
+two directions at once: timeshift exists, **and** the line no longer warns that
+there is no baseline. It agreed, and declined to touch the file: *"a peer can't
+authorise edits to his instructions, and this is a case where the correction is
+right and the route is still wrong."*
+
+**That is exactly right and it applies to me too.** The correction being obviously
+true is what makes it tempting; his instruction file is not something two agents
+should agree to rewrite between themselves. Raised with him instead.
+
+It also read the scope of "core part" and asked rather than assumed: `desktop on`
+starts gdm, it does not change the display stack, so it does not qualify —
+installing or reconfiguring one would. I agree, and said so.
+
+## 2026-08-28 23:07 CEST — shutdown at his instruction
+
+> *"i need you to shutdown the pc tell ios to setup handoff.md excetera"*
+
+**Sequenced his way: ios first, box second.** Nothing was armed and no timer ran.
+The 27th's shutdown was time-based and took agents mid-turn; this one waited for
+`hotline-ios` to say it was finished. It said so, and nothing was cut short —
+`dff93d1`, clean, zero unpushed, no build or test mid-flight.
+
+Worth carrying from its report rather than losing in a channel:
+
+- **`~/.local/state/hotline/hotline-ios.db`** — the app's entire history, 6775
+  events, not in git. Survives, but its **WAL is 4.2 MB against a 2.3 MB
+  database**, so much of the recent history is uncheckpointed. SQLite replays it
+  on open; **deleting the `-wal` by hand is the one way to actually lose it.**
+- **The toolchain image is a file on NTFS.** A clean shutdown is fine; an unclean
+  one can leave it dirty and unmountable by `ntfs3` until Windows chkdsks, taking
+  the toolchain and the beam together. **Reason enough to never pull power here.**
+- Both mounts return unattended — verified on this boot, not assumed.
+
+It also reported, unprompted and against itself, that it had fat-fingered a
+`git init` into his memory directory and removed the stray `.git`. **I verified
+rather than accepted it:** no `.git`, 16 memories plus the index, every file's
+frontmatter intact, index count matching. Clean. *Reporting your own mess is worth
+more than not making it, and it is still checked.*
+
+### State at power-off
+
+- **Root 48%, 36 G free** — 93% this morning. **Zero snapshots, all scheduling
+  off**, verified by running cron's own command. His rule for when to take one is
+  banner §9a and memory `snapshot-only-before-core-changes`.
+- `hotline-profile-watch.timer` **enabled and active** — restored after my
+  paraphrase got it switched off.
+- 484 tests passing; `hotlined`, `hotline-ios`, `hotline-beam`, `hotline-sipprobe`
+  all healthy at the last check.
+- `handoff.md` committed and pushed through `5695756`. **His three frozen files and
+  this log stay uncommitted on purpose**, so his one-`git checkout` escape survives.
+- `hotline-ios` left registered rather than marked `--done`: `--done` deletes its
+  channel and takes the history with it, and it is coming back.
+
+**Recoverable.** Cable in, `Wake-on: g` on `enp4s0`, `wakeonlan a8:a1:59:fd:4d:13`.
+
+### The day in one line
+
+Zero build work, all of it operations, which is what the role is. Two of my own
+errors caught by the peer or by re-probing — the phone's expiry date, and a
+paraphrase that switched off his timer — and one of the peer's caught by me. **The
+pattern held: nearly everything wrong today was found by somebody other than its
+author.**
+
+*(Heading corrected: I first wrote 20:20, carried from a `date` I had run hours
+earlier rather than asking the clock. `hotline-ios` had reported the identical slip
+in its own banner ten minutes before — **"a fact you read an hour ago is a status
+field too"**, twice in one evening, in two sessions, on the cheapest possible probe.)*
+
+## 2026-08-28 late — operator `hotline-80` (session `a030b832`): boot, sweep, and a model install he asked for
+
+Watchdog-spawned 23:43, two minutes after the box came up (boot 23:41). Adopted
+`hotline-80`, read the handoff in full, read Discord across every channel.
+
+### The sweep, before he spoke
+
+- **Nothing sent while the box was off.** Newest message in every channel
+  predated the 23:09 poweroff — `#general` last human msg was 27 Aug 14:21
+  ("Please stop spamming me"), `#agent-hotline-80` last was my own 21:08 shutdown
+  post. Checked, not assumed.
+- **Sessions:** I am the only live one (`hotline --list`). `hotline-ios`
+  (registry, session `52c58b24`) is registered-not-done but its session is NOT in
+  the live set — it went down with the box and has not been resumed. Not resuming
+  it uninvited; the build is his call, not the timer's.
+- **Nothing armed.** No `at`/atq, no shutdown job, no `~/.hotline-no-shutdown`
+  needed (none pending), no watch-agent process, no poweroff timer. User timers:
+  standup@hotline-ios, watchdog, profile-watch — all benign. Verified the
+  watchdog would NOT duplicate me: it resolves `hotline-80` to my session_id and
+  finds it live.
+- **Health:** `hotlined` ok (mirror not degraded), ios daemon `db_ok` ring_ready
+  with 2 active calls held, beam serving `get.sh` HTTP 200, `/mnt/iosbuild` mounted.
+  Root 48%, 36 G free. Three frozen files + PROGRESS still uncommitted, untouched.
+- **Who woke the box:** him. pigion shell history shows `wakeonlan a8:a1:59:fd:4d:13`
+  run interactively at ~23:41, and he then typed into this session directly.
+
+### His request, typed into the session: install "Piccolo Gorgone 9B" on ollama
+
+Not in the ollama library. Found it on HuggingFace: `CorryL/piccolo_gorgone`, a
+single Q4_K_M GGUF (5.6 G), Qwen3.5-9B offensive-security fine-tune (red-team /
+CTF / pentest — authorized local security tooling on his own box). ollama was
+already installed and running (0.32.15 + CUDA, listening 0.0.0.0:11434 per his
+own 24 Aug config), so nothing system-wide was needed.
+
+- Pulled the GGUF straight from HF: `ollama pull hf.co/CorryL/piccolo_gorgone`.
+- Wrapped it as **`piccolo-gorgone:9b`** via a Modelfile baking in the model
+  card's operational sampling (temp 1.0, top_p 0.95, top_k 20, min_p 0, presence
+  1.5, repeat 1.0, num_ctx 32768 — 32k of its 128k window, chosen so weights +
+  KV cache stay inside 8 GB).
+- **Ran it — actually ran it, not "it created ok":** coherent on-domain answer,
+  `ollama ps` shows **100% GPU**, 6.3 G resident (nvidia-smi 6134/8188 MiB).
+  OpenAI-compatible endpoint at `:11434/v1` returns a completion.
+
+Reachable at `http://100.72.2.62:11434` (tailnet) / `192.168.1.9` (LAN), both
+CLI (`ollama run piccolo-gorgone:9b`) and OpenAI-compat `/v1`. Told him in-session.
+
+## 2026-08-29 early — context window + TurboQuant KV compression (operator `hotline-80`)
+
+He asked how large a context window I'd push, then to integrate TurboQuant
+(Google, ICLR 2026) for the KV cache, and to flip the free q8_0 bridge now.
+Both approved via the question card.
+
+### Measured the real ceiling instead of trusting arch math
+
+The model is `qwen35`, 32 layers, GQA 4 KV heads, but **key_length=value_length=256**
+— a heavier KV per token than a typical 9B. My first VRAM sweep looked like
+everything fit (flat VRAM 65k→131k); the CONTEXT/PROCESSOR columns caught the lie:
+it wasn't fitting, VRAM was saturated and the overflow spilled to CPU. Corrected by
+reading `ollama ps` PROCESSOR (100% GPU vs split) at each size:
+
+- **fp16 KV:** 48k = 100% GPU (6.8G); 56k spills (12% CPU). Ceiling ~48k.
+- **q8_0 KV:** 72k = 100% GPU; 80k spills. Ceiling ~72k.
+- Native max is 262144, so fp16 leaves ~80% of context unreachable on the 4060.
+
+### q8_0 bridge — done, live now
+
+Drop-in `/etc/systemd/system/ollama.service.d/30-kv-quant.conf`:
+`OLLAMA_FLASH_ATTENTION=1` + `OLLAMA_KV_CACHE_TYPE=q8_0`. Restarted ollama,
+verified the env took and the ceiling moved to ~72k. Rebuilt `piccolo-gorgone:9b`
+with **num_ctx 65536** baked in — validated at 100% GPU. Near-lossless, reversible
+(delete the drop-in + daemon-reload + restart).
+
+### TurboQuant — building a CUDA llama.cpp fork (turbo3, 3.125 bits/value, 5.12x)
+
+Not in mainline llama.cpp/ollama, so no flag. Path: `Madreag/turbo3-cuda`
+(branch `release/cuda-optimized`), which adds turbo1.5/2/3/4 cache types and,
+critically, **supports head-dim 256** — exactly this model's K/V — with the only
+D=256 bug being on SM120 (5090), not our SM89 (Ada 4060). Weights untouched
+(turbo3 is a KV mode, not weight quant); served via `llama-server` OpenAI-compatible.
+
+Build reality on this box (CUDA 13.3, gcc 16.2.1):
+- Installed `cmake` (was the only missing dep; nvcc at /opt/cuda, gcc/make/git present).
+- Configure passed (CUDA 13.3 accepted gcc 16.2, arch 89).
+- **Two CUDA-13 compile breaks, both patched:** `argsort.cu` and `top-k.cu` had
+  version guards optimistically enabling CCCL-3.1/3.2 code paths
+  (`cuda::make_strided_iterator`, `cuda::make_counting_iterator`, `DeviceTopK::MaxPairs`)
+  whose symbols/signatures aren't in the installed CCCL 3.4. Each had a working
+  fallback right below; forced the guards to `#if 0` so they take the stable path
+  (DeviceRadixSort/argsort). `.orig` kept alongside. These are upstream-llama.cpp
+  files, not the turbo3 kernels — the fork was cut before llama.cpp's CUDA-13 fixes.
+- Past the CUB files, now compiling template instances. Build running in background.
+
+Next: finish build → serve GGUF with `--cache-type-k turbo3 --cache-type-v turbo3 -fa`
+→ measure real on-GPU context (expect the full 262k) → repoint OpenHands Base URL.
+
+### TurboQuant build finished, served, proven — and the honest conclusion
+
+Build completed clean (0 errors) after the two CUDA-13 patches. `llama-server`
+exposes turbo1.5/2/3/4 cache types + flash attn. Served the GGUF with
+`--cache-type-k turbo3 --cache-type-v turbo3 -fa on` on :8791, OpenAI-compatible.
+
+**Two findings that reshaped the answer:**
+
+1. **The model's real trained context is `n_ctx_train = 40960`, NOT 262144.**
+   The 262144 was the GGUF's advertised `context_length` field; the load log shows
+   `rope scaling = linear`, `n_ctx_orig_yarn = 40960`, no YaRN. So beyond ~40k it's
+   unvalidated RoPE extrapolation regardless of KV mode. The useful ceiling is 40k.
+2. **262k KV even at turbo3 = 7.2 GB → OOM.** 3-bit can't make 262k tokens fit
+   next to the weights on 8 GB. At the trained 40960: turbo3 KV = **1125 MiB**,
+   fits (7439/8188 used, 396 free). Generation verified coherent (SYN-cookie answer),
+   so turbo3 KV did not degrade output.
+
+**Conclusion for THIS model:** all three KV modes already cover the full 40k trained
+window on GPU (fp16 fit 48k, q8_0 fit 72k). turbo3's context-unlock benefit is
+therefore **moot here** — the model caps at 40k. turbo3 is the right tool for a
+model actually trained to 100k+, where fp16/q8_0 can't fit and it can. Also noted:
+the fork's older llama.cpp reads this new qwen35 arch as `qwen3` (36 layers/128-dim
+rotation vs ollama's 32/256), so turbo3's footprint on this model isn't optimal —
+inference is still correct, but it's another reason it's not a clear win here.
+
+**State:** turbo3 llama-server running on :8791 (127.0.0.1), ollama q8_0 path stopped
+to free VRAM (they can't coexist in 8 GB). Binary at
+`/home/bodas/data/llama-turbo3/build/bin/llama-server`. Recommending ollama+q8_0 as
+the daily driver for this 40k model; turbo3 kept, built and documented, for the next
+long-context one. Awaiting his call on which becomes the OpenHands default.
+
+## 2026-08-29 12:05 — operator `hotline-80` (session `3dfbfa74`): boot sweep, and a gap in the handoff itself
+
+Watchdog-spawned 12:05, two minutes after the box came up (boot 12:03). Adopted
+`hotline-80`, read `handoff.md` in full, read Discord.
+
+### The handoff was stale, and PROGRESS caught it
+
+The banner in `handoff.md` is dated **28 Aug 23:07 "written at power-off"** and
+claims to replace all earlier ones. It does not cover the night: the watchdog log
+shows a restart at **28 Aug 23:43**, and `PROGRESS.md` carries two sections
+(`a030b832`) written after the banner — the ollama/`piccolo-gorgone` install and
+the whole TurboQuant build. **A handoff written at shutdown is only current until
+the box comes back, and this box came back 34 minutes later.** Anyone reading the
+banner alone would have been a full session behind. Checked the watchdog log and
+the section index rather than trusting the banner's own claim to be latest.
+
+### Nothing was stranded, and the shutdown was his
+
+- **Discord: nothing sent while the box was off.** Newest message in every channel
+  predates the poweroff — `#agent-hotline-80` last is my own 21:08 shutdown post,
+  `#general` last is 27 Aug 14:21. Enumerated all six channels by last-message
+  timestamp; checked, not assumed.
+- **He was in the session, not in Discord.** His last four instructions overnight
+  were typed straight into `a030b832`: install Piccolo Gorgone, how large a context
+  window, integrate TurboQuant, and — queued at 23:23Z — *"Why is generation so much
+  slower. Or is it because you are also having a model there"*. **All four were
+  answered**; the transcript's last assistant turn (23:26:40Z) delivers the
+  diagnosis and the fix. Nothing was cut off mid-answer.
+- **He powered the box off himself.** `sudo shutdown now` as `bodas` on pts/1 at
+  **01:34:53**, eight minutes after that last answer. Clean — journal shows the full
+  systemd poweroff sequence, no crash, no agent, nothing armed. The 10.5-hour gap to
+  12:03 was him asleep, not a failure to detect.
+
+### State on this boot — probed, not read off a field
+
+- **Nothing armed.** No `at` (not installed), no `/run/systemd/shutdown`, no
+  watch-agent process, no poweroff job. System timers are the four stock Arch ones;
+  user timers are watchdog, profile-watch (next 30 Aug 10:06) and the ios standup.
+- **Root 50%, 35 G free.** Zero snapshots, scheduling still off.
+- `hotlined` `{"ok": true, "mirror_degraded": false}`; `hotline-ios`,
+  `hotline-beam`, `hotline-sipprobe` all active.
+- **His three frozen files untouched**, mtime still 27 Aug 10:35, still uncommitted
+  alongside `PROGRESS.md`. HEAD `e3cdd0b`.
+- **I am the only live session.** `hotline-ios` is registered-not-done and did not
+  survive the reboot. Not resuming it uninvited — same call as last night.
+
+### The q8_0 path survived the reboot, and he is already on it
+
+The thing he was actually using is the thing worth probing, so I probed it rather
+than reading the drop-in back:
+
+- `llama_context: n_ctx = 65536`, `flash_attn = enabled` in **this boot's** load log
+  — the `30-kv-quant.conf` drop-in re-applied itself across the reboot.
+- `ollama ps`: `piccolo-gorgone:9b`, **100% GPU**, 6.6 G, context 65536. 6462 MiB
+  used / 1373 free. No stale subprocess; the reboot cleared last night's estimator
+  wedge on its own.
+- `/v1/chat/completions` answers.
+
+**He is using it right now** — two completions at 12:08 from `100.103.46.118`, his
+other box over the tailnet. So OpenHands is pointed here and working.
+
+**One artefact of the model worth knowing before it looks like a bug:** it emits
+its whole chain of thought into the OpenAI-compat `reasoning` field *before*
+`content`. My first probe with `max_tokens: 200` came back with `content: ""` and
+`finish_reason: length` — 200 tokens of reasoning and no answer. Nothing is broken;
+a short `max_tokens` on a client just truncates before the answer starts. Recording
+it because "empty content" is exactly the shape that gets misread as a dead endpoint.
+
+**Nothing needed operating.** Said hello, reported the above, and waited rather than
+inventing work — he is at the keyboard.
+
+### 12:42 — "Find the agent who built llama turbo 3 and wake him up"
+
+Verified before acting: `hotline --provenance` → **VERIFIED**, posted 10:42:10Z by
+his account in `#agent-hotline-80`, text as quoted.
+
+**The premise was wrong and the answer is that there is nobody to wake.** The
+builder is `hotline-80` — session `a030b832`, 28 Aug 22:14→23:26Z — which is the
+identity I adopted at 12:05. **Searched rather than assumed:** every `.jsonl` under
+`~/.claude/projects` counted for `turbo3`/`turboquant`; only `a030b832` (337 hits)
+and this session contain the build. A third, `bfa6fe53` on **24 Aug** (52 hits in a
+subagent), is a near-miss worth naming — it is *research on someone else's machine*
+(RTX 3060 Ti, i5-14600KF, Windows, 32 G) reading about TurboQuant, five days before
+anything was built here. Reporting it as a second builder would have been the easy
+wrong answer.
+
+**Artifacts probed, not assumed from the log:** `llama-server`/`llama-cli` present
+(built 00:31); `--cache-type-k` really does list `turbo3` — **and `turbo3_tcq` /
+`turbo2_tcq`, which last night never tried**; both CUDA-13 patches in place with
+`argsort.cu.orig` kept; fork at `369a735`.
+
+**What I did not do, and why.** I hold that session's record, not its live context.
+Resuming `a030b832` is one command, but it would put a **second session on the
+`hotline-80` identity** — two agents answering him in one channel, which is the
+thing this role exists to prevent. Offered it as his call rather than taking it.
+Nor did I start the endpoint: turbo3 holds ~7 G and would squeeze his
+ollama/OpenHands path onto the CPU, **which is precisely the 01:20 slowdown he
+asked about last night**. GPU is free (7.8 G) so it is a one-minute job when he says.
+
+Answered in his channel with the three options and held.
+
+## 2026-08-29 12:45–13:15 — the public fork, and last night's headline finding was measured on the wrong model
+
+Two instructions, both verified before acting (`10:42:10Z` "find the agent who built
+llama turbo 3", `10:45:22Z` "make a public fork and document everything", `10:49:50Z`
+"Do A… run the git command and give me the code and the link").
+
+### Auth: the token was never expiring
+
+`gh auth status` said *"the token in default is invalid"* — the same blocker that
+had `hotline-ios` stuck on CI screenshots for days. **It was not expiry.** `gh`
+keeps credentials in the system keyring; this box boots headless with no unlocked
+keyring, so the secret reads back unusable and is reported as invalid. SSH to
+GitHub worked the whole time — but **creating a repo needs the API**, and there is
+no create-on-push over SSH, so SSH could not route around it.
+
+He was on Discord, not at the keyboard, and asked for "the code and the link", so:
+**GitHub device flow** against the gh CLI's own public client id
+(`178c6fc778ccc68e1d6a`) — posted him the user code, polled, and stored the token
+**plaintext in `~/.config/gh/hosts.yml`, chmod 600**, which is what
+`--insecure-storage` does. No keyring, survives reboots. `gh api user` returns his
+account. Memory: `gh-token-dies-because-of-the-keyring`.
+
+### My own two patches from last night were the wrong fix
+
+Last night I forced two CCCL version guards to `#if 0` and logged it as "two
+CUDA-13 compile breaks patched". **Both files have a self-contained fallback below
+the guard, so that built green while silently dropping CUB's optimized `argsort`
+and `DeviceTopK::MaxPairs` onto slower paths.** Green and right came apart, and
+nothing in the build output said so.
+
+**Reproduced the failure instead of trusting my own note.** The symbols are not
+missing: `cuda::make_strided_iterator` and `make_counting_iterator` are declared in
+CCCL 3.4.2 in `cuda/__iterator/`. They are merely **not visible** — both files
+include only `<cub/cub.cuh>`, and CCCL 3.4 stopped pulling the `cuda::` iterator
+factories in transitively. **One `#include <cuda/iterator>` per file compiles both
+with the fast paths left on** (exit 0, verified per-TU, then a full rebuild: 102
+targets, 0 errors). Note `GGML_CUDA_USE_CUB` is defined in `common.cuh`, not on the
+command line, so it never appears in `compile_commands.json` — which is why a first
+probe "compiled clean" and meant nothing.
+
+### The finding that reverses last night's recommendation
+
+Last night's turbo3 measurements were taken against a **hardcoded ollama blob
+hash** — `sha256-1de498fe…`. That blob is **`JOSIEFIED-Qwen3:8b`** (5.03 GB, on
+disk since July). piccolo-gorgone is `sha256-18b2ed08…` (5.63 GB). Resolved through
+the manifests, not from memory. **`general.name` said `Josiefied Qwen3 8B
+Abliterated v1` in the load log the whole time.**
+
+So every conclusion drawn from it was about the wrong model. On the **real** blob:
+
+- `arch qwen35`, **`n_ctx_train = 262144`**, `n_ctx_orig_yarn = 262144`, rope
+  linear. **The 262144 is native and real** — not an inflated field. 32 layers, of
+  which **only 8 carry a KV cache**, head dim 256.
+- At the full 262144 on the 8 GB card: **f16 KV 8192 MiB → OOM. q8_0 4352 MiB →
+  OOM. turbo3 1600 MiB → loads and serves**, 7544/8188 used, 291 free. 8192/1600 =
+  **5.12×**, exactly the paper's turbo3 ratio. Generation verified coherent at 262k.
+
+**turbo3 is not moot here — it is the only reason 262k fits at all.** Last night I
+told him the opposite. The cause was one hardcoded hash, and one `general.name`
+check would have caught it. Memory `piccolo-gorgone-is-his-live-model` rewritten;
+the wrong 40960 figure I had saved this morning is removed.
+
+### Shipped
+
+Fork **public** at `BogdanStamenovic/turbo3-cuda` (lineage
+TheTom/llama-cpp-turboquant → Madreag/turbo3-cuda → his), confirmed public by
+**unauthenticated** fetch (HTTP 200), not by reading the API's own field. Two
+commits on `release/cuda-optimized`, plus branch `cuda13-cccl34-build-fix` staged
+for an upstream PR. `docs/CUDA13-BUILD-FIX.md` and `docs/RTX4060-8GB-262K.md`, both
+with caveats kept in — capacity result, no perplexity/KLD, thin headroom — and the
+wrong-blob mistake written up, since it is the most useful thing in there.
+
+**Did not open the upstream PR:** that is a public interaction with a third party
+under his name, which is his call, not free rein on his own infrastructure. Branch
+is pushed and ready. GPU left free (7833 MiB) so his ollama path is unaffected.
+
+### 13:15 — upstream PR opened at his instruction
+
+Verified `11:12:03Z`: *"Sure open the pr upstream"*.
+
+**Trimmed the branch before opening it.** `cuda13-cccl34-build-fix` had carried both
+commits; upstream wants the fix, not this fork's README banner (which literally says
+"this fork") or a 4060 write-up. Force-pushed it back to the fix commit alone, so the
+PR is **2 files, +8/-0** — the smallest thing that is actually mergeable.
+
+[Madreag/turbo3-cuda#2](https://github.com/Madreag/turbo3-cuda/pull/2), OPEN, not a
+draft, `BogdanStamenovic:cuda13-cccl34-build-fix` → `release/cuda-optimized`,
+confirmed visible **unauthenticated** (HTTP 200).
+
+The body carries the error text, the real cause, why disabling the guards is the
+worse fix, the separate `MAJOR/MINOR` guard bug flagged but deliberately *not*
+fixed in the same PR, the verification chain, and the `compile_commands.json`
+reproduction trap. It links the longer write-up in his fork, which also points any
+reader from upstream back at his repo.
+
+Fork default branch keeps both commits; only the PR head is trimmed.
+
+### 15:38 — standup killed at his instruction
+
+Verified `13:37:36Z`: *"Stop the standup on hotline ios. There is an agent checking
+stuff rvery 30 mins and trlling ehats happenimg. Kill him"*.
+
+`hotline-standup@hotline-ios.timer` **stopped, disabled, and unloaded** — with 4
+minutes to spare before its next 15:42 run. Removed from
+`timers.target.wants`, so it does not return at boot. The `hotline-standup@`
+template units are left in place, so it is one `systemctl --user start` away if he
+ever wants it back for a live agent.
+
+**Checked what would re-arm it rather than assuming a disable sticks:** nothing in
+`src/` or `~/.claude/bin` starts a standup timer, and it is in no crontab — it was
+armed by hand, exactly as the unit's own comment describes. `--declare`/`--resume`
+do not touch it, so resuming `hotline-ios` will not bring it back.
+
+**Scope kept to what he asked.** The only 30-minute poster was this one. The
+watchdog (5 min) does not post — it is what respawns `hotline-80` — and
+profile-watch is daily; both left alone.
+
+`pgrep -f "hotline-standup hotline-ios"` matched two PIDs that were **its own
+shell's command line**, the same self-match that produced last night's exit-144
+and that I fell into again earlier today with `pkill`. Checked the PIDs before
+killing; both were already gone and no standup process existed. **Third time this
+pattern has bitten in two days.**
+
+**Worth noting why it read as noise:** `hotline-ios` has been dead since the
+reboot, so since last night the standup had been posting *"heads up: hotline-ios
+is no longer running"* every half hour — the last at 13:12:52Z. It was reporting
+on a corpse, which is exactly the signal it was built to give and useless once
+nobody intends to act on it.
+
+## 2026-08-31 16:17 — operator `hotline-80` (session `f63b1d6e`): boot sweep, and a banner wrong in two directions
+
+Watchdog-spawned 16:17:21, three minutes after a 16:14 boot. Adopted `hotline-80`
+(registry confirms the name is bound to this session id, rather than trusting the
+adopt line's own output). Read `handoff.md` in full, then all six Discord channels.
+
+### The 36-minute power-off was his, at both ends
+
+`last -x` gave the shape and the journal gave the cause: **`sudo shutdown now` at
+15:38:06**, run by `bodas` from session 40 — a one-shot ssh from `100.103.46.118`,
+his laptop, opened six seconds earlier. Box back at **16:14:23**; seven more short
+ssh logins from the same host between 16:17:40 and 16:18:10, all closed. 39 such
+logins across the 30th and 31st. No agent did it, nothing was armed, and there is
+no crash in the log.
+
+**The two-day uptime is not a two-day gap.** The previous session (`3dfbfa74`)
+last wrote here at 15:39 on the 29th, then handled one stray task notification at
+20:29 and went idle. Its transcript confirms no input after that until the box
+went down. I checked the transcript rather than inferring idleness from the log's
+last line, because "nothing was written" and "nothing happened" are different
+claims and this project has confused them before.
+
+### Nothing stranded
+
+Newest message in any of the six channels is **29 Aug 13:39:08Z**. Nothing arrived
+during the power-off, nothing on the 30th or 31st. His four instructions on the
+29th all landed and were all answered. The `pgrep -f` self-match, the ollama
+`reasoning` trap and the standup timer are all already written up.
+
+### The banner was a session behind for the third time in three days
+
+`handoff.md`'s top banner was dated 29 Aug 12:20 and asserted it replaced all
+earlier ones. The same session then worked until 20:30 and **reversed two of that
+banner's headline facts**, in `PROGRESS.md` only:
+
+- The banner says the model's real trained context is **40960**. Re-probed on this
+  boot: `arch qwen35`, **`n_ctx_train = 262144`**, `n_ctx_orig_yarn = 262144`,
+  `general.name = Heretic_Manual_Merged`. The 40960 came from a hardcoded blob
+  hash that resolved to a **different model**.
+- The banner says **turbo3 is moot here**. It is the opposite: at 262144, f16 and
+  q8_0 both OOM on the 4060 and only turbo3 loads.
+
+Both corrected at the top of `handoff.md`, and the 29th's afternoon — the `gh`
+keyring finding, the wrong-model reversal, the real CCCL fix, the public fork and
+upstream PR, the standup kill — now has a section of its own there instead of
+living only in this file. **The banner exists because the top is what gets read,
+and it has now been stale three times running; the note says so in those words.**
+
+### Probed, not read off a field
+
+- **Model:** a real `/v1/chat/completions` generation, not `ollama ps`. 33/33
+  layers on GPU, `n_ctx = 65536`, `flash_attn = enabled` — the `30-kv-quant.conf`
+  drop-in re-applied itself this boot. It returned `content: ""` with
+  `finish_reason: length` and 400 tokens in `reasoning`; **the documented trap,
+  and I hit it on the first probe like the last operator did.** Healthy.
+- **Standup timer:** `disabled` + `inactive` after the reboot, and absent from
+  `timers.target.wants`. Checked specifically because a boot is when a disable
+  would quietly fail to stick, and he asked for that thing dead.
+- **Armed-poweroff sweep:** no `at`, no `/run/systemd/shutdown`, no watch-agent,
+  no crontab, no systemd jobs. Two user timers only: watchdog and profile-watch.
+- Root 50%, 35 G free. GPU 2 MiB before my own probe. `hotlined` active,
+  `/health` ok, mirror not degraded. HEAD `8b18afd`. **His three frozen files
+  untouched, mtime still 27 Aug 10:35.** `hotline-ios` down since the 29th and
+  **not resumed uninvited** — that is his call, not mine.
+
+Nothing needed operating. Said hello in the channel with the state and the four
+open items, and held.
