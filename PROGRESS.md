@@ -5870,3 +5870,47 @@ thirty would need a different source and would mostly return nothing.
 
 The big off-blocks are all overnight — 12h47m, 10h28m, 5h04m, 5h02m — and the
 only short one is today's 36 minutes.
+
+### 16:36 — he corrected the correction, and it was the paraphrase bug again
+
+Verified (`hotline --provenance` → VERIFIED, `14:36:54Z`), three minutes after the
+previous entry:
+
+> *"Wait wait. Archserver js not an always on server and it never was. The point
+> is i was just soing inference stuff on it a lot aswell as using the mail setup
+> and other stuff on it. But the always on part happened cuz of my
+> mistakes(ofcoursw dont shutdown nwo as im doing stuff on it from my session on
+> my pc)"*
+
+**What I did wrong is precise and worth stating precisely.** He said he had been
+*forgetting* to shut down. I wrote that archserver *"is an always-on server now"*
+— and saved it to memory as a project fact. His sentence is about a mistake; mine
+is about a policy. Those are different claims, and mine would have told the next
+operator to plan around a permanence he explicitly denies.
+
+**This is the third instance of the same failure in four days**, and the file
+already carries the rule against it (banner item 11, *"RELAY HIS WORDS, NOT YOUR
+SUMMARY OF THEM"*). On the 28th *"re-signing weekly is not a problem"* became
+*"he does not want the reminder"* and a peer disabled `hotline-profile-watch.timer`
+on the strength of it. Today the paraphrase went into memory rather than into an
+action, which is why it cost nothing — but memory is where the next session's
+premises come from, so it is the same bug pointed at a slower fuse. The written
+rule did not prevent it; noticing the pattern only worked because he was reading.
+
+Memory `archserver-is-an-always-on-server-now` rewritten under the **same name**,
+so the wrong version cannot be found by searching for it, and now leads with the
+fact that it previously said the opposite. Real fact: **heavy use — inference, the
+mail setup, other things — and the long uptimes were mistakes, not a design.**
+
+### "dont shutdown nwo" — re-checked rather than answered from memory
+
+Nothing was armed and nothing is now. Re-ran the sweep instead of citing the one
+from 16:20, on the principle that a fact read twenty minutes ago is a status
+field: no `/run/systemd/shutdown`, no systemd jobs, no poweroff/reboot timers, no
+`hotline-watch-agent` process, no `at` (not installed), no crontab. The two user
+timers are the watchdog and profile-watch; neither touches power. The only
+`--on-finish poweroff` on the box is the flag's own definition in
+`hotline-watch-agent`, whose default is `none`.
+
+**Not building a shutdown reminder.** He did not ask for one, and this project has
+already had one uninvited reminder switched off as noise. Offered instead.
