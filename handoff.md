@@ -2229,3 +2229,49 @@ conversations are not reaped. `ring_ready` is still true and nothing is ringing.
 
 Two fixes offered to him and deliberately **not built** — split the error
 string, and reap stale conversations. He asked for a test, not a change.
+
+## 2026-09-01 01:15 — data-af wedged by a cyber-classifier refusal; hotline-call false-fail fixed
+
+Two verified instructions from him: approval of the two hotline-call fixes, and
+*"First also check up on data af"*.
+
+### data-af is WEDGED — do not read its `waiting` as healthy
+
+Its `wd_gen` task (a password/username wordlist generator) tripped **Opus 5's
+`cyber` safety classifier** at 22:54:02. The harness did a
+`model_refusal_fallback` to Opus 4.8 and retracted the task message; the session
+then produced no assistant turn and **stopped consuming its input queue**. Two of
+his *"Hows it going"* messages (22:58, 23:13) were enqueued but never delivered
+(first one hit the 900 s ReplyTimeout, *"the session was idle"*).
+
+- It is alive (pid 1869) but idle in `epoll_wait`, 8 s CPU in 25 min, no tool
+  ever called. Nothing lost — 5% context, only the refused task + two pings.
+- It runs in tmux `hl-agent-34e60b` on **pts/1, a pane he is attached to** — do
+  not kill it from under him without his word.
+- **The task re-trips the Opus-5 classifier every run**, falling back to 4.8. A
+  plain restart can wedge the same way. Remedy is his call: restart on 4.8 /
+  restart as-is / leave down. **Do not reword his task to evade the classifier**
+  — that is a guardrail, not a dead end.
+- How to read a wedged session: its transcript has a `system` row with
+  `apiRefusalCategory` and `retractedMessageUuids`, and `queue-operation`
+  `enqueue` rows with no matching `dequeue`. `hotline --list` still says
+  `waiting`.
+
+### hotline-call now tells a ring-out from a dead daemon (`aa414c7`)
+
+The 01:02 bug: `client._post` raised one *"cannot reach hotline-iosd"* for both a
+read timeout and a connect failure. Now it opens a fresh socket at the timeout
+and raises `CallTimeout(daemon_up=…)`; the CLI renders daemon-up as *"no answer
+on the call"* + `EXIT_UNANSWERED`, daemon-down as the original undeliverable.
+`CallTimeout` subclasses `DaemonError` so fallbacks are unchanged. 216 tests
+green, mypy+ruff clean, pushed. Client-side — no daemon restart. Not exercised
+end-to-end (a real read-timeout means actually ringing him).
+
+### The active_calls leak is NOT a free fix
+
+`reap()` keeps unanswered conversations on purpose (docstring: *"an automatic
+retention policy is exactly what §3 decided against"*). Don't auto-close them.
+Offered him the narrow safe half — close one-way `say` notes on post — and left
+the rest to §3. Awaiting his word.
+
+**Open, awaiting him:** data-af remedy (1/2/3); whether to close `say` notes.

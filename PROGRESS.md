@@ -6102,3 +6102,71 @@ as "rang, nobody answered", and reap stale conversations. Awaiting his word.
 
 **Test result: the call path works.** Reported to him in one message, no ring —
 it was 01:13 and nothing needed him.
+
+## 2026-09-01 01:15 — checked data-af (wedged), and fixed the false "dead daemon"
+
+He gave two instructions in `#agent-hotline-80`, both provenance-verified:
+*"Sure do that"* (approving the two hotline-call fixes I'd offered) and then
+*"First also check up on data af"*. The provenance receipt warned the first was
+a short non-reply, so I established what it approved before acting — the message
+immediately before it, 48 s earlier, was my two-fix offer and the only open
+question in the channel.
+
+### data-af is wedged, and two of his messages never reached it
+
+He asked me to check on `data-af`. Probed its transcript and the daemon store
+rather than the `waiting` status field:
+
+- Spawned 22:53:59 (pid 1869, tmux `hl-agent-34e60b`, pts/1 — a pane he is
+  attached to). Task: build `wd_gen`, a password/username wordlist generator.
+- **22:54:02 — Opus 5's safety classifier flagged the task `[cyber]`.** The
+  harness did a `model_refusal_fallback`: switched the session to Opus 4.8 and
+  *retracted* the task message (`apiRefusalCategory=cyber`,
+  `subtype=model_refusal_fallback`, `refusedUserMessageUuid` set).
+- **After the retraction the session produced no assistant turn and stopped
+  consuming its input queue.** 8 s CPU across 25 min, asleep in `epoll_wait`,
+  no tool ever called, no `wd_gen` created.
+- His two *"Hows it going"* messages (22:58, 23:13) were **enqueued but never
+  dequeued**. The first hit hotline's 900 s ReplyTimeout: *"the message never
+  reached its transcript, the session was idle."* That is why he got silence.
+
+Reported it as wedged, not thinking. Did **not** kill or restart it — it is on
+his terminal, and the task reliably re-trips the Opus-5 classifier, so the remedy
+(restart on 4.8 / restart as-is / leave down) is his decision, not a mechanical
+one. Explicitly declined to reword his task to slip past the classifier: that is
+a safety guardrail, not an engineering dead end, and not mine to route around.
+
+### Fix #1 — `hotline-call` reported a successful ring as a dead daemon
+
+The bug from the 01:02 test call. `client._post` raised one *"cannot reach
+hotline-iosd"* `DaemonError` for both a read timeout (daemon held the call open
+the whole time) and a connect failure (nothing listening), because urllib
+surfaces both as the same exception.
+
+Fix probes the socket at the moment of timeout instead of guessing: on a
+timeout (bare, or wrapped in a `URLError.reason`) it opens a fresh TCP connect
+and raises `CallTimeout(daemon_up=…)` from that probe. `CallTimeout` subclasses
+`DaemonError`, so existing `except DaemonError` fallbacks are unchanged.
+`call_cli` handles it before the generic branch: daemon up → *"no answer on the
+call"* + `EXIT_UNANSWERED` (fallback pages, matching a ring-out); daemon down →
+the original `EXIT_UNDELIVERABLE`.
+
+Verified: socket probe True live / False dead; unit tests for both timeout
+shapes, connection-refused staying plain, and the three CLI outcomes.
+**216 tests green, mypy + ruff clean.** `hotline-ios` `aa414c7`, pushed.
+Client-side, so it lands on the next `hotline-call` — no daemon restart. Not
+verified end-to-end because a real read-timeout means actually ringing his phone
+at 01:30; the socket probe and unit coverage stand in for it.
+
+### Fix #2 — NOT built, flagged as a design decision
+
+I had offered "reap the open conversations" before reading the daemon. `reap()`
+**deliberately keeps unanswered conversations** — its docstring: *"an automatic
+retention policy is exactly what §3 decided against."* Auto-closing them would
+overturn his SPEC 3 decision, so it is his call, not a fix I should make
+silently. `active_calls: 3` = two `say` notes from 26/27 Aug + my out-of-band
+ring. Recommended to him: close `say` notes on post (one-way, outside §3);
+leave unanswered rings per §3. Awaiting his word.
+
+**Open, awaiting him:** data-af remedy (1/2/3); fix-#2 scope. Everything else
+unchanged.
