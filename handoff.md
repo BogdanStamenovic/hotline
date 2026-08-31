@@ -2109,3 +2109,72 @@ The summary is where the meaning goes.
    (A: run as written / B: redefine the milestone around text).
 4. **Since the 28th:** the `CLAUDE.md` line claiming this root has no snapshot
    capability, now wrong in both directions.
+
+## 2026-08-31 21:59 — operator `hotline-80`: boot sweep, and a filter read as a signal
+
+Watchdog-spawned two minutes after a 21:57 boot. **The 16:45 power-off banner at
+the top of this file was still accurate this time** — box down 16:43, back
+21:57, nothing ran in between. That is the first time in four days the top
+banner has been current, and it was still verified with the three commands the
+banner itself names rather than believed.
+
+- **`hotline` is not on the inherited `PATH`.** It lives in `~/.claude/bin`.
+  Prepend it before the adopt or every command in this file fails at step one.
+- **Nothing stranded across the 5h13m power-off.** All six text channels and the
+  DM channel read directly against the API — newest message anywhere is still
+  the previous session's own 16:43 signoff. His last instruction was the
+  shutdown, and it was carried out.
+- **Nothing armed.** No `/run/systemd/shutdown`, no systemd jobs, no `at`, no
+  crontab, no watch-agent. `hotline-standup@hotline-ios.timer` still
+  `disabled` + `inactive` after this boot — re-checked, because a boot is when a
+  disable silently fails to stick.
+- **State:** only the operator live; root 50% / 35 G free; GPU 2 MiB; ollama up
+  with no model resident; `hotlined` healthy; HEAD in sync with origin; **his
+  three frozen files untouched, mtime still 27 Aug 10:35**; `hotline-ios` down
+  since the 29th and not resumed uninvited.
+- **He is on the box** — ssh from `arch` at 22:02 and 22:03, during this sweep.
+  He booted it himself. The poweroff and the gap are not findings; see his
+  correction at `14:36:54Z`.
+
+### Read this before you file a silent-failure bug
+
+**I nearly reported his profile watcher as a oneshot exiting 0 while doing
+nothing — the signature defect of this project — and it was fine.**
+`journalctl --user -u hotline-profile-watch` showed today's run starting and
+finishing with no output line, where the three previous days each had one.
+
+Running the script by hand returned a number instantly. The raw journal
+*without* the unit filter shows the line is there, 3 ms **after** the unit's own
+"Finished", which is why `-u` drops it.
+
+The standing rule here is "never read a status field as a signal." What this
+was, is the inverse: **an absence in a filtered view read as a signal.** A
+filter is a status field too, and so is a log view. Probe the thing.
+
+### The one item with a clock on it
+
+Profile `2S56P3Z95Z` has **68.5 h** left (expires 03/09 18:33) and
+`--warn-days` is 3, so it has just crossed into the warn window: **the timer run
+at Tue 01 Sep 10:02 will page him.** That is SPEC 6 working, not a fault.
+
+**Do not disable that timer.** On the 28th a peer switched it off on the
+strength of a paraphrase, and that is the canonical failure in this file.
+Memory `weekly-resigning-is-not-a-problem-for-him`: the re-signing is a chore he
+owns — report once, do not page, do not build reminders. It has been reported
+once, in the consolidated boot message.
+
+The two dates in circulation are not a contradiction to re-solve: `1 Sep 22:53`
+was derived locally from device registration, while the script asks Apple and
+gets 03/09 18:33. `profile-watch.py`'s docstring records why.
+
+### Open, and all his — unchanged since the 29th
+
+1. Resume `hotline-ios`, or leave it down.
+2. Keep or delete `~/data/llama-turbo3` (670 MB, load-bearing for 262k).
+3. **Since the 26th:** commit-or-drop the three frozen files; the acceptance
+   test (A: run as written / B: redefine the milestone around text).
+4. **Since the 28th:** the `CLAUDE.md` line claiming this root has no snapshot
+   capability, now wrong in both directions.
+
+Nothing needed operating; nothing was invented. One consolidated message, no
+ring — he is at the keyboard. Holding.

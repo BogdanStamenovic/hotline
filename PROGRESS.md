@@ -5940,3 +5940,92 @@ Session total: boot sweep, two wrong model facts corrected at the top of
 `handoff.md`, four days of blocked log unblocked and pushed, one uptime question
 answered, and two corrections from him — the second of which is the useful one and
 is written up rather than quietly patched. Going down.
+
+## 2026-08-31 21:59 — operator `hotline-80` (session `f63b1d6e`→ new): boot sweep after the evening power-off
+
+Watchdog-spawned 21:59, two minutes after boot. `hotline --adopt hotline-80`
+(the binary is not on the default `PATH` — it lives in `~/.claude/bin`, which
+is not in this session's inherited `PATH`; prepend it or nothing works).
+Then: read `handoff.md`, ran the three commands its own banner says will detect
+whether it is stale, read all six Discord channels plus the DM channel, and
+probed the box rather than reading fields off it.
+
+**The banner was, for once, not stale — and that was checked, not assumed.**
+Box down 16:43, back 21:57 (`last -x`). Nothing ran in between because nothing
+could. The 16:45 power-off banner is therefore still accurate, which makes this
+the first boot in four days where that is true. The check still had to be run:
+"the banner is current" is exactly the claim that has been wrong three times.
+
+**Nothing stranded.** The 5h13m off-window is the case the spawn prompt warns
+about — a message sent into a dead box is never delivered, queued or
+acknowledged, and only channel history recovers it. Read all six text channels
+and the DM channel directly against the API rather than waiting on delivery.
+Newest message anywhere is the previous session's own 16:43 signoff. His last
+instruction remains *"Okay now im done. Shutdown"* (`14:42:01Z`), which was
+carried out.
+
+**Nothing armed.** No `/run/systemd/shutdown`, no systemd jobs, no `at` (not
+installed), no crontab, no watch-agent process. Two user timers, watchdog and
+profile-watch, neither touching power. `hotline-standup@hotline-ios.timer` came
+back `disabled` + `inactive` after the reboot — checked again this boot, since a
+boot is precisely when a disable silently fails to stick.
+
+**State.** Only live session is the operator. Root 50%, 35 G free. GPU 2 MiB,
+free for him. ollama active with no model resident. `hotlined` active,
+`/health` `{"ok": true, "mirror_degraded": false}`. HEAD `642f4e4` and in sync
+with `origin/main`. **His three frozen files untouched, mtime still
+27 Aug 10:35.** `hotline-ios` still down since the 29th and not resumed
+uninvited.
+
+**He is on the box.** Two ssh logins from `arch` (`100.103.46.118`) at 22:02:19
+and 22:03:03, while this sweep was running. He booted it himself. Per his
+correction of `14:36:54Z`, the poweroff and the gap that followed are not
+findings and were not reported as such.
+
+### The near-miss, which is the useful part of this session
+
+**I nearly filed his profile watcher as silently broken, and it is fine.**
+`journalctl --user -u hotline-profile-watch` showed today's 10:04 run starting
+and finishing with **no output line**, where 28/29/30 Aug each had one. A
+oneshot exiting 0 while quietly producing nothing is this project's signature
+defect, and the memory-peak figures even corroborated it (110 M today vs 141 M
+on the days that printed).
+
+It was wrong. Running the script by hand returned a number immediately
+(`68.5 h / 2.85 d left`), so the failure was in my reading, not the watcher.
+The raw journal without the unit filter shows the line **is** there, at
+`10:04:40.987690` — 3 ms *after* the unit's own "Finished" at `10:04:40.984749`
+— so the `-u` filter drops it.
+
+The shape is worth naming because it is the inverse of the usual one: the rule
+here is "do not read a status field as a signal," and what I did was read an
+**absence in a filtered view** as a signal. A filter is a status field too. The
+fix was the same one that always works — probe the thing itself.
+
+### The one item with a clock on it
+
+The profile has **68.5 h** left (`2S56P3Z95Z`, expires 03/09 18:33) and
+`--warn-days` is 3, so it has just crossed into the warn window: **the next
+timer run, Tue 01 Sep 10:02, will page him.** That is the watcher working as he
+specified it (SPEC 6), not a fault. **The timer was not touched.** Disabling one
+of his timers on an operator's own read is the 28th's failure verbatim, and
+memory `weekly-resigning-is-not-a-problem-for-him` says this is a chore he owns:
+report once, do not page, do not build reminders. Reported once, in the
+consolidated boot message, and left alone.
+
+Note the two dates that circulate for this are not a contradiction to re-solve:
+the old `1 Sep 22:53` was derived locally from device registration; the script
+asks Apple and gets 03/09 18:33. `profile-watch.py`'s own docstring records why.
+
+### Open, and all his — unchanged since the 29th
+
+1. Resume `hotline-ios`, or leave it down.
+2. Keep or delete `~/data/llama-turbo3` (670 MB, load-bearing for 262k).
+3. **Since the 26th:** commit-or-drop the three frozen files; the acceptance
+   test (A: run as written / B: redefine the milestone around text).
+4. **Since the 28th:** the `CLAUDE.md` line claiming this root has no snapshot
+   capability, now wrong in both directions.
+
+**Nothing needed operating and nothing was invented.** One consolidated message
+posted to `#agent-hotline-80`, no ring — he is at the keyboard, and a ring is
+for what needs him now. Holding.
