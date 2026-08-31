@@ -1,6 +1,37 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-08-31 16:30 CEST — REPLACES ALL EARLIER BANNERS
+> ## STATUS AS OF 2026-08-31 16:45 CEST — WRITTEN AT A POWER-OFF
+>
+> **READ THIS FIRST, AND THEN DISTRUST IT.** This banner was written while the box
+> was going down at his instruction (*"Okay now im done. Shutdown"*, verified
+> `14:42:01Z`). **A banner written at shutdown is only true until the machine
+> comes back** — that has now been demonstrated three days running, including once
+> where the box returned 34 minutes later and ran a full session nobody recorded.
+> Before believing a word below, run:
+>
+> ```
+> tail watchdog.log
+> last -x -n 12 reboot shutdown
+> grep -n "^## " PROGRESS.md | tail
+> ```
+>
+> If any of those shows activity after 31 Aug 16:45, this banner is stale and the
+> newest section of `PROGRESS.md` is the truth.
+>
+> **State at power-off:** nothing armed, nothing running but the operator, GPU
+> free, ollama idle with the model unloaded, no mail queued, no ssh sessions,
+> `hotlined` healthy. Root 50%, 35 G free. HEAD pushed and clean except **his
+> three frozen files, still untouched at 27 Aug 10:35**. `hotline-ios` down since
+> the 29th, still not resumed. The four open items below are unchanged and all his.
+>
+> **This shutdown is recoverable.** `enp4s0` is UP with `Wake-on: g`;
+> `wakeonlan a8:a1:59:fd:4d:13` from pigion or his laptop brings it back.
+>
+> **He shuts this box down routinely and that is normal.** Do not open your next
+> report by treating the poweroff, or the gap that follows it, as a finding — see
+> the correction he issued at 14:36:54Z, recorded at the end of `PROGRESS.md`.
+>
+> ## STATUS AS OF 2026-08-31 16:30 CEST — the model corrections, STILL CURRENT
 >
 > **AND IT HAPPENED AGAIN: the banner below was a session behind, and two of its
 > headline facts were reversed by work done four hours after it was written.**
@@ -2009,3 +2040,72 @@ all six Discord channels, then probed rather than read fields.
 
 **Nothing needed operating; nothing was invented.** Fixed the banner, reported,
 and held.
+
+## SHUTDOWN 2026-08-31 16:45 — state at power-off (operator `hotline-80`, session `f63b1d6e`)
+
+He asked for it directly and it was verified before acting, because a poweroff is
+not undoable from this side:
+
+> *"Okay now im done. Shutdown"* — `hotline --provenance` → VERIFIED,
+> `2026-08-31T14:42:01Z`, his account, in `#agent-hotline-80`.
+
+**Checked what would be destroyed before taking it down**, rather than trusting
+that "he says he's done" covers it:
+
+- **No other live session.** `hotline --list` shows only the operator.
+- **No ssh connections established and no user logins** beyond the systemd
+  manager — he had finished on his side.
+- **ollama idle**, model already unloaded, zero `/v1` or `/api` requests in the
+  preceding ten minutes. Nothing mid-inference to interrupt.
+- **No mail queued** — checked because the mail setup is one of the things he
+  said he uses this box for.
+- Nothing armed, no background builds, no watch-agent.
+
+**This shutdown is recoverable and that is verified, not assumed.** `enp4s0` is
+UP/LOWER_UP with `Wake-on: g`, MAC `a8:a1:59:fd:4d:13` —
+`wakeonlan a8:a1:59:fd:4d:13` from pigion or his laptop brings it back. Every
+note in the older sections of this file claiming the cable is unplugged or that a
+shutdown is one-way is stale.
+
+### What this session did, in one place
+
+1. **Boot sweep.** He shut the box down himself at 15:38 over ssh and it was back
+   at 16:14; nothing armed, nothing stranded on Discord, and the two-day uptime
+   before it was idle rather than unlogged (checked the previous session's
+   transcript, not just the log's last line).
+2. **Corrected the banner, which was wrong about his model in two directions** —
+   `n_ctx_train = 262144` is native, and turbo3 is the only KV format that fits
+   262k on the 4060. Both had been reversed on the 29th and recorded in
+   `PROGRESS.md` only.
+3. **Unblocked four days of log.** `PROGRESS.md` had not committed since 27 Aug
+   because the pre-commit secret scanner was refusing a provenance quote carrying
+   his raw Discord user id. Redacted; `04d7fb7`, `86abc58` and later pushed.
+4. **Answered his 5-day uptime question** — 69.2% of 120h, 12 boots, longest run
+   2d 03h34m.
+5. **Got corrected by him, twice, on the same paraphrase bug**, and wrote it up
+   rather than quietly fixing it. See below.
+
+### The thing the next operator should actually take from this session
+
+**I paraphrased him and it changed the meaning, for the third time in four days.**
+He said he had been *forgetting* to shut down; I wrote that archserver *"is an
+always-on server now"* and saved it to memory as project fact. His sentence was
+about a mistake, mine about a policy. He caught it in three minutes.
+
+The rule against this is already in this file as banner item 11 and **did not
+prevent it.** What caught it was him reading. That is worth knowing precisely
+because the next occurrence may not be read: on the 28th the same failure switched
+off one of his timers. Memory `archserver-is-an-always-on-server-now` now leads
+with the fact that it previously said the opposite.
+
+Practical form of the rule: **when he explains something, quote him and stop.**
+The summary is where the meaning goes.
+
+### Open, and all his — unchanged since the 29th
+
+1. Resume `hotline-ios`, or leave it down.
+2. Keep or delete `~/data/llama-turbo3` (670 MB, and load-bearing for 262k).
+3. **Since the 26th:** commit-or-drop the three frozen files; the acceptance test
+   (A: run as written / B: redefine the milestone around text).
+4. **Since the 28th:** the `CLAUDE.md` line claiming this root has no snapshot
+   capability, now wrong in both directions.

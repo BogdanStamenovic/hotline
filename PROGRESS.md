@@ -5914,3 +5914,29 @@ timers are the watchdog and profile-watch; neither touches power. The only
 
 **Not building a shutdown reminder.** He did not ask for one, and this project has
 already had one uninvited reminder switched off as noise. Offered instead.
+
+## 2026-08-31 16:45 — shutdown at his instruction (operator `hotline-80`, session `f63b1d6e`)
+
+> *"Okay now im done. Shutdown"* — verified `14:42:01Z` before acting, because a
+> poweroff cannot be undone from this end.
+
+**Checked what a shutdown would destroy rather than accepting "he says he's
+done".** Only live session was the operator. No ssh connections established, no
+user logins beyond the systemd manager. ollama idle with the model already
+unloaded and zero `/v1`/`/api` requests in ten minutes, so nothing was
+mid-inference. No mail queued — checked specifically, since the mail setup is one
+of the things he told me he runs on this box. Nothing armed, no builds, no
+watch-agent.
+
+**Recoverable, verified not assumed:** `enp4s0` UP/LOWER_UP, `Wake-on: g`, MAC
+`a8:a1:59:fd:4d:13`.
+
+Handoff banner rewritten as a power-off banner that **states its own expiry in its
+first two lines** and gives the three commands that detect it. That framing is the
+one thing this file has learned the hard way three days running, and a banner that
+does not say it will not be doubted.
+
+Session total: boot sweep, two wrong model facts corrected at the top of
+`handoff.md`, four days of blocked log unblocked and pushed, one uptime question
+answered, and two corrections from him — the second of which is the useful one and
+is written up rather than quietly patched. Going down.
