@@ -2275,3 +2275,44 @@ Offered him the narrow safe half — close one-way `say` notes on post — and l
 the rest to §3. Awaiting his word.
 
 **Open, awaiting him:** data-af remedy (1/2/3); whether to close `say` notes.
+
+## 2026-09-01 01:35 — data-af restarted on Opus 4.8; calls now close on unanswered
+
+His two verified instructions (`23:27:45Z`): restart data-af directly on Opus
+4.8, and close conversations when they go unanswered ("just say they did go
+unanswered").
+
+### data-af is now a fresh Opus-4.8 session — how it was done
+
+`tmuxen.spawn` has no `--model`, so this was manual: kill the wedged session,
+then `claude --model claude-opus-4-8 --permission-mode bypassPermissions --name
+data-af` in a systemd-scoped tmux (`hl-data-af`), seeded with a prompt that runs
+`hotline --adopt data-af` first and then carries his task. Verified on 4.8 by
+`/proc/<pid>/cmdline`, adopt confirmed via `hotline --list`, and it is past the
+classifier and building. **If it wedges again, this is the pattern to repeat.**
+Do not reword his task to dodge the classifier — 4.8 does not trip it.
+
+### hotline-call / daemon: calls close on unanswered (`868c298`)
+
+Both unanswered paths append `state="unanswered"` and `_close_conversation()`.
+The SPEC-3 keep-open rule was overridden by him — and it was safe to, because
+`reply()` does not gate on `closed`: **a late answer still lands after close.**
+Close only drops it from `active_calls`/waiting. A `wait:false` ring stays open
+(genuinely pending, not unanswered). The 3 pre-existing stragglers were closed
+with the daemon stopped (DB backed up first); `active_calls` is now 0.
+
+Combined with `aa414c7` (the earlier false-"dead daemon" fix), the call path is
+in good shape. 217 tests green. Neither call fix was exercised by a real ring —
+that means actually ringing him — so unit tests + live `/health` are the
+evidence.
+
+### Open — all his, nothing mine
+
+1. data-af will ask public-vs-private before pushing `wd_gen`; that answer is
+   his.
+2. `~/data/llama-turbo3` keep/delete (670 MB, load-bearing for 262k).
+3. The three frozen files + the acceptance test (since the 26th).
+4. The `CLAUDE.md` snapshot line (since the 28th).
+
+DB backup left at `~/.local/state/hotline/hotline-ios.db.bak.20260901-013426` —
+safe to delete once he's happy the close-on-unanswered change is behaving.

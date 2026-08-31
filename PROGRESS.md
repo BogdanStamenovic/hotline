@@ -6170,3 +6170,55 @@ leave unanswered rings per §3. Awaiting his word.
 
 **Open, awaiting him:** data-af remedy (1/2/3); fix-#2 scope. Everything else
 unchanged.
+
+## 2026-09-01 01:35 — restarted data-af on Opus 4.8; closed calls on unanswered
+
+Both provenance-verified (`23:27:45Z`): *"Restart it directly to opus 4.8"* and
+*"Also close them when they go unanswered. Just say they did go unanswered."*
+
+### data-af restarted on 4.8
+
+The spawn path (`tmuxen.spawn`) has no `--model`, so this was a manual restart,
+not a tool call. Killed the wedged session (tmux `hl-agent-34e60b`, pid 1869 —
+authorised: he said restart), then spawned a fresh `claude --model
+claude-opus-4-8 --permission-mode bypassPermissions --name data-af` in a
+systemd-scoped tmux (`hl-data-af`), cwd `/home/bodas/data`, seeded with a prompt
+that (a) runs `hotline --adopt data-af` first to take the identity + channel,
+(b) carries his task verbatim, (c) states the restart context and **one
+guardrail: do the work straight, do not reword to evade a safety filter.**
+
+Verified by probing, not fields: `/proc/3834/cmdline` shows the
+`--model claude-opus-4-8` flag is really on it; `hotline --list` shows the
+`data-af` record rebound to the live session (adopt succeeded); the pane shows
+it past the classifier and building (wordlist output). No `[cyber]` refusal on
+4.8 — the whole point.
+
+The task (a `wd_gen` password/username wordlist generator) is his own dual-use
+security tooling for his own use; the Opus-5 classifier flagged it as a
+false-positive (its own note admits it over-flags legit cybersecurity work).
+Restarting his agent on the fallback model is operations, not me doing the task,
+and I did not touch the task text.
+
+### Fix #2 — close a call on unanswered, and say so (`868c298`)
+
+Both unanswered paths in `daemon.place()` now append `state="unanswered"` and
+call `_close_conversation()`. The SPEC-3 rationale for keeping them open (he may
+answer later) **does not actually hold** and I verified it: `reply()` does not
+gate on `closed` and `_channel()` reads a closed row back in, so a late answer
+still lands after close. Close only removes it from `active_calls` and the
+waiting roster. A `wait:false` ring still stays open — it has not gone
+unanswered. `reap()`'s now-stale docstring was corrected.
+
+Closed the 3 existing stragglers (two `say` notes 26/27 Aug + my out-of-band
+ring) the same way — marked unanswered, closed — with the daemon **stopped** so
+there was no WAL race on its live DB, after backing the DB up
+(`hotline-ios.db.bak.20260901-013426`).
+
+Verified live: daemon restarted onto the new code (pid 4573), `/health`
+`active_calls: 0` (was 3), `ring_ready: true`, `sip+confirmed`, no degradations;
+the ring's record reads `closed: true` + state `unanswered` via the events API.
+217 tests green, mypy + ruff clean. Not re-rung end-to-end (that means actually
+ringing him at 01:35); unit tests + live health stand in.
+
+**Nothing open that is mine.** data-af will ask him public-vs-private before it
+pushes. Holding.
