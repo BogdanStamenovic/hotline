@@ -2178,3 +2178,54 @@ gets 03/09 18:33. `profile-watch.py`'s docstring records why.
 
 Nothing needed operating; nothing was invented. One consolidated message, no
 ring — he is at the keyboard. Holding.
+
+## 2026-09-01 01:02 — `hotline-call` reports a SUCCESSFUL ring as a dead daemon
+
+He asked for a test call (*"Call em to twst if it works"*, verified
+`23:01:27Z`). It was placed with `--no-fallback`, since the ring was the thing
+under test and the default fallback to `hotline-page` would have faked a pass.
+
+**The ring worked. The tool said it failed.**
+
+```
+hotline-call: error: cannot reach hotline-iosd at http://127.0.0.1:8789: timed out
+```
+
+Proof it worked, three ways: the service log line
+`sip: sip:b0g13a@sip.linphone.org is ringing (180)` at 01:02:07; the
+`conversations` row `1270e5e686cf` (`kind=ring`, opened `23:02:01Z`); and **his
+own "It works perfecly" 26 seconds later.**
+
+**Why:** he answered on Discord instead of on the call, so the daemon held the
+request open for the full `--timeout` + 30 s. `client.py:55` and `:99` use one
+error string for a connect failure and a read timeout, so *"nobody picked up"*
+is indistinguishable from *"the daemon is down"*. The comment above
+`place_call` shows the author already knew this failure mode — the timeout was
+fixed, the wording was not.
+
+**READ THIS BEFORE REPORTING THE CALL PATH DEAD.** If `hotline-call` says it
+cannot reach the daemon, check three things before believing it:
+
+```
+journalctl --user -u hotline-ios.service --since -10min | grep -i ringing
+sqlite3 -readonly ~/.local/state/hotline/hotline-ios.db \
+  "select id,kind,datetime(opened_at,'unixepoch'),answered from conversations order by rowid desc limit 3;"
+curl -s http://127.0.0.1:8789/health
+```
+
+A ring that nobody answers looks exactly like a daemon that is down, and
+concluding the latter means an agent stops trying to reach him — the worst
+outcome for a tool that exists to reach a human.
+
+**Note the daemon's unit is `hotline-ios.service`, not `hotline-iosd`** — the
+name in the error message matches no unit on this box, which sends you looking
+for a service that does not exist. It was active the whole time.
+Do not confuse it with the *agent* `hotline-ios`, which is a Claude session and
+is separately still down since the 29th.
+
+**Leak, found and not touched:** `/health` shows `active_calls: 3` — that ring
+(`answered=0`) plus two `say` conversations open since 26 and 27 Aug. Stale
+conversations are not reaped. `ring_ready` is still true and nothing is ringing.
+
+Two fixes offered to him and deliberately **not built** — split the error
+string, and reap stale conversations. He asked for a test, not a change.

@@ -6029,3 +6029,76 @@ asks Apple and gets 03/09 18:33. `profile-watch.py`'s own docstring records why.
 **Nothing needed operating and nothing was invented.** One consolidated message
 posted to `#agent-hotline-80`, no ring — he is at the keyboard, and a ring is
 for what needs him now. Holding.
+
+## 2026-09-01 01:02 — he asked for a test call, and the tool reported the ring as a failure
+
+**His instruction, verified before acting because a call is outward:**
+
+> *"Call em to twst if it works"* — `hotline --provenance` → VERIFIED,
+> `2026-08-31T23:01:27Z`, his account, in `#agent-hotline-80`.
+
+Placed with **`--no-fallback`** deliberately. The thing under test was the ring
+itself, and `hotline-call`'s default is to fall back to `hotline-page` when the
+call cannot be delivered — which would have put a Discord mention on his screen
+and let me report "it works" while the phone stayed silent. Memory
+`hotline-call-falls-back-to-paging` exists for exactly this.
+
+### What the tool said, and why it was wrong
+
+```
+hotline-call: error: cannot reach hotline-iosd at http://127.0.0.1:8789: timed out
+```
+
+**The call had in fact succeeded.** Three independent records say so:
+
+- `hotline-ios.service` log: `sip: sip:b0g13a@sip.linphone.org is ringing (180)`
+  at **01:02:07 CEST**.
+- `hotline-ios.db` → `conversations`: id `1270e5e686cf`, `kind = ring`, opened
+  `23:02:01Z`, `waiting_since` set.
+- **He replied "It works perfecly" at `23:02:33Z`** — 26 seconds after the ring
+  line. Verified by provenance as well.
+
+**Mechanism.** He answered on **Discord rather than on the call**, so the daemon
+never recorded an answer and held the HTTP request open — correctly — for
+`--timeout 500` + 30 s. At 530 s the client's read timeout fired.
+`client.py:55` and `:99` raise the *same* `DaemonError` string for a connect
+failure and a read timeout, so "the daemon is down" and "nobody picked up" are
+indistinguishable at the call site.
+
+The code already anticipated this. The comment above `place_call` reads: *"The
+HTTP timeout has to outlive the call itself, or a long conversation looks to the
+caller exactly like a dead daemon."* The **timeout** was fixed; the **message**
+was not, so the failure mode came back through the wording.
+
+**Why this one is expensive.** `--no-fallback` was passed to prevent a false
+*pass*. What nearly happened instead was a false *fail*: reporting "the call path
+is broken" while his phone was ringing in his hand. An agent that rings him,
+gets no answer, and reads this message will conclude the daemon is dead and stop
+trying to reach him — which is the worst available outcome for a tool whose only
+job is reaching a human.
+
+### Third instance of one lesson in a single session
+
+1. The profile watcher, read as silently broken because a **filtered journal
+   view** omitted its output line.
+2. This: a **client error string** describing a successful ring as an
+   unreachable daemon.
+
+Both were resolved the same way — probe the thing itself (run the script; read
+the SIP log and the daemon's own database) rather than the thing describing it.
+See memory `an-absence-in-a-filtered-view-is-a-status-field`; an error message is
+the same category.
+
+### Found, not touched
+
+`/health` reports `active_calls: 3`. The ring above is still held open
+(`answered = 0`), plus two `say` conversations open since **26 Aug 02:48** and
+**27 Aug 14:37**. Nothing is ringing, `ring_ready` is still true, so this is a
+leak rather than a fault — open conversations do not appear to be reaped.
+
+**Two fixes offered and not built**, because he asked for a test and not a
+change, and this daemon is his: split the error string so a read timeout reads
+as "rang, nobody answered", and reap stale conversations. Awaiting his word.
+
+**Test result: the call path works.** Reported to him in one message, no ring —
+it was 01:13 and nothing needed him.
