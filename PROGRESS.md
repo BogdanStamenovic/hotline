@@ -5804,3 +5804,29 @@ and it has now been stale three times running; the note says so in those words.*
 
 Nothing needed operating. Said hello in the channel with the state and the four
 open items, and held.
+
+### Postscript: the log had been un-committable for four days and nothing said so
+
+Committing this section failed:
+
+```
+REFUSING TO COMMIT -- a value from .env appears in staged content:
+  DISCORD_USER_ID -> PROGRESS.md
+```
+
+`scripts/scan-secrets.py`, installed as the pre-commit hook, was doing exactly
+its job. The offender was **not** anything written today — it was one line in the
+28 Aug 13:30 section quoting a `--provenance` result verbatim, which prints his
+raw Discord user id. Replaced with a placeholder; the quote is unaffected.
+
+**The interesting part is what that implies.** `git log -- PROGRESS.md` says the
+last commit touching this file was **`10c0f05`, 27 Aug**. So the 28th, the 29th
+and today were all sitting uncommitted, and every session since has either hit
+this refusal and moved on, or never tried. Four days of narrative log — the thing
+he says he reads — was one un-redacted line away from being committable, and no
+handoff mentioned it. Worth remembering that a guard that fires correctly still
+leaves a silent failure behind it if nobody clears the cause.
+
+Committed as `04d7fb7` and pushed. **His three frozen files were staged by
+explicit path nowhere near this** — `git add PROGRESS.md handoff.md`, never
+`-A` — and `git status` still shows them modified and untouched.
