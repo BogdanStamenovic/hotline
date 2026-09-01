@@ -6285,3 +6285,26 @@ hook fired, posted the formatted question + both options to #agent-data-af, and
 data-af is cleanly blocked waiting on the reply — **no picker rendered.** First
 real question, caught in production. His answer must land in #agent-data-af (the
 hook watches the asking agent's own channel), which I told him.
+
+## 2026-09-01 03:25 — shutdown (verified over Discord after a phone-app request)
+
+A *"Shutdown now"* arrived via the **phone app** (`kind=phone`) — authenticated
+as a key-holder, not as him, with no receipt and nothing dating it. A poweroff is
+not undoable from here, and the standing rule is to verify an un-undoable action
+against a `kind=human` Discord message. So I did **not** act on it; I posted to
+`#agent-hotline-80` asking him to confirm in Discord, noting the box was at a
+clean stopping point (data-af had finished and pushed the public wd_gen repo via
+the bridge). He confirmed: *"Yep do it"* — verified `03:24:53Z`.
+
+His confirmation also carried a task: *"log in the handoff to fix that the
+messages i send from the app become verifiable."* Written into `handoff.md` as
+the top task, with the design direction: Ed25519 per-message signatures from a
+key held only on the phone (authenticates as HIM, not any key-holder), a signed
+timestamp + nonce (dates it, kills replay), and a persisted receipt so a later
+session can re-verify — the phone analogue of re-fetching a Discord message,
+wired through `provenance.py` so `--provenance` handles it uniformly.
+
+Pre-shutdown sweep (probed, not assumed): only the operator and data-af (idle,
+wd_gen pushed, HEAD == origin) live; nothing armed; ollama idle; GPU 2 MiB; no
+mail queued; recoverable via `wakeonlan a8:a1:59:fd:4d:13`. His three frozen
+files still untouched, mtime 27 Aug 10:35. Going down.

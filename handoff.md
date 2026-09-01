@@ -1,5 +1,58 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-01 03:25 CEST — WRITTEN AT A POWER-OFF
+>
+> **READ THIS FIRST, AND THEN DISTRUST IT.** Written as the box goes down at his
+> verified instruction (*"Yep do it"*, `kind=human` Discord, `03:24:53Z`). **A
+> banner written at shutdown is only true until the machine comes back** — that
+> has been demonstrated repeatedly. Before believing a word below, run:
+>
+> ```
+> tail watchdog.log
+> last -x -n 12 reboot shutdown
+> grep -n "^## " PROGRESS.md | tail
+> ```
+>
+> If any shows activity after 01 Sep 03:25, this banner is stale and the newest
+> `PROGRESS.md` section is the truth.
+>
+> **State at power-off:** two live sessions only — the operator, and `data-af`
+> (idle, its work done). `data-af` built **wd_gen**, an OSINT/CTF credential
+> generator, and **pushed it public** (`github.com/BogdanStamenovic/wd_gen`,
+> local HEAD `bda6180` == origin). Nothing armed, ollama idle with no model
+> resident, GPU 2 MiB, no mail queued (msmtp is send-only, no spool), no external
+> ssh. **His three frozen files still untouched, mtime 27 Aug 10:35.** Recoverable:
+> `enp4s0` UP, `Wake-on: g`, `wakeonlan a8:a1:59:fd:4d:13`.
+>
+> **This session shipped three things** (all pushed): the AskUserQuestion→Discord
+> bridge (`hotline` `923760e`), and two hotline-ios call-path fixes (`868c298`,
+> `aa414c7`). See the two newest sections at the bottom of this file.
+>
+> ## ⭐ TOP TASK HE ASKED FOR, 01 Sep 03:24 — make phone-app messages VERIFIABLE
+>
+> His words: *"Just also log in the handoff to fix that the messages i send from
+> the app become verifiable."* Right now a `kind=phone` message (typed in his app,
+> HTTP to hotline-iosd) is authenticated only by the shared `HOTLINE_API_KEY` +
+> IP allowlist — that proves *a key-holder* sent it (the key is plaintext-readable
+> by any process at this uid), **not that he did**, and there is **no receipt** to
+> re-fetch and nothing dating it, so the exact bytes replay valid forever. That is
+> why tonight's phone *"Shutdown now"* had to be re-confirmed over Discord.
+>
+> **The fix, to give a phone message a real `hotline --provenance` path like a
+> Discord relay has** (design, not yet built — he said shut down):
+> 1. **Authenticate as HIM, not as a key-holder:** the app signs each message with
+>    a private key held **only on the phone** (Ed25519); the daemon verifies
+>    against the public key. A shared symmetric key cannot do this — anything on
+>    the box that holds it can forge. Asymmetric signing is the whole difference.
+> 2. **Date it + kill replay:** the signature must cover a timestamp and a nonce
+>    (or monotonic counter); the daemon rejects stale timestamps and seen nonces.
+>    Then "these exact bytes" stop being valid next week.
+> 3. **Leave a receipt:** persist the signed envelope so a later session can
+>    re-verify it against the stored public key — the phone analogue of re-fetching
+>    a Discord message. That is what makes `kind=phone` checkable off a status
+>    field. Wire it into `provenance.py` so `--provenance` handles it uniformly.
+>
+
 > ## STATUS AS OF 2026-08-31 16:45 CEST — WRITTEN AT A POWER-OFF
 >
 > **READ THIS FIRST, AND THEN DISTRUST IT.** This banner was written while the box
@@ -2352,3 +2405,47 @@ through intact.
    data-af is blocked on it through the bridge.
 2. llama-turbo3 keep/delete; the three frozen files + acceptance test; the
    CLAUDE.md snapshot line — all unchanged.
+
+## SHUTDOWN 2026-09-01 03:25 — state at power-off (operator `hotline-80`, session `f63b1d6e`→ new)
+
+He confirmed the shutdown over Discord (`kind=human`, verified `03:24:53Z`,
+*"Yep do it"*) after I declined to act on the phone-app *"Shutdown now"* alone —
+that channel authenticates a key-holder, not him, and a poweroff is not undoable
+from here. The confirmation also carried the top task now at the top of this file:
+**make phone-app messages verifiable.**
+
+**Checked what a shutdown would destroy, not assumed:**
+- Only two live sessions: the operator and `data-af` (idle, work done + pushed).
+- `data-af`'s `wd_gen` is committed and **pushed** — local HEAD `bda6180` equals
+  `origin/main`. Its pane has an unsubmitted `add hashcat-rule export` line, which
+  is a leftover idea, not running work.
+- Nothing armed: no `/run/systemd/shutdown`, no systemd jobs, no watch-agent, no
+  `at`, no crontab.
+- ollama idle, no model resident, GPU 2 MiB — nothing mid-inference.
+- No mail queued (msmtp is send-only, no spool).
+- Recoverable: `wakeonlan a8:a1:59:fd:4d:13` (`enp4s0` UP, `Wake-on: g`).
+
+### What this long session actually did
+
+1. Boot sweep after the evening power-off; nothing stranded, nothing armed.
+2. Test call at his request — **and found `hotline-call` reports a successful
+   ring as a dead daemon**; fixed it (`aa414c7`): a read timeout now probes the
+   socket and reads as "no answer on the call", not "cannot reach".
+3. **Close calls on unanswered** at his instruction (`868c298`), overriding the
+   SPEC-3 keep-open rule (safe, because `reply()` does not gate on `closed`).
+4. `data-af` wedged twice — first by an **Opus-5 `cyber` classifier** refusal
+   (restarted it directly on Opus 4.8 at his instruction), then on an
+   **AskUserQuestion picker**.
+5. **Built the AskUserQuestion→Discord bridge** (`923760e`) — the picker no
+   longer hangs a headless agent; it relays to `#agent-<name>` and feeds his
+   reply back as the tool result. Proven live: `data-af` asked public-vs-private
+   through it, he answered "public", and it pushed the public repo.
+
+### Open — all his
+
+1. **⭐ Make phone-app messages verifiable** — the top task, design at the top.
+2. `~/data/llama-turbo3` keep/delete (670 MB, load-bearing for 262k).
+3. The three frozen files + acceptance test (since the 26th).
+4. The `CLAUDE.md` snapshot line (since the 28th).
+
+Going down.
