@@ -21,6 +21,7 @@ from typing import Any, NoReturn
 
 from . import __version__
 from .agents import DEFAULT_KEEP_DAYS, Registry
+from .ask import install_ask_hook
 from .ccsocks import discover
 from .channels import from_env as channels_from_env
 from .channels import slug as channel_slug
@@ -765,6 +766,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             log(
                 f"PreToolUse guard {'installed' if guard_changed else 'already registered'}: {guard}"
             )
+        ask_hook, ask_changed = install_ask_hook()
+        log(
+            f"AskUserQuestion bridge {'installed' if ask_changed else 'already registered'}: {ask_hook}"
+        )
         log(f"spool: {stops_dir()}")
         return 0
 
