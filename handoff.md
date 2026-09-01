@@ -2316,3 +2316,39 @@ evidence.
 
 DB backup left at `~/.local/state/hotline/hotline-ios.db.bak.20260901-013426` —
 safe to delete once he's happy the close-on-unanswered change is behaving.
+
+## 2026-09-01 02:05 — AskUserQuestion bridge (headless agents no longer hang on the picker)
+
+data-af wedged a second time (`23:49:31Z`), this time on **AskUserQuestion** —
+it asked public-vs-private, the interactive picker opened, and his injected
+redirect landed *inside* the menu. Immediate unstick: `Escape` to the pane; it
+took his CTF/OSINT redirect and reworked wd_gen.
+
+**The build he asked for (`aedcfb5`):** a PreToolUse hook on `AskUserQuestion`
+(`src/hotline/ask.py` → `~/.claude/hooks/hotline-ask.py`). It fires before the
+picker renders, posts the question + options to `#agent-<name>`, waits for his
+reply, and returns a `deny` whose reason carries his answer verbatim — the model
+reads it as the tool result and proceeds. No menu, no hang, **no keystrokes**:
+his free text goes back whole and the model maps it to the option. That is why
+it beats the keystroke approach he suggested — a redirect (not "pick 2") carries
+through intact.
+
+- **Gate:** `HOTLINE_SPAWNED`. Fires only for headless agents with a channel;
+  his own keyboard sessions get the normal picker. `tmuxen.spawn` sets it, and
+  `hotline-run` now sets it too (operator covered on next respawn).
+- **Proven live:** minutes after install, data-af (already running) called
+  AskUserQuestion and the hook caught it — Claude Code re-reads hooks per call,
+  so no restart was needed. Question relayed to #agent-data-af, no picker.
+- **His answer must land in the ASKING agent's channel** (#agent-data-af), not
+  the operator's — the hook watches that channel via `replies_since`.
+- On no reply in 20 min: denies with "take the safest reversible option and
+  continue," not a hang. Tunable via `HOTLINE_ASK_TIMEOUT`.
+- 490 tests green, mypy+ruff clean. Installed via `hotline --install-hook`.
+  Settings backed up `~/.claude/settings.json.bak.20260901-020126`.
+
+### Open — his
+
+1. **Waiting on him in #agent-data-af:** public or private for the wd_gen repo.
+   data-af is blocked on it through the bridge.
+2. llama-turbo3 keep/delete; the three frozen files + acceptance test; the
+   CLAUDE.md snapshot line — all unchanged.

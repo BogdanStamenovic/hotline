@@ -6222,3 +6222,66 @@ ringing him at 01:35); unit tests + live health stand in.
 
 **Nothing open that is mine.** data-af will ask him public-vs-private before it
 pushes. Holding.
+
+## 2026-09-01 02:05 — data-af wedged on AskUserQuestion; built a Discord bridge for it
+
+Verified instruction (`23:49:31Z`): *"Data af is stuck again he did ask user
+question. As im seeing you must setup a way to catch ask user question and then
+relay it to dc and relay the answer back through the terminal through keystrokes
+or something like that."*
+
+### The immediate wedge
+
+data-af (on 4.8) had built wd_gen, gone green, and called **AskUserQuestion** to
+ask public-vs-private — exactly as I had seeded it to. That renders an
+interactive keyboard-only picker. His clarification injected in the meantime
+(the CTF/OSINT redirect) landed *inside* the menu as a selectable item, freezing
+it. Sent `Escape` to the pane; the picker cancelled, data-af picked up his
+redirect as a turn and reworked wd_gen from a "funny password tumbler" into the
+CTF/OSINT credential-guesser he actually asked for.
+
+### The bridge (his real request), and why it beats keystrokes
+
+**A PreToolUse hook matched to `AskUserQuestion`** (`src/hotline/ask.py`,
+installed as `~/.claude/hooks/hotline-ask.py`). It fires *before* the picker
+renders, posts the question + options to `#agent-<name>`, waits for Bogdan's
+reply, and returns a PreToolUse `deny` whose reason carries his answer verbatim.
+The model reads that as the tool result and proceeds — no menu, no hang, and
+**no keystroke injection or answer-parsing**: his free text goes back whole and
+the model maps it to the option itself. His CTF redirect tonight is the case in
+point — it was a redesign, not "pick option 2", and this path carries that
+intact where a keystroke injector could not.
+
+**De-risked before building, by probe not assumption:**
+- A PreToolUse `deny` on AskUserQuestion *does* suppress the picker and the
+  model acts on the reason. Tested in a real tmux TUI — AskUserQuestion is
+  interactive-only and absent in `-p` mode, so `-p` could not have tested it.
+- The hook sees `HOTLINE_SPAWNED` (confirmed `"1"` in a spawned session), which
+  is the gate: it acts only for headless agents with a channel, leaving his own
+  keyboard sessions' pickers untouched.
+- The real pager posts to Discord (verified against an empty channel, cleaned
+  up). Reply detection reuses the pager's own `replies_since`.
+
+Installed globally (self-gated, safe for every session), wired into
+`hotline --install-hook`, and `hotline-run` now sets `HOTLINE_SPAWNED` so the
+operator is covered on its next respawn. On no-answer within 20 min the hook
+denies with a "take the safest reversible option and continue" fallback rather
+than hanging. **490 tests green, mypy + ruff clean.** `aedcfb5`, pushed.
+Settings backed up at `~/.claude/settings.json.bak.20260901-020126`.
+
+### Known caveat being watched
+
+data-af started 01:30, before the hook installed at 02:01, and is about to
+re-raise public-vs-private. If Claude Code cached hooks at startup, data-af may
+still open a picker; watching its pane to catch that and relay manually if so.
+Offered him a restart-to-guarantee, no work at risk since the pivot is committed.
+
+### Resolved live: the bridge caught data-af's real question
+
+The caveat above did not bite. At 02:01, minutes after the hook installed,
+data-af called AskUserQuestion (public-vs-private, ready to push wd_gen). Claude
+Code re-reads hooks per call, so the already-running session picked it up: the
+hook fired, posted the formatted question + both options to #agent-data-af, and
+data-af is cleanly blocked waiting on the reply — **no picker rendered.** First
+real question, caught in production. His answer must land in #agent-data-af (the
+hook watches the asking agent's own channel), which I told him.
