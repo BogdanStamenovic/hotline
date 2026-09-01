@@ -29,12 +29,13 @@ import time
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
-from . import mirror
+from . import mirror, phoneauth
 from .config import load_env
 from .errors import HotlineError
 from .fresh import Event
 from .httpd import HttpError, Request, Server
 from .pool import SessionPool
+from .provenance import Origin
 from .router import Router, describe
 
 DEFAULT_PORT = 8788
@@ -65,6 +66,43 @@ If something is ambiguous, ask one short question instead of guessing and
 explaining at length. If you cannot do something, say so plainly in a sentence.
 
 This is a conversation. Match the length of the question."""
+
+
+_PHONE_LABEL = "typed in the hotline app on his phone"
+
+
+def _phone_origin(payload: dict[str, Any], text: str, log: Callable[[str], None]) -> Origin:
+    """Build the provenance Origin for a phone message, verifying a signature if present.
+
+    Three outcomes, all producing a `kind="phone"` Origin so the receiver always
+    knows the transport:
+      - signed and valid  -> `extra` carries the receipt id and phone_verified=true;
+        `hotline --provenance phone:<id>` will confirm it was Bogdan.
+      - signed and invalid -> we refuse to launder a bad signature into a good
+        standing: log it and fall back to the unverified label.
+      - unsigned          -> the status quo, honestly labelled key-holder-only.
+    """
+    signature = str(payload.get("signature") or "").strip()
+    if not signature:
+        return Origin(kind="phone", label=_PHONE_LABEL)
+    try:
+        receipt = phoneauth.verify_message(
+            body=text,
+            timestamp=str(payload.get("timestamp") or ""),
+            nonce=str(payload.get("nonce") or ""),
+            signature=signature,
+            key_id=str(payload.get("key_id") or ""),
+            label=_PHONE_LABEL,
+        )
+    except phoneauth.PhoneAuthError as exc:
+        log(f"phone signature did not verify: {exc}")
+        return Origin(kind="phone", label=_PHONE_LABEL)
+    log(f"phone message verified as {receipt.key_id!r}, receipt {receipt.receipt_id}")
+    return Origin(
+        kind="phone",
+        label=_PHONE_LABEL,
+        extra={"receipt": receipt.receipt_id, "phone_verified": "true"},
+    )
 
 
 def _seconds(value: object, default: float, low: float, high: float) -> float:
@@ -209,6 +247,15 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
         soft = _seconds(payload.get("soft_timeout"), DEFAULT_SOFT_TIMEOUT, 1.0, 600.0)
         hard = _seconds(payload.get("timeout"), DEFAULT_HARD_TIMEOUT, soft, 3600.0)
 
+        # The key + IP allowlist above proves a key-holder sent this, not that
+        # Bogdan did -- the key is readable by anything at his uid. A signature
+        # (Ed25519, private key only on the phone) is what proves it is him, and
+        # it leaves a receipt a later session can re-check with `--provenance`.
+        # Signing is optional and additive: an unsigned message keeps the old
+        # "key-holder only" standing rather than being refused, so the phone app
+        # can adopt signing without a flag-day.
+        origin = _phone_origin(payload, text, log)
+
         narration: list[str] = []
 
         def narrate(event: Event) -> None:
@@ -220,7 +267,7 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
         began = time.monotonic()
         try:
             outcome = await pool.ask_soft(
-                key, text, narrator=narrate, soft_timeout=soft, hard_timeout=hard
+                key, text, narrator=narrate, soft_timeout=soft, hard_timeout=hard, origin=origin
             )
         except HotlineError as exc:
             log(f"{key}: {type(exc).__name__}: {exc}")

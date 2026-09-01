@@ -19,7 +19,7 @@ import sys
 from collections.abc import Callable, Sequence
 from typing import Any, NoReturn
 
-from . import __version__
+from . import __version__, phoneauth
 from .agents import DEFAULT_KEEP_DAYS, Registry
 from .ask import install_ask_hook
 from .ccsocks import discover
@@ -583,6 +583,17 @@ def _check_provenance(record: str) -> int:
     and says so in words, because silently treating "I could not ask" as "it is
     fine" is the failure this whole module exists to prevent.
     """
+    # A phone message is checked against its on-disk receipt, not against Discord:
+    # the phone signed it with a key only it holds, so re-verifying the stored
+    # signature against the enrolled public key is the phone analogue of
+    # re-fetching a Discord message. Accepts either `phone:<receipt_id>` or a
+    # kind="phone" record whose header carried a `receipt` field.
+    stripped = record.strip()
+    if stripped.startswith("phone:"):
+        ok, summary = phoneauth.reverify(stripped[len("phone:") :].strip())
+        print(summary)
+        return 0 if ok else 1
+
     body: str | None = None
     if record.strip() == "-":
         message = sys.stdin.read()
@@ -604,6 +615,11 @@ def _check_provenance(record: str) -> int:
         if not isinstance(found, dict):
             print(f"hotline: error: {record[:80]!r} is not a provenance record.", file=sys.stderr)
             return 2
+
+    if isinstance(found, dict) and found.get("kind") == "phone" and found.get("receipt"):
+        ok, summary = phoneauth.reverify(str(found["receipt"]))
+        print(summary)
+        return 0 if ok else 1
 
     env = load_env()
     verdict = verify(

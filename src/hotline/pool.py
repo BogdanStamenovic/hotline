@@ -979,19 +979,25 @@ class SessionPool:
         narrator: Narrator | None = None,
         soft_timeout: float = 100.0,
         hard_timeout: float = 900.0,
+        origin: Origin | None = None,
     ) -> tuple[Route, Reply] | None:
         """Like `ask`, but returns None instead of waiting out a long turn.
 
         The turn is shielded, not cancelled: a phone giving up after a hundred
         seconds must not destroy several minutes of real work. Whatever the caller
         says next rejoins the same task and collects its answer.
+
+        `origin` is attached only when the turn's task is first created; a
+        subsequent poll rejoins the existing task and its already-set origin,
+        which is correct -- the receipt belongs to the message, not to the poll
+        that collects its answer.
         """
         conv = self.conversations.get(key)
         if conv is not None and conv.pending is not None and not conv.pending.done():
             task = conv.pending
         else:
             task = asyncio.ensure_future(
-                self.ask(key, utterance, narrator=narrator, timeout=hard_timeout)
+                self.ask(key, utterance, narrator=narrator, timeout=hard_timeout, origin=origin)
             )
             conv = self.conversations.get(key)
             if conv is not None:

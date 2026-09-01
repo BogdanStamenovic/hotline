@@ -6308,3 +6308,134 @@ Pre-shutdown sweep (probed, not assumed): only the operator and data-af (idle,
 wd_gen pushed, HEAD == origin) live; nothing armed; ollama idle; GPU 2 MiB; no
 mail queued; recoverable via `wakeonlan a8:a1:59:fd:4d:13`. His three frozen
 files still untouched, mtime 27 Aug 10:35. Going down.
+
+## 2026-09-01 09:44 — operator boot sweep (session on the 09:40 boot)
+
+Timer-started operator. Adopted `hotline-80`. Ran the banner-distrust checks and
+reconciled a discrepancy: the top handoff banner says power-off at 03:25, but
+`last`/journal show the box actually ran until a clean **05:27:34** `shutdown now`
+(final commit `049269c` at 05:27:14). The "going down now" Discord post at 03:27
+was premature narration; the prior operator kept working two more hours, then
+powered off cleanly. No instruction stranded in the gap — the only sudo calls
+were the operator's own (ethtool WoL check, shutdown). Box back up 09:40.
+
+**His last word anywhere: 03:24:53Z ("Yep do it… make the app messages
+verifiable") — fully handled** (shutdown executed, verifiability task logged at
+top of handoff). Nothing from him arrived while the box was off; last message in
+every channel predates the power-off.
+
+**Verified live state (probed, not status-field):** one live session (me);
+`data-af` gone with the power-off, its `wd_gen` shipped+pushed public before it
+went; nothing armed (no scheduled shutdown / `at` / crontab / watch-agent);
+hotlined `/health` ok + mirror not degraded, hotline-ios + hotline-beam active;
+GPU 2 MiB idle, ollama empty, 35 G free, no external ssh, no mail spool. His
+three frozen files (mtime 27 Aug 10:35) untouched — left alone.
+
+**Action:** nothing needed operating, so no invented work. Posted one
+consolidated hello+status to #agent-hotline-80 and surfaced the one real open
+build — phone-message verifiability — with its architectural fork: the Ed25519
+*server* half is buildable here now, but the *app* half (device-held key, per-
+message signing) is his to build+deploy and the server half is inert until it
+signs. Asked whether to build the server half speculatively or hold for a
+possibly-different auth model. Holding for his answer.
+
+## 2026-09-01 12:43 — operator boot sweep (session `2fbd5b42`, on the 12:39 boot)
+
+Timer-started operator. Adopted `hotline-80`. Ran the banner-distrust checks and
+reconciled the boot history: since the last recorded section (09:44), the box ran
+until **12:28:45**, when *he* powered it off himself — `sudo shutdown now` from
+`pts/1` (journal, `session-2.scope`), not a stranded instruction and not an agent
+action. Box rebooted **12:39**, 3 minutes before this session started. So there
+were two of his own hands-on events in the gap (shutdown, reboot) and **zero new
+messages** from him.
+
+**His last word anywhere is still 03:24:53Z** ("Yep do it… make the app messages
+verifiable") — fully handled by the 05:27 + 09:44 operators (shutdown executed,
+verifiability task logged at top of handoff). Swept every guild channel for a
+newer human message: newest human post is that 03:24:53Z one in #agent-hotline-80;
+`#agent-data-af` last human "Public" (00:11, handled — repo shipped). Nothing sent
+during either power-off, nothing unhandled.
+
+**Verified live state (probed, not status-field):**
+- One live session — me (`hotline --list`: pid 1014 only). The `--agents`
+  *registry* still lists data-af/data-66/data-89/data-bd/data-75/hotline-ios as
+  `[working]`, but those are **stale records of dead sessions**, not live or
+  stuck agents — nobody is waiting on them. Left them to auto-expire (keep-days 3)
+  rather than reap channels that hold his history.
+- Nothing armed: no scheduled shutdown (`/run/systemd/shutdown/` empty), no
+  crontab, no `at`, no watch-agent/poweroff process.
+- Daemons healthy by probe, not by `is-active`: `hotlined` `/health` →
+  `{"ok":true,"mirror_degraded":false}` on 8788; iOS message daemon listening on
+  8789 (tailnet+localhost); installer server on 8790. (First `/health` curl came
+  back empty — a cold-boot race at 3 min uptime, not a fault; retried and it was
+  up.)
+- GPU 2 MiB idle, ollama empty, 35 G free, no external ssh.
+- His three frozen `.py`/test files (provenance.py, router.py, test_provenance.py)
+  untouched at 27 Aug 10:35 — left alone.
+
+**Action:** nothing needed operating, so no invented work and no build resumed
+(PLAN.md is background). The single open thread — the phone-message-verifiability
+fork the 09:46 operator posted (build the Ed25519 *server* half now vs. hold for a
+possibly-different auth model) — is a question addressed to him and still
+unanswered; he came to the box and rebooted without answering it, so it stays his.
+Not repeating it (no spam). Posted one consolidated hello to #agent-hotline-80 and
+am holding.
+
+## 2026-09-01 12:53 — answered his question: what woke the 09:40 boot
+
+He asked (verified `93569543`, 10:51:42Z) what woke the box for the 09:40 boot.
+Traced it: ruled out RTC/schedule (no wakealarm armed/set, no wake timer/cron,
+irregular boot times); ruled out arch as sender (arch was itself off — its last
+atuin command was `sudo shutdown now` 00:07:56, next command 12:28); no console
+presence on the box until his 12:28 remote ssh-in to shut it down. NIC has
+`Wake-on: g`, so mechanism = a WoL magic packet (phone/other LAN device) or the
+physical power button — undistinguishable from S5 logs. Answered in-channel,
+leaning WoL, and asked him to confirm which if he remembers.
+
+## 2026-09-01 13:15 — built the phone-message-verifiability SERVER half
+
+He answered the fork ("to the ios app fix", verified `b7b96652`, 10:57Z) — build
+it. Built the server half of the ⭐ top task: make phone messages `--provenance`-
+checkable as *him*, not just as a key-holder.
+
+**Architecture (all in CLEAN files; his frozen 3 untouched, mtime still 27 Aug):**
+- New self-contained `src/hotline/phoneauth.py`. Ed25519 sign/verify, a canonical
+  byte format (`HOTLINE-PHONE-SIG-v1\n<key_id>\n<ts>\n<nonce>\n<body>`), enrolled
+  pubkeys in `~/.config/hotline/phone_keys.json` (authorized_keys-style), a nonce
+  store (sqlite) + timestamp window for anti-replay, and persisted receipts.
+  `verify_message` is idempotent on identical re-POSTs so the phone can poll a
+  slow turn without tripping replay; a nonce reused with *different* bytes is
+  rejected. `reverify(id)` re-checks a stored receipt against the enrolled key —
+  never trusts a stored "verified" flag.
+- **Crypto = PyNaCl, not `cryptography`.** Corrected my own first instinct: the
+  daemon runs in the 3.12 `.venv`, which already has PyNaCl 1.6.2 (transitive via
+  py-cord[voice]) and lacks `cryptography`. The "no 3.14 wheel" caveat is about
+  system 3.14, not the daemon. Zero new dependencies.
+- Wired at `daemon.py` (`_phone_origin`: verify a signed request, persist a
+  receipt, stamp `Origin(kind="phone", extra={receipt, phone_verified})`; unsigned
+  keeps the old honest key-holder label; a bad signature is logged and NOT
+  laundered into good standing), `pool.ask_soft` (now threads `origin`), and
+  `cli._check_provenance` (`hotline --provenance phone:<id>` and the kind=phone
+  header form → phoneauth). Provenance.py's serializer already emits `extra`, so
+  the receipt reaches the reader **without editing his frozen provenance.py**.
+- `python -m hotline.phoneauth enroll|list|verify` for key management.
+
+**Proven, not assumed:** 11 new tests (`tests/test_phoneauth.py`, simulated phone
+key, isolated tmp stores) — valid/tampered/wrong-signer/unknown-key/stale/replay/
+idempotent-poll/tampered-receipt. Full suite **501 green** (was 490). ruff+mypy
+clean on my files (5 pre-existing ruff errors in mirror.py/pager.py are not mine).
+Live end-to-end via the real CLI + daemon helper: signed→`VERIFIED` exit 0 (both
+`phone:<id>` and full header on stdin), unsigned→key-holder, tampered→refused. No
+pollution of his real config (used env-redirected stores; removed the test key).
+
+**App half is his** — `iphone/PHONE-VERIFY.md` has the exact format, a Swift/
+CryptoKit snippet, and enrollment. **Caveat flagged:** the iOS *Shortcut* can't
+sign Ed25519 natively; signing belongs in the native app (or a Scriptable helper),
+so the server half is inert until the native app signs. Unsigned traffic is
+unchanged meanwhile.
+
+**Left for his decision:** (1) commit/push — everything is uncommitted and
+staged-by-path ready; his frozen 4 stay untouched; his call whether I commit my
+new files or he folds it in. (2) `hotlined` restart to activate the new code —
+non-destructive but it's his phone bridge, so I left it running the current
+(unsigned-identical) code pending his word.
