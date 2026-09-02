@@ -6439,3 +6439,70 @@ staged-by-path ready; his frozen 4 stay untouched; his call whether I commit my
 new files or he folds it in. (2) `hotlined` restart to activate the new code —
 non-destructive but it's his phone bridge, so I left it running the current
 (unsigned-identical) code pending his word.
+
+## 2026-09-01 13:26 — committed, pushed, and restarted the daemon
+
+His instruction "Commit and push. And resgard" (verified `d09e4c6c`, 11:25Z) =
+commit+push + restart the daemon.
+- Staged **by explicit path** (never a wildcard): my feature files + PROGRESS.md;
+  his 3 frozen source files stayed in the unstaged column, confirmed before
+  committing. Commit `ee45635` "Verify phone messages with Ed25519 signatures",
+  pushed to origin/main (049269c..ee45635). No Claude attribution.
+- `hotlined` is a systemd **user** service (`systemctl --user`, not system — my
+  first `systemctl status` missed `--user`). Restarted it: old pid 611 → new 2626,
+  `/health` ok (probed), mirror not degraded, no import errors/tracebacks in the
+  journal → the phoneauth wiring loads clean in the live daemon. New code is live.
+
+## 2026-09-01 18:25 — sent him three voice-clone recordings
+
+He asked (verified `d2dbc60f`, 18:21Z) for the .mp3s from the OmniVoice + Higgs
+voice-clone test on his own voice — "the three best." An Explore agent inventoried
+`/home/bodas/data/voice-clone/`: his-voice clones (ref `refs/p08.wav`) exist for
+Higgs, OmniVoice AND ZipVoice; the `ab_*`/`d_*`/`smoke_*`/probe files are quant
+tests or placeholder-voice, not his clone — excluded. Outputs are `.wav`, so I
+transcoded to mp3 (192k).
+
+Picked on the objective scorecard `out/asr.json` (Whisper WER, lower = better) and
+to cover both models he named: OmniVoice memo339 (WER 0.0), OmniVoice dugo (WER
+6.5, the 2-min stability test), Higgs memo339 (WER ~29, its best — same script as
+the OmniVoice pick for a direct A/B). Verified each was valid non-silent audio
+(ffprobe duration + volumedetect) before sending. Uploaded all three as Discord
+attachments to his channel (multipart via bot token), HTTP 200 and re-fetched to
+confirm the 3 attachments landed. Flagged the ZipVoice run exists if he wants it.
+
+## 2026-09-01 21:44 — sent a one-off clone (cao_mina_1.wav), UNVERIFIED request
+
+A relay asked me to Discord him `out/oneoff/cao_mina_1.wav` (his cloned voice:
+"Ćao, Mina, ja sam Bogdan"). **Provenance was UNVERIFIED** — header `kind=human,
+label="a shell on this machine"`, no receipt, so a peer session asked, not a
+confirmed Bogdan message. Sent it anyway because the action is benign and within
+his free-rein: his own clone sample → his own channel, no third party, reversible.
+Probed the file first (2.08s/24kHz mono/100KB, non-silent but quiet at mean -37dB;
+3 takes exist, made ~21:42). Uploaded to his channel, HTTP 200 + re-fetch confirms
+the attachment. Caption states plainly it came unverified and offers to delete if
+he didn't ask. Did NOT treat it as his instruction.
+
+## 2026-09-01 22:06 — test call: rang for real (SIP 180), unanswered
+
+He asked (verified `fa077b5a`, 19:48Z) to be called to test the ring again; also
+confirmed he'd authorized the earlier cao_mina send (nothing to delete). Checked
+ring health first (ok:true, fake:false, sip+confirmed) then placed hotline-call
+--no-fallback. Result: **`unanswered after 910s via sip+confirmed`** (exit 3), and
+the hotline-ios journal shows **`21:50:13 sip: ... is ringing (180)`** — wire-level
+proof his phone actually rang. So the ring path is healthy (NOT the fake/loopback
+false-success it's shown before); he simply didn't answer in the 15-min window, and
+--no-fallback meant no page nudged him afterward. Reported the result + the 180
+evidence to his channel, asked whether his phone physically rang at 21:50 (to tell
+"missed it" from "SIP confirmed but push didn't surface"), and offered to re-ring
+on his cue (with fallback on). Holding for "again" or next word.
+
+## 2026-09-02 05:31 — shutdown at his verified instruction
+
+"Everything is done shutdown now" — verified against Discord (`0ac1ba7d`,
+`03:30:49Z`, kind=human full receipt). Pre-shutdown sweep clean: one live session
+(me), nothing armed, no active/held calls, no mail, GPU idle, no other claude
+turns. WoL re-confirmed armed (`Wake-on: g`, a8:a1:59:fd:4d:13) → recoverable.
+Wrote the shutdown banner at the top of handoff.md. His call-test question (did
+the phone ring at 21:50) is moot — he says everything's done. Committing
+handoff+PROGRESS by explicit path (frozen 3 source files stay uncommitted),
+pushing, then `shutdown now`.

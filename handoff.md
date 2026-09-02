@@ -1,5 +1,42 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-02 05:31 CEST — WRITTEN AT A POWER-OFF
+>
+> **READ THIS FIRST, AND THEN DISTRUST IT.** Written as the box goes down at his
+> verified instruction (*"Everything is done shutdown now"*, `kind=human` Discord,
+> `0ac1ba7d`, `03:30:49Z`). A banner written at shutdown is only true until the
+> machine comes back. Before believing a word below, run:
+>
+> ```
+> tail watchdog.log
+> last -x -n 12 reboot shutdown
+> grep -n "^## " PROGRESS.md | tail
+> ```
+>
+> If any shows activity after 02 Sep 05:31, this banner is stale and the newest
+> `PROGRESS.md` section is the truth.
+>
+> **State at power-off:** one live session only (the operator). Nothing armed
+> (no scheduled shutdown / at / cron / watch-agent), no active or held calls, no
+> mail queued, GPU 2 MiB idle, ollama empty. **His three frozen source files
+> (provenance.py, router.py, test_provenance.py) still untouched, mtime 27 Aug
+> 10:35.** Recoverable: `enp4s0` UP, `Wake-on: g`, `wakeonlan a8:a1:59:fd:4d:13`.
+>
+> **This session (12:39 boot → 05:31 shutdown) shipped:**
+> 1. **The phone-message verifiability SERVER half** — new `phoneauth.py` (Ed25519
+>    sign/verify, timestamp+nonce anti-replay, persisted receipts, `hotline
+>    --provenance phone:<id>`), wired into `daemon.py`/`pool.ask_soft`/`cli.py`.
+>    Committed `ee45635`, pushed to origin/main, and `hotlined` was **restarted
+>    onto the new code**. His frozen `provenance.py` was NOT touched. The app half
+>    (native iOS signing) is his; contract in `iphone/PHONE-VERIFY.md`. See
+>    [[phone-verifiability-server-half-exists]].
+> 2. **Sent him files over Discord**: 3 voice-clone mp3s (OmniVoice/Higgs, picked
+>    on the `out/asr.json` WER scorecard) + the `cao_mina_1.wav` one-off.
+> 3. **A test call** — rang for real (`sip+confirmed`, SIP **180 Ringing** at
+>    21:50:13 confirms his phone actually rang, NOT the fake-ring failure mode),
+>    but went unanswered (exit 3). The "did your phone physically ring at 21:50?"
+>    question was open when he said everything's done — treat as closed.
+
 > ## STATUS AS OF 2026-09-01 03:25 CEST — WRITTEN AT A POWER-OFF
 >
 > **READ THIS FIRST, AND THEN DISTRUST IT.** Written as the box goes down at his
