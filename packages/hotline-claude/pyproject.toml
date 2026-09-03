@@ -19,7 +19,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
 ]
-# router.py (frozen, moved here verbatim) drives session delivery through the
+# router.py (moved here verbatim) drives session delivery through the
 # same Router that hotline-core's own pager/bot/CLI use, and pool.py/daemon.py
 # need hotline's Discord bot, channel manager, provenance and pager on top of
 # that. hotline and hotline-claude are mutually coupled at the module level --

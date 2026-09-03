@@ -1,8 +1,8 @@
-"""Forever shim: `router.py` is one of hotline's three frozen files (see the
-root README) and this split did not edit its content -- it moved verbatim to
-hotline-claude because it drives the session registry, control sockets, hooks
-and transcripts directly, and `pool.py` in that package holds a `Router` and
-drives its full delivery API.
+"""Forever shim: `router.py`'s content moved verbatim to hotline-claude,
+because it drives the session registry, control sockets, hooks and transcripts
+directly, and `pool.py` in that package holds a `Router` and drives its full
+delivery API. Moving it was a placement decision about those dependencies, not
+a rewrite -- the content is byte-identical to what used to be here.
 
 This aliases `sys.modules["hotline.router"]` to the real
 `hotline_claude.router` module object rather than copying its names -- see

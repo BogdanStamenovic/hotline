@@ -22,9 +22,9 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
 ]
-# hotline-core's own router.py/provenance.py are frozen and did not move, but
-# router.py's *content* still imports the registry/socket/hook/transcript
-# modules that DID move to hotline-claude (see hotline-claude/README.md) --
+# provenance.py stays in core (every relay checks messages), but router.py's
+# content moved to hotline-claude and imports the registry/socket/hook/
+# transcript modules that went with it (see hotline-claude/README.md) --
 # this dependency is real, not a workspace formality.
 dependencies = ["hotline-claude"]
 

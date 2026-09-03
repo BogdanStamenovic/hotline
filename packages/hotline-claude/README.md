@@ -10,11 +10,10 @@ the `Stop` hook (`stops.py`), the `PreToolUse` denylist guard (`guard.py`), and
 the `AskUserQuestion` -> Discord bridge (`ask.py`). `hotlined`, the daemon the
 iPhone Shortcut talks to, lives here too (`daemon.py`, `httpd.py`).
 
-`router.py` also lives here. It is one of hotline's three frozen files (see
-the root README) and this split did not edit it -- it moved verbatim because
-its content drives the session registry, control sockets, hooks and
-transcripts in this package directly, not because "routing" is conceptually
-infrastructure rather than comms. That is also why this package depends on
+`router.py` also lives here. It moved verbatim -- byte-identical, not
+rewritten -- because its content drives the session registry, control sockets,
+hooks and transcripts in this package directly, not because "routing" is
+conceptually infrastructure rather than comms. That is also why this package depends on
 `hotline` rather than the other way around only: `pool.py` and `daemon.py`
 need `hotline`'s `Router`, Discord bot, channel manager, pager and provenance
 checker on top of what lives here. The two packages are genuinely coupled at
