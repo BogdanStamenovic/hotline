@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hotline-admin"
+version = "0.1.0"
+description = "Admin plugin for hotline: role granting, discovered via the hotline.plugins entry point"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Bogdan Stamenovic" }]
+keywords = ["claude", "hotline", "admin", "plugin"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+]
+# hotline core discovers this plugin at runtime via the entry point below and
+# never imports it directly -- these are real imports the other direction
+# (this plugin uses hotline's provenance/config and hotline-claude's registry).
+dependencies = ["hotline", "hotline-claude"]
+
+[project.entry-points."hotline.plugins"]
+grant = "hotline_admin.grant:register"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hotline_admin"]
+
+[tool.uv.sources]
+hotline = { workspace = true }
+hotline-claude = { workspace = true }

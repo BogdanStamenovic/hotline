@@ -22,7 +22,11 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
 ]
-dependencies = []
+# hotline-core's own router.py/provenance.py are frozen and did not move, but
+# router.py's *content* still imports the registry/socket/hook/transcript
+# modules that DID move to hotline-claude (see hotline-claude/README.md) --
+# this dependency is real, not a workspace formality.
+dependencies = ["hotline-claude"]
 
 [project.optional-dependencies]
 discord = ["py-cord[voice]>=2.6", "aiohttp>=3.9"]
@@ -33,12 +37,23 @@ dev = [
   "pytest-asyncio>=0.23,<2",
   "ruff>=0.6,<1",
   "mypy>=1.11,<3",
+  # Not a runtime dependency of hotline core -- hotline discovers this plugin
+  # at runtime via the hotline.plugins entry point, never imports it. Listed
+  # here only so a normal dev install (`uv sync --extra dev`) has it present
+  # to test against, matching how it's actually deployed on this box.
+  "hotline-admin",
 ]
 
 [project.scripts]
 hotline = "hotline.cli:main"
-hotlined = "hotline.daemon:main"
 hotline-page = "hotline.page_cli:main"
+
+[tool.uv.workspace]
+members = ["packages/hotline-claude", "packages/hotline-admin"]
+
+[tool.uv.sources]
+hotline-claude = { workspace = true }
+hotline-admin = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hotline"]

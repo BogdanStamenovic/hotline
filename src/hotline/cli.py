@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
+import importlib.metadata
 import json
 import os
 import sys
@@ -198,7 +199,7 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
 
     if args.grant:
         name, role, where = args.grant
-        return _grant_role(name, role, where, registry, log)
+        return _dispatch_grant(name, role, where, registry, log)
 
     if args.provenance:
         return _check_provenance(args.provenance)
@@ -533,45 +534,25 @@ def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str],
     return 0
 
 
-def _grant_role(
+def _dispatch_grant(
     name: str, role: str, where: str, registry: Registry, log: Callable[[str], None]
 ) -> int:
-    """`--grant NAME ROLE <message>` -- record a role and where it was granted.
-
-    The message is required, not optional. A role recorded without one is an
-    assertion this machine makes about itself, and the entire value of the role
-    is that a reader can check the delegation against Discord instead.
+    """`--grant` is admin surface, not core: it lives in the hotline-admin
+    plugin and is found here through the `hotline.plugins` entry point rather
+    than imported directly, so a `hotline` install with no hotline-admin
+    doesn't crash -- it just doesn't have this verb.
     """
-    parts = [p for p in where.replace("https://discord.com/channels/", "").split("/") if p]
-    if len(parts) < 2 or not all(p.isdigit() for p in parts[-2:]):
+    matches = [
+        ep for ep in importlib.metadata.entry_points(group="hotline.plugins") if ep.name == "grant"
+    ]
+    if not matches:
         print(
-            "hotline: error: pass the Discord message where he granted it -- a "
-            "message link, or 'channel_id/message_id'. A role with no receipt is "
-            "just this machine vouching for itself.",
+            "hotline: error: --grant requires hotline-admin, which is not installed.",
             file=sys.stderr,
         )
-        return 2
-    channel_id, message_id = parts[-2], parts[-1]
-
-    env = load_env()
-    verdict = verify(
-        {"kind": "sys-admin", "label": name, "granted_by": message_id, "granted_in": channel_id},
-        token=env.get("HOTLINE_BOT_TOKEN"),
-        gated_user_id=env.get("DISCORD_USER_ID"),
-    )
-    if not verdict.ok:
-        # Refuse rather than record-and-warn. A role that half-verified would be
-        # read as a role.
-        print(f"hotline: error: not granting it -- {verdict.summary}", file=sys.stderr)
         return 1
-
-    agent = registry.grant(name, role, message_id, channel_id)
-    if agent is None:
-        print(f"hotline: error: no agent called {name!r}. Try --agents.", file=sys.stderr)
-        return 1
-    log(f"granted: {agent.describe()}")
-    print(verdict)
-    return 0
+    grant_role = matches[0].load()()
+    return grant_role(name, role, where, registry, log)
 
 
 def _check_provenance(record: str) -> int:

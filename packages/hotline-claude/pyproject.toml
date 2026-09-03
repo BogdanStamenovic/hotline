@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hotline-claude"
+version = "0.1.0"
+description = "Session-orchestration infrastructure underneath hotline: spawning, pooling, hooks, and the session registry"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Bogdan Stamenovic" }]
+keywords = ["claude", "hotline", "orchestration", "ipc"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+]
+# router.py (frozen, moved here verbatim) drives session delivery through the
+# same Router that hotline-core's own pager/bot/CLI use, and pool.py/daemon.py
+# need hotline's Discord bot, channel manager, provenance and pager on top of
+# that. hotline and hotline-claude are mutually coupled at the module level --
+# real, not accidental -- so this is a real dependency, not a workspace nicety.
+dependencies = ["hotline"]
+
+[project.optional-dependencies]
+discord = ["hotline[discord]"]
+
+[project.scripts]
+hotlined = "hotline_claude.daemon:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hotline_claude"]
+
+[tool.uv.sources]
+hotline = { workspace = true }
