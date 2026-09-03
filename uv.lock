@@ -795,6 +795,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+admin = [
+    { name = "hotline-admin" },
+]
 dev = [
     { name = "hotline-admin" },
     { name = "mypy" },
@@ -819,6 +822,7 @@ voice = [
 requires-dist = [
     { name = "aiohttp", marker = "extra == 'discord'", specifier = ">=3.9" },
     { name = "faster-whisper", marker = "extra == 'voice'", specifier = ">=1.0" },
+    { name = "hotline-admin", marker = "extra == 'admin'", editable = "packages/hotline-admin" },
     { name = "hotline-admin", marker = "extra == 'dev'", editable = "packages/hotline-admin" },
     { name = "hotline-claude", editable = "packages/hotline-claude" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11,<3" },
@@ -832,7 +836,7 @@ requires-dist = [
     { name = "silero-vad", marker = "extra == 'voice'", specifier = ">=5.1" },
     { name = "soxr", marker = "extra == 'voice'", specifier = ">=0.5" },
 ]
-provides-extras = ["discord", "voice", "dev"]
+provides-extras = ["admin", "discord", "voice", "dev"]
 
 [[package]]
 name = "hotline-admin"
