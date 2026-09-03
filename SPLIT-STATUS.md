@@ -15,6 +15,11 @@ aee2180  Stop documenting the withdrawn "frozen files" rule as live
 2f559e6  Split hotline into hotline / hotline-claude / hotline-admin
 ```
 
+Pushed to `origin/split-packages` (head `a34b6b0`). `main` has since moved to
+`a2488f8`, but that commit is PROGRESS.md/handoff.md only — no code — so this
+branch is not stale and does not need rebasing. Verified with `git merge-tree`:
+it still merges into current `main` with no conflicts.
+
 Working tree clean. Local durability: `backups/split-packages-final.bundle`
 (verified, complete history — `git clone` it if `.git` is ever lost).
 
