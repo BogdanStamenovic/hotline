@@ -6506,3 +6506,196 @@ Wrote the shutdown banner at the top of handoff.md. His call-test question (did
 the phone ring at 21:50) is moot — he says everything's done. Committing
 handoff+PROGRESS by explicit path (frozen 3 source files stay uncommitted),
 pushing, then `shutdown now`.
+
+## 2026-09-02 09:43 — operator boot sweep (session on the 09:40 boot)
+
+Timer-started operator after the 09:40 boot (box was down 05:32→09:40, its own
+power-on — no WoL evidence in the journal head; this is the recurring ~09:40
+boot). Adopted hotline-80.
+
+**Verified, not relayed:**
+- His last word: *"Everything is done shutdown now"* — matched the pre-shutdown
+  banner (Discord `0ac1ba7d`, `03:30:49Z`, kind=human). Nothing new in
+  #agent-hotline-80 or #general since; nothing arrived while the box was off
+  (channel history checked past the 07:40Z power-off gap — clean).
+- Only live claude process is me (pid 866 + tmux 865). The six `[working]`
+  records in `hotline --agents` (data-af, hotline-ios, data-66, data-89,
+  data-bd, data-75) are stale pre-shutdown — no agent process is running.
+- `hotlined` restarted with the box (PID 610, active since 09:40:58), `/health`
+  ok, mirror not degraded.
+- Nothing armed: no crontab, no `at` (atq absent), no `/run/systemd/shutdown`.
+- HEAD `c83ab9c`; the 3 frozen files (provenance.py, router.py,
+  test_provenance.py) still mtime 27 Aug 10:35 — his intentional uncommitted work.
+
+**Nothing to operate.** Posted one consolidated hello to #agent-hotline-80
+stating the above; open items are all his (native iOS signing — server half
+live; llama-turbo3 keep/delete; the 3 frozen files + acceptance test). iOS
+re-sign clock (Thu 03 Sep 18:33) already flagged once — not nagging per
+[[weekly-resigning-is-not-a-problem-for-him]]. Holding.
+
+## 2026-09-02 14:00 — held turbo3; spawned voice-debug agent at his request
+
+His verified instruction (Discord `1544677287209869403`, `11:56:03Z`, VERIFIED via
+--provenance): "Hold out on testing the turbo3 just yet. First spawn me an agent
+i can talk to to help me debug the voice cloner i was building yesterday."
+
+- **turbo3:** answered his prior question first (probed: build works — binary runs
+  post-reboot, turbo3 cache types compiled in, proven 262k/1600 MiB on 31 Aug — but
+  the manual :8791 server did NOT survive the 09:40 reboot and there's no unit).
+  Now **parked** per his instruction; did not start it.
+- **Voice cloner:** located it at `~/data/voice-clone` — the `reci` pipeline
+  (reci_gen/post/pick + reci_run.sh), a `profiles/` system (save_profile.py,
+  profiles.py; bogdan-stamenovic, mihajlo-jovanovic, vuk-prstohvat…), models
+  OmniVoice + higgs-v3 + ZipVoice, venvs .venv-omni/.venv-higgs. He touched
+  bench/*.py through 05:28 and a profile at 13:49 today.
+- **Spawned `voice-debug`** (Sonnet 5 — his rule for talk-to agents, and it dodges
+  the Opus-5 cyber-classifier wedge that bit data-af): detached tmux
+  `hl-voice-debug`, HOTLINE_SPAWNED=1, cwd `~/data/voice-clone`, pid 10369. Seeded
+  to `hotline --declare` (got channel #agent-voice-debug / 1544677961121271861),
+  read the project + yesterday's #general WITHOUT assuming the bug, then greet him
+  and ask what's broken. Pointed him there from #agent-hotline-80. One voice: it
+  owns the voice-cloner conversation.
+
+## 2026-09-03 19:02 — operator boot sweep after a crash; found & fixed the phone bridge down
+
+Booted 18:57 (crash-reboot; `last -x` shows shutdowns/boots at 12:53→15:34→18:56→18:57
+today — the box has been unstable all afternoon). Watchdog respawned the operator.
+Adopted `hotline-80`, read the handoff (top banner 09-02 05:31 — **stale**, three
+boots old) and Discord back to his last word.
+
+**His last actual instruction** (Discord, 09-03 13:40Z, over `hotline-c5`):
+*"Adopt the hotline 80 sys admin identity, check the hotline repo for the handoff.
+The computer crashed so you may need to recover it somehow."* At the time `hotline-c5`
+hit repeated `API Error: 529 Overloaded` and couldn't act; he spawned `data-5b` to
+check it. Nothing since but voice-join announcements (16:52–16:59) and a session list.
+So the recovery he asked for is the live task.
+
+**FOUND: the phone bridge (`hotline-ios.service`, port 8789 — roster, phone-app
+messages, SIP ring) was crash-looping, restart #45.** Not a bind/tailscale problem
+(100.72.2.62 is up). Real cause:
+
+```
+ModuleNotFoundError: No module named 'nacl'
+  hotline_ios.daemon → from hotline.config import load_env
+  → hotline/__init__.py → cli.py:22 → phoneauth.py:45 → from nacl.exceptions import BadSignatureError
+```
+
+The 09-01 phone-verifiability work put `phoneauth` (hard nacl import) into `cli.py`'s
+import chain. The **ios server runs from its own venv** (`hotline-ios/server/.venv`,
+py3.12) which imports the `hotline` package transitively but never had PyNaCl. It
+survived on the already-loaded process until a 09-03 crash restarted the unit fresh —
+then it could never come back up. **His phone bridge (calls + phone-app messages) was
+down through every 09-03 reboot.** This is the missing dep, distinct from
+[[hotline-daemon-runtime-has-pynacl-not-cryptography]] which is hotline's *own* venv.
+
+**FIX:** `uv pip install --python hotline-ios/server/.venv/bin/python pynacl==1.6.2`
+(matches hotline's own venv version; pulled cffi 2.1.1 + pycparser 3.0). Venv-local,
+reversible. `reset-failed` + `restart` → `active (running)`, clean since 19:02:10, no
+more nacl tracebacks. Probed the endpoint, not the status field:
+`ring_ready:true, transport:sip+confirmed, fake:false, hook_reachable:true,
+degradations:[]`, listening on 100.72.2.62:8789 + 127.0.0.1:8789. Phone bridge restored.
+
+**Rest of the sweep:**
+- Only the operator is alive. `data-5b`, `voice-debug`, `hotline-c5`, turbo3 all died
+  in the crash — the `[working]` rows in `--agents` are stale registry records.
+- Nothing armed: no /run/systemd/shutdown, no at, no cron, no watch-agent.
+- `hotlined` (8788) healthy; `mirror_degraded:true` is a **stale sticky flag** —
+  `mirror.json` last_failure_at is 10:09 (a pre-crash boot), the hook endpoint now
+  returns 200, so it clears on the next mirror event. Not active.
+- His three frozen files (provenance.py, router.py, test_provenance.py) untouched,
+  mtime 27 Aug 10:35. HEAD `c83ab9c` == origin/main.
+
+**Open — his:** whether to respawn `voice-debug` (voice-cloner debug agent, died in
+crash) and/or restart turbo3 testing (he parked it 09-02); the long-standing frozen
+files + acceptance test, llama-turbo3 keep/delete, CLAUDE.md snapshot line.
+
+## 2026-09-03 19:47 — big delegation: spawned 4 Sonnet agents for the track/wake/modularize task
+
+Verified his instruction (`bfa463f4`, 17:40Z, kind=human). He handed a large multi-module
+build and explicitly said: decompose it, spawn an agent per module, and leave myself
+work-free because he wants to talk about something else. So I orchestrated and stepped back.
+
+**Decomposition (all workers Sonnet 5 per his rule + to dodge the Opus-5 cyber-classifier;
+own channels; parented to hotline-80):**
+1. **dealhunter** (~/data) — the "manager that spins up sonnets." Immediate value for his
+   "fast fast" laptop need: fan out Sonnet scouts across Balkans marketplaces / eBay /
+   refurb business-laptop channels, return a ranked underpriced shortlist to Discord.
+   Read-only — buying gates on his kind=human approval. Also the live reference run for `track`.
+2. **wake-dev** (~/data/wake) — build the `wake` ownbox tool: server+device installs, synced
+   wake-task DB (referencing ~/.local/bin/profiler), pluggable wake backend (rtcwake/WoL/timer),
+   hotline-ios integration. Publishes its CLI contract early so track can design against it.
+3. **track-dev** (~/data/track) — build the `track` ownbox tool: assignment -> scheduled
+   wakeups (via wake) -> Sonnet scouts -> underpriced finds -> dedup/score over time ->
+   summary via `hotline` to Discord. May stub wake in tests so it isn't blocked.
+4. **hotline-split** (~/data/hotline, branch) — modularize: `hotline`=call/page/discord core,
+   `hotline-claude`=session infra, `hotline-admin`=admin plugin. HIGH RISK (live codebase the
+   two daemons + the operator import). Charter forces: snapshot first, branch-only, re-export
+   shims so `import hotline` + every CLI verb keep working, frozen 3 files untouched, tests
+   green, and NO daemon restart / merge to main without a green suite + operator go. Plan-first.
+
+**Guardrails baked into every seed:** outward/irreversible actions (spending money, public
+repo/push, contacting a seller) require his fresh kind=human approval, surfaced to their own
+channel — no laundering through the operator. Never fabricate a green test or a listing.
+
+Box has 7.3Gi RAM free + 11Gi swap with all 5 sessions up; it crashed repeatedly earlier today
+so I'm watching load. Tree: hotline-80 + 4 workers (dealhunter will spawn scout children) +
+the kept-but-not-started hotline-ios record. Reported the whole plan to him and freed myself
+to talk, per his instruction.
+
+## 2026-09-03 22:30 — CLAUDE.md rewritten from a 90-question interview; unattended 08:00 run orchestrated
+
+### CLAUDE.md rewrite (his explicit task)
+Interviewed him across 90 graded questions on the doc's ideology, fact-checked every
+checkable claim against the box, read the Pigion README at his direction, and fanned out
+three Sonnet researchers to generalize principles from his own projects (he said: "do not
+reference projects, read them to generalize what i tried to show you by them"). Old doc
+backed up to ~/.claude/CLAUDE.md.bak.20260903-222154.
+
+Biggest corrections he made:
+- **"I am not a monolith myself. I am a team member as well as you."** The doc now opens on
+  that: argue with him, research to win the argument, resolve by compromise. The old "once he
+  gives a reason, execute without further argument" was *another session's invention* — deleted.
+- **The anti-spam rule was backwards.** He PREFERS constant narration; what he dislikes is
+  being asked trivia. Heartbeat is event-based, at branching points.
+- **"No monolith" is about UNRELATED CONCERNS**, not file size or coupling.
+- **Sonnet is for "research this / look at this / try this"; anything that builds real code is
+  Opus, always.** I had misread this and put Sonnets on a live refactor — he stopped everything.
+- **Frozen files were never his.** See below.
+- Impersonation: allowed, but ask first every time; then present by effect.
+- Fact fixes: timeshift IS installed, pacman cache is 338 not ~1750, 11 GiB swap, host is
+  archserver (a desktop, NOT an always-on server).
+
+### The "frozen files" were mine all along
+His words: *"they are frozen cuz like a week ago i just stopped you to do something else. i
+guess the info degraded into worked by me."* The three files were MY unfinished work; a
+prohibition outlived its reason and the gap got backfilled with an invention that misled
+several sessions for a week. The work was in fact complete and green — committed as ce8a211
+(reply contract on messages someone is waiting on), 501 tests pass, pushed. Memory corrected;
+hotline-split told the rule is dead (it has already committed aee2180 removing it from docs).
+Deleted wake-bogdan.sh and the wake-from-pc skill at his instruction (call-bogdan supersedes).
+
+### Unattended 08:00 run — orchestrated, not built by me
+He left with: "tomorrow pc wakesup when intended does the research shutsdown." Architecture is
+his: **Pigion = wake server, archserver = wake device, track runs here.**
+Verified before briefing: Pigion reachable (Pi Zero 2 W, 46d uptime, 218 MiB free, py3.13.5,
+no uv), **Pigion 192.168.1.8 and archserver 192.168.1.139 are on the SAME LAN** so WoL works,
+`wakeonlan` already installed there, MAC a8:a1:59:fd:4d:13, rtc0/wakealarm present,
+passwordless sudo on both. `wake` already builds a working CLI (add/list/cancel/sync/agent/
+serve/fire).
+
+- **wake-dev** owns the power lifecycle: server on Pigion under systemd, device here, TWO
+  independent wake paths (server-side WoL primary, local RTC alarm backup), shutdown-after-task,
+  and guards.
+- **track-dev** owns the research: ONE non-interactive command = one pass -> Discord -> exit 0.
+  Assignment is the real one (powerful cheap laptop). Publish the command string early so
+  wake-dev can wire against it.
+- **Hazard I caught and sent to wake-dev:** hotline-watchdog.timer is enabled, OnBootSec=2min /
+  OnUnitActiveSec=5min, and respawns the operator on every boot. A naive "is any agent running?"
+  shutdown guard would therefore ALWAYS see the operator and never power off — the box would
+  sit on all day. Guard must ignore the operator, block on humans and real work, and stop the
+  watchdog timer for the shutdown window only.
+- Rehearsal required: a real poweroff->wake->run->poweroff cycle **with the operator alive**,
+  since that is the actual 08:00 state. It kills every session; recoverable via watchdog + WoL
+  + RTC. I gate the timing so agents commit first.
+
+Wake time 08:00 CEST is MY assumption — he never named one, and I told him so.

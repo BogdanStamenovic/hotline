@@ -1,5 +1,62 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-03 22:30 CEST — AN UNATTENDED RUN IS ARMED FOR 08:00
+>
+> **READ THIS FIRST, AND THEN DISTRUST IT.** A banner is only true until the machine
+> changes underneath it. Verify with `tail watchdog.log`, `last -x -n 12 reboot shutdown`,
+> `grep -n "^## " PROGRESS.md | tail`, and `hotline --list` before believing a word.
+>
+> ### IF YOU ARE THE OPERATOR WAKING UP ON 2026-09-04 — DO NOT INTERFERE
+> The box is *meant* to be awake, and it is *meant* to power itself off again. Bogdan asked
+> for this: **wake at 08:00 -> `track` runs one research pass -> posts to Discord -> shut down.**
+> - **Do not cancel the shutdown, and do not "rescue" the box from powering off.** That is the
+>   task succeeding, not a fault.
+> - **Do not start long work that would block it.** The shutdown guard blocks on a logged-in
+>   human and on real agent work; it deliberately ignores the operator, because
+>   `hotline-watchdog.timer` (OnBootSec=2min, every 5min) respawns the operator on EVERY boot
+>   and would otherwise keep the box up forever.
+> - If 08:00 came and went with no Discord post, the run FAILED — say so plainly, do not
+>   invent a result. Check `wake list`, the device unit's journal, and Pigion
+>   (`ssh bodas@pigion`, the wake server lives there).
+>
+> **Architecture (his, not negotiable):** Pigion = wake SERVER (always-on Pi Zero 2 W,
+> 192.168.1.8, ~218 MiB RAM). archserver = wake DEVICE (192.168.1.139, MAC
+> a8:a1:59:fd:4d:13). Two independent wake paths: server-side WoL primary (same LAN,
+> `wakeonlan` already on Pigion), local RTC alarm backup (`/sys/class/rtc/rtc0/wakealarm`).
+> Passwordless sudo on both hosts; `ssh bodas@pigion` is passwordless.
+> **08:00 is the operator's assumption, not his instruction** — he never named a time.
+>
+> ### CLAUDE.md WAS REWRITTEN TONIGHT — re-read it, it is not what you remember
+> Rewritten from a 90-question interview with him. Old copy at
+> `~/.claude/CLAUDE.md.bak.20260903-222154`. The changes that will bite a stale session:
+> - **He is a team member, not an authority.** Argue with him; research to win the argument.
+>   "Once he gives a reason, execute without further argument" was a previous session's
+>   invention and is deleted.
+> - **Narrate constantly — he PREFERS being spammed.** What he dislikes is being asked trivia.
+>   Ask only what only he can answer. Heartbeat at branching points, event-based.
+> - **Sonnet only for research/retrieval/review. Anything that writes real code is Opus.**
+> - **"No monolith" means unrelated concerns**, not file size or coupling.
+> - Impersonation is allowed but **ask first, every time**.
+> - `wake-bogdan.sh` and the `wake-from-pc` skill are DELETED. `call-bogdan` is the escalation.
+>
+> ### THE "THREE FROZEN FILES" RULE IS DEAD — it was never real
+> His words: *"they are frozen cuz like a week ago i just stopped you to do something else. i
+> guess the info degraded into worked by me."* They were never his untouchable work; they were
+> unfinished work of *ours* that a prohibition outlived its reason for. The work was already
+> complete and green, and is now committed as **ce8a211** and pushed (501 tests pass).
+> **Treat provenance.py, router.py and test_provenance.py as ordinary files.** If any note
+> anywhere still says otherwise, that note is stale — delete it.
+>
+> **Live agents at time of writing:** `wake-dev` and `track-dev` (both Opus, building the
+> 08:00 run), `hotline-split` (Opus, modularizing hotline on branch `split-packages`, rebased
+> onto ce8a211, gated: no merge to main and no daemon restart without the operator).
+> `dealhunter` was killed by Bogdan himself — do not respawn it unless he asks; the laptop
+> hunt is now `track`'s job.
+> **Daemons:** hotlined (8788) and hotline-ios.service (8789) both active; the phone bridge
+> needs PyNaCl in its OWN venv (`~/data/hotline-ios/server/.venv`) or it crash-loops on a cold
+> start — that was fixed tonight and must survive any refactor.
+
+
 > ## STATUS AS OF 2026-09-02 05:31 CEST — WRITTEN AT A POWER-OFF
 >
 > **READ THIS FIRST, AND THEN DISTRUST IT.** Written as the box goes down at his
