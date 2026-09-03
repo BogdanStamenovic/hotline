@@ -26,6 +26,19 @@
 > Passwordless sudo on both hosts; `ssh bodas@pigion` is passwordless.
 > **08:00 is the operator's assumption, not his instruction** — he never named a time.
 >
+> ### A POWEROFF REHEARSAL WAS RUNNING WHEN THIS WAS WRITTEN (2026-09-03 ~23:00)
+> If you are booting shortly after that, **this boot may BE the rehearsal succeeding.** wake-dev
+> proved RTC and WoL wake from SUSPEND (S3) by measurement, but tomorrow's run needs wake from
+> full power-off (S5), which is a separate BIOS capability — so a real poweroff was the only
+> honest test. A boot you cannot explain is the expected outcome, not an incident.
+> **Everything was committed and pushed before it ran:**
+> hotline `main` a2488f8 · hotline `split-packages` a34b6b0 (on origin) · track b6fba6b
+> (origin/main) · wake f805904 (committed, clean, LOCAL ONLY — it has no remote, because
+> creating a public repo needs Bogdan's approval; do not push it without asking).
+> Three independent ways back if the box went dark: Pigion re-sends the magic packet every 2 min
+> for 30 min, `wakeonlan a8:a1:59:fd:4d:13` from any host on 192.168.1.0/24, and the local RTC
+> alarm. All three must fail for the box to stay off.
+
 > ### CLAUDE.md WAS REWRITTEN TONIGHT — re-read it, it is not what you remember
 > Rewritten from a 90-question interview with him. Old copy at
 > `~/.claude/CLAUDE.md.bak.20260903-222154`. The changes that will bite a stale session:
