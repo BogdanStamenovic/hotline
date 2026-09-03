@@ -21,6 +21,7 @@ from __future__ import annotations
 import sys
 
 from hotline_claude.router import (
+    MID_TURN_WINDOW,
     AmbiguousSession,
     ClaudeLaunchFailed,
     Event,
@@ -38,7 +39,7 @@ from hotline_claude.router import (
     parse_utterance,
 )
 
-__all__ = ["AmbiguousSession", "ClaudeLaunchFailed", "Event", "HotlineError", "InjectFailed", "Reply", "ReplyTimeout", "Route", "Router", "SessionNotFound", "Watch", "_why_no_reply", "describe", "mid_turn", "parse_utterance"]
+__all__ = ["MID_TURN_WINDOW", "AmbiguousSession", "ClaudeLaunchFailed", "Event", "HotlineError", "InjectFailed", "Reply", "ReplyTimeout", "Route", "Router", "SessionNotFound", "Watch", "_why_no_reply", "describe", "mid_turn", "parse_utterance"]
 
 from hotline_claude import router as _router
 

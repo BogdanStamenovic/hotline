@@ -16,6 +16,13 @@ from __future__ import annotations
 
 import sys
 
+# `pool.py` itself does `from . import standin, tmuxen`, so those submodules are
+# attributes of the real module at runtime and the test suite patches straight
+# through them (`pool_module.standin.report`). Re-imported here so the static
+# view of `hotline.pool` matches the runtime one -- without this, mypy rejects
+# `pool_module.standin` as an attribute that does not exist, on a line that
+# works fine.
+from hotline_claude import standin, tmuxen
 from hotline_claude.pool import (
     HELP_TEXT,
     ORPHAN_TIMEOUT,
@@ -26,7 +33,7 @@ from hotline_claude.pool import (
     describe_resources,
 )
 
-__all__ = ["HELP_TEXT", "ORPHAN_TIMEOUT", "RELAY_TIMEOUT", "Conversation", "Deliver", "SessionPool", "describe_resources"]
+__all__ = ["HELP_TEXT", "ORPHAN_TIMEOUT", "RELAY_TIMEOUT", "Conversation", "Deliver", "SessionPool", "describe_resources", "standin", "tmuxen"]
 
 from hotline_claude import pool as _pool
 
