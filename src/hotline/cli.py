@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import contextlib
 import importlib.metadata
 import json
 import os
@@ -199,7 +198,10 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
 
     if args.grant:
         name, role, where = args.grant
-        return _dispatch_grant(name, role, where, registry, log)
+        grant_role = _plugin_verb("grant")
+        if grant_role is None:
+            return _needs_admin("grant")
+        return int(grant_role(name, role, where, registry, log))
 
     if args.provenance:
         return _check_provenance(args.provenance)
@@ -231,20 +233,10 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
         return 2
 
     if args.adopt:
-        adopted = registry.adopt(args.adopt, session_id)
-        if adopted is None:
-            print(
-                f"hotline: error: no agent called {args.adopt!r} to adopt. "
-                "Use --agents to see them, or --declare to start a new one.",
-                file=sys.stderr,
-            )
-            return 1
-        log(f"adopted: {adopted.describe()}")
-        if adopted.channel_id is None:
-            log("it had no channel; use --declare if you want one")
-        else:
-            log(f"channel: #{channel_slug(adopted.name)}")
-        return 0
+        adopt_session = _plugin_verb("adopt")
+        if adopt_session is None:
+            return _needs_admin("adopt")
+        return int(adopt_session(args.adopt, session_id, registry, log))
 
     if args.voice:
         speaker = registry.get(session_id)
@@ -270,36 +262,24 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
         return 0
 
     if args.declare:
-        name = _session_name(session_id) or session_id[:8]
-        agent = registry.declare(
-            session_id,
-            name,
-            args.declare.strip(),
-            parent=args.parent,
-            wants_channel=not args.no_channel,
-            keep_days=args.keep_days if args.keep_days is not None else DEFAULT_KEEP_DAYS,
+        declare_session = _plugin_verb("declare")
+        if declare_session is None:
+            return _needs_admin("declare")
+        # The name is resolved here, not in the plugin: deriving it means asking
+        # the live control sockets which session this is, which is session
+        # plumbing rather than roster bookkeeping.
+        return int(
+            declare_session(
+                args.declare.strip(),
+                session_id,
+                _session_name(session_id) or session_id[:8],
+                parent=args.parent,
+                wants_channel=not args.no_channel,
+                keep_days=args.keep_days if args.keep_days is not None else DEFAULT_KEEP_DAYS,
+                registry=registry,
+                log=log,
+            )
         )
-        log(f"declared: {agent.describe()}")
-        if agent.wants_channel and agent.channel_id is None:
-            manager = channels_from_env()
-            if manager is None:
-                log("no Discord configured; skipping the channel")
-            else:
-                try:
-                    agent.channel_id = manager.create_text(agent.name, topic=agent.task)
-                    registry.save()
-                    log(f"channel: #{channel_slug(agent.name)}")
-                except HotlineError as exc:
-                    # The agent is registered either way. Losing its channel is
-                    # worth saying out loud, but it is not worth failing the
-                    # declaration and leaving the session unregistered.
-                    log(f"warning: could not create the channel: {exc}")
-        elif agent.channel_id is not None:
-            manager = channels_from_env()
-            if manager is not None:
-                with contextlib.suppress(HotlineError):
-                    manager.retopic(agent.channel_id, agent.task)
-        return 0
 
     finished = registry.complete(session_id, handoff=args.handoff)
     if finished is None:
@@ -534,25 +514,31 @@ def _resume(name: str, registry: Registry, cwd: str | None, log: Callable[[str],
     return 0
 
 
-def _dispatch_grant(
-    name: str, role: str, where: str, registry: Registry, log: Callable[[str], None]
-) -> int:
-    """`--grant` is admin surface, not core: it lives in the hotline-admin
-    plugin and is found here through the `hotline.plugins` entry point rather
-    than imported directly, so a `hotline` install with no hotline-admin
-    doesn't crash -- it just doesn't have this verb.
+def _plugin_verb(verb: str) -> Any | None:
+    """Load an admin verb's implementation out of the `hotline.plugins`
+    entry-point group, or None when hotline-admin is not installed.
+
+    `--adopt`, `--declare` and `--grant` are admin surface, not core: they act
+    on the roster (who exists, what they were told to do, who granted what)
+    rather than on calls, pages or Discord. Core keeps *declaring* the flags,
+    so an install without the plugin gives the verb-specific error below
+    instead of argparse's "unrecognized arguments" -- the flag is real, only
+    the implementation is absent. Lookup is by entry-point name, so adding a
+    verb is a line in hotline-admin's pyproject rather than a change here.
     """
-    matches = [
-        ep for ep in importlib.metadata.entry_points(group="hotline.plugins") if ep.name == "grant"
-    ]
-    if not matches:
-        print(
-            "hotline: error: --grant requires hotline-admin, which is not installed.",
-            file=sys.stderr,
-        )
-        return 1
-    grant_role = matches[0].load()()
-    return grant_role(name, role, where, registry, log)
+    for ep in importlib.metadata.entry_points(group="hotline.plugins"):
+        if ep.name == verb:
+            loaded: Any = ep.load()()
+            return loaded
+    return None
+
+
+def _needs_admin(verb: str) -> int:
+    print(
+        f"hotline: error: --{verb} requires hotline-admin, which is not installed.",
+        file=sys.stderr,
+    )
+    return 1
 
 
 def _check_provenance(record: str) -> int:

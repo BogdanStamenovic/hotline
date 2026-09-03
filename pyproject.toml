@@ -29,6 +29,15 @@ classifiers = [
 dependencies = ["hotline-claude"]
 
 [project.optional-dependencies]
+# The admin plugin (--adopt, --declare, --grant). Deliberately an extra rather
+# than a runtime dependency: core never imports it, it is discovered through the
+# hotline.plugins entry point, and a comms-only install is a supported shape.
+#
+# But DO install it on this box. Every spawned agent runs `hotline --adopt` as
+# its first act, so an install without this plugin is one where no new session
+# can get an identity. `hotline[admin]` is the deployment default here, and the
+# dev extra pulls it in so the suite tests the wiring rather than a stub.
+admin = ["hotline-admin"]
 discord = ["py-cord[voice]>=2.6", "aiohttp>=3.9"]
 voice = ["faster-whisper>=1.0", "silero-vad>=5.1", "soxr>=0.5", "numpy>=1.26", "piper-tts>=1.2"]
 dev = [

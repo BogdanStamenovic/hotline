@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "hotline-admin"
 version = "0.1.0"
-description = "Admin plugin for hotline: role granting, discovered via the hotline.plugins entry point"
+description = "Admin plugin for hotline: the agent roster and role granting, discovered via the hotline.plugins entry point"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -26,6 +26,8 @@ dependencies = ["hotline", "hotline-claude"]
 
 [project.entry-points."hotline.plugins"]
 grant = "hotline_admin.grant:register"
+adopt = "hotline_admin.sessions:register_adopt"
+declare = "hotline_admin.sessions:register_declare"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hotline_admin"]
