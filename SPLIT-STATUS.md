@@ -15,7 +15,7 @@ aee2180  Stop documenting the withdrawn "frozen files" rule as live
 2f559e6  Split hotline into hotline / hotline-claude / hotline-admin
 ```
 
-Working tree clean. Local durability: `backups/split-packages-20260903-222855.bundle`
+Working tree clean. Local durability: `backups/split-packages-final.bundle`
 (verified, complete history — `git clone` it if `.git` is ever lost).
 
 ## Verified green — actually run, not inferred
