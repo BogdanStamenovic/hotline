@@ -22,7 +22,7 @@ import asyncio
 import json
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from time import monotonic
 
 from .agents import Registry
@@ -589,6 +589,14 @@ class Router:
         origin: Origin | None = None,
     ) -> Reply:
         """Inject into a live session and read its reply back out of the transcript."""
+        # Set here rather than at each call site because this method IS the
+        # definition of "someone is waiting": `deliver` is the fire-and-forget
+        # half and must not claim otherwise. A caller that forgets to pass the
+        # flag would silently reintroduce the contract gap, and there is no way
+        # to notice that from the sending end -- the symptom is a timeout, which
+        # looks exactly like a busy or a dead session.
+        if origin is not None:
+            origin = replace(origin, awaiting_reply=True)
         watch = await self.deliver(spec, text, origin)
         return await self.collect(watch, narrator=narrator, timeout=timeout)
 
