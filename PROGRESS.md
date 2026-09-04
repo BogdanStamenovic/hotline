@@ -7057,3 +7057,78 @@ second question. `src/track_web/` → `src/track/web/`, `track-web serve` →
 `track web`. Two agents now share one repo, so I assigned strict file ownership
 and gave `cli.py` to track-core, since a shared entry point is the one guaranteed
 conflict.
+
+## 2026-09-05 00:55 — ownbox installers delegated; GPU brief rewritten around LLM inference
+
+### Interactive ownbox installs (his 22:32 instruction)
+
+He wants `ownbox install wake` to ask device-or-server then the server address, and
+`ownbox install track` to ask webui-or-not then port then bind address.
+
+**Established the load-bearing fact before tasking anyone**, because it decides
+whether this is buildable at all: `ownbox/store.py:244` runs setup commands as
+`subprocess.run(command, cwd=target, shell=True, check=True, timeout=1800)` —
+**no `capture_output`, no stdin redirect**, so stdio is inherited. A setup script
+therefore gets his real TTY and can prompt. **ownbox needs no change.**
+
+The trap that comes with it, and the rule both agents got: `COMMAND_TIMEOUT` is
+1800s, so a prompt with nobody there does not fail — it hangs for thirty minutes.
+Every prompt must be guarded on `[ -t 0 ]` with a documented default or env var
+otherwise, and both paths must be *demonstrated*: prompts answered live in a tmux
+pane (a real TTY, which a headless agent otherwise lacks) and a run with stdin
+closed. Also told them `--yes` approves the *command list* and does not make a
+script non-interactive — different things.
+
+- **`wake-ownbox`** (new Opus agent) — wake's half. Wedged on the folder-trust
+  prompt on spawn, exactly as [[spawned-agents-wedge-on-the-trust-prompt]] says;
+  cleared it and it started.
+- **`track-web`** — track's half, because every question is about the UI it just
+  built. It had already landed the `track web` move at `86d7492`.
+
+**One thing I put back to him rather than building.** I read "open to the
+internet" as a claim about reachability and raised NAT and the unauthenticated
+page. He corrected me: he meant `0.0.0.0`, literally, and he already knew. That
+was me over-reading a plain word. Told track-web to drop the hedging entirely —
+straight binary, `127.0.0.1` or `0.0.0.0`, no editorialising in the prompt, one
+factual line in the README instead. A prompt that argues with him is worse than
+one that asks.
+
+### The GPU assignment now names its purpose
+
+He loved the Tesla V100 32GB find and asked that the brief state the card is for
+running LLMs. Rewrote assignment `e400d473` (DB backed up first). The change is
+not cosmetic — it reorders what the scouts optimise for:
+
+- **VRAM capacity primary, bandwidth second** (bandwidth sets tokens/sec once the
+  model fits), so HBM2 and 384-bit buses earn a premium.
+- **Datacenter cards promoted from caveat to first-class.** Checked rather than
+  assumed: the 4060 is the only GPU and the box boots `multi-user.target` —
+  it is **headless**, so "no display outputs" is not a downside here and the
+  scouts were explicitly told to stop marking it down. That single line was what
+  had been penalising the V100.
+- Multi-GPU priced on combined VRAM; capture SXM2-vs-PCIe, cooling, PSU, length,
+  and compute capability (Volta cc7.0 has FP16 but no native bf16).
+
+**It changed the output in one run.** New: Quadro RTX 8000 **48GB** and Quadro
+RTX 6000 24GB, with the scout reasoning unprompted about *"PCIe blower so it's a
+drop-in (no SXM2 adapter needed like a V100)"*. **Best card found all night:
+Gigabyte RTX 3090 24GB repackaged at 720 EUR**, against 1,100+ for every other 3090.
+
+Gave him the honest comparison rather than just agreeing about the V100: its 32GB
+at 650 EUR is the best VRAM-per-euro anywhere, but that listing is SXM2 (adapter,
+passive cooling — a project, not a drop-in) and Volta has no native bf16, so the
+720 EUR 3090 is arguably the better LLM card at the same money. Asked which model
+he wants to fit, since that is the only thing that settles 24 vs 32GB.
+
+**Note for whoever reads the site:** existing rows keep the rationale they were
+found with, so the V100's card still shows the old display-outputs wording until
+it is seen again. Rationale is per-sighting, not retroactive — the same shape as
+[[schema-changes-read-as-retroactive]].
+
+### Meanwhile, unprompted and worth recording
+
+track-core relabelled the cost line after his billing question — it now reads
+`~$0.50 of model usage at list price (no charge on a Claude subscription)`. And
+the reaper is live: that run reported *"5 still on offer, 1 the site would not
+let us check — recorded as unknown, not as sold."* Which is the honest failure
+semantics it was chartered for, working.
