@@ -7132,3 +7132,71 @@ track-core relabelled the cost line after his billing question — it now reads
 the reaper is live: that run reported *"5 still on offer, 1 the site would not
 let us check — recorded as unknown, not as sold."* Which is the honest failure
 semantics it was chartered for, working.
+
+## 2026-09-05 01:15 — shutdown at his verified instruction
+
+His word (`hotline --provenance`, kind=human, `23:03:51Z`): *"Also shutdown the pc
+when you finish. thats it. call me if anything comes up."* **"When you finish"** —
+so three agents were told to land everything first, not killed mid-build.
+
+### Checked what a shutdown would destroy, rather than assuming
+
+- All five repos clean, `unpushed=0`: hotline, hotline-ios, track, wd_gen, wake.
+- All three agents idle and reporting done. `~/data/track-web` keeps 8 local
+  commits with no remote — that is the superseded pre-move repo, bundled, and its
+  code lives in `track/src/track/web/` since `86d7492`.
+- Channels archived to `docs/agent-archive/` (2482 lines) **before** retiring the
+  agents, because `--done` deletes the channel and the writeups were in it.
+  wake-ownbox spotted that trap itself and refused to self-retire over it.
+
+### The wake path, verified twice over
+
+A manual `systemctl poweroff` does **not** arm the RTC the way wake's own
+`finish_power` does, which would have left WoL as the single path back. So I
+armed the backup — and hit a real defect doing it:
+
+**`wake add --backend rtcwake` failed with `rtcwake: /dev/rtc0: Permission
+denied` and still recorded the task as `pending`.** The list said armed; the
+hardware was not. That is this project's signature failure in a new place, and it
+is now in the banner. Armed by hand instead and verified from two sources:
+sysfs readback, and `/proc/driver/rtc` showing `alarm_IRQ: yes` for 05:58 UTC.
+
+So: **RTC 05:58 UTC** (hardware, survives a dead LAN) **and Pigion WoL 06:00**
++retries, Pigion up 47d with `wake-server` active, NIC `Wake-on: g`.
+
+### The shims the agents created, and why the morning run survives them
+
+`ownbox install` put **`~/.local/bin/track` and `~/.local/bin/wake`** on PATH,
+both pointing at ownbox clones of `main` rather than `~/data/*`. track-web caught
+this and warned track-core unprompted — bare `track` would silently test a
+checkout lagging anything uncommitted.
+
+I verified the unattended path myself rather than taking that on trust:
+`track-run-all` hardcodes `${TRACK_BIN:-/home/bodas/data/track/.venv/bin/track}`
+and `wake-agent.service` uses `%h/data/wake/.venv/bin/wake` — both absolute, both
+present and executable, and `track list` under `env -i` returns both active
+assignments including the new LLM brief. The 06:05 run does not go near a shim.
+
+### What the three agents delivered
+
+- **`wake-ownbox`** — `257a734` makes `ownbox install wake` a real install (role
+  and server-address prompts, manifest driving `deploy/install.sh`) and `remove`
+  actually remove. Then put the deploy scripts under shellcheck (`b8a183c`) and
+  found SC2164 in `scripts/mutate.sh`: a bare `cd` in a script that `perl -0pi`s a
+  source file and `git checkout`s it back, which would have done that in whatever
+  directory it was invoked from. 194 tests, 0 skipped.
+- **`track-web`** — `3d54f31`, `ownbox install track` asking webui/port/bind, run
+  for real and shown in its channel. Ten tests drive the script with stdin closed,
+  because only a real run disproves a hang. Uninstall proven to remove the unit,
+  config and checkout **and keep the findings DB**.
+- **`track-core`** — the mispricing scoring, the reaper, and the schema the site
+  reads. Also relabelled the cost line after his billing question.
+
+One judgement call from track-web worth preserving: asked local-or-open at its own
+install prompt, it answered `open`, because the service was already on
+localhost+tailnet and `local` would have silently killed his phone access. Picking
+the answer that takes nothing away, with one line to reverse it, is the right
+instinct at an unattended prompt.
+
+Nothing in flight, nothing half-applied, nothing armed except the morning run.
+Going down.

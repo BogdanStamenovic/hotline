@@ -1,74 +1,60 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-04 21:40 CEST — THE UNATTENDED RUN IS DONE AND PROVEN; NOTHING IS ARMED
+> ## STATUS AS OF 2026-09-05 01:15 CEST — WRITTEN AT A POWEROFF, AT HIS INSTRUCTION
 >
 > **READ, THEN DISTRUST.** Verify with `last -x -n 8 reboot shutdown`, `wake list`
-> here *and* on Pigion (`ssh bodas@pigion`), `hotline --list`, and
-> `grep -n "^## " PROGRESS.md | tail`.
+> here *and* on Pigion, `hotline --list`, and `grep -n "^## " PROGRESS.md | tail`.
 >
-> - **The 08:00 run SUCCEEDED, end to end, unattended.** Boot from full power-off
->   08:00:24 → track posted 6 listings to Discord 08:05:41 → self-poweroff 08:05:45
->   → dark for 13h24m. Verified from the journal and the artifact, not the banner.
->   The whole wake→research→Discord→poweroff loop is now a working thing, not a plan.
->   **This objective is complete. Do not re-arm it or re-prove it.**
-> - **THE 08:00 RUN IS ARMED AGAIN, for 2026-09-05** (his 19:52 instruction).
->   Pigion WoL 06:00 UTC +retries 06:02/06:04; archserver fires
->   `~/.local/bin/track-run-all` at 06:05 UTC, `--then poweroff`, 900s ceiling.
->   All four `pending` on **both** hosts. **Do not rescue the box from powering
->   off.** The fired command runs every assignment `track list` calls `active`,
->   so a new `track add` joins the morning run by itself — do not put assignment
->   ids in the wake task. `bin/track-run-all` here is the version-controlled copy;
->   `~/.local/bin/` is live. It is a **stopgap**: when track grows
->   `track run --all`, repoint the wake task and delete it.
-> - **The poweroff will likely NOT fire while agents or his tty sessions live.**
->   Probed 22:03: `CLEAR: False — someone is using this machine: logind session 2,
->   3 (tty); work in flight: track-core, track-web`. That is the guard working.
->   The trackers still run and post; only the poweroff is conditional. **Do not
->   relax `POWEROFF_ALLOW_MATCH` to force it** — that trades his session and two
->   mid-build agents for a power target.
-> - **The 21:30 boot was Bogdan**, not a wake task: pid 1224 is a Claude Code
->   *remote* session in `/home/bodas`, started 21:31:32, one minute after boot.
->   Check `ps` for `.claude/remote/ccd-cli` before calling a boot unexplained.
-> - **A trap that nearly read as a bug, for whoever touches `wake` next:** track's
->   Discord post is stamped ~2s *before* wake logs the task `fired`, which looks
->   like poweroff racing a live command. It is not — `server.py:150` calls
->   `backends.fire()` **synchronously** and only then logs and powers off. Do not
->   "fix" this ordering; if it ever becomes fire-and-forget, the morning run starts
->   failing the first time a scout runs slow.
-> - **`mirror_degraded: true` on :8788 is a stale counter, not a fault.** Its
->   `last_failure_at` is 2026-09-03 10:09 — yesterday's bridge outage. It never
->   resets on recovery. Date it before reporting it.
-> - **Roster cleared at his 19:43 instruction, and it is honest now.** The five
->   agents that died in the 08:05 poweroff are marked `[done]` and their channels
->   deleted — but **archived first to `docs/agent-archive/`** (1109 lines; go
->   there for anything track-dev or wake-dev worked out, not to Discord).
-> - **Two Opus agents are live and are NOT yours to take over:**
->   `track-core` (mispricing scoring, the why/how-old columns, the post-run
->   reaper) in `~/data/track`, and `track-web` (the website, new repo
->   `~/data/track-web`) — both from his 19:43 message. They report to the
->   operator. Check them with `tmux capture-pane`, not `hotline --list` alone.
-> - **`dealhunter` was killed by Bogdan himself. Do not respawn it.** The laptop
->   hunt belongs to `track`.
-> - **A GPU tracker exists: assignment `e400d473`**, run once (22 finds).
->   Deliberately `--no-schedule` — arming it to wake the box is his call.
-> - **Spawning traps, both cost time tonight:** an agent spawned into an
->   untrusted directory sits on Claude Code's folder-trust prompt, invisible to
->   `tmux ls` *and* `hotline --list` — capture the pane after every spawn. And
->   `tmuxen.spawn` passes no `--model`, so anything spawned through `hotline`
->   inherits the CLI default; spawn via `tmux` by hand for the Opus-for-code rule.
-> - **Do not disable `hotline-profile-watch.timer`.** It has now been turned off
->   twice on a paraphrase of his wishes (28 Aug, and by me tonight) and restored
->   both times. Its negative-countdown bug is fixed; the timer stays.
+> Going down at his verified word (kind=human, `23:03:51Z`): *"Also shutdown the pc
+> when you finish. thats it. call me if anything comes up."*
 >
-> **Open, and all his — nothing here is a task you should pick up:** the laptop
-> spec vs budget tension (≥32GB + 2024–2026 yields ~1 match at ≈€1245); whether
-> `wake` gets a public remote (it has none, and creating one needs his yes);
-> `hotline-split` parked unmerged on `split-packages`; `~/data/llama-turbo3`
-> keep/delete.
+> ### THE BOX IS MEANT TO COME BACK AT 08:00 AND POWER OFF AGAIN. DO NOT INTERFERE.
+> **Two independent wake paths are armed and both were verified, not assumed:**
+> - **RTC alarm 05:58 UTC** — hardware, works with the LAN and Pigion dead.
+>   `/proc/driver/rtc` reads `alarm_IRQ: yes`, `alrm_date: 2026-09-05`.
+>   **Note:** `wake add --backend rtcwake` FAILED with "Permission denied" and
+>   *still recorded the task as `pending`*. The status field lied; the alarm was
+>   armed by hand via `sudo sh -c 'echo <epoch> > /sys/class/rtc/rtc0/wakealarm'`.
+>   **Do not trust a `pending` rtcwake row — read the sysfs value.**
+> - **Pigion WoL 06:00 UTC** +retries 06:02/06:04. Pigion up 47d, `wake-server`
+>   active, NIC `Wake-on: g`.
+> - **06:05 UTC:** `~/.local/bin/track-run-all` → every ACTIVE assignment in turn →
+>   Discord → poweroff. Verified end-to-end under `env -i`.
 >
-> Everything below in the 22:30 banner is still architecturally true (Pigion =
-> wake server, archserver = wake device, two independent wake paths), but its
-> "an unattended run is armed for 08:00" framing is spent — that run has happened.
+> ### THE PATH SHIMS ARE A TRAP — the scheduled run dodges them, you might not
+> `ownbox install` created **`~/.local/bin/track` and `~/.local/bin/wake`**, both
+> pointing at **ownbox clones of `main`**, not `~/data/*`. Typing bare `track` or
+> `wake` tests a checkout that lags anything uncommitted. The 06:05 task is safe —
+> `track-run-all` hardcodes the absolute dev path and `wake-agent.service` uses
+> `%h/data/wake/...` — but **you are not.** Use `~/data/<repo>/.venv/bin/<tool>`.
+> Restore note: `~/backups/track-ownbox-install-20260905-004651/RESTORE.txt`.
+>
+> ### State at power-off
+> - **Everything committed and pushed.** hotline, hotline-ios, track, wd_gen, wake
+>   all clean with `unpushed=0`. `~/data/track-web` is the superseded pre-move repo
+>   (8 local commits, no remote by design, bundled) — its code lives in
+>   `track/src/track/web/` now.
+> - **All agents retired** (`--done --handoff`), channels archived first to
+>   `docs/agent-archive/` — 2482 lines. Read those, not Discord; the channels are
+>   deleted. Roster is just `hotline-80`.
+> - **Both ownbox installers are done and demonstrated**, not merely written:
+>   `ownbox install wake` asks role then server address; `ownbox install track`
+>   asks webui/port/bind. Both guard every prompt on `[ -t 0 ]` with env overrides
+>   and were proven twice — answered live in a tmux pane, and with stdin closed.
+>   `remove: []` is gone from both; uninstall keeps the findings DB.
+> - **`wake` has a remote at last** — `BogdanStamenovic/wake`, **PRIVATE**. Not an
+>   oversight: his real MAC and tailnet IP appear 26 times each in it. He has the
+>   one-line `gh repo edit --visibility public` and has not used it yet.
+> - Daemons hotlined:8788 and hotline-ios:8789 were healthy at shutdown.
+>
+> ### Open — all his
+> 1. Which model he wants to fit, which is the only thing that settles a 24GB
+>    RTX 3090 at 720 EUR against a 32GB Tesla V100 at 650 EUR (the V100 listing is
+>    **SXM2** — adapter + datacenter airflow, not a drop-in — and Volta has no bf16).
+> 2. `llama-turbo3` and `uxonews` still hold the old `markojova145@gmail.com`;
+>    both are other people's namespaces so they were left alone deliberately.
+> 3. Whether `wake` goes public, and whether to scrub the MAC/IP first.
+> 4. `hotline-split` still parked unmerged on `split-packages`; `~/data/llama-turbo3`.
 
 
 > ## STATUS AS OF 2026-09-03 22:30 CEST — AN UNATTENDED RUN IS ARMED FOR 08:00
