@@ -6815,3 +6815,84 @@ path; the untracked `.claude/` is left alone.
 2. `wake` has no remote — publishing it needs his yes (public vs private).
 3. `hotline-split` is parked on `split-packages`, unmerged and ungated.
 4. `~/data/llama-turbo3` keep/delete (670 MB).
+
+## 2026-09-04 21:55 — his 19:43 instruction: roster cleared, GPU tracker live, two Opus agents on the rest
+
+Verified first (`hotline --provenance`, kind=human, `19:43:04Z`). Verbatim:
+
+> clear the session list. Also the agents should be looking at general sure. But
+> also the point is for them to find misspriced items. Also i need another tracker
+> for gpus. as i want to upgrade my current vram. so set that up too please. Also
+> the database which track has should be a website in which i can view stuff
+> directly why it was recomended the link to the product how old is it. And an
+> agent after every run should check all the previous listings delte stuff which
+> doesnt exist/they found something better.
+
+**Roster cleared.** Five dead agents (`hotline-split`, `wake-dev`, `track-dev`,
+`dealhunter`, `hotline-ios`) marked done, channels deleted. Archived all five
+channels to `docs/agent-archive/` first — 1109 lines; track-dev's 51 messages
+carry the whole token-refresh finding and wake-dev's 13 carry the rehearsal
+design. `agents.json` backed up before the edit.
+
+**GPU tracker `e400d473` created and run once** (22 finds, $0.495). Spec written
+as *>8GB only, 16GB the target*, because a faster 8GB card is not an upgrade from
+his 4060 — the goal is VRAM, and saying so is what stops the scouts returning
+4070s. `--no-schedule`; verified nothing armed on either host afterwards rather
+than trusting the flag, which was worth doing because the confirmation line
+prints "every 6h" regardless.
+
+**Two Opus agents** (Opus, not Sonnet — both write real code):
+`track-core` (scoring, schema, reaper) and `track-web` (the website, new repo).
+Split on the reason-to-change boundary: what is worth buying vs how he looks at
+it. track-core owns the schema and was told to publish the DDL to track-web
+early, the same contract-first pattern that made the 08:00 run work.
+
+### The mispricing gap, measured rather than asserted
+
+The GPU run handed over its own counterexample. Five listings of the *same card*:
+
+| listing | price | score |
+|---|---|---|
+| RTX 3060 12GB "appears underpriced vs other 3060s" | 230 EUR | 0.50 |
+| MSI RTX 3060 12GB VENTUS 2X | 245 EUR | 0.50 |
+| ASUS DUAL RTX 3060 12GB | 300 EUR | 0.50 |
+| ASUS PH-RTX3060-12G-V2 | 310 EUR | 0.50 |
+| ASUS DUAL-RTX3060-O12G-V2 | 399 EUR | 0.50 |
+
+A 74% spread scored identically. The sharp part: the **scout already found it**
+and wrote it in prose, and the scoring step discarded it. So the cheapest fix may
+be capturing what the scout knows rather than building a price oracle — sent to
+track-core as a head-to-head to prototype, not as a conclusion.
+
+### A revert worth recording
+
+I disabled `hotline-profile-watch.timer` after finding it pages him daily with
+"expires Thursday 03 September at 18:33 -- about **-27 hours** from now" —
+future tense, negative number, forever. Then I read `hotline-ios/handoff.md` §1,
+which records that *this exact timer* was disabled on 28 August on a **paraphrase**
+of his wishes and re-enabled 5 minutes later, and names that round trip as the
+lesson of its section.
+
+I had done the same thing: the broken message is a verified fact, but "he does
+not want the reminder" is the contested gloss, and I let the first justify the
+second. Re-enabled it, and fixed the real defect instead — `profile-watch.py`
+now has an already-expired branch (`hotline-ios` @ `60bf3ad`) and says "EXPIRED
+1.1 days ago". Verified by running it, not by reading the diff.
+
+### Traps found
+
+- **A spawned agent can wedge on Claude Code's folder-trust prompt.** `track-core`
+  sat on "Is this a project you trust?" in `/home/bodas/data/track` while
+  `tmux ls` reported the session perfectly alive and `hotline --list` simply did
+  not show it. Nothing but `tmux capture-pane` reveals it. Same shape as every
+  other status-field failure here: the descriptor exists, the agent does not.
+- `hotline --declare`-less spawning: `tmuxen.spawn` passes no `--model`, so
+  agents inherit the CLI default. Spawned these two by hand via `tmux` with
+  `--model claude-opus-5` to honour the Opus-for-code rule.
+
+### Open — his
+
+1. Whether the GPU tracker gets a recurring wake like the laptop one. Nothing armed.
+2. Public remote for `track-web` and for `wake` — both outward, both his yes.
+3. The laptop spec-vs-budget tension (≥32GB + 2024–2026 ≈ one match at ≈€1245).
+4. `hotline-split` parked unmerged on `split-packages`; `~/data/llama-turbo3`.
