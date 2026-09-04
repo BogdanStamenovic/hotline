@@ -6967,3 +6967,93 @@ it *is* off, which is the case that proved itself this morning.
 Ran both assignments twice while testing the wrapper (runs 10, 11), ~$0.85 of
 scout spend, and two more reports landed in his channel as a side effect. Told
 him rather than letting them look like a malfunction.
+
+## 2026-09-04 23:20 — git author-email rewrite (360 commits, 6 repos) + remotes for wake
+
+Two verified instructions (`21:11:19Z`, `21:16:28Z`).
+
+### The instruction was right; its premise was not
+
+He asked to "fix the git commit path to email bogdan.stamenovic@gmail.com ...
+make that global". **The global was already correct.** `git config --global
+user.email` had been `bogdan.stamenovic@gmail.com` all along. The wrong address
+came from **repo-local `user.email` overrides** in `hotline`, `track` and
+`track-web`, and a local setting beats the global one. Told him, because "fix the
+global" would have changed nothing and the problem would have recurred. Removed
+all three overrides; every repo now resolves correctly with no per-repo action.
+
+`CLAUDE.md` §9 identity line updated to the new address.
+
+### The rewrite
+
+`git-filter-repo` (installed into a scratch venv — not system-wide) with a mailmap
+mapping only `markojova145@gmail.com` → `bogdan.stamenovic@gmail.com`.
+
+| repo | commits | remote |
+|---|---|---|
+| hotline | 152 | pushed |
+| hotline-ios | 158 | pushed |
+| track | 22 | pushed |
+| wd_gen | 5 | pushed (see below) |
+| wake | 13 | new private remote |
+| track-web | 8 | folding into track |
+
+**Verified content was untouched** by comparing `HEAD^{tree}` before and after in
+every repo — byte-identical in all six. Only author/committer metadata moved.
+
+**Deliberately rewrote only `markojova145@gmail.com`.** `Erol Germain-Gomuc`,
+`Stefan Glamoclija` and `ci@hotline.local` were left exactly as they are.
+Rewriting them would be falsifying who wrote what; he asked for *his* address
+fixed, not everyone's.
+
+### `--force-with-lease` earned its keep
+
+Full `git bundle --all` backup of all 9 repos taken first
+(`~/backups/git-email-rewrite-20260904-231200/`). Then the lease refused four
+pushes with "stale info" — filter-repo drops remote-tracking refs, so there was
+no basis to evaluate against. Rather than reaching for plain `--force`, I fetched
+and compared each remote head to the backed-up refs:
+
+- `hotline`, `track` — matched exactly. Safe.
+- `hotline-ios` — remote was *behind* local by my own unpushed profile-watch
+  commit. Safe.
+- **`wd_gen` — the remote had THREE commits my clone did not have**
+  (`7ab51b0`, `c2368d5`, `375f83f`: data-af's LLM-planner rebuild). A plain
+  `--force` would have destroyed them. Redone from a fresh clone of the real
+  remote, all 5 commits preserved and rewritten, then pushed; the stale working
+  copy was reset onto it.
+
+The general lesson, and it is the session's sharpest: **a local clone is a status
+field too.** "My history is the history" is an assumption, and the lease is the
+thing that checks it. Overriding a refusal you have not explained is how the
+three commits would have gone.
+
+### Two repos left alone
+
+- `llama-turbo3` → remote `Madreag/turbo3-cuda`, **not his namespace**, and it
+  carries a commit by Erol Germain-Gomuc. Force-pushing a third party's repo is
+  outward; rewriting locally would only diverge it from upstream.
+- `uxonews` → remote `stefanglamoclija-bot/uxonews`, 7 of 13 commits authored by
+  Stefan Glamoclija. Different account, mixed authorship.
+
+Both flagged to him rather than guessed at.
+
+### wake got a remote — private, against the public-by-default rule
+
+No credentials in it: the live `API_KEY` from `~/.config/wake/wake.env` appears
+in **zero** commits, and every "secret" hit is a test fixture (`correct-horse`,
+`s3cret`). **But his real MAC `a8:a1:59:fd:4d:13` and his tailnet IP appear 26
+times each.** Not credentials, but his data, and publishing is the irreversible
+direction — so private, with the one-line `gh repo edit --visibility public` given
+to him and an offer to scrub the identifiers to placeholders first. Choosing the
+reversible direction and handing him the switch beats choosing for him.
+
+### track-web folds into track
+
+His "track web should be in track as the standard path" overrules my earlier
+call to give it its own repo — and he is right. I split it on "different
+question, different specialist", but a web view of track's own database is not a
+second question. `src/track_web/` → `src/track/web/`, `track-web serve` →
+`track web`. Two agents now share one repo, so I assigned strict file ownership
+and gave `cli.py` to track-core, since a shared entry point is the one guaranteed
+conflict.
