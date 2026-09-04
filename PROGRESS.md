@@ -6699,3 +6699,119 @@ serve/fire).
   + RTC. I gate the timing so agents commit first.
 
 Wake time 08:00 CEST is MY assumption — he never named one, and I told him so.
+
+## 2026-09-04 00:05 — operator boot after the poweroff rehearsal; caught a dropped instruction
+
+Operator `hotline-80` (session `c72bfa67`), respawned by the watchdog on the 23:52 boot.
+
+### The boot is the rehearsal succeeding — S5 wake proven
+`last -x`: shutdown 23:06 → boot 23:52 (45 min dark), exactly the poweroff→wake
+cycle the 22:30 banner armed. Wake from full power-off (S5), the one thing the
+earlier S3 tests could not prove, now works by measurement. This is the expected
+outcome, not an incident.
+
+### The 08:00 run IS genuinely armed — verified the firing loops, not the banner
+My first read (empty RTC wakealarm, no wake systemd timer, no scheduled shutdown)
+looked like "not armed" — but the wake tool uses its own services, both live:
+- **archserver** `wake-agent.service` (pid 855, up since the 23:52 boot) fires the
+  pending shell task `morning-run` = `track run 10ee961f` at **08:05**, poweroff after.
+- **Pigion** `wake-server.service` (pid 71566) fires `morning-wol` at **08:00**
+  (+ retries 08:02, 08:04) to WoL archserver (MAC a8:a1:59:fd:4d:13).
+`wol-enp4s0.service` armed WoL on enp4s0. All four tasks confirmed `pending` in
+`~/.local/state/wake/wake.db` with fire_at decoding to 08:00–08:05 CEST 04 Sep.
+
+### His most recent word (21:07, agent-80) had been DROPPED — fixed it
+Read Discord both channels including the downtime window: nothing arrived while the
+box was off. His newest instruction is 21:07:19 — reassign track: replace a
+ProBook-450-class laptop, ≥32GB RAM, great display, battery life, modern CPU (no
+GPU), dual-boot, release 2024/2025/2026 only; "run track again with those things
+in mind." The pre-rehearsal operator (busy with the CLAUDE.md rewrite + 08:00
+orchestration, 21:07→23:06) never applied it — assignment 10ee961f still held the
+old loose spec (16GB+, discrete GPU, ThinkPad/Latitude/EliteBook), last run 20:50.
+The armed 08:05 run would have searched the wrong thing.
+- Verified the message first-hand from Discord (author id = his DISCORD_USER_ID).
+- track has no edit verb; backed up the DB
+  (`track.db.bak.20260904-000016`) and updated `assignments.text` for 10ee961f in
+  place, preserving the ID so `morning-run` picks it up. Market/notify/interval kept.
+- Ran it once as he asked ($0.491 scouts): 12 sources, 1 new match —
+  **HP OmniBook 5 16-ba1004nm, Core 7 150U, 32GB RAM, 1TB NVMe, 16" WUXGA IPS,
+  145,730 RSD (~€1245)**, score 0.18. Tight spec → fewer hits, expected and honest.
+  The 08:05 run now uses the corrected assignment.
+
+### Box is up overnight (minor, not interfering)
+Nothing schedules a poweroff before 08:05; the box will idle overnight rather than
+sleep. Functionally harmless — wake-agent fires morning-run at 08:05 regardless of
+sleep state and powers off after; a WoL to an awake box is a no-op. Per the banner,
+not touching the power lifecycle.
+
+Nothing else needs operating. Holding.
+
+## 2026-09-04 21:35 — operator boot sweep: the unattended run WORKED, verified end to end
+
+Session `hotline-b1` (pid 916), spawned by `hotline-watchdog.timer` on the 21:30
+boot, adopted as `hotline-80`. No build work done — operations only.
+
+### The headline: the 08:00 run succeeded, and it is proven by measurement
+
+Not from a status field, and not from the Discord post alone. The whole chain:
+
+| time (CEST) | evidence |
+|---|---|
+| 08:00:24 | boot — `last -x`, and `wake-agent` starts. Wake from S5 (box was off since 04:53) |
+| 08:00:24 | `wake agent: sync failed ... 192.168.1.8 Network is unreachable` — expected, NIC not up yet |
+| 08:01:24 | `pushed 0, pulled 1` — Pigion reachable, schedule pulled |
+| ~08:05:00 | `backends.fire()` enters; the 08:05:24 sync tick is *missing* because the fire call blocks |
+| 08:05:41 | **track posts real results to Discord** — 6 new listings, `_scouts: $0.441_` |
+| 08:05:43 | `task morning-run (shell) fired` → `powering off (no next task to arm; watchdog suppressed: True)` → `sudo systemctl poweroff` |
+| 08:05:45 | `Reached target System Shutdown` |
+| 08:05 → 21:30 | box dark for 13h24m |
+
+**One thing looked wrong and was not.** The Discord post is timestamped two
+seconds *before* wake logs the task as fired, which reads like wake racing the
+command and powering off underneath it. It does not: `server.py:150` calls
+`backends.fire(task, config)` synchronously and only logs `fired` and calls
+`finish_power()` after it returns. The post precedes the log because track posts
+and then exits. Checked the code rather than assuming, because if it *had* been
+fire-and-forget the run only succeeded by luck and would break the first time a
+scout ran slow.
+
+So: wake from full power-off → research run → Discord → self-poweroff, unattended,
+no human in the path. That is the thing he asked for on 09-03 17:40, working.
+
+### State found
+
+- **Nothing armed anywhere.** `wake list` is empty on *both* hosts — archserver
+  and Pigion (checked over ssh, 47d uptime, `wake-server` active). No systemd
+  jobs, no `at`, no crontab. The box stays up until someone says otherwise.
+- **Bogdan is at the keyboard right now.** pid 1224 is a Claude Code *remote*
+  session (`~/.claude/remote/ccd-cli`) in `/home/bodas`, started 21:31:32 — one
+  minute after the boot. So the 21:30 boot was him, not a wake task. Nothing to
+  explain and nothing to rescue.
+- **Daemons healthy:** hotlined 8788 and hotline-ios 8789 both up, `ring_ready`,
+  `transport: sip+confirmed`, `hook_reachable`, 0 active calls.
+- **`mirror_degraded: true` on 8788 is a stale counter, not a live fault.** Its
+  `last_failure_at` dates to 2026-09-03 10:09 — yesterday's crash window, when
+  the phone bridge was down with the PyNaCl fault. 8789 is up now; the field just
+  never resets on recovery. Probed the date rather than reporting the flag.
+- **The roster lies.** `hotline --agents` shows six agents `[working]`;
+  `hotline --list` shows two live processes. `hotline-split`, `wake-dev`,
+  `track-dev`, `dealhunter` and the `hotline-ios` *session* were all killed by
+  the 08:05 poweroff. Their status field has outlived them by 13 hours. Left
+  alone deliberately — marking them `--done` deletes their Discord channels,
+  which is where their build notes live, and that is not mine to destroy
+  unasked. Flagged to him instead.
+
+### Housekeeping
+
+Committed the 00:05 operator's handoff banner and PROGRESS entry, which it wrote
+but never got to commit — the 08:05 poweroff killed it first. Staged by explicit
+path; the untracked `.claude/` is left alone.
+
+### Open — all his, nothing mine
+
+1. Whether to keep hunting: the corrected spec (≥32GB, 2024–2026) yields ~1
+   real match at ~145,730 RSD (≈€1245), which is a long way from "cheap". The
+   spec and the budget are in tension and only he can resolve it.
+2. `wake` has no remote — publishing it needs his yes (public vs private).
+3. `hotline-split` is parked on `split-packages`, unmerged and ungated.
+4. `~/data/llama-turbo3` keep/delete (670 MB).

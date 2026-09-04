@@ -1,5 +1,27 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-04 00:05 CEST — REHEARSAL SUCCEEDED; TRACK REASSIGNMENT APPLIED
+>
+> **READ, THEN DISTRUST.** Verify with `last -x -n 8 reboot shutdown`, the two wake
+> services (`systemctl --user status wake-agent` here, `wake-server` on Pigion),
+> and `track list` before believing this.
+>
+> - **The poweroff rehearsal WORKED.** shutdown 23:06 → boot 23:52 (45 min) = wake
+>   from full power-off (S5) proven by measurement. A boot you can't explain right
+>   after this is that, not an incident. Do NOT rescue the box from powering off.
+> - **08:00 run is armed and verified live** (not from a status field):
+>   Pigion `wake-server` (pid 71566) fires `morning-wol` 08:00 +retries 08:02/08:04;
+>   archserver `wake-agent` (pid 855) fires `morning-run` = `track run 10ee961f` at
+>   **08:05**, poweroff after. All four `pending` in `~/.local/state/wake/wake.db`.
+> - **His 21:07 track reassignment had been DROPPED by the prior operator — now
+>   applied.** Assignment `10ee961f` updated in place (DB backed up
+>   `track.db.bak.20260904-000016`) to: replace a ProBook-450, ≥32GB RAM, modern
+>   CPU no GPU, great display+battery, dual-boot, 2024–2026 only. Reran once
+>   ($0.49): 1 match (HP OmniBook 5, Core 7 150U, 32GB, ~145,730 RSD). The 08:05
+>   run uses this corrected spec. Everything below in the 22:30 banner still holds.
+>
+
+
 > ## STATUS AS OF 2026-09-03 22:30 CEST — AN UNATTENDED RUN IS ARMED FOR 08:00
 >
 > **READ THIS FIRST, AND THEN DISTRUST IT.** A banner is only true until the machine
