@@ -11,9 +11,21 @@
 >   → dark for 13h24m. Verified from the journal and the artifact, not the banner.
 >   The whole wake→research→Discord→poweroff loop is now a working thing, not a plan.
 >   **This objective is complete. Do not re-arm it or re-prove it.**
-> - **NOTHING IS ARMED, on either host.** `wake list` is empty on archserver *and*
->   Pigion. No systemd jobs, no `at`, no crontab. If you find the box powering off,
->   that is new and someone armed it — it is not this.
+> - **THE 08:00 RUN IS ARMED AGAIN, for 2026-09-05** (his 19:52 instruction).
+>   Pigion WoL 06:00 UTC +retries 06:02/06:04; archserver fires
+>   `~/.local/bin/track-run-all` at 06:05 UTC, `--then poweroff`, 900s ceiling.
+>   All four `pending` on **both** hosts. **Do not rescue the box from powering
+>   off.** The fired command runs every assignment `track list` calls `active`,
+>   so a new `track add` joins the morning run by itself — do not put assignment
+>   ids in the wake task. `bin/track-run-all` here is the version-controlled copy;
+>   `~/.local/bin/` is live. It is a **stopgap**: when track grows
+>   `track run --all`, repoint the wake task and delete it.
+> - **The poweroff will likely NOT fire while agents or his tty sessions live.**
+>   Probed 22:03: `CLEAR: False — someone is using this machine: logind session 2,
+>   3 (tty); work in flight: track-core, track-web`. That is the guard working.
+>   The trackers still run and post; only the poweroff is conditional. **Do not
+>   relax `POWEROFF_ALLOW_MATCH` to force it** — that trades his session and two
+>   mid-build agents for a power target.
 > - **The 21:30 boot was Bogdan**, not a wake task: pid 1224 is a Claude Code
 >   *remote* session in `/home/bodas`, started 21:31:32, one minute after boot.
 >   Check `ps` for `.claude/remote/ccd-cli` before calling a boot unexplained.
