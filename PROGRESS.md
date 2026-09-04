@@ -6896,3 +6896,74 @@ now has an already-expired branch (`hotline-ios` @ `60bf3ad`) and says "EXPIRED
 2. Public remote for `track-web` and for `wake` — both outward, both his yes.
 3. The laptop spec-vs-budget tension (≥32GB + 2024–2026 ≈ one match at ≈€1245).
 4. `hotline-split` parked unmerged on `split-packages`; `~/data/llama-turbo3`.
+
+## 2026-09-04 22:05 — re-armed the 08:00 run, now driven by the assignment list
+
+His instruction, verified (`hotline --provenance`, kind=human, `19:52:22Z`):
+
+> Do it at 8 am aswell. so setup auto wake up
+
+The schedule was **empty** — all four of this morning's tasks fired and cleared,
+so this was a re-arm from nothing, not an edit. Armed on both hosts:
+
+| when (UTC) | host | task |
+|---|---|---|
+| 06:00 (+06:02, 06:04 retries) | Pigion | WoL → `a8:a1:59:fd:4d:13` |
+| 06:05 | archserver | `track-run-all`, `--then poweroff`, 900s ceiling |
+
+Verified present on **Pigion** over ssh as well as here — the sync moved the
+shell task up and the three WoL tasks down (`pushed 0, pulled 3`).
+
+### Why the fired command is not `track run <id>` twice
+
+He now has two trackers and will have more; a wake task carrying a hardcoded
+list of assignment ids is wrong the moment he runs `track add` again, and wrong
+*silently* — the new tracker just never runs in the morning. So the fired command
+is `~/.local/bin/track-run-all`, which asks `track list` which assignments are
+`active` and runs each in sequence. Adding a tracker is now sufficient to get it
+into the morning run.
+
+Sequential rather than parallel on purpose: each cycle already fans out five
+Sonnet scouts on a 6-core/15GiB box. Failures do not abort the loop — a dead
+laptop hunt must not silently cancel the GPU hunt — and the exit code still
+carries that any of them failed.
+
+**Tested under `env -i HOME=... PATH=/usr/local/bin:/usr/bin` from `/tmp`**, which
+is the environment wake actually fires into: both assignments, **exit 0, 171s**
+(82s + 89s). Copied to `bin/track-run-all` in this repo so it is version
+controlled; `~/.local/bin/` is the live copy.
+
+**It is meant to be temporary.** "Run every active assignment" belongs inside
+track, not in a shell script the operator owns. It lives outside only because
+track-core is mid-edit in that repo. Told track-core: build `track run --all`
+and I will repoint the wake task and delete this. Also told them `track list`'s
+output is now a machine interface, and not to leave `main` broken overnight —
+a half-applied schema migration at 08:05 is a silent morning.
+
+### The poweroff will probably NOT happen tomorrow, and that is correct
+
+Probed the guard directly rather than reasoning about it:
+
+```
+humans : ['logind session 2 (tty)', 'logind session 3 (tty)']
+agents : ['track-core', 'track-web']
+CLEAR  : False
+why    : someone is using this machine: ...; work in flight: track-core, track-web
+```
+
+So unless he logs out and both agents finish, the trackers will run and post and
+the box will stay on. Only the poweroff is conditional; the research is not.
+Deliberately did **not** relax `POWEROFF_ALLOW_MATCH` to force it — killing his
+session or two mid-build agents to hit a power target is the wrong trade, and
+this guard existing is why the box does not power off under him. Told him, so a
+box that is still on at 09:00 reads as the guard working rather than as a fault.
+
+Also: the box is up now and nothing takes it down tonight, so the 08:00 packet
+lands on an awake machine — a no-op. The wake path is insurance for the mornings
+it *is* off, which is the case that proved itself this morning.
+
+### Cost note
+
+Ran both assignments twice while testing the wrapper (runs 10, 11), ~$0.85 of
+scout spend, and two more reports landed in his channel as a side effect. Told
+him rather than letting them look like a malfunction.

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Run one research cycle for every ACTIVE track assignment, in sequence.
+#
+# This exists because the morning wake task must not carry a hardcoded list of
+# assignment ids. Bogdan adds trackers (`track add ...`) and expects the 08:00
+# run to pick them up without anyone editing a wake task to match; driving it
+# from the DB is what makes that true.
+#
+# Sequential on purpose, not parallel: each cycle already fans out five Sonnet
+# scouts, and the box is a 6-core with 15GiB. Two cycles at once is how you get
+# a morning run that OOMs instead of reporting.
+#
+# Exit 0 if every assignment ran, 1 if any failed. It never aborts early -- a
+# failing laptop hunt must not silently cancel the GPU hunt.
+set -uo pipefail
+
+TRACK=${TRACK_BIN:-/home/bodas/data/track/.venv/bin/track}
+rc=0
+
+ids=$("$TRACK" list 2>/dev/null | awk -F'\t' '$2 == "active" { print $1 }')
+if [ -z "$ids" ]; then
+    echo "track-run-all: no active assignments" >&2
+    exit 1
+fi
+
+for id in $ids; do
+    echo "track-run-all: running $id"
+    if "$TRACK" run "$id"; then
+        echo "track-run-all: $id ok"
+    else
+        # track's contract: 1 = posted honestly but nothing usable, 3 = could
+        # not post. Only 3 is really our problem, but both are worth carrying
+        # out in the exit code rather than swallowing.
+        echo "track-run-all: $id FAILED (exit $?)" >&2
+        rc=1
+    fi
+done
+
+exit $rc
