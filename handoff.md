@@ -26,13 +26,27 @@
 > - **`mirror_degraded: true` on :8788 is a stale counter, not a fault.** Its
 >   `last_failure_at` is 2026-09-03 10:09 — yesterday's bridge outage. It never
 >   resets on recovery. Date it before reporting it.
-> - **THE ROSTER LIES.** `hotline --agents` says six agents are `[working]`;
->   `hotline --list` shows two processes. `hotline-split`, `wake-dev`, `track-dev`,
->   `dealhunter` and the `hotline-ios` *session* all died in the 08:05 poweroff.
->   Left uncleaned on purpose: `--done` deletes their Discord channels, which hold
->   their build notes. Asked him which he wants; the answer is his.
+> - **Roster cleared at his 19:43 instruction, and it is honest now.** The five
+>   agents that died in the 08:05 poweroff are marked `[done]` and their channels
+>   deleted — but **archived first to `docs/agent-archive/`** (1109 lines; go
+>   there for anything track-dev or wake-dev worked out, not to Discord).
+> - **Two Opus agents are live and are NOT yours to take over:**
+>   `track-core` (mispricing scoring, the why/how-old columns, the post-run
+>   reaper) in `~/data/track`, and `track-web` (the website, new repo
+>   `~/data/track-web`) — both from his 19:43 message. They report to the
+>   operator. Check them with `tmux capture-pane`, not `hotline --list` alone.
 > - **`dealhunter` was killed by Bogdan himself. Do not respawn it.** The laptop
 >   hunt belongs to `track`.
+> - **A GPU tracker exists: assignment `e400d473`**, run once (22 finds).
+>   Deliberately `--no-schedule` — arming it to wake the box is his call.
+> - **Spawning traps, both cost time tonight:** an agent spawned into an
+>   untrusted directory sits on Claude Code's folder-trust prompt, invisible to
+>   `tmux ls` *and* `hotline --list` — capture the pane after every spawn. And
+>   `tmuxen.spawn` passes no `--model`, so anything spawned through `hotline`
+>   inherits the CLI default; spawn via `tmux` by hand for the Opus-for-code rule.
+> - **Do not disable `hotline-profile-watch.timer`.** It has now been turned off
+>   twice on a paraphrase of his wishes (28 Aug, and by me tonight) and restored
+>   both times. Its negative-countdown bug is fixed; the timer stays.
 >
 > **Open, and all his — nothing here is a task you should pick up:** the laptop
 > spec vs budget tension (≥32GB + 2024–2026 yields ~1 match at ≈€1245); whether
