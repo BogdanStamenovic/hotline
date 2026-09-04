@@ -1,25 +1,48 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-04 00:05 CEST — REHEARSAL SUCCEEDED; TRACK REASSIGNMENT APPLIED
+> ## STATUS AS OF 2026-09-04 21:40 CEST — THE UNATTENDED RUN IS DONE AND PROVEN; NOTHING IS ARMED
 >
-> **READ, THEN DISTRUST.** Verify with `last -x -n 8 reboot shutdown`, the two wake
-> services (`systemctl --user status wake-agent` here, `wake-server` on Pigion),
-> and `track list` before believing this.
+> **READ, THEN DISTRUST.** Verify with `last -x -n 8 reboot shutdown`, `wake list`
+> here *and* on Pigion (`ssh bodas@pigion`), `hotline --list`, and
+> `grep -n "^## " PROGRESS.md | tail`.
 >
-> - **The poweroff rehearsal WORKED.** shutdown 23:06 → boot 23:52 (45 min) = wake
->   from full power-off (S5) proven by measurement. A boot you can't explain right
->   after this is that, not an incident. Do NOT rescue the box from powering off.
-> - **08:00 run is armed and verified live** (not from a status field):
->   Pigion `wake-server` (pid 71566) fires `morning-wol` 08:00 +retries 08:02/08:04;
->   archserver `wake-agent` (pid 855) fires `morning-run` = `track run 10ee961f` at
->   **08:05**, poweroff after. All four `pending` in `~/.local/state/wake/wake.db`.
-> - **His 21:07 track reassignment had been DROPPED by the prior operator — now
->   applied.** Assignment `10ee961f` updated in place (DB backed up
->   `track.db.bak.20260904-000016`) to: replace a ProBook-450, ≥32GB RAM, modern
->   CPU no GPU, great display+battery, dual-boot, 2024–2026 only. Reran once
->   ($0.49): 1 match (HP OmniBook 5, Core 7 150U, 32GB, ~145,730 RSD). The 08:05
->   run uses this corrected spec. Everything below in the 22:30 banner still holds.
+> - **The 08:00 run SUCCEEDED, end to end, unattended.** Boot from full power-off
+>   08:00:24 → track posted 6 listings to Discord 08:05:41 → self-poweroff 08:05:45
+>   → dark for 13h24m. Verified from the journal and the artifact, not the banner.
+>   The whole wake→research→Discord→poweroff loop is now a working thing, not a plan.
+>   **This objective is complete. Do not re-arm it or re-prove it.**
+> - **NOTHING IS ARMED, on either host.** `wake list` is empty on archserver *and*
+>   Pigion. No systemd jobs, no `at`, no crontab. If you find the box powering off,
+>   that is new and someone armed it — it is not this.
+> - **The 21:30 boot was Bogdan**, not a wake task: pid 1224 is a Claude Code
+>   *remote* session in `/home/bodas`, started 21:31:32, one minute after boot.
+>   Check `ps` for `.claude/remote/ccd-cli` before calling a boot unexplained.
+> - **A trap that nearly read as a bug, for whoever touches `wake` next:** track's
+>   Discord post is stamped ~2s *before* wake logs the task `fired`, which looks
+>   like poweroff racing a live command. It is not — `server.py:150` calls
+>   `backends.fire()` **synchronously** and only then logs and powers off. Do not
+>   "fix" this ordering; if it ever becomes fire-and-forget, the morning run starts
+>   failing the first time a scout runs slow.
+> - **`mirror_degraded: true` on :8788 is a stale counter, not a fault.** Its
+>   `last_failure_at` is 2026-09-03 10:09 — yesterday's bridge outage. It never
+>   resets on recovery. Date it before reporting it.
+> - **THE ROSTER LIES.** `hotline --agents` says six agents are `[working]`;
+>   `hotline --list` shows two processes. `hotline-split`, `wake-dev`, `track-dev`,
+>   `dealhunter` and the `hotline-ios` *session* all died in the 08:05 poweroff.
+>   Left uncleaned on purpose: `--done` deletes their Discord channels, which hold
+>   their build notes. Asked him which he wants; the answer is his.
+> - **`dealhunter` was killed by Bogdan himself. Do not respawn it.** The laptop
+>   hunt belongs to `track`.
 >
+> **Open, and all his — nothing here is a task you should pick up:** the laptop
+> spec vs budget tension (≥32GB + 2024–2026 yields ~1 match at ≈€1245); whether
+> `wake` gets a public remote (it has none, and creating one needs his yes);
+> `hotline-split` parked unmerged on `split-packages`; `~/data/llama-turbo3`
+> keep/delete.
+>
+> Everything below in the 22:30 banner is still architecturally true (Pigion =
+> wake server, archserver = wake device, two independent wake paths), but its
+> "an unattended run is armed for 08:00" framing is spent — that run has happened.
 
 
 > ## STATUS AS OF 2026-09-03 22:30 CEST — AN UNATTENDED RUN IS ARMED FOR 08:00
