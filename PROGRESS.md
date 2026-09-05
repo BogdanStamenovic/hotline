@@ -7836,3 +7836,69 @@ expiry he has now cleared.
 `sip+confirmed` are the daemon's account of itself and this project has already
 had a good ring reported as a dead daemon. Offered him a real ring test rather
 than ringing his phone unasked.
+
+## 2026-09-05 16:35 — relayed a cast change to the agent on `arch`; corrected the agent's own read of urgency
+
+His instruction, provenance-verified before acting (posted 14:18:51Z): *"there is
+an agent working on arch. As i am not on arch i cannt stop it but i must. So i
+need you to stop it to tell it that aca is not playing. And thst jakov is"*
+
+Read as "interrupt it in order to tell it", not "kill it" — the second reading
+makes the rest of the sentence impossible, and it is the irreversible one.
+
+**Finding the agent.** No `hotline` and no `tmux` on `arch`; the sessions there
+are Claude Desktop, driven over Remote Control. Three `claude` processes:
+
+```
+174716  cwd ~/data/mm-stuff    last active 09-03 22:42   stale
+223143  cwd ~/data/SD_analize  last active 09-04 16:37   stale
+276873  cwd ~/data             last active 09-05 16:04   LIVE, resumed 53500c09
+```
+
+Live transcript `8e1d463e`, cwd `~/data/mm-stuff`, last turn 14:14:53Z — four
+minutes before he wrote. `ListAgents` showed a Remote Control peer named
+**Murder mystery creation**, which matches; delivered with `SendMessage`,
+carrying his verbatim words plus the Discord receipt (channel/message/author) so
+it could check who asked rather than who was relaying. `hotline --provenance` is
+not installable on arch, so the receipt is as far as verification goes there.
+
+**A probe of mine that was wrong and nearly became a false "not delivered".** I
+polled `~/.claude/projects/-home-bodas/*.jsonl` on arch for the relayed text for
+~2 minutes and it never appeared, so I was about to report the message as stuck.
+It had in fact arrived and been answered — a Remote Control / Desktop session
+does not write inbound cross-session messages into that project's `.jsonl`. The
+reply came back on the bridge address, not through any file I could grep.
+**Do not verify cross-session delivery by grepping the receiver's transcript.**
+
+**Its answer, which contradicted my assumption and was right to.** The game was
+already played — night of 3/4 Sept, `mm2`, 13 players; the group accused Miloš
+Vuksan, the guilty one was Mihajlo Jovanović. Nothing was in flight and nothing
+needed stopping. The change landed on the *next* game's `karakteri.md`: Aca
+marked not playing with his data kept for possible NPC use, Jakov opened as a
+player with empty fields, the whole thing tagged as an unverified second-hand
+change with nothing written until Bogdan confirms directly. Good discipline, and
+it is the same rule I am under.
+
+**Where I corrected it, per "a fact outranks momentum".** It told me neither of
+its two questions was urgent — *"ništa ne gori i ništa ne čeka"*. Its own session
+says otherwise, 14 minutes before he messaged me:
+
+```
+2026-09-05T13:53:56Z  him:  "pa igra ce danas da se igra opet"
+2026-09-05T13:54:20Z  it:   "The game is today."
+2026-09-05T14:04:35Z  him:  "pa verovatno oko 12 uvece. ali fora je da se sad
+                             napravi pa da mozemo da krenemo kad god."
+```
+
+So the next game is ~midnight tonight, and by its own account the evidence-log
+device tags derive from the first three letters of a player's surname — which
+puts **Jakov's surname on tonight's critical path**, not in a backlog. Sent back
+to it, along with two smaller things: it dated a `karakteri.md` rewrite to
+yesterday when its own backup is `karakteri.md.bak.20260905` and the turns are
+timestamped today; and Aca out plus Jakov in leaves 13 players, not the 14 it
+named — flagged as an ambiguity for it and him, not resolved by me.
+
+**Both its questions carried to him in one Discord message** with the timing
+attached, since he is away from arch and cannot read that agent at all right now.
+No ring — it said this does not warrant one and I agree. I did not touch
+`mm-stuff` and did not take over any of its decisions.
