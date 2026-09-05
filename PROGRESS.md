@@ -8186,3 +8186,49 @@ which is this project's signature failure yet again, and it is now sitting on th
 one tool that exists to reach him in an emergency. The iOS app was reinstalled
 today and may simply not be registering. Offered an agent for that and for
 softening the pager's default ladder; neither started.
+
+### 21:05 — he corrects me: DND. The call DID arrive, and the daemon cancelled it
+
+*"Nah i didnt get it cuz my phone was on dnd. I just sas a mixed calll"*
+(provenance-verified, 19:01:34Z).
+
+**I was wrong and it matters.** I had written "your phone almost certainly never
+rang", and recorded a hypothesis that the reinstalled app might not be
+registering. A missed call in his log is proof the INVITE landed, so the app
+registered fine and the reinstall was good. Both retracted to him directly.
+
+**The real mechanism, read out of the code rather than guessed.**
+`ConfirmedRing.ring` (`hotline-ios/server/src/hotline_ios/ring/watch.py`) demands
+a SIP **180/183** (`RING_CODES`, `ring/sip.py:101`) within `confirm_within = 8.0`s
+as proof the phone rang. Under iOS Do Not Disturb the call is never presented, so
+Linphone sends no 180. The daemon then:
+
+```python
+if not ringing.is_set():
+    attempt.cancel()   # SIP CANCEL on a LIVE invite -- this is the missed call
+    raise CallUnreachable("the phone never confirmed it was ringing within 8s")
+```
+
+**So the confirmation guard manufactured the missed call**, and the `--ring-timeout
+45` I passed never applied — the 8s window kills the call first. Then the
+"undeliverable" verdict triggered the pager ladder, so he got a cancelled call
+*and* thirteen mentions.
+
+**The consequence is bigger than today: he cannot be reached by phone while DND is
+on.** Every call cancels at 8s and degrades to Discord. DND at night or on focus
+is exactly when a ring is the only thing that would work, so the tool's headline
+capability is off precisely when it matters. It also means **past "unreachable"
+log lines may be false negatives** — real rings that were cancelled.
+
+**Proposed fix, argued rather than asserted, and NOT started.** Raising
+`confirm_within` is the wrong move: the guard is correct, and without it the
+loopback-reports-success bug returns. The defect is that one branch serves two
+different cases — *"this transport cannot confirm at all"* (loopback: refuse
+immediately, right as written) and *"this transport confirms and has not yet"*
+(SIP: keep the INVITE ringing to the full timeout, fall back only if still
+unconfirmed at the end). Never cancel a live INVITE at 8s. Offered an agent with a
+test that rings with confirmation suppressed and asserts the call is still ringing
+at 30s, plus softening the pager ladder in the same pass.
+
+**Asked him one question:** whether DND is usually on. If it is, every call ever
+logged unreachable was probably a real ring that got cancelled.
