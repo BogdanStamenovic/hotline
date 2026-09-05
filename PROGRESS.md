@@ -7771,3 +7771,28 @@ poweroff armed for today.
 
 One consolidated report posted to `#agent-hotline-80`. Nothing needed operating,
 so nothing was invented. Waiting.
+
+### 15:45 — the server half verified on the server, and two false alarms I created myself
+
+`/health` is a status field, so I went for the rows. Authenticated against Pigion
+with `X-Wake-Key` (`API_KEY` in `~/.config/wake/wake.env`) on the real endpoint
+`POST /api/v1/tasks/list {"since": 0}` — `/tasks` does not exist:
+
+```
+server revision 104 | 34 rows | 2 pending
+track-slot-0800-resume  1788674400 = 2026-09-06 06:00:00Z  wol    owner=''           repeat=86400  target=a8:a1:59:fd:4d:13
+track-slot-0800         1788674520 = 2026-09-06 06:02:00Z  shell  owner='archserver' repeat=86400
+```
+
+`owner=''` is the server, which is the form that actually fires — the trap the
+13:35 banner documents. Both halves confirmed on both machines.
+
+**Two false alarms of my own, worth writing down because they are the same bug
+this project keeps hitting.** My first two probes printed "**0 pending rows on
+the server**" — a dead primary wake path, and I would have paged him with it. It
+was wrong both times: the endpoint returned `{"error": "not found"}` and then
+`{"error": "bad or missing X-Wake-Key"}`, and my parser fell back to iterating
+the response's keys and counted zero. An error body read as data. Neither
+reached Discord because I checked the raw response before believing my own
+output. The parser now asserts `'tasks' in d` and fails loudly instead. Any probe
+whose failure mode is a plausible-looking number is not a probe.
