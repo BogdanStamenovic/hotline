@@ -8000,3 +8000,35 @@ fields; and the six missing voices (Verbić, Ramičić, Vuksan, Lena, Luka, Anja
 a question his session was cut off on this afternoon.
 
 Ring still armed for 15:55Z / 17:55 CEST, when character bibles block.
+
+### 16:48 — correction accepted; the block moved forward, so the ring moved with it
+
+The agent accepted the misattribution correction in full, checked it itself, told
+him directly, and **left the files alone because they were right**. It wrote the
+role-and-timestamp rule into its own memory. Progress meanwhile: twelve character
+bibles done, story-draft and lawyer-round instructions written, QC running over
+the bibles, map at 33 locations with the matrix computed from the graph.
+
+**The hard block is now one word, and it is closer than my timer assumed.** The
+story-draft phase writes every scene and the whole conversation graph for all
+thirteen at once, so a thirteenth person added afterwards is a patch, not a
+character. It estimates ~30 minutes of useful work before that phase starts —
+i.e. it blocks around **15:15Z**, not 15:55Z.
+
+Stopped the 15:55Z timer (`TaskStop`) and armed a new one for **15:05Z**
+(17:05 CEST), ten minutes ahead of the block, so a call that takes a couple of
+rings to connect still lands before the work stops rather than while it waits.
+
+**Ring criteria, stated to him and to the agent rather than kept private:** he has
+been silent 30 minutes across three messages, having answered within minutes
+earlier today, so the read is *away*, not *ignoring* — which is what the phone is
+for. On the call I ask for two things only, the roster word and Jakov's surname
+and email. I am not reading a list down the phone; everything else the agent has
+agreed to proceed on assumptions for and swap later.
+
+Items it will not stop for, and I passed them on as **its** judgment: Nikolina's
+"kome se dokazuje" (assumed roommates from 105 plus the group), Verbić's actions
+(agent-written and marked **as a suggestion** in the file, not passed off as
+his), the six missing voices, and — the one worth his attention — **his own two
+fields are the only ones blank for any character**, "priča ovako" and "šta je
+stvarno uradio", for the one person the group knows first-hand.
