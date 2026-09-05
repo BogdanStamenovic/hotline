@@ -7672,3 +7672,38 @@ pane.
 - My earlier claim that `WAKE_DB_PATH` is broken did not survive its testing: it
   honours the variable in all three binaries. The stray live row is better
   explained by the variable being set for one command and not the other.
+
+## SHUTDOWN 2026-09-05 13:45 — state at power-off (operator `hotline-80`)
+
+Going down at his verified instruction (`kind=human`, `11:15:04Z`): *"when you
+finish just shutdown either way doesnt matter if the ssh is still there"* — he
+cannot clear the SSH session because the laptop holding it is not with him, so
+the guard's `logind session 2 (tty)` signal is a true reading of a condition he
+has told me to override. `presence().clear` is `False` for exactly that reason.
+
+**Verified immediately before poweroff, not earlier in the session:**
+- All five repos clean and pushed, each checked with `git ls-remote` rather than
+  the local ref: hotline `5ff4a62`, track `2b01757`, wake `1b457da`,
+  hotline-ios `2140799`, wd_gen `b6c88e0`.
+- Two recurring wake rows pending, both `every=1d`; the server-side resume
+  confirmed present on Pigion with `repeat_seconds=86400` intact.
+- **RTC re-read rather than trusted**: `alarm_IRQ: yes`, `wakealarm=1788674280`
+  = 2026-09-06 05:58:00 UTC. It had been silently cleared once already today.
+- Pigion `/health` answering, revision 104. `Wake-on: g` still armed on `enp4s0`.
+- GPU 2 MiB, ollama holds nothing — nothing mid-inference.
+- Nothing in `/run/systemd/shutdown`, no systemd jobs, no crontab, no `at`.
+- Both subagents retired (`[done]`), channels archived to `docs/agent-archive/`
+  first because `--done` deletes them, and their tmux sessions killed.
+
+**What changed today, in one line:** the morning run stopped being a task somebody
+re-arms every evening and became `track`'s own recurring schedule, with the wake
+half owned by the server and the run half owned by this box.
+
+**The three failures caught, each of which reads as a healthy `pending` row until
+the morning it matters:** `--on <server>` writing a task neither side fires;
+`shutil.which` resolving the scheduled command to an ownbox shim that exits 127
+under a wake unit's PATH; and an unassigned recurring task against a
+pre-recurrence server losing its period on both sides.
+
+Recoverable as always: `wakeonlan a8:a1:59:fd:4d:13`, or it comes back by itself
+at 05:58.
