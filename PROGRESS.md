@@ -7200,3 +7200,71 @@ instinct at an unattended prompt.
 
 Nothing in flight, nothing half-applied, nothing armed except the morning run.
 Going down.
+
+## 2026-09-05 12:30 — operator boot sweep on the 12:20 boot (HIS wake, not a schedule)
+
+Adopted `hotline-80`, read `handoff.md` (top banner is the newest here — 09-05
+01:15; the tail is 09-01, so the prompt's "newest at the BOTTOM" is wrong for
+this file), then read both Discord channels including the window the box was
+powered off.
+
+**Environment gotcha for whoever is next:** this session started with
+`PATH=/usr/local/bin:/usr/bin` only. `hotline` and every sibling live in
+`~/.claude/bin`, which was **not** on it — `hotline --adopt` failed with
+"command not found" before anything else could happen. Export
+`~/.claude/bin:~/.local/bin` first.
+
+### The 08:00 run worked, verified from the task DB rather than a banner
+
+`wake list --all` shows `morning-*` WoL **fired** at 06:00/06:02/06:04 UTC and
+`track-run-all` **fired** at 06:05. `last -x` shows boot 08:00 CEST, down 08:07
+— a 7-minute uptime. Both trackers posted at 08:06–08:07. That is the run
+succeeding, not a fault.
+
+**The rtcwake row lied again, and this is now observed rather than predicted.**
+The 05:58 `rtcwake` task *still* reads `pending` this afternoon, hours after the
+hardware wake it describes came and went. It has never once been accurate.
+
+### The 12:20 boot is Bogdan, not a schedule and not a fault
+
+Nothing in the wake DB fired at 12:20. The journal shows `sshd-session[796]:
+Accepted publickey for bodas from 100.103.46.118` at 12:20:52 — sixteen seconds
+after boot — and `100.103.46.118` is the tailnet host `arch`, his laptop. A
+`.claude/remote/srv/.../server --serve` came up at 12:20:53 in `session-2.scope`
+and the SSH connection is still ESTAB. **He woke it and opened a Claude Code
+remote bridge.** Treated as a second voice, not talked over.
+
+### A status field caught me mid-sweep — worth recording, since it is the ninth
+
+`ssh pigion 'systemctl is-active wake-server'` returned **inactive**, and I was
+one sentence from reporting the wake path broken. It is a **user** unit. Probing
+the thing itself — `curl http://192.168.1.8:8791/health` — returned
+`{"ok": true, "revision": 63, "role": "server"}`, and `ss -tlnp` shows `wake`
+listening on 8791. Pigion is up 48 days. **System-scope `is-active` on a user
+unit is not a false negative, it is an answer to a different question.**
+
+### State
+
+- Roster is just `hotline-80`; no other agents alive, nothing wedged.
+- hotlined:8788 and hotline-ios:8789 both probed on their real ports —
+  `ring_ready: true`, `transport: sip+confirmed`, `active_calls: 0`.
+- hotline / hotline-ios / track / wake / wd_gen all clean, `unpushed=0`.
+- GPU 2 MiB, no model resident; ollama holds nothing. 13 GiB RAM free.
+- **Nothing armed either way:** no poweroff scheduled, and no wake for tomorrow.
+
+### The one real decision, and it is his
+
+The 08:00 run was **never recurring** — it has been armed by hand each evening,
+and the last row in the DB is this morning's 06:05. Left as-is the box does not
+come back tomorrow. Offered him three options (make it recurring / arm tomorrow
+only / leave it) in one consolidated message and did not act, because which one
+is right is a question about what he wants, not about the system.
+
+### Open — all his, unchanged
+
+1. Which model he wants to fit — the only thing that settles the 720 EUR RTX
+   3090 24GB against the 650 EUR V100 32GB (SXM2: adapter + airflow, no bf16).
+2. Whether to scrub the MAC / tailnet IP from the now-public `wake` worktree,
+   and whether to rewrite git history for it.
+3. `llama-turbo3` and `uxonews` still on the old `markojova145@gmail.com`.
+4. `hotline-split` still parked unmerged on `split-packages`.
