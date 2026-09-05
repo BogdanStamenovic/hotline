@@ -1,5 +1,63 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-05 12:35 CEST — BOX IS UP BECAUSE **HE** WOKE IT. NOTHING IS ARMED.
+>
+> **READ, THEN DISTRUST.** Verify with `last -x -n 8 reboot shutdown`,
+> `~/data/wake/.venv/bin/wake list --all`, `hotline --agents`, and
+> `grep -n "^## " PROGRESS.md | tail`.
+>
+> ### FIRST COMMAND, BEFORE `--adopt`: fix PATH
+> The watchdog spawns the operator with `PATH=/usr/local/bin:/usr/bin` and nothing
+> else. Every hotline binary lives in `~/.claude/bin`, which is **not** on it —
+> `hotline --adopt` fails with `command not found` on line one. Run:
+> `export PATH="$HOME/.claude/bin:$HOME/.local/bin:$PATH"`
+>
+> ### The 08:00 run of 2026-09-05 SUCCEEDED and is SPENT — do not expect another
+> WoL fired 06:00/06:02/06:04 UTC, `track-run-all` fired 06:05, both trackers
+> posted at 08:06–08:07 CEST, box powered off at 08:07. All confirmed from `fired`
+> rows in the wake DB, not from a banner.
+> **The run was never recurring — it was armed by hand each evening.** The last row
+> in the DB is this morning's 06:05, and the RTC alarm is spent (`alarm_IRQ: no`).
+> **As things stand the box does NOT come back on its own tomorrow, and no poweroff
+> is armed either.** Which of those to change is his call; it was put to him in
+> #agent-hotline-80 at 10:27Z (recurring / tomorrow-only / leave it) and is unanswered
+> as of this writing.
+> The 05:58 `rtcwake` row *still* reads `pending` hours after the fact. That row has
+> never once been accurate — read `/proc/driver/rtc`, never the row.
+>
+> ### The 12:20 boot was Bogdan, and he may still be here
+> Nothing in the wake DB fired at 12:20. `sshd-session[796]: Accepted publickey for
+> bodas from 100.103.46.118` at 12:20:52 — sixteen seconds after boot, and that IP is
+> the tailnet host `arch`, his laptop. A `.claude/remote/.../server --serve` came up
+> at 12:20:53 in `session-2.scope`. **If a session is running on that bridge it is a
+> second voice — check before answering anything, so he does not get two replies.**
+>
+> ### A user unit reads as `inactive` in system scope — this nearly became a false alarm
+> `ssh pigion 'systemctl is-active wake-server'` returns **inactive**. It is a **user**
+> unit and it is fine: `curl http://192.168.1.8:8791/health` gives
+> `{"ok": true, "revision": 63, "role": "server"}` and `ss -tlnp` shows it listening.
+> Pigion is up 48 days. Probe the port, not the scope you happened to guess.
+>
+> ### State at 12:35
+> - Roster is **only `hotline-80`**. No other agents alive, none wedged.
+> - hotlined:8788 and hotline-ios:8789 probed healthy — `ring_ready: true`,
+>   `transport: sip+confirmed`, `active_calls: 0`.
+> - hotline / hotline-ios / track / wake / wd_gen clean, `unpushed=0` (hotline HEAD
+>   `8ae8fad`, checked against `git ls-remote`, not against the local ref).
+> - GPU 2 MiB, no model resident. 13 GiB RAM free.
+> - `~/.local/bin/track` and `~/.local/bin/wake` are still **ownbox clones of `main`**.
+>   Use `~/data/<repo>/.venv/bin/<tool>` for those two.
+>
+> ### Open — all his
+> 1. Which model he wants to fit — the only thing that settles the 720 EUR RTX 3090
+>    24GB against the 650 EUR V100 32GB (SXM2: adapter + datacenter airflow, no bf16).
+> 2. Whether to scrub the MAC / tailnet IP from the now-public `wake` — worktree is
+>    5 minutes; git history means a rewrite and a force-push.
+> 3. `llama-turbo3` and `uxonews` still on the old `markojova145@gmail.com`.
+> 4. `hotline-split` still parked unmerged on `split-packages`.
+> 5. Whether tomorrow's 08:00 run gets armed, and whether it becomes recurring.
+
+
 > ## STATUS AS OF 2026-09-05 01:15 CEST — WRITTEN AT A POWEROFF, AT HIS INSTRUCTION
 >
 > **READ, THEN DISTRUST.** Verify with `last -x -n 8 reboot shutdown`, `wake list`
