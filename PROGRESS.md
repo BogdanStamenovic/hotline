@@ -7367,3 +7367,90 @@ him that in the same message rather than discovering it at the end.
    tidiness rather than secrecy. Asked; unanswered.
 2. GPU model choice; `llama-turbo3`/`uxonews` on the old email; `hotline-split`
    unmerged — all unchanged.
+
+## 2026-09-05 12:52 — capability inventory, a wrong claim corrected, and the track build authorised
+
+`10:45:30Z`, verified: *"I just need you to tell me again ehat capabilities does
+track have and wake. Track should be able to say track x: then an sgent spawns
+looksinto x finds the best time to check things for it. Then setsup an automated
+schedule using wake to wake up everyday at thst tims does what it needs to then
+shutdwon."*
+
+### I had told him something wrong an hour earlier, and had to correct it
+
+At 12:35 I told him recurrence did not exist. That is true of **wake** and I had
+checked wake — but I had not checked **track**, and track already builds
+recurrence on top of wake by re-arming: `engine.py:_rearm_wake()` arms the next
+one-shot at the end of every run. So track was already ~70% of what he described,
+and my earlier answer understated it. Corrected in the same message that answered
+his question, before it could steer a decision.
+
+The near-miss inside that: I first grepped for `schedule_next`, got **zero call
+sites**, and was one sentence from reporting that track's recurrence was dead
+code that never re-arms. The function is called `schedule`; `engine.py:123` calls
+it. A grep for the wrong name returning nothing looks exactly like a grep for the
+right name returning nothing.
+
+### The honest gap, which is what he actually wanted to know
+
+Of his five steps, three exist and two do not:
+
+| his step | state |
+|---|---|
+| `track x` creates the assignment | exists |
+| an agent spawns and researches it | exists — Sonnet scouts, keyless `claude -p` |
+| **finds the best time to check** | **does not exist** — `--interval`, flat, default 6h |
+| schedules through wake, recurring | exists, by re-arm |
+| **then shuts down** | **does not exist** — track never passes `--then poweroff` |
+
+`wake` has `--then poweroff`; track has never used it. **That is the whole reason
+the morning run is hand-armed**: a separate wake task calling `track-run-all` with
+poweroff bolted on, re-armed by hand three evenings running, because track could
+not say "daily at 08:00, then power off."
+
+He replied **"Okay so build it"** (`10:48:47Z`, verified). Spawned `track-sched`
+on Opus, baseline **348 tests**. Briefed that GAP 2 outranks GAP 1 under time
+pressure, and that the multi-assignment case is the hard half — two assignments
+each powering off independently would kill each other mid-run.
+
+### wake-general landed recurrence; production cannot store it yet
+
+`bbd8add` gives `--at 06:00 --every 1d`. **257 tests, up from 194**, ruff and mypy
+clean. `wake list` gained `every` and `on`, and `on` renders `server` for
+`owner=''` — which removes the footgun from this morning at the source.
+
+**But Pigion's schema has no `repeat_seconds` column.** Dumped it directly.
+Pigion is the *server* — it fires every WoL and every device syncs against it — so
+an old server with a new device may silently drop the repeat field and turn a
+recurring task into a one-shot that dies after one fire: precisely the failure the
+feature exists to remove. Asked wake-general whether that is degraded or broken,
+since it decides whether Pigion is deployed before or after. Pigion also has no
+git checkout of wake, so nothing there updates by itself.
+
+### A mistake of mine, and what it exposed
+
+Testing `--every` by hand I assumed `WAKE_DB_PATH` would isolate me to a scratch
+DB. **It did not, and the test row went into the live database** — a recurring
+task that would have fired at 06:00 tomorrow and then daily forever. Cancelled;
+verified absent from archserver and Pigion; the four `stopgap-*` rows intact.
+`--db` is a TOP-LEVEL flag, before the subcommand, and is the form that works.
+
+Two further things fell out of it:
+- A first `wake cancel <full id>` returned **"no such task"** for a task that was
+  present and `pending`; an identical retry a minute later cancelled it fine.
+  Possibly me racing the agent's own edits mid-refactor. Reported as a maybe, not
+  as a fact, because a recurring task that reports "no such task" and cannot be
+  cancelled runs forever.
+- An intermediate check of mine printed `LIVE: ABSENT` for a row that was in fact
+  `pending` in the live DB — WAL visibility across connections. **A single
+  database read is a status field too.** The row was only pinned down by querying
+  all three DBs in one pass.
+
+### State
+
+- Two Opus agents live: `wake-general` (wake), `track-sched` (track). Different
+  repos, no file contention. Both verified on Opus from `/proc/<pid>/cmdline`.
+- Shutdown still held and now flagged to him as a real question: it was a small
+  job when he asked, and is now two builds mid-flight.
+- Git history rewrite: **declined by him**, recorded in the banner so it stops
+  being re-asked.
