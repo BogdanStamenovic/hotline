@@ -8065,3 +8065,73 @@ what else the call covers, because it is a better argument than any deadline:
 **of the thirteen, his is the only character written without a single sentence of
 his own.** Everyone else has something he said about them; his is the only one
 assembled second-hand, and he will read it in his own dossier.
+
+## 2026-09-05 17:45 — he took over the mm work himself; retasked to track's laptop findings
+
+**His two messages, read straight off Discord (15:09:21Z and 15:12:55Z):**
+*"Its okay ive cleared up everything abort doing anything right now which interacts
+with mm. In the meantime i need you to look tracks findings nad make me a
+comprehensvie list and summary tell me which laptop why what does it bring to the
+table excetera"* and *"Stop the reminders you are sending me"*.
+
+**Both obeyed immediately.** Confirmed no pager or call process was still alive
+(`ps` clean, `active_calls=0`) — the ladder had already stopped when he answered.
+**I did not message the mm agent to stand it down**, because that is itself an
+interaction with mm and he said abort; it would also have put two voices on the
+same question, which is the thing this role exists to prevent. If it pings me I
+answer minimally and tell it he took over.
+
+**The call itself: the phone never rang.** `hotline-call` reported
+`unreachable after 8s via sip+confirmed` and fell through to the pager, which
+reached him after 462s and fourteen escalations. `/health` was clean beforehand —
+`fake:false`, `ring_ready:true`, `sip+confirmed`, `degradations:[]` — so this is
+the health flags saying yes while the phone does not ring, on the same day the
+iOS app was reinstalled. **Not chased, because he had just said stop; noted as
+one line for him and left alone.**
+
+### The laptop work, and why the answer is not "the top-scored find"
+
+`track show` presents "best finds" that are all 16 GB 2017–2019 machines with
+score 1.00, against an assignment demanding 32 GB and 2024–2026. That view is
+useless, so I went to `~/.local/share/track/track.db` instead.
+
+**What the data actually says (197 laptop findings, 14 runs, ~$7.36):**
+
+| measure | value | consequence |
+|---|---|---|
+| findings with `reference_price` | **9 / 197** | only nine scores mean "underpriced"; the rest are a different basis, ranked against them |
+| findings with `product_year` | **12 / 197** | the 2024–2026 filter is not being applied |
+| `listing_status` rows retired | **0 / 145** | "still listed" has never been checked once |
+
+**So I probed all 26 candidate URLs rather than trusting any of it.** Four return
+**HTTP 404**, six more load but are withdrawn or out of stock, and stored prices
+drift from the page — Dell Pro 16 Plus is recorded at 312,490 RSD and its page
+says 351,490 today. **The top-scored find (0.70) is a 404; the two machines worth
+buying scored 0.09.** The ranking is close to anti-correlated with usefulness
+here, for reasons the table above fully explains.
+
+**The recommendation, all verified live this afternoon:**
+- **HP ZBook 8 G1i — €900, new.** Ultra 7 265H (2025), 32 GB, 256 GB. The only
+  listing that is current-gen *and* 32 GB *and* business-grade *and* under €1000
+  simultaneously. 256 GB is ~€40 to fix.
+- **HP EliteBook X G1i 14** — Ultra 7 258V (Lunar Lake), 32 GB, 1 TB. Best fit for
+  the battery requirement; page is live but the price does not render to a plain
+  fetch, so it is **unpriced, not expensive** — needs a human click. Said so
+  rather than guessing a number.
+- **HP OmniBook 3 15″ — €850.** Cheapest qualifying, 4× the storage, consumer line.
+- **Dell 16 Plus — 283,490 RSD (~€2,417).** The only listing in all 197 that
+  quantifies its panel (16″ QHD+, 600 nits).
+
+**The honest finding about his own spec:** he asked for "a great high-quality
+display", and exactly one listing states a brightness figure. Every sub-€1000
+machine says "FHD" and stops. So the real choice is buy-on-spec with an unknown
+screen, or pay ~€1,500 more for the one that names its panel. That is a property
+of the listings, not a gap in the research — said so plainly.
+
+Written up as an artifact (verified-live table, the four data-quality numbers,
+the picks) and posted with the headline in Discord:
+`https://claude.ai/code/artifact/709b83ea-0877-4b19-8913-efda58e1691c`
+
+**Offered, not started:** an agent on track's scoring and its reaper. Both are
+contained jobs in track's own code, and they are the reason the ranking cannot be
+read. Waiting for his word rather than assuming the offer is an instruction.
