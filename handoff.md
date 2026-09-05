@@ -22,6 +22,18 @@
 > | 06:00 | **Pigion** (`owner=''`) | `track-slot-0800-resume`, WoL to `a8:a1:59:fd:4d:13`, **`every=1d`** |
 > | 06:02 | archserver (`owner='archserver'`) | `track-slot-0800`, runs both trackers in sequence, **`every=1d`**, `then=poweroff`, 1080s ceiling |
 >
+> The 06:02 task runs **`~/.local/share/ownbox/tools/track/.venv/bin/track`**, the
+> ownbox copy, not `~/data/track`. Deliberate: the dev checkout is his working
+> tree, and an agent mid-edit there means the morning run executes a half-written
+> checkout with nobody watching. The ownbox copy only moves on `ownbox update`.
+>
+> **The RTC alarm gets cleared by things other than a reboot.** It was armed at
+> 12:45 and found cleared (`alarm_IRQ: no`) at 13:40 with `wake-agent` never
+> having restarted (`NRestarts=0`), most likely by a transient `wake agent` during
+> `ownbox update wake` — `cli.py:335` clears a leftover alarm on agent start. Not
+> pinned down definitively. **Re-read `/proc/driver/rtc` after any ownbox update
+> or unit restart; do not assume it survived.**
+>
 > **These recur natively.** Nothing re-arms them, so a crashed run or a box that
 > was off no longer kills the schedule permanently. Verified on Pigion that
 > `repeat_seconds=86400` survives the sync round trip, and by running wake's real
