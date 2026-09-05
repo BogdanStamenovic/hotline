@@ -31,8 +31,21 @@
 > 12:45 and found cleared (`alarm_IRQ: no`) at 13:40 with `wake-agent` never
 > having restarted (`NRestarts=0`), most likely by a transient `wake agent` during
 > `ownbox update wake` — `cli.py:335` clears a leftover alarm on agent start. Not
-> pinned down definitively. **Re-read `/proc/driver/rtc` after any ownbox update
-> or unit restart; do not assume it survived.**
+> pinned down definitively. **Re-check it after any ownbox update, unit restart,
+> or reboot; do not assume it survived.** It happened AGAIN across the 13:33
+> poweroff — found unarmed at 15:29 on the 15:26 boot, and this time `wake agent`
+> logged no clearing, so it was already gone before the agent started.
+>
+> **CORRECTION, 15:35 — do NOT check `/proc/driver/rtc` for this. It lies.**
+> `alrm_time` and `alrm_date` keep whatever was last written to them whether or
+> not the alarm is enabled. At 15:29 that file read `alrm_date: 2026-09-06`,
+> `alrm_time: 05:58:00` — tomorrow, exactly right, and completely dead. The
+> authority is **`/sys/class/rtc/rtc0/wakealarm`**: an epoch integer when armed,
+> **empty** when not. In `/proc` only `alarm_IRQ` (`yes`/`no`) tracks the truth.
+> Arm it through wake's own path, never by hand — `arm_wakealarm` writes `0`
+> first because the kernel refuses to overwrite an armed alarm with a quiet
+> EBUSY:
+> `cd ~/.local/share/ownbox/tools/wake && ./.venv/bin/python -c "from wake import power; power.arm_wakealarm(<epoch>)"`
 >
 > **These recur natively.** Nothing re-arms them, so a crashed run or a box that
 > was off no longer kills the schedule permanently. Verified on Pigion that
@@ -113,7 +126,8 @@
 > #agent-hotline-80 at 10:27Z (recurring / tomorrow-only / leave it) and is unanswered
 > as of this writing.
 > The 05:58 `rtcwake` row *still* reads `pending` hours after the fact. That row has
-> never once been accurate — read `/proc/driver/rtc`, never the row.
+> never once been accurate — never read the row. (And not `/proc/driver/rtc`
+> either; see the 13:35 banner's 15:35 correction — `/sys/class/rtc/rtc0/wakealarm`.)
 >
 > ### The 12:20 boot was Bogdan, and he may still be here
 > Nothing in the wake DB fired at 12:20. `sshd-session[796]: Accepted publickey for

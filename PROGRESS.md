@@ -7707,3 +7707,67 @@ pre-recurrence server losing its period on both sides.
 
 Recoverable as always: `wakeonlan a8:a1:59:fd:4d:13`, or it comes back by itself
 at 05:58.
+
+## 2026-09-05 15:35 — unscheduled boot; the RTC backup wake read armed and was not
+
+Woken at 15:26 CEST by nothing in the schedule. Adopted `hotline-80`, read
+`handoff.md` and both Discord channels including everything sent while the box
+was down (nothing new from him since 11:15Z, before the 13:33 poweroff).
+
+**Who booted the box: not determined, and I have not claimed otherwise.**
+`wake list --all` has no row anywhere near 13:26Z — the only `pending` rows are
+tomorrow's two. No `Accepted publickey` this boot, `who` shows only my own tmux
+pts, and there is no `.claude/remote/.../server --serve` process, so the
+ccd-bridge tell for "he is at the keyboard" is absent. Most likely a magic
+packet from him. Put to him in the channel rather than guessed at.
+
+**THE FINDING. `/proc/driver/rtc` is a status field. The alarm is
+`/sys/class/rtc/rtc0/wakealarm`.**
+
+At 15:29 `/proc/driver/rtc` read:
+
+```
+alrm_time : 05:58:00
+alrm_date : 2026-09-06     <- tomorrow, looks armed
+alarm_IRQ : no             <- the only honest line
+```
+
+`/sys/class/rtc/rtc0/wakealarm` was **empty**. The alarm was **not armed**. The
+`alrm_time`/`alrm_date` registers keep their last written value whether or not
+the interrupt is enabled, so a reader who checks the date — which is what the
+13:35 handoff banner tells the next session to do — concludes the hardware
+backup is live when it is dead. This is the project's signature failure again,
+tenth instance: a field read as a signal without probing what it indicates.
+
+Re-armed through wake's own tested path rather than by hand:
+
+```
+wake.power.arm_wakealarm(1788674280)   # 2026-09-06 05:58:00 UTC
+read back: 1788674280 ; /proc alarm_IRQ now: yes
+```
+
+**Why it was cleared is NOT diagnosed, and I did not go hunting.** `wake agent`
+clears a leftover alarm on start deliberately (`cli.py:334-336`, and the
+reasoning in `power.clear_wakealarm` is sound — a WoL wake leaves the RTC alarm
+armed to power the box on again at a time nobody chose). But it logs when it
+does, and it logged nothing this boot: `read_wakealarm()` returns `None` on an
+empty file, so the alarm was already gone before the agent came up at 15:26:18.
+That leaves the 13:33 poweroff itself, or something in it. Ops job was to
+restore the state and say so; the cause is a build question for whoever owns
+`wake` next.
+
+**What was actually at risk: the redundancy, not the run.** The primary path is
+intact and probed — Pigion `{"ok": true, "revision": 104, "role": "server"}`,
+WoL at 06:00Z `every=1d` owner `server`, archserver run at 06:02Z `every=1d`
+against the ownbox track binary. The RTC is the path that works with the LAN and
+Pigion dead, which is exactly the failure it exists for and exactly the one you
+find out about on the morning it happens.
+
+**Rest of the sweep, probed not assumed:** hotlined:8788 ok / not degraded;
+hotline-ios:8789 ok, `ring_ready true`, `sip+confirmed`, 0 active calls;
+hotline, hotline-ios, track, wake all clean with HEAD == `git ls-remote` origin;
+GPU 2 MiB, 13 GiB RAM free; roster is `hotline-80` alone, nothing wedged, no
+poweroff armed for today.
+
+One consolidated report posted to `#agent-hotline-80`. Nothing needed operating,
+so nothing was invented. Waiting.
