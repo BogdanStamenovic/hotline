@@ -8135,3 +8135,54 @@ the picks) and posted with the headline in Discord:
 **Offered, not started:** an agent on track's scoring and its reaper. Both are
 contained jobs in track's own code, and they are the reason the ranking cannot be
 read. Waiting for his word rather than assuming the offer is an instruction.
+
+## 2026-09-05 20:58 — "Did you call me? Investigate who did and for what reason"
+
+Provenance-verified (posted 18:55:53Z). **The answer is yes, it was me, and the
+useful part is that it did not reach him as a call.**
+
+**The one call this boot:** id `37e546fbfe72`, 17:05:36 CEST, placed by me for the
+two murder-mystery blockers. `hotline-ios` logged it failing:
+
+```
+17:05:36 WARNING ring degraded: no ring confirmation from sip within 8s
+17:05:36 WARNING call 37e546fbfe72 undeliverable: the phone never confirmed
+         it was ringing within 8s -- treating as undeliverable
+```
+
+**So his phone almost certainly never rang.** What reached him was
+`hotline-page`'s fallback ladder: DM + channel post at 17:05:37, then **thirteen
+escalating @mentions in #general every ~30s** from 17:07:41 to 17:13:10. He said
+"Stop the reminders" at 17:12:55, mid-storm, and they ended at 17:13:16 because he
+replied — **2m20s short of the workstation siren**, which fires at the ten-minute
+mark.
+
+**Mine, and I said so without softening it.** The ladder is `hotline-page`'s
+default (30s cadence after a 2-minute grace, siren at 10 and 25 min). I passed
+`--timeout 900` and nothing else — no `--no-siren`, and not `--no-wait`, which
+would have delivered the question and let me pick the answer up later. I chose the
+blocking form because I had nothing else to do, which is a poor reason to hold a
+nudge loop open on him.
+
+**Verified nothing else called or paged him, rather than asserting it:**
+
+| check | result |
+|---|---|
+| daemon logs, last 90 min | **zero** entries in `hotlined` and `hotline-ios` |
+| call events this boot | exactly **one** — the failed one above |
+| Claude sessions on this box | **one**, pid 845, me. No other agents alive |
+| Discord after 17:13 | only my 17:19 laptop report |
+
+**Stated as unknown rather than filled in:** the `arch` laptop is offline (SSH
+times out), so anything the murder-mystery agent might have done by a route not
+passing through this box is unverifiable from here, and an ordinary phone call
+from a person would be invisible to me entirely. **If something rang him around
+20:50, it did not come from this box.**
+
+**The real defect this exposed, offered not started:** the SIP ring failed while
+`/health` reported `ring_ready: true`, `transport: sip+confirmed`, `fake: false`,
+`degradations: []`. The health check does not know the phone half is broken —
+which is this project's signature failure yet again, and it is now sitting on the
+one tool that exists to reach him in an emergency. The iOS app was reinstalled
+today and may simply not be registering. Offered an agent for that and for
+softening the pager's default ladder; neither started.
