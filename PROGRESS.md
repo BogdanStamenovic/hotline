@@ -7943,3 +7943,60 @@ I also pointed it at `~/.claude/projects/-home-bodas/8e1d463e-*.jsonl` on arch,
 turns 13:53Z–14:14Z, in case it wants the lost afternoon back as turns rather
 than as the files' end state — and said I had read only enough to route it and
 would not mine further without his say-so.
+
+## 2026-09-05 16:40 — the agent asked me to relay a contradiction that did not exist; verified first, so it never reached him as one
+
+The `arch` agent sent me what it called a real inconsistency between a decision
+he made and what the files do, ranked it **above** Jakov's surname, and asked for
+one word from him: open a third Gmail, or keep sending from his own account. It
+had recovered the lost afternoon through a subagent to find this.
+
+**Verified before relaying, and it was backwards.** His actual answer, from the
+transcript on `arch`, `8e1d463e`, at **2026-09-05T13:21:29.514Z**:
+
+```
+"Nalog za slanje i tvoja uloga -- kako resavamo to sto saljes sa svog naloga a igras?"
+  = "Ostaje kako jeste ali je prosla sesija shvatila kako to da zaobidje
+     posalje i odmah nakon obrise."
+```
+
+He chose **"ostaje kako jeste"** and gave his reason. The agent's own next turn
+at 13:22:01 answers exactly that choice — send-then-delete needs IMAP
+`STORE \Deleted` + `EXPUNGE` because Gmail auto-saves SMTP sends. So
+`PROMPT.md`'s *"Zasebnog naloga nema; šalje se sa naloga domaćina, koji igra"* is
+a faithful write-down. **Nothing fell silently and there was nothing to fix.**
+
+**Both halves of its reconstruction were misattributions, and they are worth
+naming because they are a general trap:**
+
+1. *"U 13:20 izabrao je 'Novi nalog, ostaješ igrač'"* — that is the **label of the
+   option the agent itself recommended**, in the picker it issued at 13:20:06.
+   Its own text, not his answer. His answer came 83 seconds later.
+2. *"Četiri minuta kasnije rekao je 'Da ja ću biti i igrač i pokretaću
+   skriptu'"* — **not a message from him today.** It appears at 13:24:08.637Z as
+   a tool RESULT: the tail of `karakteri.md`, his **August** answer set, read
+   back off disk in the same output as the 13-name list. The agent had itself
+   identified that tail as August material at 13:24:54.
+
+So a menu it wrote plus a file it read became "a decision he made and then
+withdrew". **A subagent replaying a transcript hands back option lists and file
+contents rendered exactly like speech** — attribute by role and timestamp before
+treating a line as something he said. Sent the agent the timestamps rather than
+the conclusion, and told it to fix its provenance notes, not the files.
+
+**What did survive is real and went to him properly framed.** Last night's
+send-and-delete stripped the `Poslato` label from a message he had sent to
+himself — one Gmail message, two labels — so it left his **own** Inbox too and he
+lost his dossier as the game began. The applied fix excludes his mail, at the
+price of his messages remaining in `Poslato`. He chose "ostaje kako jeste"
+*without knowing that cost*, which makes it fair to re-put to him — as new
+information, **not** as a contradiction, and without asking him to open an
+account on a false premise.
+
+Carried to him in one message, ranked: his direct **"potvrđujem"** on Aca/Jakov
+(the agent refuses to write dossiers off my relay alone — correct); Jakov's
+surname with the **Miletić** continuity catch; his email and three character
+fields; and the six missing voices (Verbić, Ramičić, Vuksan, Lena, Luka, Anja),
+a question his session was cut off on this afternoon.
+
+Ring still armed for 15:55Z / 17:55 CEST, when character bibles block.
