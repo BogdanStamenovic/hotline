@@ -7796,3 +7796,43 @@ the response's keys and counted zero. An error body read as data. Neither
 reached Discord because I checked the raw response before believing my own
 output. The parser now asserts `'tasks' in d` and fails loudly instead. Any probe
 whose failure mode is a plausible-looking number is not a probe.
+
+## 2026-09-05 16:20 — "I installed ios again": verified against Apple and against the laptop
+
+Relayed via hotline and checked before acting: `hotline --provenance` re-fetched
+it and confirmed `bogdan028304` posted it in `#agent-hotline-80` at 14:11:27Z.
+
+**Profile turned over, confirmed by asking Apple, not by believing him or me:**
+
+```
+python3 ~/data/hotline-ios/tools/profile-watch.py --check
+  before (12:27 run):  2S56P3Z95Z  expires 03/09/2026 18:33   (-1.75 d)
+  now:                 PLB54Z6J2X  expires 12/09/2026 12:36   (+6.85 d)
+```
+
+**A fresh profile in the account is NOT proof the phone has it** — re-signing on
+a desktop does not update the copy already installed on the device. The probe
+that settles it is dating the *install*, per the standing note on this. Over SSH
+to `arch`:
+
+```
+~/.cache/xtool/tmp-staging-BD5C200F-20F1-4469-9FAF-5CF0B8EAD8ED   2026-09-05 12:37:00 +0200
+```
+
+Same minute Apple issued `PLB54Z6J2X`, so it was an `xtool install` onto the
+cabled phone and the account clock and the phone clock coincide — the same
+signature as the 27 Aug install. It also cannot have run on archserver: this box
+was powered off 13:33-15:26 and the install was at 12:37. `~/.config/xtool/data`
+is still 2026-08-27 16:24, confirming again that it is the auth login and never
+an install.
+
+**Consequence, which is the operational point:** `hotline-profile-watch.timer`
+fires next at 10:02 tomorrow with `--warn-days 3`. It will now see 6 days and
+stay silent instead of paging him a third time about something he had already
+fixed. Nothing to change; the watcher was right, it was just reporting a real
+expiry he has now cleared.
+
+**Not claimed:** that the app launches and rings. `ring_ready: true` /
+`sip+confirmed` are the daemon's account of itself and this project has already
+had a good ring reported as a dead daemon. Offered him a real ring test rather
+than ringing his phone unasked.
