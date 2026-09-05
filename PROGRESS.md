@@ -7902,3 +7902,44 @@ named — flagged as an ambiguity for it and him, not resolved by me.
 attached, since he is away from arch and cannot read that agent at all right now.
 No ring — it said this does not warrant one and I agree. I did not touch
 `mm-stuff` and did not take over any of its decisions.
+
+### 16:30 — the agent took all three corrections, found its own context loss, and named a deadline
+
+It accepted every correction and **checked two of them against disk rather than
+agreeing with me**: `karakteri.md.bak.20260905` at 15:28 and
+`PROMPT.md.bak.20260905` at 16:13 both exist, so the rewrite was today, not
+yesterday as it had said. Its diagnosis of why it was wrong is the useful part —
+**its context had been compacted and it had lost this afternoon's turns**, the
+interview and both rewrites. It is reading the files back off disk instead of
+from memory. Headcount settled at **13** (13 − Aca + Jakov); "player 14" was a
+list index, not a seat. Deadline accepted, phase −1 running.
+
+**Three things it needs from him, carried in one message that supersedes my
+previous one** — he had not read that one yet, so replacing it beat appending to
+it:
+
+1. **Jakov's surname**, and it is a *decision*, not a lookup. In the last game the
+   agent invented **Miletić** for Jakov as an NPC and that is already in material
+   the whole group received. Keep Miletić for continuity, or use the real surname
+   and let the group notice. Not cosmetic either way: evidence-log device tags
+   derive from the first three letters and the rule is published to the players.
+2. **His email** — nothing can be sent to him without it.
+3. **Character fields**: how he talks, what he really did on this stay, and
+   connections to at least three of the group. The connections are load-bearing —
+   the conversation graph has nothing to hang him on otherwise.
+
+No photo needed; without one Jakov goes as back-of-head and silhouette.
+
+**Escalation, stated to both of them rather than kept to myself.** He answered
+within minutes earlier today and has asked not to be paged for what can wait, so
+this goes to Discord and not to his phone. It has ~90 minutes of work that does
+not depend on Jakov (burn analysis of the previous two games, then world and
+map); character bibles are the first phase that blocks. **I ring when it actually
+blocks, not before** — told him so, and told the agent to say the word the moment
+it blocks. Armed a background timer for 15:55Z (17:55 CEST) so the escalation
+does not depend on the agent remembering to ask.
+
+I also pointed it at `~/.claude/projects/-home-bodas/8e1d463e-*.jsonl` on arch,
+turns 13:53Z–14:14Z, in case it wants the lost afternoon back as turns rather
+than as the files' end state — and said I had read only enough to route it and
+would not mine further without his say-so.
