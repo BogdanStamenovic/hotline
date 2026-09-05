@@ -7454,3 +7454,109 @@ Two further things fell out of it:
   job when he asked, and is now two builds mid-flight.
 - Git history rewrite: **declined by him**, recorded in the banner so it stops
   being re-asked.
+
+## 2026-09-05 13:15 — both features delivered; a dangerous rm declined; the track work sent back once
+
+### I declined an `rm -rf "$HOME"` from `wake-general`
+
+It was sandboxing the installer test by pointing `HOME` at a throwaway directory,
+four times, in the shape:
+
+    export HOME=$PWD/home4; rm -rf "$HOME"; mkdir -p "$HOME"
+
+**Safe as written** — the export precedes the rm in the same shell, so it
+resolves to a scratch path, and I confirmed that before deciding. Declined
+anyway, because the cost of it *not* being run as written is total: replayed
+alone in a fresh shell, or retried without its first half, that line deletes
+`/home/bodas`. Scheduled snapshots are off and root is ext4 with no snapper, so
+there is no rollback. The guard fired for the right reason even though its
+literal reading of the command was wrong.
+
+Gave it the two-minute fix — name the variable anything but `HOME`, set it
+per-process on the command itself — and told it explicitly **not** to disguise
+the rm to get past the guard, since that would defeat a guardrail rather than
+satisfy it. It agreed without argument (*"Fair call"*), rewrote it, and then ran
+five non-interactive cases plus a real pty interactive test.
+
+**The reusable finding: a permission prompt is NOT covered by the
+AskUserQuestion → Discord bridge.** It hangs the agent silently and reaches
+nobody. This one was caught only by capturing the pane. The bridge covers
+`AskUserQuestion`; it does not cover tool-permission prompts, and an agent that
+hits one is wedged until a human or the operator answers it.
+
+### `track-sched`: right design, zero tests, sent back, came back good
+
+`d4455c3` shipped **759 lines and 348 tests — exactly the baseline it started
+from.** `slots.py` was 184 new lines and five functions with nothing exercising
+any of them. I exercised them by hand first: `8:00` normalises to `08:00`, a time
+already past rolls to tomorrow (+23.0h), `25:00`/`abc`/`''` are rejected with
+useful messages. **So the code was correct — the objection was that the code
+deciding when the machine wakes and powers off was protected by nothing.**
+
+Sent back with five named tests. It returned `58e7126`: **413 tests, up from
+348**, a new 419-line `test_slots.py`, and every ask covered —
+`test_every_is_never_passed_to_an_rtcwake_resume_task`,
+`test_one_member_that_did_not_ask_keeps_the_machine_up`,
+`test_support_for_every_is_detected_from_the_help_text`, the rollover boundary,
+midnight, and drift measured the short way round midnight.
+
+It also answered both smaller asks properly: `--at` and `--interval` are now
+mutually exclusive and say so in `--help`, and **DST is detected rather than
+merely documented** — a slot firing more than 30 minutes off its nominal time
+re-anchors to local time, so the cost of a clock change is one run an hour out,
+twice a year, instead of six months of them.
+
+### Verified end to end with an instrumented fake `wake`, not just by unit test
+
+Put a fake `wake` first on PATH that logs its argv, and drove the real code path
+against scratch databases. Both branches:
+
+    # installed wake WITHOUT --every  -> falls back to re-arming
+    add --at 1788674400 --task '... run --slot 08:00' --backend shell \
+        --then poweroff --timeout 540 --id track-slot-0800
+
+    # installed wake WITH --every     -> native recurrence
+    add --at 1788674400 --task '... run --slot 08:00' --backend shell \
+        --every 1d --then poweroff --timeout 540 --id track-slot-0800
+
+Three claims confirmed by observation:
+- **Two assignments collapse into ONE wake task** — same `--id track-slot-0800`,
+  the second add replacing the first. The slot grouping is real.
+- **The timeout scales with membership** — 540s for one member, 1080s for two.
+- **The poweroff veto works.** Adding a member that did not ask for poweroff
+  removed `--then poweroff` from the argv entirely. One member that did not ask
+  keeps the machine up, exactly as the commit message claims.
+
+### `wake-general`: generalized, and it answered the Pigion question in code
+
+`ee026bb` — *"Ask the installing machine for its own details instead of shipping
+mine"*. Verified the scrub: **zero occurrences** of the MAC, tailnet IP,
+`archserver` or `pigion` anywhere outside `.git`. Replaced with real
+documentation ranges — `192.0.2.10` (RFC 5737 TEST-NET-1) and `00:00:5e:00:53:2a`
+(RFC 7042), not other real addresses. The installer now asks for MAC (detected as
+the default, `none` to store nothing), WoL broadcast, and the hotline-ios URL and
+key, each with a `WAKE_INSTALL_*` override and the `[ -t 0 ]` guard intact.
+
+It is now splitting a commit whose message did not describe everything in it, and
+has added a sync path that **says so when the server is too old to keep a
+recurring task** — which answers the question I put to it about Pigion, in code
+rather than in prose.
+
+### Pigion's upgrade path, worked out rather than waited for
+
+Pigion runs a **copied**, non-git install at `~/data/wake` with a venv, started by
+a *user* unit (`ExecStart=%h/data/wake/.venv/bin/wake serve`). Its DB lacks
+`repeat_seconds` — but `_MIGRATIONS` in the new `db.py` contains that exact
+`ALTER TABLE` and applies it on database open, the same mechanism that added
+`owner` before. **So deploying Pigion is install-and-restart, with no manual
+schema work.** Established by reading the migration, not by asking.
+
+### State
+
+- Live wake DB: still only the four `stopgap-*` rows. Live track DB: still only
+  his two real assignments. Neither agent polluted production.
+- `~/.local/bin/track` was updated at 13:08 by `track-sched` deploying its own
+  tool through ownbox — legitimate and reversible.
+- `wake` has commits not yet pushed; `track` is pushed and level with origin.
+- Shutdown still held, asked twice, unanswered. Not powering off mid-build on my
+  own judgement.
