@@ -51,8 +51,13 @@
 > ### Open — all his
 > 1. Which model he wants to fit — the only thing that settles the 720 EUR RTX 3090
 >    24GB against the 650 EUR V100 32GB (SXM2: adapter + datacenter airflow, no bf16).
-> 2. Whether to scrub the MAC / tailnet IP from the now-public `wake` — worktree is
->    5 minutes; git history means a rewrite and a force-push.
+> 2. ~~Whether to scrub the MAC / tailnet IP from the now-public `wake`.~~ **ANSWERED
+>    2026-09-05.** Worktree scrub: **yes**, and it is wider than a scrub — he wants the
+>    tool *generalized*, asking the user for their own MAC rather than carrying his
+>    (`wake-general` is building it). Git history: **NO** — *"Thats not needed. Tou do
+>    nit need to purge history"* (kind=phone, so unverifiable; accepted because it
+>    declines an irreversible action and matches the recommendation already given).
+>    **Do not re-ask him this.**
 > 3. `llama-turbo3` and `uxonews` still on the old `markojova145@gmail.com`.
 > 4. `hotline-split` still parked unmerged on `split-packages`.
 > 5. Whether tomorrow's 08:00 run gets armed, and whether it becomes recurring.
