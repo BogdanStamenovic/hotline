@@ -7560,3 +7560,115 @@ schema work.** Established by reading the migration, not by asking.
 - `wake` has commits not yet pushed; `track` is pushed and level with origin.
 - Shutdown still held, asked twice, unanswered. Not powering off mid-build on my
   own judgement.
+
+## 2026-09-05 13:35 — the morning run is track's own schedule now; both agents delivered
+
+His two instructions that shaped the end of the day, both verified:
+- `11:15:04Z` — *"If tou need yo finish anything finish it. But just so you know
+  for the shutdown. I cannot log out of the pc as its logged in from my laptop
+  which is not here right now. So when you finish just shutdown either way
+  doesnt matter if the ssh is still there"* — which resolves the guard question:
+  `human_signals()` sees his SSH login and he cannot clear it, so he has
+  authorised powering off through it.
+
+### Deploy order was load-bearing, and `wake-general` found out why by running it
+
+Its report answered the compatibility question by checking out `b8a183c` into a
+worktree and running the **actual** pre-change server rather than reasoning about
+the merge path. The answer was worse than its own prediction:
+
+| task | against a pre-`--every` server |
+|---|---|
+| no `--every` | unaffected |
+| `--every` **with** `--on <device>` | works; the device holds the period |
+| `--every` **without** `--on` | **broken** — server drops the column, fires once, and the device then pulls that back and **loses its own copy of the period too** |
+
+The WoL wakeup is exactly that third shape. So **Pigion had to be upgraded before
+anything recurring was armed**, which is the order it went in.
+
+### Pigion upgraded, verified rather than declared
+
+Backed up first (`~/backups/wake-pigion-20260905-131328.tar.gz`, 3.8M), rsynced,
+reinstalled into its venv, restarted the *user* unit. Then probed: the
+`repeat_seconds` migration ran on the populated DB, all four `stopgap-*` rows
+survived, `/health` answered on the port, and a task armed at +5s came back
+`status=fired, error=None`. **The restarted server fires.** Same probe run earlier
+on archserver, which had been running pre-change code against an already-migrated
+database — also fired cleanly, so an old binary on a new schema is safe in
+practice, with the caveat wake-general documented: a recurring task the old agent
+marks `fired` is terminal and must be re-added after the upgrade.
+
+### The real schedule, armed and verified on both sides
+
+`track reschedule` — which `track-sched` built today so his two assignments, 14
+and 9 runs of history, could join a slot without being deleted — put both into an
+08:00 slot:
+
+    track-slot-0800-resume  06:00 UTC  wol    owner=''           every=1d  target=a8:a1:59:fd:4d:13
+    track-slot-0800         06:02 UTC  shell  owner='archserver' every=1d  then=poweroff  timeout=1080
+
+Server-owned resume, device-owned run, 120s boot grace, native recurrence on both.
+Confirmed on **Pigion** that `repeat_seconds=86400` survived the sync round trip —
+the precise thing that fails against an old server — and ran wake's real `due()`
+query against tomorrow's timestamps on both machines. The four stopgaps are
+cancelled; the RTC alarm stays armed at 05:58 as the hardware third path.
+
+### A bug that would have broken tomorrow, found by running the armed command
+
+`track/src/track/engine.py:_track_cmd` resolves the scheduled command with
+`shutil.which("track")`. On this box that returns `~/.local/bin/track`, which is
+not a binary but an **ownbox shim**: `exec ownbox 'track' "$@"`. `ownbox` is not
+on a wake unit's PATH, so the armed task under the real firing environment gave:
+
+    /home/bodas/.local/bin/track: line 3: exec: ownbox: not found
+    exit=127
+
+The run would not have happened, and `--then poweroff` would still have taken the
+box down. The function's own docstring is about this exact hazard — *"a bare
+`track` is not on a systemd or wake unit's PATH"* — and then `which` picks a
+wrapper that reintroduces it. **The test that catches this is whether the resolved
+path works under the firing environment, not whether it is absolute.**
+
+Re-armed with the real venv binary first on PATH, so the live row is the absolute
+`~/.local/share/ownbox/tools/track/.venv/bin/track`, verified under
+`env -i PATH=/usr/local/bin:/usr/bin`. **The workaround is in the armed row, not
+the code** — reported to `track-sched` to fix properly.
+
+### Sent the track work back once, and it came back right
+
+`d4455c3` shipped 759 lines against 348 tests — exactly its own baseline, with
+`slots.py` (184 lines, five functions) untested. I exercised those by hand first
+and they were correct, so the objection was not a suspected bug: it was that the
+code deciding when the machine wakes and powers off had nothing protecting it.
+Five named tests requested; it returned 413, then 426 after `reschedule`. Every
+ask covered, including the two that were only claims —
+`test_every_is_never_passed_to_an_rtcwake_resume_task` and
+`test_one_member_that_did_not_ask_keeps_the_machine_up`.
+
+Verified the design end-to-end myself with a fake `wake` on PATH logging argv:
+two assignments collapse to one task, the timeout scales 540→1080s with
+membership, and **the poweroff veto genuinely strips `--then poweroff`** when a
+member has not asked for it.
+
+### An `rm -rf "$HOME"` declined
+
+`wake-general` sandboxed its installer test with `export HOME=$PWD/home4; rm -rf
+"$HOME"`, four times. Safe as written, and I checked that before deciding.
+Declined anyway: one detached retry from deleting `/home/bodas`, with no snapshots
+on this box. Gave it the fix — never name `HOME` on a destructive line, pass it
+per-process — and told it explicitly not to disguise the rm to satisfy the guard.
+It agreed, rewrote it, and wrote the rule down for its successors.
+
+**A permission prompt is NOT covered by the AskUserQuestion→Discord bridge.** It
+wedges a spawned agent silently and reaches nobody. Caught only by capturing the
+pane.
+
+### Corrections I owed
+
+- I flagged two `wip` commits as unpushed junk; they had never been in the pushed
+  range — the agent reset them before I looked. Verified: `git log b8a183c..HEAD`
+  has zero wip subjects and zero attribution trailers.
+- wake-general corrected its own test count from 264 to 263. Mine was right.
+- My earlier claim that `WAKE_DB_PATH` is broken did not survive its testing: it
+  honours the variable in all three binaries. The stray live row is better
+  explained by the variable being set for one command and not the other.

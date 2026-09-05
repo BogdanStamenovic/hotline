@@ -1,5 +1,83 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-05 13:35 CEST — THE MORNING RUN IS NOW `track`'s, NOT A HAND-ARMED TASK
+>
+> **READ, THEN DISTRUST.** Verify with `last -x -n 8 reboot shutdown`,
+> `~/data/wake/.venv/bin/wake list`, `hotline --agents`, and
+> `grep -n "^## " PROGRESS.md | tail`.
+>
+> ### FIRST COMMAND, BEFORE `--adopt`: fix PATH
+> The watchdog spawns the operator with `PATH=/usr/local/bin:/usr/bin`. Every
+> hotline binary lives in `~/.claude/bin`, which is not on it, so
+> `hotline --adopt` dies with `command not found` on line one. Run:
+> `export PATH="$HOME/.claude/bin:$HOME/.local/bin:$PATH"`
+>
+> ### What is armed for 2026-09-06, and why it is different from every previous day
+> The hand-armed `track-run-all` task is **gone**. `track` owns its own schedule
+> now. Three independent things must hold, all verified today, not assumed:
+>
+> | when (UTC) | who fires it | what |
+> |---|---|---|
+> | 05:58 | archserver RTC, hardware | backup wake, works with LAN and Pigion dead |
+> | 06:00 | **Pigion** (`owner=''`) | `track-slot-0800-resume`, WoL to `a8:a1:59:fd:4d:13`, **`every=1d`** |
+> | 06:02 | archserver (`owner='archserver'`) | `track-slot-0800`, runs both trackers in sequence, **`every=1d`**, `then=poweroff`, 1080s ceiling |
+>
+> **These recur natively.** Nothing re-arms them, so a crashed run or a box that
+> was off no longer kills the schedule permanently. Verified on Pigion that
+> `repeat_seconds=86400` survives the sync round trip, and by running wake's real
+> `due()` query against tomorrow's timestamps on both sides.
+>
+> ### The ownership rule that silently breaks everything
+> `owner` IS the firing rule. The device agent matches its own origin; **the
+> server matches the empty string.** So `wake add --on pigion`, naming the server,
+> writes a task **neither side will ever fire** — and it reads as a healthy
+> `pending` row until the morning it matters. I did exactly this at 12:40 and only
+> caught it by simulating the query. `wake list` now renders `owner=''` as
+> `server`, which helps, but the trap is in `--on`.
+>
+> ### A live bug: the scheduled command is resolved from whoever ran the schedule
+> `track/src/track/engine.py:_track_cmd` uses `shutil.which("track")`, which on
+> this box finds `~/.local/bin/track` — an **ownbox shim** that is
+> `exec ownbox 'track' "$@"`. `ownbox` is not on a wake unit's PATH, so the armed
+> task exits **127** and the run silently does not happen while `--then poweroff`
+> still takes the box down. Worked around by re-arming with the real venv binary
+> first on PATH, so the live row is the absolute
+> `~/.local/share/ownbox/tools/track/.venv/bin/track` and is verified under
+> `env -i PATH=/usr/local/bin:/usr/bin`. **The workaround is in the armed row, not
+> in the code** — anyone re-running `track reschedule` from a normal login
+> re-breaks it. `track-sched` was fixing this; check whether it landed.
+>
+> ### State
+> - `wake` at `1b457da`, `track` at `5cbd53a` or later, `hotline` clean. All pushed
+>   and checked with `git ls-remote`, not the local ref.
+> - **Pigion was upgraded today** — backup at `~/backups/wake-pigion-20260905-131328.tar.gz`
+>   on Pigion. Migration to `repeat_seconds` ran automatically; a probe task fired.
+>   It is a *copied*, non-git install, started by a **user** unit, so
+>   `systemctl is-active wake-server` in system scope answers `inactive` and means
+>   nothing. Probe `http://192.168.1.8:8791/health` instead.
+> - Deploy order matters: **an unassigned `--every` task against a pre-recurrence
+>   server loses the period on BOTH sides.** Server first, always.
+> - `~/.local/bin/track` and `~/.local/bin/wake` are ownbox shims, both now level
+>   with main. For hand testing use `~/data/<repo>/.venv/bin/<tool>`.
+> - `WAKE_DB_PATH` did not isolate my test to a scratch DB; `--db` is a TOP-LEVEL
+>   flag, before the subcommand, and is the form that works.
+>
+> ### Surfaced, not fixed
+> - `wake list` truncates ids to 8 chars but `cancel`/`fire` need the full 32.
+>   Needs prefix-ambiguity handling.
+> - A **permission prompt** is not covered by the AskUserQuestion→Discord bridge.
+>   It wedges a spawned agent silently and reaches nobody. Capture panes.
+>
+> ### Open — his
+> 1. Which model he wants to fit — the only thing settling the 720 EUR RTX 3090
+>    24GB against the 650 EUR V100 32GB (SXM2: adapter + airflow, no bf16).
+> 2. `llama-turbo3` and `uxonews` still on the old `markojova145@gmail.com`.
+> 3. `hotline-split` still parked unmerged on `split-packages`.
+> 4. `~/data/llama-turbo3` keep/delete (670 MB).
+>
+> Git history rewrite for `wake`: **declined by him, do not re-ask.**
+
+
 > ## STATUS AS OF 2026-09-05 12:35 CEST — BOX IS UP BECAUSE **HE** WOKE IT. NOTHING IS ARMED.
 >
 > **READ, THEN DISTRUST.** Verify with `last -x -n 8 reboot shutdown`,
