@@ -7268,3 +7268,102 @@ is right is a question about what he wants, not about the system.
    and whether to rewrite git history for it.
 3. `llama-turbo3` and `uxonews` still on the old `markojova145@gmail.com`.
 4. `hotline-split` still parked unmerged on `split-packages`.
+
+## 2026-09-05 12:40 — his three corrections; wake gets recurrence built, not just armed
+
+Two verified instructions arrived within five minutes of my 10:27 sweep, both
+`kind=human` and both checked with `hotline --provenance` before I touched
+anything:
+
+- `10:29:18Z` — *"A few things need changing: first arm the wakeup reacuring
+  using wake(cuz that is its functionality). Second thing. While installing wake
+  trough ownbox. The user should be prompted for the mac address and everything
+  else. remove all traces of my own machine info from the repo. as the point is
+  for the user to be asked. When i say public repo push i mean generalize don
+  lock it onto my machines. the point for it is to ask."*
+- `10:33:59Z` — *"Also after you are done shutdown"*
+
+### The premise of instruction one is wrong, and saying so early mattered
+
+**`wake` has no recurrence.** `wake add` accepts `--at` only — epoch, ISO 8601 or
+`+N[smhd]` — and every task is one-shot; there is no `--every`, no cron field, no
+repeat column in the schema. So "arm it recurring using wake" could not be typed.
+That is also the real reason the 08:00 run has been re-armed by hand every
+evening: not forgetfulness, but the absence of a way to express it. Told him
+inside two minutes rather than quietly arming another one-shot and reporting
+success. Missing capability is a subtask — recurrence is being built, in wake,
+where it belongs.
+
+### The last sentence is the actual spec
+
+*"When i say public repo push i mean generalize don lock it onto my machines"* —
+this reframes what the previous session logged. It had been filed as a **privacy**
+question (his MAC and tailnet IP are in a now-public repo, scrub or not?). It is
+not. It is a **design** defect: a public tool that carries its author's hardware
+is not generalized. The fix is the installer ASKING, and the constants becoming
+documentation-range placeholders. Briefed the agent on that framing, not the
+13-lines framing.
+
+### A silent-failure bug caught by simulating the query instead of reading a row
+
+Armed tomorrow's run as a one-shot stopgap so a slip in the build cannot cost him
+the wake. First attempt passed `--on pigion`, since Pigion is the machine that
+must send the WoL. **That produces a task nothing will ever fire.**
+
+`--on` sets the `owner` column, and `owner` is the entire scheduling rule:
+`WakeDB.due()` filters `owner = ?`, the device agent passes its own origin, and
+`run_once`'s docstring says it outright — *"the server runs with `""`"*. So
+`owner='pigion'` matches neither side: Pigion's serve loop looks for the empty
+string, archserver's agent looks for `archserver`. The help text — *"origin name
+of the machine that fires it (default: the server)"* — is what led me straight
+into it. **The value that names the server is the one value that breaks it.**
+
+`wake list` showed all four rows as healthy `pending`. Nothing would have
+surfaced until 06:00 tomorrow, as a box that simply never woke. Caught it by
+running the real `due()` SQL on Pigion against tomorrow's timestamps rather than
+trusting the listing — the tenth time a status field has been the failure here.
+
+Re-armed with no `--on` at all and **proved the selection**, both halves:
+
+    -- server loop (owner='') at 2026-09-06 06:05:30 UTC --
+      FIRES: stopgap-wol-0906     wol  a8:a1:59:fd:4d:13
+      FIRES: stopgap-wol-0906-r1  wol  a8:a1:59:fd:4d:13
+      FIRES: stopgap-wol-0906-r2  wol  a8:a1:59:fd:4d:13
+    -- owner='archserver' --
+      FIRES: stopgap-run-0906     shell
+
+Confirmed present on Pigion with `owner=''` after the agent's own 60s sync — my
+`wake sync` reported `pushed 0, pulled 0`, which was true rather than broken: the
+`wake-agent` service had already pushed them.
+
+### Delegated the build, on Opus, by hand
+
+`wake-general`, spawned into `hl-wake-general` with an explicit `--model opus`,
+because `tmuxen.spawn` passes no `--model` and would have inherited the CLI
+default — the standing bug that quietly breaks the Opus-for-code rule. Verified
+Opus from `/proc/<pid>/cmdline`, and captured the pane to confirm it cleared the
+folder-trust prompt. It declared itself and verified his provenance record
+independently before starting.
+
+One agent, not two, though the work splits cleanly in half: recurrence and
+generalization touch the same files (`cli.py`, `db.py`, `install.sh`, README,
+tests), and two agents in one repo would fight.
+
+Baseline recorded before it started: **194 tests passing**, ruff and mypy clean.
+
+### The shutdown is held, and the guard would refuse it anyway
+
+Not powering off until the work lands. Probed the guard rather than assuming:
+`wake.power.human_signals()` returns `['logind session 2 (tty)']` — his own SSH
+login from the laptop. **A logged-in human blocks the automated poweroff**, and a
+poweroff will drop the Claude Code remote bridge he is connected through. Told
+him that in the same message rather than discovering it at the end.
+
+### Open — his
+
+1. Whether to rewrite `wake`'s git history to purge the MAC/IP from past commits.
+   Worktree scrub is happening regardless. **My recommendation: don't** — the repo
+   has been public for four hours, mirrors already have it, so a force-push buys
+   tidiness rather than secrecy. Asked; unanswered.
+2. GPU model choice; `llama-turbo3`/`uxonews` on the old email; `hotline-split`
+   unmerged — all unchanged.
