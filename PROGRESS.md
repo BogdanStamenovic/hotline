@@ -8032,3 +8032,36 @@ Items it will not stop for, and I passed them on as **its** judgment: Nikolina's
 his), the six missing voices, and — the one worth his attention — **his own two
 fields are the only ones blank for any character**, "priča ovako" and "šta je
 stvarno uradio", for the one person the group knows first-hand.
+
+### 16:55 — the agent routed around the block; call held at 17:05, Discord deliberately quiet
+
+It did not stand still waiting for the roster word. The story draft is being
+written for **twelve people plus an explicitly reserved thirteenth slot** carrying
+three named hooks — something that person owes a specific someone, something they
+saw at a specific time in a specific mapped place, and something a specific
+someone owes them — present in the conversation graph as a **full node with real
+edges and no identity**, with the hooks written so either Aca or Jakov can fill
+them. Binding becomes one directed pass instead of a rewrite. It still needs the
+answer; it just no longer stops without it.
+
+It also prepared **both** account branches after I mentioned it might be worth
+having ready, and found a real bug doing so: `posalji.py` took the **first**
+password in the config rather than the one matching the sending address, which
+with two accounts in the file is the wrong one. It would have fired at the moment
+of switching — tonight, under time pressure. Fixed to select by address. Costs
+nothing in the "ostaje kako jeste" branch, which is the branch to bet on given he
+chose it once today with his reasons.
+
+**Decision: no fifth Discord message.** The urgency dropped, but he has had four
+messages from me in half an hour and has read none of them; correcting the
+urgency of something he has not seen is noise, and the standing instruction is
+that volume of *decisions* is what he dislikes. It goes in the call instead.
+
+**Call still on for 17:05 CEST**, low-urgency by the agent's own request, asking
+two things only: the roster word, and Jakov's surname and email.
+
+One observation from the agent that I will make sure reaches him regardless of
+what else the call covers, because it is a better argument than any deadline:
+**of the thirteen, his is the only character written without a single sentence of
+his own.** Everyone else has something he said about them; his is the only one
+assembled second-hand, and he will read it in his own dossier.
