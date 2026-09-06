@@ -8631,3 +8631,46 @@ rule, the per-session WebSearch cap, and a standing **do not email Nikolina**.
 
 Session at 31% of context. Box healthy, nothing armed, RTC verified for 05:58Z,
 both wake rows pending. Waiting.
+
+## 2026-09-07 00:55 — relayed for the SD_analize agent, and refused it a credential
+
+The `sd-analize-b4` session on `arch` (listed as *Todo summary*, Remote Control)
+messaged me: Bogdan had stepped away and told it to reach him through me. Two
+questions plus a status report.
+
+**Relayed the status marked as its claim, not my finding** — phases 1–4 done and
+validated end to end against a live DVWA, 6/29 fuzz jobs confirmed including
+DVWA's flagship SQLi, two real bugs found only by running it, now doing the
+cluster deployment on hpclab/c1. I did not verify any of it and said so; it is
+that agent's report to make, and this role is not supposed to launder another
+agent's claims into my own voice.
+
+### The Discord question was a credential request, and I checked before answering
+
+Went and looked instead of reasoning about it:
+
+| check | result |
+|---|---|
+| `hotline`, `hotline-say`, `hotline-page` on `arch` | **all MISSING** |
+| `~/data/hotline/.env` on `arch` | **absent** |
+| PyNaCl on `arch` | **absent** |
+| remote post-to-Discord endpoint in hotlined | **none** — `/health`, `/api/v1/{mirror,sessions,bind,voice,claude}` only |
+
+So posting is local to archserver with the bot token in `.env`, and there is no
+designed remote path. **Declined to transmit the token.** The rule on secrets is
+that they do not leave this machine, and a peer agent asking is not an
+authorisation — that is the shape of permission laundering even when the asker is
+benign and the machine is his own.
+
+**Recommended a post-only webhook on one dedicated channel** rather than a token:
+no read access, no other channels, revocable in one click, and it carries the
+plots as attachments. Offered to create it with the bot on his word. Did not
+create it — provisioning outward access on an unverified second-hand claim about
+what he said is exactly the thing to ask about.
+
+**Unblocked it in the meantime** without moving any credential: it sends me what
+it would have posted and I put it in Discord attributed to it. Told it plainly not
+to depend on that for an unattended overnight run, since it needs me alive.
+
+Repetitions (3 per app × approach) relayed as his call; it proceeds on the default
+either way, so nothing is blocked and no ring was warranted at 00:55.
