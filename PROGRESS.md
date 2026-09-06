@@ -8674,3 +8674,59 @@ to depend on that for an unattended overnight run, since it needs me alive.
 
 Repetitions (3 per app × approach) relayed as his call; it proceeds on the default
 either way, so nothing is blocked and no ring was warranted at 00:55.
+
+## 2026-09-07 01:15 — webhook approved and half-built; "did you see my message" answered by probing
+
+Two verified messages: *"Surr lets fo webhook set it up please. As gor the
+repetitions lets do 3"* (23:09:17Z) and *"Add admin for the discord bot send me
+the link so i xan auth. Also did you see my message to you?"* (23:10:52Z).
+
+### Reps = 3 relayed as HIS instruction, with the receipt
+
+Passed to the SD_analize agent over SendMessage **with the provenance record
+inline**, so it can check who asked instead of trusting me as the relay. It
+confirmed `run.sbatch` already defaults to `REPS=3`, so nothing changed — but it
+is now his instruction rather than the agent's default, which is the difference
+that matters in a write-up.
+
+### The webhook: built as far as permissions allow
+
+Created `#sd-analize` (id `1546296369923489952`) under the same category as the
+main channel. **Deliberately not `agent-`-prefixed**: hotline's own reaper deletes
+agent channels when an agent finishes, and this run has to outlive that.
+
+Then a hard stop, established by reading the bot's actual role rather than
+guessing from an error:
+
+| permission | bot has it? |
+|---|---|
+| MANAGE_CHANNELS | yes — which is why the channel worked |
+| MANAGE_WEBHOOKS | **no** — hence 403 on `GET /channels/{id}/webhooks` |
+| MANAGE_ROLES | **no** — so it cannot grant itself the permission either |
+
+That last row is the reassuring one: there was no self-escalation path even to be
+tempted by. Sent him both OAuth links — the admin one he asked for, and a narrow
+one (`540109840` = current perms + MANAGE_WEBHOOKS). Argued for the narrow one in
+two sentences and left the choice with him: hotline already deletes channels
+automatically, and admin turns a guarded routine into a server-wide blast radius.
+
+### "Did you see my message to you?" — the answer was in the logs, not in my memory
+
+Swept every text channel for his messages since 18:00Z and cross-read
+`hotlined`'s journal. **All five of tonight's messages are in `#agent-hotline-80`
+and all five were answered.** Nothing was missed.
+
+The cause of his doubt is real and worth naming: `hotlined` posts an instant
+*"Your message is queued for hotline-de…"* note, and the actual answer arrives one
+to four minutes later. He sent 01:10 while I was still composing the reply to
+01:09, so what appeared next was an answer to the *previous* message. Status note,
+then an answer to the wrong question, then silence. **The pool confirms there is
+no second voice** — `attached_to: hotline-80`, one conversation key — so this is a
+latency-and-ordering artefact, not the two-agents-answering failure this role
+exists to prevent. Told him so plainly rather than just reassuring him.
+
+### Minor defect noted, not chased
+
+`hotline-ios` logged *"transcript for hotline-80 unreadable: 1 of 1 lines in this
+slice did not parse"* twice at 21:55Z, offset held at 1720702 for re-read. It
+self-recovered and has not recurred. Recording it rather than chasing it at 01:15.
