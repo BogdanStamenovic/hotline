@@ -8768,3 +8768,35 @@ agent answers to whoever it works for. Offered to carry only the smoke-test resu
 into his own channel, since he is not necessarily watching a new channel overnight.
 
 Channel `sd-analize` (`1546296369923489952`), webhook `1546298053793939566`.
+
+## 2026-09-07 01:30 — SD_analize agent is self-sufficient; gave it the escalation contract
+
+It has the webhook, tested it, posted its first status to `#sd-analize`, and has
+taken over reporting to him directly. **Deliberately did not relay any of this to
+him** — it is routine progress, he has had a lot of messages tonight, and the
+whole point of handing reporting back was to stop being a paraphrase layer.
+
+Told it the one thing it cannot see from `arch`: **I may not survive the night.**
+This operator runs on archserver, which has an 08:02 CEST job that powers the box
+off. Wake refuses while anyone is logged in and he is logged in now, so it will
+*probably* stay up — but if he logs out, archserver goes down and the relay, the
+pager and the phone bridge go with it. Its webhook is unaffected (Discord-side),
+but a webhook post **does not notify him**; it lands silently in a channel nobody
+is watching at 3am. So: "I posted it" is not "he knows".
+
+### The bar for waking him, written down rather than left to its judgement
+
+Since I would be the one placing the call, I gave it the rule explicitly: the run
+is dead or dying, a decision from him is the only unblock, and waiting until
+morning costs the whole night. **A failed smoke test does not clear that bar** —
+post it and stop. An ambiguous result does not either — take the conservative
+branch, say loudly which and why, let him overturn it at breakfast. The cost of a
+wrong ring at 03:00 is far higher than six idle hours, and after today's
+thirteen-mention pager storm that asymmetry is not theoretical.
+
+Suggested, not imposed: checkpoint per (app × approach × rep) rather than only at
+the end, so an interruption resumes from the last completed cell instead of
+re-running everything at 3 reps. Its call, its code.
+
+Nothing open on my side. Box healthy, nothing armed to power off today, RTC
+verified for 05:58Z, both wake rows pending.
