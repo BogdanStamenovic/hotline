@@ -8730,3 +8730,41 @@ exists to prevent. Told him so plainly rather than just reassuring him.
 `hotline-ios` logged *"transcript for hotline-80 unreadable: 1 of 1 lines in this
 slice did not parse"* twice at 21:55Z, offset held at 1720702 for re-read. It
 self-recovered and has not recurred. Recording it rather than chasing it at 01:15.
+
+## 2026-09-07 01:20 — webhook live, and the admin grant quietly armed a trap
+
+*"I gave you adminstrator"* (verified, 23:15:52Z). **Probed the role rather than
+believing it** — `ADMINISTRATOR: True`. Then created the webhook in `#sd-analize`
+and, per the rule this project keeps relearning, **proved it by POSTing through
+the webhook itself** rather than trusting the create call's success response. Test
+message landed; the credential is demonstrated, not assumed.
+
+URL delivered to the agent over SendMessage, so it has **never appeared in any
+Discord channel history**. Local copy deleted after delivery. Gave it the usage
+limits it will otherwise discover the hard way: 2000-char `content` cap that
+truncates *silently*, ~5 requests / 2 s per webhook, multipart for plots, 8 MB
+ceiling. It had already committed to scratchpad-only handling; added "and keep it
+out of logs and out of anything the run tars up as an artefact".
+
+### The finding he did not have
+
+Re-authorising with the admin link **replaced** the bot's permission set rather
+than adding to it. The role is now literally `permissions = 8` — administrator and
+nothing else, where before it was `3238928` (MANAGE_CHANNELS, SEND_MESSAGES,
+MANAGE_MESSAGES, …). Admin supersedes all of it, so everything works today.
+
+**But if he ever unticks administrator, the bot falls to zero permissions and
+hotline dies completely** — no channels, no messages, no pager. It will not
+degrade gracefully; it will stop. Told him, and gave him the narrow re-auth link
+(`540109840`) as the way to undo it later instead of unticking the box. This is
+the kind of thing that would otherwise be discovered months from now, at the
+moment the pager was needed.
+
+### Handed the reporting back to the agent
+
+Told it to post its own progress to `#sd-analize` and address him directly rather
+than route through me — it is its work and its report, and the rule is that an
+agent answers to whoever it works for. Offered to carry only the smoke-test result
+into his own channel, since he is not necessarily watching a new channel overnight.
+
+Channel `sd-analize` (`1546296369923489952`), webhook `1546298053793939566`.
