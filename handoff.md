@@ -28,6 +28,21 @@
 > shared with subagents**. A five-agent fan-out exhausted it on 2026-09-06 and
 > everything afterwards was WebFetch and curl only.
 >
+> **Running unattended overnight, not yours to touch:** `sd-analize-b4` on `arch`
+> (Remote Control, listed as *Todo summary*) is running his thesis SAST/DAST
+> pipeline on the hpclab cluster at 3 reps per (app × approach), his confirmed
+> instruction. It reports **itself** to `#sd-analize` via a post-only webhook I
+> provisioned — that channel is deliberately **not** `agent-`-prefixed so hotline's
+> reaper cannot delete it, so do not "tidy" it. Do not relay its progress to him;
+> it addresses him directly. It will only ping this session if the run is dead and
+> only his decision unblocks it. **A webhook post does not notify him** — if it
+> escalates, that is what the operator is for.
+>
+> **The Discord bot now has `permissions = 8` — ADMINISTRATOR and nothing else.**
+> He granted it 2026-09-06 23:15Z. Everything works, but **removing admin drops the
+> bot to zero and kills hotline outright**; re-auth with `permissions=540109840`
+> instead of unticking the box.
+>
 > **Open with him, nothing blocked:** the Robotex registration year and whether
 > Serbian passports need a visa/K-ETA for South Korea. He is sending his friend
 > any further email himself — **do not email `nikolina.zdravkovic143@gmail.com`**;
