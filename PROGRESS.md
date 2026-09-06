@@ -8544,3 +8544,59 @@ him.
 **Constraint hit again:** the spawned agent's WebSearch also failed — the 200-call
 budget is per session and shared with subagents. Everything in this entry came
 from WebFetch and curl. Worth knowing before planning another fan-out today.
+
+## 2026-09-07 00:40 — he caught a real error: Robotex International is Seoul, not Tallinn
+
+Verified (posted 2026-09-06 22:25:27Z): *"in the email you said something about a
+sumo event in korea in november"*. My first instinct was that he had merged two
+things — the email's sumo item with my Discord note about Korea. **I checked the
+file instead of trusting that instinct, and he was right.**
+
+| | |
+|---|---|
+| what my email says | "Robotex International, Talin (5–6.12.)" |
+| what the organiser's 2026 timetable says | "**28.11 – 29.11 – Seoul, South Korea**" |
+
+Wrong country and wrong month, in a document already sent to a third party. The
+only "Tallinn" on that timetable page is a sponsor's name inside a category title
+(*Tallinn University LEGO Line Following*) and a Visit Tallinn advert in the
+footer — almost certainly where the error entered upstream.
+
+### The cause is the useful part, and it is a new shape of the old failure
+
+I ruled Robotex out for being **sumo rather than combat**, and having ruled it out
+I never checked its date or venue — I carried a researcher's line. Everything I
+*recommended* I verified against primary sources; everything I *dismissed* I did
+not. **The dismissed pile is where a wrong fact hides quietest**, because nothing
+downstream depends on it until someone asks. Today's other correction (the
+Schengen claim) was caught precisely because it was load-bearing. This one was not
+load-bearing, so nothing caught it but him.
+
+Written down as a rule: **verification effort must not scale with how much you
+like the answer.** A one-line dismissal in a document sent outward is still a
+claim, and it carries the sender's authority just as much as the recommendation.
+
+### What it changes
+
+- **28–29 Nov 2026, Seoul** is inside the 4 Jan deadline with five weeks to spare.
+- Categories are Mini Sumo, Mega Sumo, LEGO Sumo, and the page states
+  **"Competitions are for all age groups"** — the age question that no combat
+  rulebook would answer.
+- Sumo is a materially better first project than a combat robot: no weapons, no
+  arena damage, no failsafe/weapon-lock scrutineering, and kits exist.
+- The timetable also lists a national **Robotex Korea, 19 July, Incheon** (past).
+
+### Not confirmed, and said so
+
+1. "Registration is open until 24 October" carries **no year**, and the site's
+   "registration is now open" post is dated July 2025 about the 2025 edition, with
+   a 2024 hero still on the homepage. Not treated as confirmed.
+2. **Korea visa for Serbian passports.** Established only that K-ETA applies to
+   visa-free nationals and that a temporary K-ETA exemption is in force per a
+   2026-03-20 notice; could not retrieve the country list. Open.
+
+### Waiting on him
+
+Asked whether to send Nikolina a short correction. A second email to a third
+party's inbox is a fresh outward act and not covered by his authorisation of the
+first one, so it does not go until he says so. Draft ready.
