@@ -8491,3 +8491,56 @@ Said so directly to him, because he is the one who will carry it to the team.
 Blocks still reported as blocks: `robochallenge.ro` 403s, unchanged. The CCRL
 page's "Rules were updated on 10/3/2026" is format-ambiguous and I did not guess
 which reading is right — listed as unconfirmed.
+
+## 2026-09-06 22:10 — "the thing in korea, the sumo one": the gap my own researcher declared
+
+Verified (posted 19:46:08Z). He asked about Korea — which is **exactly the hole
+the rest-of-world researcher had flagged**: it ran out of WebSearch budget and
+wrote *"South Korea — genuinely did not check. Flagging rather than guessing."*
+That honesty is the only reason I could answer him in one line about why it was
+missing instead of pretending the report had been exhaustive. Worth recording as
+evidence that an explicit gap beats a padded list.
+
+### The sumo event is real, and cannot be entered
+
+**씨름로봇** (*ssireum-robot* — ssireum is Korean wrestling; it is their word for
+robot sumo), a category inside 지능로봇대회, part of the International Robot
+Contest run by **KIRIA**, a government body under the trade ministry. Eligibility
+reads "no age or education restriction"; first place carries the **President's
+Award**. 2025 edition: 31 Oct – 1 Nov, Gangneung Olympic Park.
+
+**No 2026 edition exists publicly.** Zero occurrences of "2026" on the contest
+site; KIRIA's own newsroom carries daily releases through 2026-09-04 with nothing
+about it. A repeat would land Oct/Nov by pattern — which is a guess, not a fact,
+and was reported as such.
+
+Two further strikes even if it appears: Korean-language only with no English
+registration path, and on the same page the *humanoid* category explicitly admits
+foreign entrants (국내·외) while the sumo category does not repeat it. International
+in name, domestic in practice.
+
+### What he almost certainly means
+
+**FIRST Global Challenge 2026 — 7–10 October 2026, Incheon.** Dates and venue
+confirmed three independent ways (my own WebFetch, the agent's site read, and the
+earlier Balkans researcher). Fits his deadline with three months to spare. Not
+sumo, not combat. One team per country, and **Serbia's slot is the team he leads**.
+
+Two reads disagreed on the season's theme name. Did not assert either — the dates
+and venue are what carries a decision and those agree across all three.
+
+Also ruled out: IYRC Daejeon (confirmed 2026 dates, but ran 6–7 Aug and has no
+sumo category), FIRA (domain dead and parked), RoboCup (no sumo discipline).
+
+### The observation I surfaced but did not act on
+
+If he is already taking a team to Incheon in October, the fastest route to "these
+students attend an international robotics competition before January" may be his
+existing slot, not a combat robot built in six weeks. That is a different plan
+from the one emailed to Nikolina, it is his to make, and starting it unasked would
+be exactly the adjacent-work overreach the role forbids. Said out loud, left with
+him.
+
+**Constraint hit again:** the spawned agent's WebSearch also failed — the 200-call
+budget is per session and shared with subagents. Everything in this entry came
+from WebFetch and curl. Worth knowing before planning another fan-out today.
