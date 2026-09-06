@@ -8306,3 +8306,128 @@ voice in the room; I am not talking over it.
 - GPU 2 MiB, 12 GiB RAM free. Repo clean, HEAD == origin/main (`44ec1b1`).
 
 Nothing needs operating. Not inventing work; posting one message and waiting.
+
+## 2026-09-06 21:15 — his big task: combat-robotics competitions a Belgrade school team can still enter
+
+Verified before acting (`hotline --provenance`, posted 19:10:01Z). Verbatim: a
+friend from **Prva beogradska gimnazija** wants to form a team for a robotics
+competition; *"the desdline for them tk go to the comp and come back is 04 jan
+2027"*; find **battlebots comps where you can still apply as a team**; send a
+detailed report to **nikolina.zdravkovic143@gmail.com**.
+
+**He also answered the open DND question — *"Dnd is nit ussually on."*** That
+falsifies the worst reading of yesterday's bug: most past "unreachable" calls are
+ordinary no-answers, not cancelled live rings. The defect is real and narrow, not
+a standing outage. Memory corrected rather than left standing next to the
+correction.
+
+### How I read the task, and the two filters that actually bind
+
+The trip must *finish* by 04 Jan 2027, so the event window is now → ~02 Jan 2027,
+and the entry has to still be open **to a new team**. A calendar listing an event
+is not evidence of either — that is the same status-field-as-signal failure this
+project keeps hitting, so every shortlisted event gets checked against its own
+registration page.
+
+The unstated hard constraint is **build time**. A team that starts from zero in
+September is only realistic at 150 g antweight or 1.36 kg beetleweight; anything
+heavier is not a scheduling problem, it is a physics-and-money problem. Told the
+researchers to weight for that rather than listing prestigious events nobody could
+turn up to.
+
+### Five Sonnet researchers out (research, so Sonnet by the standing rule)
+
+| agent | scope |
+|---|---|
+| UK/Ireland | FRA calendar, Extreme Robots, Robots Live!, Bugglebots, AWS |
+| Continental Europe | RoboChallenge RO, Robotex EE, NL/DE/PL/CZ/IT/ES/TR leagues |
+| Rest of world | BattleBots, NHRL, Indian university robowars circuit, CN/AU |
+| Balkans + fallback | Serbia/BG/HR/GR in local languages; FIRST/WRO/RoboCup as fallback |
+| Logistics | Serbian-passport visas, LiPo on aircraft, fees, build time, minors |
+
+Each was told to write "UNKNOWN — could not confirm" rather than estimate, and
+not to route around any block.
+
+### Asked him one thing, non-blocking
+
+Budget tier, because it changes the answer completely (under €500 / €1–2k / €5k+).
+Not stalling on it — if he does not answer the report covers all three. Team size,
+ages, and whether they already have a robot are Nikolina's to answer, so those go
+in the email as questions rather than to him.
+
+**On the send:** told him it will go from his Gmail written as him, and to say so
+if he would rather it be explicitly from an assistant. `mailsend` verified present
+at `~/.local/bin/mailsend` with a working `--dry-run`, msmtp relay configured for
+bogdan.stamenovic@gmail.com.
+
+## 2026-09-06 21:30 — the robotics task: five researchers, two corrections, one report sent
+
+Report emailed to nikolina.zdravkovic143@gmail.com at 21:27:07,
+`exitcode=EX_OK`, 18,838 bytes, HTML, in Serbian, written as him from his own
+address. Dry-run previewed first. He had explicitly instructed the send and the
+address, so the outward-action gate was satisfied by his own message; the one
+judgement left to me was presentation, decided by effect — a Serbian student
+reading a Serbian email from a Serbian sender.
+
+### The answer, and why it is a single answer
+
+**Czech Combat Robot League vol. 6, 17–18 Oct, Maker Faire Brno.** Registration
+open, **closes 4 Oct**, free, antweight only (150 g / 225 g non-wheeled / 300 g
+walker), 15×15 cm footprint, up to 5 members and 5 robots.
+
+It is the only candidate that clears four filters simultaneously: registration
+actually open, a class a beginner can finish, no cost, no visa. I verified it in
+their own registration system (`app.flsbattlebots.cz` → `tetragonleague.cz`)
+rather than off a calendar — vol. 5 shows 8/50 bots, so capacity is real. And it
+is a 7-hour drive, which removes the whole lithium-battery and blade-in-luggage
+problem rather than managing it.
+
+### Two things I checked myself, and one of them was wrong in a source
+
+| claim | what I did | result |
+|---|---|---|
+| "Serbia is NOT Schengen visa-exempt" | read Annex II of Reg (EU) 2018/1806 | **false** — Serbia is listed, 90/180, excluding Coordination Directorate passports |
+| "UK needs a visa for Serbs" | read the Immigration Rules visa-national list | **true** — entry 87, ~€164, 3 weeks via TLScontact Belgrade |
+| ETIAS in force? | official EU site | **no**, slipped to 2027 |
+
+The first is the one that mattered: a summarising model misread a visa-facilitation
+table as a visa requirement, and shipping that would have inverted the whole
+recommendation. The rule held — verify anything consequential yourself.
+
+### Corrected an agent before its answer reached her
+
+The Balkans researcher ranked **Robolahing** (Tartu, 31 Oct) as the best fallback
+because it is genuine combat robotics inside the window. Its weight classes are
+**0–29.9 kg and 30–55 kg** — there is no small class at all. That is not a first
+robot in eight weeks. Demoted, with the reason given rather than silently dropped.
+
+### Blocks reported as blocks
+
+`robochallenge.ro` (Bucharest, ~450 km, the closest and cheapest-to-fly option)
+returns **HTTP 403** to automated access. Independently reproduced with a second
+tool. Not routed around — it is a third party's system, not his data. The email
+says plainly that registration status, categories and fee are unverified, and
+gives the organisers' address instead of a guess.
+
+Same discipline on the two silences: nothing on the Brno site states whether
+foreign teams or under-18s may enter. That is an absent sentence, not a failed
+search, and it is written up as the one thing to settle before building.
+
+### The measured constraint worth keeping
+
+Six weeks is enough **only with a bought kit**. From real build logs, not
+marketing: one first antweight reached a competition in ~2.5 months; another
+stalled past six months unfinished. No documented case of a rookie finishing a
+weaponed beetleweight in this window. **Every failure found was electronics and
+wiring, never machining.** Written into the email as "buy the kit, practise
+soldering from week one, expect to build two robots".
+
+### Cost and one real limit hit
+
+Five Sonnet agents (research, per the standing rule), all on Max, no billed spend.
+**The session's WebSearch budget is exhausted — 200/200** — spent by the fan-out.
+Everything after that was WebFetch and curl, which is why the verification pass
+was fetch-only. Worth knowing before planning another fan-out this session.
+
+Budget question to him went unanswered; wrote the report across all tiers rather
+than stalling on it. It costs nothing now, because the top pick is free.
