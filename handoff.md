@@ -1,6 +1,41 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-05 13:35 CEST — THE MORNING RUN IS NOW `track`'s, NOT A HAND-ARMED TASK
+> ## STATUS AS OF 2026-09-07 00:45 CEST — operator `hotline-80`
+>
+> ### THE BOTTOM OF THIS FILE IS NOT THE NEWEST MATERIAL. The spawn prompt says
+> it is, and the spawn prompt is wrong. This file's last entry is **2026-09-01**.
+> The live narrative is **`PROGRESS.md`** — read `grep -n "^## " PROGRESS.md | tail`
+> and start from there. Two banners and one prompt disagreed about this at the
+> 2026-09-06 boot and PROGRESS.md was right, as it has been every time.
+>
+> **State at 00:45.** Box up since 15:47 (he woke it and SSH'd from `arch`).
+> Only two sessions: this operator and his own `bodas-02`. Nothing armed to power
+> off today. RTC armed and verified in `/sys` for 05:58Z; both wake rows pending,
+> `every=1d`. `hotlined` and `hotline-ios` up. **Root at 95%, 4.0 GB free** — the
+> one number going the wrong way.
+>
+> **The morning run works.** 2026-09-06 was the first fully unattended cycle:
+> `track-slot-0800` fired, both trackers ran and posted, box powered itself off at
+> 08:05:48. Only that half is proven — the box was already up, so neither the WoL
+> nor the RTC backup was exercised.
+>
+> **An RTC alarm armed before a poweroff cannot be assumed to survive the next
+> boot.** Armed 08:05:46 for today, empty five seconds into the 15:47 boot, with
+> `wake-agent` logging no clearing. Re-arm and re-verify against
+> `/sys/class/rtc/rtc0/wakealarm` on every boot; `/proc/driver/rtc` lies.
+>
+> **Session limit worth knowing:** WebSearch is capped at 200 calls **per session,
+> shared with subagents**. A five-agent fan-out exhausted it on 2026-09-06 and
+> everything afterwards was WebFetch and curl only.
+>
+> **Open with him, nothing blocked:** the Robotex registration year and whether
+> Serbian passports need a visa/K-ETA for South Korea. He is sending his friend
+> any further email himself — **do not email `nikolina.zdravkovic143@gmail.com`**;
+> that authorisation was for one message on 2026-09-06 and it has been used.
+>
+> ---
+>
+> ## SUPERSEDED BANNER — STATUS AS OF 2026-09-05 13:35 CEST — THE MORNING RUN IS NOW `track`'s, NOT A HAND-ARMED TASK
 >
 > **READ, THEN DISTRUST.** Verify with `last -x -n 8 reboot shutdown`,
 > `~/data/wake/.venv/bin/wake list`, `hotline --agents`, and

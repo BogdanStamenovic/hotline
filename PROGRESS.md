@@ -8600,3 +8600,34 @@ claim, and it carries the sender's authority just as much as the recommendation.
 Asked whether to send Nikolina a short correction. A second email to a third
 party's inbox is a fresh outward act and not covered by his authorisation of the
 first one, so it does not go until he says so. Draft ready.
+
+## 2026-09-07 00:45 — he takes the correction himself; handoff banner refreshed
+
+*"nah thats okay il send her anything myseld"* (verified, posted 22:29:09Z).
+**No correction email sent, and none will be.** The authorisation he gave was for
+one message on 2026-09-06 and it has been used; a second message to a third
+party's inbox is a fresh outward act. Gave him the correction as paste-ready
+Serbian instead, matching the tone of the email already in her inbox — that serves
+what he said he would do rather than second-guessing it.
+
+Left the two loose ends explicitly with him rather than chasing them unasked: the
+Robotex registration year (page says "until 24 October" with no year on a site
+still showing 2024 content) and whether Serbian passports need a visa or K-ETA for
+South Korea. Both are one email each; offered, not started.
+
+### Fixed the document that misled me at boot
+
+The spawn prompt tells every operator *"newest material is at the BOTTOM"* of
+handoff.md. **It is not** — that file's last entry is 2026-09-01, while the live
+narrative has been PROGRESS.md for six days. I lost time to that this morning and
+recovered by checking the section index. Rather than leave the correction sitting
+next to the wrong claim, the banner now leads with it, and the old 09-05 banner is
+retained below, explicitly marked superseded — its PATH fix, RTC method and wake
+ownership rules are all still true and worth keeping.
+
+New banner also carries: today's verified state, that the unattended cycle works
+but only its run-and-poweroff half was exercised, the RTC-does-not-survive-a-boot
+rule, the per-session WebSearch cap, and a standing **do not email Nikolina**.
+
+Session at 31% of context. Box healthy, nothing armed, RTC verified for 05:58Z,
+both wake rows pending. Waiting.
