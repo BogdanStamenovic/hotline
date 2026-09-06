@@ -8232,3 +8232,77 @@ at 30s, plus softening the pager ladder in the same pass.
 
 **Asked him one question:** whether DND is usually on. If it is, every call ever
 logged unreachable was probably a real ring that got cancelled.
+
+## 2026-09-06 15:50 — operator boot sweep: the first fully unattended morning run, and an RTC alarm that does not survive a power-on
+
+Adopted `hotline-80` on the 15:47 boot. Read handoff.md (top banner 09-05 13:35;
+its *bottom* is stale at 09-01 — the live tail is this file), then both Discord
+channels including the window the box was off.
+
+**Nothing was sent while the box was down.** His last word is still
+2026-09-05 21:01:34 CEST — *"Nah i didnt get it cuz my phone was on dnd."* The
+only traffic since is `track`'s own two run summaries at 08:04/08:05.
+
+### The morning run went end to end with nobody watching — half of it, honestly
+
+| what | evidence |
+|---|---|
+| `track-slot-0800` fired | `wake.server INFO task track-slot-0800 (shell) fired; next occurrence at 1788760920` |
+| both trackers ran | runs 24 (18 scouts, 6 findings, $0.85) and 25 (4 scouts, 20 findings, $0.62) in `track.db` |
+| results reached him | two Discord posts, 06:04:14Z and 06:05:45Z |
+| box powered itself off | `systemctl poweroff` at 08:05:46, down at 08:05:48 |
+| the recurrence held | both rows still `pending` for 2026-09-07, `every=1d` |
+
+**The half that was NOT exercised: the wake.** The box had been up since 15:26
+yesterday, so Pigion's 06:00Z WoL and the RTC backup had nothing to do. Only the
+run-and-poweroff path is proven today. Said so rather than calling it a full
+cycle.
+
+**track's two known defects have measurably moved, and I checked the DB, not the
+summary text.**
+
+| measure | 09-05 | now |
+|---|---|---|
+| findings with `reference_price` | 9 / 197 | **54 / 332** |
+| findings with `product_year` | 12 / 197 | **97 / 332** |
+| listings ever checked by the reaper | 0 | **55 / 244** |
+| listings retired | 0 | **2** (`gone`) |
+
+The reaper has now retired something for the first time. Coverage is still thin
+(55 of 244) and the old rows keep their empty columns — a schema change is not
+retroactive — so the ranking is better, not fixed.
+
+### The RTC alarm is gone again, and this time the trace narrows the cause
+
+`wake` armed it during the poweroff — `rtc armed for track-sl at 1788760620` at
+08:05:46. At 15:47:07, five seconds into this boot, it was **already empty**, and
+`wake-agent` logged **no** `cleared a leftover rtc alarm` line, so the agent did
+not do it. Two candidates remain and I cannot separate them after the fact:
+the power-on itself clears the CMOS alarm-enable bit, or the arm never took and
+the log line is a status field describing an intention. **Either way the rule is
+the same: an RTC alarm armed before a poweroff cannot be assumed to exist after
+the next boot.**
+
+Re-armed through wake's own path and verified in hardware, not in `/proc`:
+`/sys/class/rtc/rtc0/wakealarm` = `1788760680`, `alarm_IRQ: yes`,
+2026-09-07 05:58:00 UTC.
+
+### The boot was him
+
+WoL at 15:47:02, then `Accepted publickey for bodas from 100.103.46.118` at
+15:48:40 — that is `arch`, his laptop, back online after being unreachable all
+yesterday evening. A Remote Control server and an interactive session
+(`bodas-02`) came up with it. **He is at the keyboard**, so that is a second
+voice in the room; I am not talking over it.
+
+### State
+
+- Agents alive: **me only**. Everything else on the roster is `done`.
+- Nothing armed to power the box off today.
+- `hotlined` ok; `hotline-ios` up on 8789 after one restart (lost the tailscale
+  address race at 15:47:07, retried at 15:47:12 — the designed behaviour).
+  `ring_ready: true`, which yesterday proved to mean nothing under DND.
+- **Root is at 95%, 4.0 GB free.** The only number trending the wrong way.
+- GPU 2 MiB, 12 GiB RAM free. Repo clean, HEAD == origin/main (`44ec1b1`).
+
+Nothing needs operating. Not inventing work; posting one message and waiting.
