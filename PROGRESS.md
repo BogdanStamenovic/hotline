@@ -8431,3 +8431,63 @@ was fetch-only. Worth knowing before planning another fan-out this session.
 
 Budget question to him went unanswered; wrote the report across all tiers rather
 than stalling on it. It costs nothing now, because the top pick is free.
+
+## 2026-09-06 21:55 — the weapon rules: read the primary documents, not summaries
+
+Verified first (`hotline --provenance`, posted 19:35:13Z): he wants to know what
+counts as a weapon and what does not, because he is the current leader of
+Serbia's FIRST Robotics team and will be helping this team build.
+
+Published as an artifact — it is a reference the team will build against, not a
+chat answer: `https://claude.ai/code/artifact/09550f9d-9cb5-4007-8f79-e65576b4539a`
+
+### Method, and why it mattered again
+
+Fetched both rulebooks as raw text and read them myself rather than asking a
+model to summarise: the CCRL antweight rules stripped from HTML, and the **FRA
+Build Rules 2024 Edition** downloaded as a 27-page PDF and converted with
+`pdftotext -layout`. Today already produced one wrong answer from a summarising
+pass (the Schengen claim), and a rulebook is exactly where that failure is
+expensive. Quoted wording in the artifact is verbatim from those two files.
+
+### The actual finding — not the one I expected
+
+The banned list is short and **both rulebooks agree on it**: electrical weapons,
+RF jamming, magnets against electronics, entanglement, liquids leaving the robot,
+untethered projectiles, and anything aimed at the driver rather than the robot.
+Two organising principles behind it: nothing that damages invisibly, nothing that
+stops the fight instead of winning it.
+
+**The real hazard is the legal weapons.** The two books set wildly different
+ceilings for the same device:
+
+| limit | CCRL (Brno) | FRA (UK) |
+|---|---|---|
+| pneumatic pressure | **7 bar** | **68 bar / 1000 psi** |
+| maximum voltage | **24 V** | 75 V DC, LiPo to 14S / 51.8 V |
+| tethered projectile | 50 cm from centre | 2.5 m tether |
+| spinner pre-approval | not specified at antweight | >10% weight, >500 RPM, >500 mm |
+| spinner spin-down | not specified | under 60 s |
+
+A flipper built to the UK rulebook is illegal in Brno by nearly a factor of ten.
+That is the answer to his question, and it is a design constraint, not trivia.
+
+### Two clauses that invalidate common first-robot tricks
+
+- **CCRL 2.4** — expansion beyond the size box is legal only *after* the match
+  starts and only if **remotely commanded**; a pre-loaded spring or automatic
+  deployment is explicitly excluded.
+- **CCRL 6.6** — an exposed LiPo stops the fight and **the battery's owner
+  loses**. Armour over the pack is a scoring decision, not only a safety one.
+
+### The absence that matters more than any weapon rule
+
+Read FRA's Build Rules, Code of Conduct and Competition Regulations, plus the
+CCRL rules, in full. **Not one contains any rule on competitor age, guardianship
+or pit access.** That is a genuine absence rather than a failed search, and for a
+gimnazija team it is the single largest unknown — ahead of every weapon question.
+Said so directly to him, because he is the one who will carry it to the team.
+
+Blocks still reported as blocks: `robochallenge.ro` 403s, unchanged. The CCRL
+page's "Rules were updated on 10/3/2026" is format-ambiguous and I did not guess
+which reading is right — listed as unconfirmed.
