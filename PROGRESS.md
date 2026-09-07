@@ -9026,3 +9026,24 @@ is plainly at the laptop. Waiting.
 5. The three frozen files + acceptance test — since the 26th.
 6. The `CLAUDE.md` snapshot line — since the 28th.
 7. `split-packages` is 8 commits ahead of hotline `main` and unmerged.
+
+### The one remaining wake path, verified at both ends
+
+Since the RTC backup is gone, tomorrow's 06:00Z wake rests entirely on Pigion's
+WoL packet, so I probed both halves rather than trusting the `pending` row.
+
+- **NIC side:** `ethtool enp4s0` reports `Wake-on: g` — magic packet armed, not
+  merely `wol-enp4s0.service` reporting `active (exited)`.
+- **Server side:** Pigion answers `GET /health` on the LAN address with
+  `{"ok": true, "revision": 108, "role": "server"}`. The local DB is at
+  `revision` 108 and `last_pulled_rev` 108, and the WoL row's `pushed_rev` (107)
+  equals its `rev` (107) — so the row reached the server and this box is level
+  with it. `wake.env` points at `http://192.168.1.8:8791` (LAN), not the tailnet
+  address; the tailnet IP does not serve it. The server exposes only `/health` on
+  GET, everything else is POST, so `/tasks` returning `not found` is the API
+  shape and not a fault.
+
+That path is also proven empirically — it fired at 06:00Z this morning and the
+box came up. Two independent halves plus one live success is enough; I did not
+arm an RTC row on my own initiative because a second wake path that powers the
+box on is his design decision, not housekeeping.
