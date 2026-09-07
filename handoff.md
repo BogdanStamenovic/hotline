@@ -1,6 +1,37 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-07 00:45 CEST — operator `hotline-80`
+> ## STATUS AS OF 2026-09-07 04:55 CEST — SHUT DOWN at his verified instruction
+>
+> **Both machines were powered off overnight.** `arch` (his laptop) at ~04:52,
+> confirmed down by probe; archserver immediately after. His instruction, verified
+> at 02:44:14Z: shut down arch then archserver, have the arch agent write a
+> handoff first, and wake arch at archserver's next wakeup to finish.
+>
+> **THE WAKE-ARCH PART IS IMPOSSIBLE — do not try, and do not record it as a
+> pending task.** archserver is on 192.168.1.0/24 wired. `arch` is on WiFi
+> 10.69.173.229/16 and reaches this box only over Tailscale via a public IP.
+> Wake-on-LAN is a layer-2 broadcast and does not route; arch's wired port is down
+> and no interface reports Wake-on support. **He must open the laptop himself.**
+> It did not matter, because the run is not on the laptop (below).
+>
+> **What is running with both machines off:** Slurm job **1449** (`sd-hybapp`) on
+> hpclab node **c1**, verified R state directly. Results land on cluster NFS at
+> `~/sd-analize/results/` with per-cell `.done` markers. hpclab is NOT reachable
+> from archserver (the host alias lives in arch's ssh config).
+>
+> **⚠ FIRST THING TO TELL HIM: `cd ~/data/SD_analize && git push` on the laptop.**
+> The agent's `handoff.md` (6934 bytes, commit `d2c2423`) and ~21 commits are
+> committed but **never pushed** — GitHub `main` is still `b8b24a2` from 01 Sep.
+> Nothing is lost; it is unbacked-up and unreadable until he opens the laptop. My
+> miss: I verified "committed" and not "pushed".
+>
+> **Expect this box back ~08:00 CEST** on its own: RTC 05:58Z (armed, verified in
+> `/sys`) plus Pigion WoL 06:00Z, then the track slot at 06:02Z which powers the
+> box off again if nobody is logged in.
+>
+> ---
+>
+> ## SUPERSEDED — STATUS AS OF 2026-09-07 00:45 CEST — operator `hotline-80`
 >
 > ### THE BOTTOM OF THIS FILE IS NOT THE NEWEST MATERIAL. The spawn prompt says
 > it is, and the spawn prompt is wrong. This file's last entry is **2026-09-01**.

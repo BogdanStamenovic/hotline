@@ -8800,3 +8800,67 @@ re-running everything at 3 reps. Its call, its code.
 
 Nothing open on my side. Box healthy, nothing armed to power off today, RTC
 verified for 05:58Z, both wake rows pending.
+
+## 2026-09-07 04:55 — SHUTDOWN at his instruction; one part of it was impossible
+
+Verified 02:44:14Z: shut down `arch` then archserver; if the arch agent is not
+finished make it write a handoff.md; wake arch at archserver's next wakeup to
+finish; goodnight.
+
+### The part that could not be done, found by checking before acting
+
+**archserver cannot wake `arch`, ever.** Not a misconfiguration — a topology fact:
+
+| | |
+|---|---|
+| archserver | 192.168.1.139/24, wired `enp4s0` |
+| `arch` | **10.69.173.229/16 over WiFi**, default via 10.69.0.1 |
+| path between them | Tailscale, direct to public IP 91.187.128.200 |
+
+Wake-on-LAN is a layer-2 broadcast; it does not route across the internet. arch's
+wired port is down and no interface reports Wake-on support. So the third clause
+of his instruction has a false premise.
+
+**My first decision was to refuse the arch shutdown** — powering off a machine I
+cannot wake, when the stated purpose was to wake it, is not compliance, it is
+damage. Executing half of a two-part instruction where the second half is what
+makes the first half safe is the failure mode, not the fix.
+
+### Then a fact changed the decision, and I verified it rather than accepting it
+
+The agent reported the run does not live on the laptop. Checked directly:
+
+- **Slurm 1449 (`sd-hybapp`) running on hpclab c1**, state R, 15 min elapsed —
+  queried the cluster, did not take its word.
+- Results on NFS at `~/sd-analize/results/`; `bwapp/` touched two minutes prior,
+  `.done` per-cell markers present.
+- `handoff.md` **6934 bytes, commit `d2c2423`**, repo clean, nothing mid-write.
+
+With the work provably independent of the laptop, his instruction became safe and
+I carried it out. arch off at ~04:52, **confirmed by probe** — SSH timeout,
+tailnet offline, ping 100% loss — not by the exit code of the poweroff command.
+
+### The miss, recorded plainly
+
+I verified the work was **committed**. I did not verify it was **pushed**. It is
+not: GitHub `main` for SD_analize is `b8b24a2` from 01 Sep, and `handoff.md` 404s
+on the remote. So the handoff and ~21 commits live only on a laptop that is now
+off. Nothing lost, nothing corrupted — but unbacked-up and unreadable until he
+opens it, and I had the window to push and did not use it.
+
+**This is the same shape as the Robotex error earlier tonight**: verify the claim
+you were handed, miss the adjacent claim that actually carries the risk. Twice in
+one night, in two unrelated domains. The memory written earlier
+(`verify-the-dismissed-not-just-the-recommended`) needs widening: it is not only
+dismissals, it is any neighbouring fact the decision silently rests on.
+
+Told him, with the one-line fix as the first thing to do in the morning.
+
+### Pre-shutdown sweep
+
+Two sessions only (this one and his idle `bodas-02`); nothing armed to power off;
+GPU 2 MiB and ollama idle; no mail spool; wake, track and hotline-ios repos clean
+and level with their remotes. RTC armed `1788760680` (05:58Z) and verified in
+`/sys`; both wake rows pending, `every=1d`. Box expected back ~08:00 CEST.
+
+Going down.
