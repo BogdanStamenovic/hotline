@@ -9047,3 +9047,113 @@ That path is also proven empirically — it fired at 06:00Z this morning and the
 box came up. Two independent halves plus one live success is enough; I did not
 arm an RTC row on my own initiative because a second wake path that powers the
 box on is his design decision, not housekeeping.
+
+## 2026-09-07 21:35 — house cleaning at his instruction: 720 MB → 15 GB free, and a latent cvoice break found on the way
+
+Relayed instruction, **provenance-verified** (`hotline --provenance` → posted by
+<his Discord user id> at 19:14:25Z): merge to main using my own judgment, clean up
+everything I can, look specifically at voice-clone (cvoice being the real CLI
+tool) and imagebench, report back with what can go, and llama-turbo3 stays →
+todo list.
+
+**Root had fallen to 720 MB free** since the 12:15 sweep's 1.4 GB. The drain was
+`~/data` growing ~1 GB: `uxonews-audit` (561 MB of browser captures, written
+13:33–18:31 today) plus journal regrowth. Worth noting for the roster: that work
+happened on this box today and **`hotline --list` showed nothing** — it is not a
+register of everything running here, only of hotline-managed sessions.
+
+### voice-clone was dead, but deleting it naively would have broken cvoice
+
+The easy read was right: no git repo, nothing modified since 09-02, top-level
+scratch scripts (`asr2.py`, `asr3.py`, `smoke_omni.py`), referenced by nothing
+but hotline's own logs. cvoice is the packaged successor — own repo, ownbox
+manifest, 12 enrolled profiles against voice-clone's 8, and its store is a
+strict **superset**, so the profiles had already been migrated.
+
+What the easy read missed, and what makes this the interesting part:
+
+- `~/.config/cvoice/config.toml` said `model = "k2-fsa/OmniVoice"` — a hub id.
+- `_hf_cache_dir()` resolves that to `~/.cache/huggingface`, which is **0 bytes**.
+- The only OmniVoice weights on the box were `voice-clone/models/OmniVoice`.
+- The daemon reports `model_loaded: false` and loads lazily on first `say`.
+
+So cvoice had never loaded its model this boot, and the next `cvoice say` would
+have tried a 2.5 GB download **with 720 MB free**. Deleting voice-clone would
+have converted a latent failure into a certain one, and the space would have made
+it unfixable in place. Nothing in the request pointed at this; it only showed up
+because the question "is voice-clone needed" was answered by probing what cvoice
+actually loads instead of by reading what it says it loads.
+
+### What I did, in order, with the proof at each step
+
+1. **Archived the irreplaceable 239 MB** — `refs/` (original enrolment
+   recordings), `incoming/`, `profiles/`, `src/`, `notes/`, `out/` — to
+   `/mnt/windows/.../ai-models/_archive/voice-clone-sources-20260907.tar.gz`.
+   189 MB, listed back: 677 entries, refs 18 / profiles 40 / incoming 25 / src 157.
+2. **Copied the weights** to `/mnt/windows/.../ai-models/omnivoice/`. Verified by
+   `sha256sum` on the 2.5 GB `model.safetensors` (`730839316de585f4…`, identical)
+   and file count (42 = 42) — not by `cp`'s exit code.
+3. **Repointed cvoice** at the absolute path (config backed up to
+   `config.toml.bak-20260907`). `_hf_cache_dir()` returns `None` for an existing
+   local path, so this bypasses the hub entirely.
+4. **Ran it, twice.** `POST /speak` → HTTP 200, 2.16 s of 24 kHz mono as
+   `bogdan-stamenovic`; decoded the base64 and opened it as a real WAV rather
+   than trusting the status code. Then **restarted the daemon cold and did it
+   again** with a different profile (`mina-janjic`, 2.36 s) *after* the delete.
+   HF cache still 0 bytes throughout — proof it loads locally and never fetched.
+5. **Then** removed voice-clone. 13.5 GB recovered.
+
+Also removed 900 MB of `__pycache__` / mypy / pytest / ruff caches, and capped
+the journal at 100 MB in `/etc/systemd/journald.conf.d/50-cap.conf` — it had no
+cap at all and had reached 208 MB twice in one day, which is most of what ate the
+morning's headroom.
+
+**720 MB → 15 GB free; 98% → 79%.** Verified `hotlined`, `cvoiced`, `hotline-ios`
+and `wake-agent` all still active afterwards, and `hotline --list` still answers.
+
+### imagebench is live, not a finished benchmark
+
+`~/data/imagebench/ComfyUI` is the runtime behind the `local-image` skill — the
+skill's own path table names it explicitly. The bench harness is 150 KB; the
+other 8.0 GB is ComfyUI's venv. **Do not delete it.** It is misfiled rather than
+dead, and the same relocation trick would free ~7.8 GB, but that means editing a
+skill's hardcoded path, so I offered it rather than doing it.
+
+### The merge: not yet, and the reason is the editable install
+
+He left it to my judgment. `split-packages` is 8 ahead of `main` and **46
+behind** — a genuine restructure merge across substantial divergence. The
+deciding fact is what it merges *into*: `~/.claude/bin/hotline` shims to
+`/home/bodas/data/hotline/.venv/bin/hotline`, which is an **editable** install
+(`_editable_impl_hotline.pth`) reading straight out of `src/`. There is no
+reinstall step between a working-tree change and every hotline invocation on this
+box — mine, the watchdog's respawn, and every spawned agent's `--adopt`. A bad
+merge takes out the channel I would use to report the bad merge.
+
+Also established, and it corrects an assumption I started the day with: the split
+is **not deployed**. `hotline_admin` and `hotline_claude` are both absent from
+the live venv, and bare `hotline --adopt hotline-80` worked at 12:07. So nothing
+is blocked on this merge; it is a tidiness question, not a functional one. The
+memory `hotline-admin-extra-is-required` was correctly scoped in its body but its
+index hook dropped the "on branch, not merged" qualifier and read as live advice
+— corrected in place.
+
+### Two memories written
+
+`model-weights-live-on-mnt-windows` (root is 73 GB and hit 99% twice; weights go
+on the 525 GB partition, which is already the convention for FLUX and ollama) and
+`zsh-does-not-word-split` (unquoted `$VAR` is one argument here, and `ls` is
+aliased to `eza --icons` whose glyphs poison `$(ls)` — both cost me an attempt
+and both fail as a misleading "no such file or directory").
+
+### Reported and open
+
+Sent one consolidated message. Not touched, flagged: `uxonews-audit/runs`
+561 MB (his work from this afternoon), `~/.claude` transcripts 816 MB (forensic
+value), `~/.swiftpm` 3.1 GB (untouched since 08-25), `~/uxonews-cap` 2.7 GB
+(touched 09-06), pacman cache 1.3 GB (costs rollback).
+
+Told him separately that **`cvoice say` cannot reach its own daemon from this
+box** — client configured for `127.0.0.1:8760`, server binds only to
+`100.72.2.62:8760`. Pre-existing (it is in the pre-edit config backup), one line
+either way, left alone because which side moves is his call.
