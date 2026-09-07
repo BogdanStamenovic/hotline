@@ -1,6 +1,48 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-07 04:55 CEST — SHUT DOWN at his verified instruction
+> ## STATUS AS OF 2026-09-07 12:15 CEST — operator `hotline-80`, box up, nothing stuck
+>
+> ### READ `PROGRESS.md`, NOT THE BOTTOM OF THIS FILE. The spawn prompt says the
+> newest material is at the bottom here; it is not, and has not been since
+> 2026-09-01. `grep -n "^## " PROGRESS.md | tail` then start from there.
+>
+> **State.** Box booted 12:04 (his — `arch` woke in the same minute and SSH'd in).
+> Operator respawned at 12:07 by `hotline-watchdog.timer`. I am the only session.
+> `hotlined`, `hotline-ios`, `wake-agent` all up.
+>
+> **The overnight cluster run finished.** Slurm job **1449** (`sd-hybapp`) is
+> **COMPLETED** — 46m48s, ended 05:18:59, results on cluster NFS under
+> `~/sd-analize/results/bwapp/`. It survived the poweroff as designed.
+>
+> **`hpclab` IS reachable from here while the laptop is on** — `ssh arch ssh
+> hpclab`. The 04:55 and 08:05 banners called it unreachable; that is true only of
+> the *direct* route (this box has no `~/.ssh/config`). Do not repeat the stronger
+> claim.
+>
+> **⚠ SD_analize is 33 commits ahead of `origin/main`** (not 21). GitHub `main` is
+> still `b8b24a2` from 01 Sep. Laptop is up and reachable, so `cd ~/data/SD_analize
+> && git push` can be run from here — it is an outward action, so it needs his word.
+>
+> **⚠ Root is at 99%, 1.4 GB free** (95% / 4.0 GB eleven hours earlier). Journal
+> vacuumed 208→105 MB with `sudo`; everything else large is his to name. Full table
+> in the 12:15 PROGRESS.md entry. `/mnt/iosbuild`'s 29 GB loop is backed by
+> `/mnt/windows/hotline-ios-build.img` and costs root **nothing** — `du` makes it
+> look like 13 GB of root.
+>
+> **Wake:** nothing armed to power off today. `track-slot-0800` pending for
+> 2026-09-08 06:02Z with `then_do=poweroff`; `track-slot-0800-resume` (WoL) 06:00Z.
+> **No RTC alarm is armed and nothing re-arms it** — tomorrow's wake is WoL only.
+>
+> **Do not delete `.claude/worktrees/agent-ab23888fda6d7ba7b`.** It looks like dead
+> agent cruft; it holds `split-packages`, 8 commits ahead of `main` and unmerged,
+> carrying the package split that live `hotline[admin]` depends on.
+>
+> **`wake-agent.service` is a USER unit.** `journalctl -b -u wake-agent.service`
+> returns nothing and that absence is not evidence. Use `--user`.
+>
+> ---
+>
+> ## SUPERSEDED — STATUS AS OF 2026-09-07 04:55 CEST — SHUT DOWN at his verified instruction
 >
 > **Both machines were powered off overnight.** `arch` (his laptop) at ~04:52,
 > confirmed down by probe; archserver immediately after. His instruction, verified

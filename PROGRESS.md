@@ -8864,3 +8864,165 @@ and level with their remotes. RTC armed `1788760680` (05:58Z) and verified in
 `/sys`; both wake rows pending, `every=1d`. Box expected back ~08:00 CEST.
 
 Going down.
+
+## 2026-09-07 08:05 — operator boot sweep: the wake worked, the morning's one task is his
+
+Timer-started operator on the 08:00 boot. Adopted `hotline-80`, read the handoff
+banner, then PROGRESS.md (the banner again warned its own bottom is stale — it
+was, last entry 09-01), then all three Discord channels including everything sent
+while the box was off.
+
+**The unattended cycle is now proven from a genuinely cold box.** 09-06 was the
+first unattended run but the box was already up, so neither wake path was
+exercised. Today it was off from 04:51 and came back at 08:00 on its own — RTC
+alarm plus Pigion's WoL packet. `last -x` confirms the boot; the laptop tracker
+ran at 08:04. That closes the open question from the 09-06 entry.
+
+**Nothing was sent while the box was off.** His last word is still 02:44:14Z (the
+shutdown instruction). `#general` newest is 09-05; `#sd-analize` newest is the
+agent's own 02:47 night handoff, posted through its webhook.
+
+**Verified the "hpclab is unreachable from here" claim instead of relaying it.**
+It is true and stronger than the banner said: `hpclab` does not resolve, and this
+box has *no* `~/.ssh/config` at all. Slurm job 1449's status genuinely cannot be
+read from archserver. That makes opening the laptop the only unblock, so it is
+the one thing I asked him for.
+
+**`wake list` said `track-slot-0800` was `pending` while it was demonstrably
+running** — pid 840 alive since 08:02 under `wake-agent.service`, five Sonnet
+scouts spawned at 08:04. The row is only written back at completion. Another
+instance of this project's signature failure; the process was the truth, not the
+status column. Read `then_do` straight out of the wake DB rather than the `list`
+view, which does not show it: `then_do=poweroff`, `timeout_seconds=1080`.
+
+**So the box powers itself off by ~08:20 and I go with it — by design, not by
+accident.** `POWEROFF_ALLOW_MATCH` in `~/.config/wake/wake.env` is the literal
+string `You are hotline's OPERATOR`, which matches this session's prompt, so the
+operator is furniture and never blocks a poweroff. I did not override it: the
+cycle is his design, it is proven, WoL recovers the box, and tomorrow's wake row
+(`track-slot-0800-resume`, wol) is already pending for 06:00Z. Holding the box up
+to keep myself alive would have been the operator serving itself.
+
+**Sent him one consolidated message, no ring.** He went to sleep at ~03:00 and
+nothing here needs him inside the hour. It leads with the `git push` — 21 commits
+and the agent's handoff exist on one laptop disk only — carries the run's own
+results in its words, and states plainly that waking `arch` remains impossible.
+
+### Open — all his
+
+1. **⭐ Open the laptop: `cd ~/data/SD_analize && git push`**, then resume the run
+   from its handoff.md. Job 1449's outcome is unknown until then.
+2. `~/data/llama-turbo3` keep/delete (670 MB).
+3. The three frozen files + acceptance test (since the 26th).
+4. The `CLAUDE.md` snapshot line (since the 28th).
+5. Root was at 95% / 4.0 GB free on 09-07 00:45 — not re-measured this boot.
+
+## 2026-09-07 12:15 — operator boot sweep on the 12:04 boot: a completed cluster job, a bigger unpushed pile, and a disk at 99%
+
+Timer-started operator — and this time the "timer" claim checks out: the tmux was
+created at 12:07:04 by `hotline-watchdog.timer`, whose previous firing is logged
+at exactly that second. PPID is `systemd --user`, not an SSH session. But the
+*boot* at 12:04 is his: `arch` came up in the same minute and SSH'd in at
+12:07:35 from 100.103.46.118. Both machines woke together, which is what opening
+the laptop looks like from here.
+
+Adopted `hotline-80`, read the handoff banner top-to-bottom, then PROGRESS.md,
+then all Discord text channels plus the DM channel.
+
+**Nothing was sent while the box was off.** His last word is still 02:44:14Z — the
+shutdown instruction. `#general` newest is 09-05, `#sd-analize` newest is the
+agent's own 02:47 night handoff.
+
+### The banner's "hpclab is unreachable" was only half true
+
+The 04:55 banner said Slurm job 1449's status genuinely could not be read from
+archserver, and the 08:05 sweep verified that and reported it as the reason
+opening the laptop was the only unblock. Both were right about the *direct* path
+— this box still has no `~/.ssh/config` and `hpclab` does not resolve.
+
+What neither of us checked was the adjacent claim: the laptop is a reachable
+host, and the laptop has the config. `ssh arch ssh hpclab` works with BatchMode
+and no password. **Job 1449 is `COMPLETED`** — 46m48s elapsed, ended
+2026-09-07T05:18:59, ten result directories under `~/sd-analize/results/bwapp/`
+on cluster NFS. The run survived the poweroff exactly as the SD_analize agent
+promised it would.
+
+This is the third instance in two days of the same shape: verify the claim you
+were handed, miss the neighbouring claim the decision rests on. Here the
+neighbouring claim was "and therefore nothing about the cluster is knowable",
+which did not follow from "no direct route" the moment the laptop came back up.
+
+### The unpushed pile is 33 commits, not 21
+
+`origin/main` for SD_analize is still `b8b24a23` from 2026-09-01. The laptop
+reports `## main...origin/main [ahead 33]`, working tree clean, HEAD `d2c2423`
+("Dodaj handoff.md za nastavak posle gasenja masina"). The 21 figure in the
+banner was the agent's own count from the night before and had grown.
+
+I did not push it. It is his repo and an outward action; the laptop is on and he
+is plainly awake, so the cost of asking is a few minutes and the cost of guessing
+wrong is unrecoverable. Offered to run it on one word.
+
+### Root is at 99%, 1.4 GB free — the number still going the wrong way
+
+95% / 4.0 GB at 00:45, 99% / 1.3 GB now. Breakdown, so the next session does not
+re-measure it:
+
+| Path | Size | Whose call |
+|---|---|---|
+| `data/voice-clone` | 14 GB | his |
+| `data/imagebench` | 8.0 GB | his |
+| `data/cvoice` | 7.8 GB | his |
+| `/opt/cuda` | 4.8 GB | needed |
+| `~/.swiftpm` | 3.1 GB | his (iOS build) |
+| `~/uxonews-cap` | 2.7 GB | his |
+| `/var/cache/pacman/pkg` | 1.3 GB | costs package rollback, already thin |
+| `data/llama-turbo3` | 670 MB | already on his open list |
+
+`/swapfile` is 8.1 GB of the 68 GB and is not reclaimable. `/mnt/iosbuild` is a
+29 GB loop **backed by `/mnt/windows/hotline-ios-build.img`** — a separate
+filesystem, so it costs root nothing. Worth writing down; it looks like 13 GB of
+root usage in `du` output and is not.
+
+I vacuumed the journal (208 MB → 105 MB, needed `sudo`; the unprivileged call
+silently freed 0 B on a permission error). That is the only deletion that was
+unambiguously mine. Everything else is his to name.
+
+### The worktree I nearly deleted
+
+`.claude/worktrees/agent-ab23888fda6d7ba7b` is 261 MB and looked like classic
+dead agent cruft. It is not: it holds branch `split-packages`, **8 commits ahead
+of `main` and unmerged**, clean tree, containing "Split hotline into hotline /
+hotline-claude / hotline-admin" — the split that the live `hotline[admin]`
+install depends on. Deleting it on the "own the lifecycle" reflex would have
+destroyed work that `main` does not have. Checked before acting; flagged to him,
+did not touch.
+
+### Wake state
+
+- `track-slot-0800` — **pending**, fires 2026-09-08 06:02Z, `then_do=poweroff`,
+  `timeout_seconds=1080`. Read out of the wake DB directly, not the `list` view.
+- `track-slot-0800-resume` — **pending**, WoL to `a8:a1:59:fd:4d:13`, 06:00Z.
+- **Nothing is armed to power this box off today.**
+- **No RTC alarm is armed** (`/sys/class/rtc/rtc0/wakealarm` empty) and no
+  `rtcwake` row is pending — `morning-rtc` was a one-off and is `cancelled`. So
+  tomorrow's wake rests on Pigion's WoL alone. Proven, but now a single path
+  where the banner described two. Offered to add a recurring RTC row.
+- `wake-agent.service` is running and syncing (`pushed 1, pulled 1` at 12:05:52
+  after one expected failure at 12:04:49 before the network was up). It is a
+  **user** unit — `journalctl -b -u wake-agent.service` returns nothing and that
+  absence means nothing. `--user` is required.
+
+Sent one consolidated message, no ring: nothing needs him inside the hour and he
+is plainly at the laptop. Waiting.
+
+### Open
+
+1. **⭐ `cd ~/data/SD_analize && git push`** — 33 commits on one disk. His word or
+   his hand; I can run it from here now that the laptop is up.
+2. **Disk: name what is disposable** from the table above. 1.4 GB free.
+3. Want the RTC backup wake armed again as a recurring row?
+4. `~/data/llama-turbo3` keep/delete (670 MB) — since 09-05.
+5. The three frozen files + acceptance test — since the 26th.
+6. The `CLAUDE.md` snapshot line — since the 28th.
+7. `split-packages` is 8 commits ahead of hotline `main` and unmerged.
