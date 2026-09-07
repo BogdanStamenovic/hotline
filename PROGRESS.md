@@ -9248,3 +9248,70 @@ Then: register `dds.uxonews.com`, enable Receiving, register the webhook, write
 `.env.local`, prove the whole chain against Resend's free `<id>.resend.app`
 inbound address — which needs **no DNS at all**, so the MX sequencing trap is
 closed by construction — and only then ask the agent for the records.
+
+## 2026-09-07 23:20 — inbound mail: receive half live, and a third "adjacent number" trap
+
+**His design, corrected twice before I built anything.** The dds-site session
+relayed that he wanted a reply relay; I verified against his own words in its
+transcript (20:07:01Z) rather than the relay, and the detail differed — the
+Gmail account is **isolated and dedicated**, and the real sender is encoded **in
+the body**, not only a header. I put to him that a reply addressed to his own
+Gmail never leaves Google, so nothing on the server could ever catch it. He
+approved the `Reply-To: relay+<token>@dds.uxonews.com` variant, body encoding
+kept as belt-and-braces. He also told the agent "header" and told me "body", so
+we carry both and neither of us has to be right.
+
+**Set up over the API — none of it needed the dashboard**, contrary to the spec:
+registered `dds.uxonews.com` (sending + receiving; receiving took
+`PATCH /domains/{id}` with `{"capabilities":{"receiving":"enabled"}}`), created
+the `email.received` webhook, and wrote `/opt/dds/app/.env.local` (0600, `dds`)
+with the signing secret straight from the API response into the file — it never
+transited a transcript. That also switched `notify()` on for the first time.
+
+**Proved signature verification in production**, not locally: a correctly signed
+webhook reached the fetch stage, confirmed by `[inbound] could not record …` in
+the journal, which is only reachable past the check.
+
+**The dds-site session reviewed the endpoint and found two real things.**
+`Buffer.from(x,"base64")` never throws — verified, `"!!!not base64!!!"` yields 6
+bytes of garbage — so both try/catch blocks were dead. Better than deleting
+them: a mistyped secret was producing a short garbage key that never matched, so
+the endpoint answered **401 as though Resend were at fault**. It now reports
+`signing secret decoded to N bytes — it looks truncated or mistyped`.
+
+**Its second suggestion was wrong and I corrected it back.** It proposed sweeping
+duplicate markers at the 5-minute replay tolerance. A marker must outlive the
+**retry ladder**, whose last attempt is ten hours out; pruning at five minutes
+would let that through and store the message twice — the exact duplicate the
+marker prevents. Retention is seven days, with a test pinning that a
+**12-hour-old marker survives** while an 8-day-old one goes. It accepted the
+correction and named the pattern itself.
+
+**And the same shape again, a third time, in DNS.** It reported the sending
+records "propagated", having resolved them from the uxonews box. They are not.
+A DreamHost **origin** nameserver (64.90.62.230) serves them; the nameservers the
+domain actually publishes — `ns1/2/3.dreamhost.com`, now Cloudflare-fronted
+anycast at 162.159.x — do **not** yet, so no public resolver sees them and
+**Resend still reports `pending` / `not_started`**. "A nameserver answered" is a
+status field; "the nameservers the world queries answer" is the thing. Resend's
+own verdict is the only one that decides anything.
+
+**State.** `dds.uxonews.com` **MX is absent and staying that way** — checked at
+the authoritative servers, not a cache. Endpoint live, 401s unsigned traffic,
+site up, `:3200` still loopback-only. Deployed `92026b6` after rebasing onto the
+agent's `698cfcc`.
+
+**Blocked on two things, both external:**
+1. **His isolated Gmail address** → `DDS_INBOUND_FORWARD_TO`. Until it is set the
+   chain verifies, fetches, stores and returns 200 while telling nobody — now a
+   loud error naming the variable rather than a warning in a journal.
+2. **The `<id>.resend.app` inbound address** from the dashboard. It receives with
+   no DNS, so it is how the authentication question gets answered empirically.
+
+**I am deliberately not building the relay yet.** Whether it can be secured at
+all rests on whether Resend exposes SPF/DKIM/DMARC verdicts on received mail,
+which their docs do not say. Building around that unknown is what the dds-site
+session warned against and it is right: a relay that re-sends arbitrary text as
+`contact@` on a landmine-clearance domain is an open relay unless the sender is
+cryptographically authenticated, and `From:` is trivially forged. One real
+message answers it.
