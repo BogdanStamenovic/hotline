@@ -1,6 +1,47 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-07 12:15 CEST — operator `hotline-80`, box up, nothing stuck
+> ## STATUS AS OF 2026-09-07 21:40 CEST — operator `hotline-80`, house cleaned
+>
+> ### READ `PROGRESS.md`, NOT THE BOTTOM OF THIS FILE. Its last entry is 09-01.
+> `grep -n "^## " PROGRESS.md | tail` and start there.
+>
+> **Disk is fixed: 79% / 15 GB free**, from 98% / 720 MB. `voice-clone` is gone
+> (13.5 GB) at his instruction; caches 900 MB; journal now capped at 100 MB in
+> `/etc/systemd/journald.conf.d/50-cap.conf`.
+>
+> **⚠ cvoice's weights moved to `/mnt/windows/Users/Korisnik/ai-models/omnivoice/`**
+> and `~/.config/cvoice/config.toml` points at that absolute path (backup:
+> `config.toml.bak-20260907`). Proved by real synthesis from a cold daemon after
+> the delete. **Do not "restore" the hub id `k2-fsa/OmniVoice`** — the HF cache is
+> empty and that would start a 2.5 GB download.
+>
+> **⚠ `~/data/imagebench` is NOT a finished benchmark — do not delete it.** Its
+> `ComfyUI/` is the live runtime behind the `local-image` skill, which hardcodes
+> that path. The bench harness is 150 KB; the rest is ComfyUI's venv.
+>
+> **Archive of the deleted work:**
+> `/mnt/windows/Users/Korisnik/ai-models/_archive/voice-clone-sources-20260907.tar.gz`
+> — 189 MB, 677 entries, refs/incoming/profiles/src/notes/out. Verified readable.
+>
+> **The `split-packages` merge is deliberately NOT done.** 8 ahead of `main`, 46
+> behind. The live hotline is an **editable** install off this working tree, so
+> merging changes the running tool instantly with no reinstall step — including
+> the tool you would use to report the breakage. The split is **not deployed**
+> (`hotline_admin`/`hotline_claude` absent from the venv; bare `--adopt` works),
+> so nothing is blocked on it.
+>
+> **Still true from 12:15:** job 1449 COMPLETED; SD_analize **33 commits
+> unpushed**; `ssh arch ssh hpclab` reaches the cluster while the laptop is on;
+> no RTC alarm armed, tomorrow's wake is Pigion WoL only; `track-slot-0800` fires
+> 09-08 06:02Z with `then_do=poweroff`.
+>
+> **`hotline --list` is not a register of everything running here.** A UX capture
+> run wrote 561 MB under `~/data/uxonews-audit` between 13:33 and 18:31 today and
+> was invisible to it.
+>
+> ---
+>
+> ## SUPERSEDED — STATUS AS OF 2026-09-07 12:15 CEST — operator `hotline-80`, box up, nothing stuck
 >
 > ### READ `PROGRESS.md`, NOT THE BOTTOM OF THIS FILE. The spawn prompt says the
 > newest material is at the bottom here; it is not, and has not been since
