@@ -9157,3 +9157,94 @@ Told him separately that **`cvoice say` cannot reach its own daemon from this
 box** — client configured for `127.0.0.1:8760`, server binds only to
 `100.72.2.62:8760`. Pre-existing (it is in the pre-edit config backup), one line
 either way, left alone because which side moves is his call.
+
+## 2026-09-07 22:35 — inbound mail: endpoint built, tested and live in production
+
+His task, provenance-verified twice (19:14:25Z house cleaning, 19:31:27Z the
+inbound-mail job). His verdict changed the spec's architecture: mail lands in
+his **normal Gmail**, he replies there, the reply reaches the sender.
+
+**Corrected his premise about where the webhook runs.** He asked whether it
+should run on his PC. It cannot: Resend has to reach *in*, and probing from
+`arch` (genuinely off-LAN on 10.69.x) showed 80/443/8791 all closed on the
+household IP 109.245.172.67 — no port forwarding — and archserver powers itself
+off daily, so it would miss mail inside Resend's 5s→10h retry ladder anyway.
+Same for pigion: same NAT, 415 MiB Pi. The thing he was thinking of is the
+Resend CLI's `webhooks listen`, which is a *development* tool that registers a
+temporary webhook. He then pointed out the public webserver already exists, and
+he was right — I had needlessly hopped through `arch` because the `uxonews` ssh
+alias only existed on the laptop. Added it here.
+
+**`dds-site-56` was a dead address.** The brief told me to message it; the name
+resolves to nothing and exists nowhere on either machine except inside that
+brief. The session is reachable under its auto-generated title instead. Root
+cause worth keeping: **an agent's declared identity is not its message address**
+— I made the same mistake in reverse by signing my message `hotline-80`.
+Verified the real constraint rather than guessing: Claude Desktop sessions on
+arch run `--disallowedTools SendMessage` and only get the local-only
+`ccd_session_mgmt__send_message`. Gave it a tested return path,
+`ssh archserver 'hotline --to hotline-bf --no-wait "..."'`, proven by running it.
+
+**It corrected me on `rsend` and it was right.** I had the TXT-vs-CNAME the
+wrong way round. Settled from the Resend API rather than either dashboard
+reading: `resend._domainkey` TXT **verified**, `rsend` wants CNAME
+`rsend.forge.rmta.net` and is **pending** (the blocker), `send` CNAME verified,
+Receiving MX = `inbound-smtp.eu-west-1.amazonaws.com` **pending**. That last one
+kills the spec's claim that the MX value is dashboard-only and must not be
+guessed — the API returns it.
+
+**Facts that reshaped the plan**, all probed: only `uxonews.com` exists in
+Resend, `partially_verified`; **`dds.uxonews.com` is not registered at all**, so
+this is more than the spec's "one record added last"; no webhooks registered;
+`/opt/dds/app/.env.local` does not exist, so `notify()` has always returned
+`no-provider` and the contact form has **never emailed anyone**. The agent
+worried about an unread backlog — there is none: `data/` does not exist and both
+apps have zero stored enquiries. Inbound is on the free plan, so no spend.
+
+**Built `POST /api/inbound`.** Signature verification (HMAC-SHA256 over
+`id.timestamp.body`, secret base64 after `whsec_`, constant-time compare, ±5 min
+tolerance, rotation list supported), dedupe, real-message fetch, disk store,
+forward with threading headers. No new dependencies — `node:crypto`.
+
+**The one deliberate departure from the spec**, documented in the code: it says
+acknowledge first and fetch after. I do the work first and return non-200 on
+failure. An acknowledgement is a promise the message was taken, and any failure
+after it is silent loss — the exact thing the document exists to prevent. Safe
+because the dedupe marker is written **only after the message is on disk**;
+marking on arrival would make a failed attempt suppress its own retry.
+
+**Tested, not assumed.** Signature verifier checked against an *independent
+Python implementation* of the documented algorithm so the test is not my code
+agreeing with itself — 10/10: valid, tampered body, wrong id, wrong secret,
+stale timestamp, missing prefix, rotation, bad version, missing headers, no
+secret. Then the live route: 401 unsigned, 401 bad signature, 401 replayed
+timestamp, 400 non-JSON, 400 no email_id, 200 ignored for other event types, 500
+when unconfigured. Hit the **real** Resend API with a bad key → 500 and **zero
+dedupe markers written**, which is the retry-safety property proven rather than
+argued. Path traversal in a webhook id is neutralised (`../../../etc/evil` →
+`_________etc_evil`).
+
+Two self-inflicted lessons: `pkill -f "next start -p 3201"` matched the Bash
+tool's own command line and killed my shell (exit 144) — kill by port, not by
+pattern. And zsh does not word-split unquoted `$VAR`, which silently broke a tar
+earlier in the day; it broke a multi-line ssh command here the same way.
+
+**Deployed.** `89bd017..b3994ba`, built on the server under node 22, route shows
+`ƒ` dynamic, service restarted. Verified live over HTTPS: site still 200,
+endpoint 401s unsigned traffic, GET is 405, and `:3200` is still loopback-only
+so the README's `next start -H` trap was not reintroduced. Rollback target
+recorded: `89bd017`.
+
+### Blocked on him, and only on him
+
+1. **A or B** — reply as `contact@dds.uxonews.com` (Gmail Send-mail-as over
+   Resend SMTP, needs `dds.uxonews.com` as a sending domain and a second DNS
+   round) or reply from his personal Gmail (`Reply-To` does the work, no DNS,
+   but strangers see his personal address). Both the dds-site agent and I
+   reached this independently; it costs about a day.
+2. **The Gmail address** for `DDS_INBOUND_FORWARD_TO`.
+
+Then: register `dds.uxonews.com`, enable Receiving, register the webhook, write
+`.env.local`, prove the whole chain against Resend's free `<id>.resend.app`
+inbound address — which needs **no DNS at all**, so the MX sequencing trap is
+closed by construction — and only then ask the agent for the records.
