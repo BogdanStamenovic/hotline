@@ -9315,3 +9315,92 @@ session warned against and it is right: a relay that re-sends arbitrary text as
 `contact@` on a landmine-clearance domain is an open relay unless the sender is
 cryptographically authenticated, and `From:` is trivially forged. One real
 message answers it.
+
+## SHUTDOWN 2026-09-08 03:25 — state at power-off (operator `hotline-80`)
+
+His instruction, provenance-verified at 01:17:38Z: "Okay so lets shutdown for
+today." **archserver only.** He did not name a machine and last night he named
+both explicitly, so I read the terse version narrowly: `arch` stays up because
+it is his laptop and the dds-site session is mid-task on it, chasing one DNS
+record. Powering that off would kill work he did not ask me to touch. One word
+from him reverses this.
+
+### The find that matters most tonight is not my task
+
+**UXONEWS cannot send email.** `POST /emails` returns 403 "The uxonews.com
+domain is not verified" — and the same for `dds.uxonews.com`. The account's
+entire send history is **one message**, 2026-08-24, "Your UXONEWS access has
+been approved", delivered. Nothing has been attempted since, which is why the
+fallback outbox is empty and why nobody noticed.
+
+So it is **latent, not actively losing mail** — but the next real access
+approval will fail. `uxonews.com` is `partially_verified`: DKIM verified, `send`
+CNAME verified, **`rsend` CNAME pending** because a TXT sits where Resend wants
+a CNAME. Partial verification is not cosmetic; it is a hard 403 on every send.
+
+The handed-down caution said *"Do not change `rsend` without asking — the
+product's real transactional mail depends on that path."* **That reasoning is
+inverted**: the record as it stands is what blocks the mail it warns us to
+protect. The fix is one record, `rsend` CNAME → `rsend.forge.rmta.net`. **I did
+not do it and did not ask the agent to** — it touches the product's mail path
+and needs his yes. Told him; he has not answered. The dds-site session corrected
+the doc within the hour (`c5d6119`).
+
+### Inbound mail — where it actually stands
+
+**Done, deployed, verified:** `POST /api/inbound` live at
+`https://dds.uxonews.com/api/inbound` — Svix verification, dedupe with a
+retry-safe marker, real-message fetch, disk store, forward with threading
+headers. `dds.uxonews.com` registered in Resend, sending and receiving both
+enabled. Webhook registered and `enabled`. `/opt/dds/app/.env.local` holds the
+signing secret and API key (0600, `dds`). Verified at shutdown after the agent's
+`c5d6119`: site 200, contact page 200, unsigned POST 401.
+
+**The one blocker, and it is specific:** `send.dds` MX
+(`feedback-smtp.eu-west-1.amazonses.com`, priority 10) was **never added** —
+absent at the origin and all three nameservers, not lag. Its two siblings did
+propagate. Until `dds.uxonews.com` verifies, the forward cannot send, so nothing
+can be tested end to end.
+
+**Deliberately not built: the relay.** Whether it can be secured at all rests on
+whether Resend exposes SPF/DKIM/DMARC verdicts on received mail, which the docs
+do not state. Never answered, because nothing on the account can send a test
+message in. The experiment is one line once sending works: mail anything to
+`dds-test@toosolis.resend.app` and dump the `headers` object. **Do not write the
+relay before running it** — a relay that re-sends arbitrary text as `contact@`
+on a landmine-clearance domain is an open relay unless the sender is
+cryptographically authenticated, and `From:` is trivially forged.
+
+**`dds.uxonews.com` MX is absent** — confirmed at all three nameservers and
+three public resolvers at shutdown. `contact@` still bounces honestly, which is
+correct while the forward cannot send. **It must stay absent** until a message
+provably reaches his inbox, because that address is already printed on the live
+contact page.
+
+### The anycast lesson, resolved
+
+The dds-site session and I disagreed about whether the records had propagated;
+both readings were honest and both partial. `ns1/2/3.dreamhost.com` are
+Cloudflare-fronted **anycast**, so "the authoritative server has it" is
+location-dependent — its US nodes had the zone, my Serbian ones did not, and
+three public resolvers gave three different answers with 8.8.8.8 holding one
+record but not the other. Not caching: my queries were RD=0 straight to the
+nameserver IPs. Both records reached my edge before shutdown, confirming it.
+**With anycast there is no single authoritative answer to read.**
+
+### Pre-shutdown sweep
+
+One session (this one). Nothing armed to power off before tomorrow's own cycle.
+`track-slot-0800-resume` (WoL) pending 06:00Z and `track-slot-0800` pending
+06:02Z with `then_do=poweroff`, both `every=1d`. **No RTC alarm and nothing arms
+one — the WoL is the sole wake path**, verified at both ends: NIC reports
+`Wake-on: g`, Pigion answers `/health` at revision 108, level with this box. It
+fired successfully this morning. Root at 80% / 15 GB free after the cleanup.
+All services active. hotline, wake, hotline-ios clean and level; `track` has an
+untracked `uv.lock` that is not mine. dds-site work confirmed **on the remote**,
+not merely committed — this morning's lesson applied deliberately.
+
+Told the dds-site session I am going down, what the one missing record is, and
+not to write the relay before the authentication test.
+
+Going down.

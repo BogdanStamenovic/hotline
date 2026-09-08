@@ -1,6 +1,50 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-07 21:40 CEST — operator `hotline-80`, house cleaned
+> ## STATUS AS OF 2026-09-08 03:25 CEST — SHUT DOWN at his instruction (archserver only)
+>
+> ### READ `PROGRESS.md`, NOT THE BOTTOM OF THIS FILE. Its last entry is 09-01.
+> `grep -n "^## " PROGRESS.md | tail` and start there.
+>
+> **archserver powered off at his verified instruction (01:17:38Z). `arch` was
+> left UP on purpose** — his laptop, with the dds-site session mid-task on it.
+> He named no machine; last night he named both, so the terse version was read
+> narrowly. Box expected back ~08:00 via Pigion's WoL.
+>
+> **⚠ TELL HIM FIRST: UXONEWS cannot send email.** `POST /emails` 403s — "the
+> uxonews.com domain is not verified". The account has sent exactly **one**
+> message ever (2026-08-24). Latent, not losing mail, but the next access
+> approval fails. Cause: `uxonews.com` is `partially_verified` — `rsend` wants a
+> CNAME to `rsend.forge.rmta.net` and a TXT sits there. **The old warning "don't
+> touch rsend, the product's mail depends on it" is backwards** — that record is
+> what blocks it. One-record fix, needs HIS YES, not done.
+>
+> **Inbound mail: receive half is live and proven.** `POST /api/inbound` on
+> dds.uxonews.com — signature verification, dedupe, fetch, store, forward.
+> Domain registered (sending+receiving enabled), webhook registered,
+> `/opt/dds/app/.env.local` holds the secret and key. Verified at shutdown: site
+> 200, unsigned POST 401.
+>
+> **⚠ THE ONE BLOCKER:** `send.dds` MX (`feedback-smtp.eu-west-1.amazonses.com`,
+> prio 10) was **never added** — not lag, absent everywhere. Until it is,
+> `dds.uxonews.com` stays `pending` and the forward cannot send.
+>
+> **⚠ DO NOT WRITE THE RELAY YET**, and **do not add the `dds` MX**. The relay
+> cannot be secured unless Resend exposes SPF/DKIM/DMARC verdicts on received
+> mail, which is UNKNOWN — the docs do not say and no test message ever got in.
+> Settle it first: mail anything to `dds-test@toosolis.resend.app` and dump the
+> `headers` object. `contact@dds.uxonews.com` is on the live contact page, so an
+> MX with a dead forward means real mail nobody reads.
+>
+> **Still needed from him:** the isolated Gmail address for
+> `DDS_INBOUND_FORWARD_TO`, and a yes on the `rsend` fix.
+>
+> **Anycast:** `ns1/2/3.dreamhost.com` are Cloudflare anycast. "The authoritative
+> server has it" is location-dependent — three public resolvers gave three
+> different answers. There is no single authoritative reading.
+>
+> ---
+>
+> ## SUPERSEDED — STATUS AS OF 2026-09-07 21:40 CEST — operator `hotline-80`, house cleaned
 >
 > ### READ `PROGRESS.md`, NOT THE BOTTOM OF THIS FILE. Its last entry is 09-01.
 > `grep -n "^## " PROGRESS.md | tail` and start there.
