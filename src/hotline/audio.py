@@ -54,6 +54,24 @@ MAX_UTTERANCE = 45.0  # a hard stop, so a stuck-open mic cannot buffer forever
 _NEEDED = ("libcublas.so", "libcublasLt.so", "libcudnn", "libcudart.so", "libnvrtc.so")
 
 
+def _wheel_roots() -> list[str]:
+    """site-packages trees that might hold the nvidia wheels.
+
+    Normally just this venv's. `HOTLINE_CUDA_WHEEL_DIRS` (os.pathsep-separated)
+    adds others, and that is not a nicety: the CUDA runtimes were deliberately
+    stripped from this venv on 2026-08-28 to reclaim 5.6 GB with root at 81%,
+    which left ctranslate2 unable to find libcublas.so.12 and killed GPU Whisper
+    here. Root is still tight, so pointing at the copy that already exists in a
+    sibling project's venv costs 0 bytes where reinstalling costs ~1.2 GB.
+
+    The lending venv's Python version does not matter -- these are plain C
+    shared objects loaded by ctypes, not Python extension modules.
+    """
+    roots = [entry for entry in sys.path if entry.endswith("site-packages")]
+    roots += [d for d in os.environ.get("HOTLINE_CUDA_WHEEL_DIRS", "").split(os.pathsep) if d]
+    return roots
+
+
 def _preload_cuda_from_wheels() -> int:
     """Point the loader at the CUDA runtimes installed as pip wheels.
 
@@ -64,7 +82,7 @@ def _preload_cuda_from_wheels() -> int:
     the time Python is running it is far too late.
     """
     dirs: list[str] = []
-    for root in (entry for entry in sys.path if entry.endswith("site-packages")):
+    for root in _wheel_roots():
         dirs += glob.glob(os.path.join(root, "nvidia", "*", "lib"))
     loaded = 0
     for directory in dirs:
