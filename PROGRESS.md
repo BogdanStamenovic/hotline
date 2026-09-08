@@ -9984,3 +9984,78 @@ autoregressive model.
 Rang him at 17:50 and 17:56; daemon logged `180 ringing` both times, no answer.
 Reported on Discord instead. Pushed: hotline c100992, cvoice 992718c,
 hotline-ios c96ab9a.
+
+## LONG RUN 2026-09-08 20:00 -- speculation, media thread, RTC backstop
+
+His instruction: build the speculative input, then everything else, in one run.
+
+**RTC backstop (done first, because tomorrow depended on it).** The 06:00Z wake
+was Wake-on-LAN only -- `/sys/class/rtc/rtc0/wakealarm` empty -- with a poweroff
+armed behind it at 06:02Z. One dropped packet and the box stays dark with
+nothing behind it. `/usr/local/bin/rtc-wake-backstop` + a systemd unit now arm
+05:58Z and re-arm on the way down. Reads `/sys`, never `/proc`, because
+`/proc/driver/rtc` renders a date for an alarm that does not exist.
+
+**Measured before building, and it redirected the design.** 32 independent
+stateless calls: each prefix of 8 real transcripts of his, answered without the
+model seeing the rest of the sentence, then judged.
+
+| heard | EQUIVALENT | HOLDING | WRONG |
+|---|---|---|---|
+| 25% | 1/8 | 5/8 | 2/8 |
+| 50% | 2/8 | 4/8 | 2/8 |
+| 75% | 4/8 | 2/8 | 2/8 |
+
+**WRONG is flat at 25% however much has been heard.** More input does not make a
+speculative answer safer, so answers are never spoken unvalidated. But HOLDING
+is 50-62% early, and a holding phrase asserts nothing -- it cannot be
+contradicted. So what got built speculates the INTENT and plays a pre-rendered
+phrase, not an answer.
+
+His own example was the cleanest case: "hteo sam da te pitam sta se sa onim
+bagom desilo" is HOLDING at 25%, 50% AND 75% -- it never guesses, it says "go
+on". Which is right.
+
+**The classifier, and being wrong twice on the way.** On 12 unseen Serbian
+phrasings: bge-m3 embeddings 12/12 @ 10ms; keyword regex 5/12; qwen2.5:1.5b
+5/12 @ 39ms; qwen2.5:0.5b 4/12 @ 25ms; piccolo-gorgone:9b 2/12 @ 4693ms.
+
+- First comparison had keywords at 10/12 and I concluded the model was
+  pointless. That test set was written alongside the keyword list -- the regex
+  was graded on its own homework. On phrasings it was not tuned against it
+  collapsed to 5/12. **Bogdan's instinct that a small local model belonged here
+  was right and my reading of the first measurement was not.**
+- piccolo-gorgone scored 0/12 before it scored 2/12: it emits a reasoning
+  preamble and `num_predict=8` truncated the label away. A model measured
+  through a broken parser is indistinguishable from a model that cannot do the
+  job. Verify the dismissed, not just the recommended.
+- Generative models lose to a REGEX at classification. The right tool was an
+  encoder all along.
+
+**Media thread.** He reported the quality meter rising and falling and audio
+"glitchy and segmented" AFTER the stream was already continuous. Not loss: the
+20ms pacing shared a thread with Whisper on the GPU, cvoice over HTTP and a
+subprocess. Frames went out late, and 40ms late is indistinguishable from lost
+at the far end. `MediaPump` owns the socket and the clock and nothing else;
+VoiceCall no longer touches the wire. It counts `late_frames` so starvation is
+reported rather than inferred from a complaint.
+
+Two bugs the new tests caught first: `self._stop` on a Thread subclass shadows
+`threading.Thread._stop`, which `join()` calls -- closing a call raised
+TypeError from inside the stdlib. And barge-in stopped feeding the socket but
+left queued audio behind.
+
+**VRAM settled the Whisper question.** cvoice + bge-m3 + large-v3 all resident
+is **6870 of 8188 MiB** -- it fits with 1.3 GB spare. So large-v3 stays and its
+3.8 WER points over sam8000 turbo-serbian on telephony audio are not traded for
+headroom that is not needed. His original instruction was premised on the
+allrounder being slower; chunked transcription had already moved ASR off the
+critical path (0.45-0.59s, hidden under his own speech), so the premise no
+longer held. Told him rather than switching quietly.
+
+321 tests. Pushed: hotline-ios 3af1c9a.
+
+**Not done, and his to decide:** the media path still relays through
+176.31.149.179 rather than the tailnet. It works; it is simply less private than
+the rest of the stack, and that should be a choice rather than something
+inherited.
