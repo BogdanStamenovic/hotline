@@ -9912,3 +9912,75 @@ failure — something recorded once and never re-probed:
 
 Three memories written: `a-403-is-a-status-field`,
 `serbian-outward-text-is-ascii-no-diacritics`, `robotex-is-three-different-events`.
+
+## VOICE SUBSYSTEM GROUNDWORK 2026-09-08 18:00
+
+His plan: pigion (always-on Pi Zero 2 W) sees an inbound SIP call, wakes
+archserver by WoL, archserver calls him back and they talk in Serbian. He asked
+for three fixes and left the rest to judgement.
+
+**Feasibility, measured rather than estimated.** archserver boots in 26.2 s
+(`systemd-analyze`: 7.3 firmware + 6.6 loader + 2.3 kernel + 1.5 initrd + 8.5
+userspace); cvoice cold-loads in ~10 s; so the callback lands ~45-60 s after he
+hangs up. WoL is genuinely armed -- `Wake-on: g`, `Link detected: yes`, cable in.
+The Aug-24 note in `pigion/wake.py` saying the wake layer "has never woken
+anything, by design" is STALE; that was written when enp4s0 was NO-CARRIER.
+
+**The Serbian question, tested head-to-head.** Synthesised Serbian through
+cvoice, then down two paths: 16 kHz wideband vs a real G.711 mu-law roundtrip.
+
+| Whisper | wideband WER | G.711 8 kHz WER | RTF |
+|---|---|---|---|
+| small | 25.0% | 29.2% | 0.02-0.05x |
+| medium | 12.5% | 16.7% | 0.06-0.08x |
+| large-v3 | 12.5% | **12.5%** | 0.10x |
+
+At large-v3 the telephony penalty vanishes. **We do not need Opus** -- plain
+G.711, the codec that cannot be negotiated away, is enough. Caveat stated to him
+plainly: this is synthesised speech, and errors like "Nasao"->"Naslo",
+"modulu"->"modelu" are partly cvoice mispronouncing rather than Whisper
+mishearing. A screen, not a verdict.
+
+TTS warm: takes=1 is 1.66 s for 2.4 s of audio; takes=3 is 8.97 s because the
+Whisper take-scoring costs ~7.3 s. **Take-selection must be off on the call
+path.**
+
+**Corrected myself to him:** I claimed the VRAM would not hold this. Wrong, in
+the direction that helps -- large-v3 (3728 MiB) + cvoice (2406) = 6134 of 8188.
+The voice pipeline fits; what does not fit is piccolo-gorgone:9b joining it. Hit
+that live when medium OOM'd with cvoice resident. He then ruled local models out
+of scope anyway.
+
+**Three things built.**
+1. cvoice client could not reach its own daemon -- configured 127.0.0.1, daemon
+   binds only the tailnet address. First connection error now retries against
+   the server's own configured address; only connection errors fall through.
+2. GPU Whisper dead since the 08-28 CUDA purge (no libcublas.so.12). Borrowed
+   cvoice's wheels via `HOTLINE_CUDA_WHEEL_DIRS` instead of reinstalling ~1.2 GB
+   on a partition at 80%. 17 libs preloaded, large-v3 in 2.5 s.
+3. `media/srtp.py` -- AES_CM_128_HMAC_SHA1_80. Chose 200 lines of RFC 3711 over
+   adopting baresip, which is a softphone rather than a library. Tests check
+   RFC 3711 Appendix B's published vectors, NOT the code against itself,
+   because a self-consistent SRTP can be confidently wrong. 26 tests, 261 in
+   the suite. Un-parked media/{rtp,pcm,queue} and restored AudioFormat,
+   frames(), as_int16() to ring/base.py.
+
+**End-to-end proof over real sockets:** Serbian -> 8 kHz -> G.711 -> SRTP ->
+UDP -> unprotect -> decode -> Whisper. 384 frames, 0 auth failures, payload
+byte-identical, transcript correct.
+
+**Known gap, told to him rather than buried:** no replay window (RFC 3711
+s3.3.2). Fine on a tailnet call to one known peer; write it before this faces a
+network he does not control.
+
+**Subagent `cvoice-4d` (Sonnet, research)** answered to HIM directly on the
+OmniVoice streaming question. Answer: no, and it is architectural -- OmniVoice
+is non-autoregressive (N-step masked parallel decoding over the whole span), so
+no prefix is ever finished early. Maintainer confirms it in k2-fsa issues
+#6/#109. The real lever is `num_step`: 32->16 is ~1.9x, 32->8 is ~3.2x, quality
+at reduced steps UNVERIFIED. Genuine sub-second first-audio needs a different,
+autoregressive model.
+
+Rang him at 17:50 and 17:56; daemon logged `180 ringing` both times, no answer.
+Reported on Discord instead. Pushed: hotline c100992, cvoice 992718c,
+hotline-ios c96ab9a.
