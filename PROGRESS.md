@@ -9452,3 +9452,381 @@ instruction, the operator that reads it has about five minutes before
 or hold an inhibitor — but it has to be done deliberately in those five minutes.
 Not needed today; recorded so the next morning session knows the clock is
 running before it starts anything.
+
+## 2026-09-08 15:20 — an unscheduled boot with a real task behind it
+
+The 15:08 boot was **not** a timer. `track-slot-0800` next fires 2026-09-09
+06:02Z; `/sys/class/rtc/rtc0/wakealarm` is empty; no system timer, no scheduled
+shutdown. Nothing was armed to take the box down, so unlike the morning there
+was no five-minute clock — the whole session is available.
+
+The cause was him. At **13:08:00Z**, the same minute as the boot, he posted in
+`#agent-hotline-80`:
+
+> I need you to research hackatons that are scheduled in the next few month in
+> the balkans and europe. that allow underage participants(16-17-18) the group
+> should be 5 people. The hackatons can be anything. You can also find robotics
+> competitions something kinda like FIRST global. Or combat robotics comps. Also
+> keep in mind that i am unavailable during the FIRST globalc challange duration
+> in icheon. The deadline as to when the comp must be completed(so nay date or
+> time from now to then) is january 4th
+
+Verified rather than relayed: the author id matches `DISCORD_USER_ID` from
+`.env`, message `1541610683240554527/1546869720605786133`. That id is
+the warrant the researchers carry.
+
+### How the ask decomposes, and which filter actually binds
+
+The 4 Jan 2027 deadline is the *same* deadline as the 09-06 combat-robotics
+task, so this is a widening of one underlying need, not a new one. Window: today
+→ event completed by 2027-01-04, effective latest end ~02 Jan with travel home.
+
+**The binding filter is age, not date.** Most well-known European hackathons are
+university-student-only or hard 18+ for liability reasons, and several youth
+robotics programmes have an upper age cap that an 18-year-old fails (FLL 9-16,
+RoboCup Junior 19). So every candidate has to produce its own eligibility text,
+quoted, with a URL — a calendar entry is not evidence, which is this project's
+signature failure. Second filter is team size 5: plenty cap at 4.
+
+His Icheon blackout needs a number, so **two agents are pinning the FIRST Global
+Challenge 2026 dates independently.** Deliberate duplication on the one date that
+constrains everything else. Both were warned not to conflate it with Robotex
+International, which he himself corrected to Seoul on 09-07.
+
+### Six Sonnet researchers (research, per the standing rule)
+
+| agent | scope |
+|---|---|
+| Balkans | hackathons in RS/HR/BA/ME/MK/SI/BG/RO/GR/AL, searched in local languages |
+| Europe | DE/NL/PL/CZ/AT/CH/FR/IT/ES/Nordics/Baltics/UK/TR; Junction, HackZurich, TUM, CERN, ESA |
+| Youth & online | the 16-18 segment itself — MLH minors policy, Hack Club, CanSat, ECSC, Astro Pi, Devpost |
+| Robotics (educational) | FGC Icheon dates first; then WRO, RoboCup Junior, FTC/FLL, Robotex, VEX, Eurobot, ERL |
+| Robotics (combat) | refresh of the 09-06 findings, treated as dated claims not facts |
+| Logistics | FGC dates (2nd read), Schengen/ETIAS/UK entry, **minors crossing borders unaccompanied**, LiPo and weapons in luggage, three-tier costs, funding routes |
+
+Each was given the same rules of engagement as the 09-06 pass: write "UNKNOWN —
+could not confirm" rather than estimate, report a 403 or anti-bot wall **as a
+block** without spoofing headers or proxying (third-party systems, not his data),
+return the artifact as the final message rather than a shared file path, and be
+economical with WebSearch — the 09-06 fan-out exhausted that session's 200-call
+budget with five agents, and this one has six.
+
+The combat agent was given the 09-06 findings explicitly as a table of *claims to
+re-verify*, not as background to trust. The time-critical one: Czech Combat Robot
+League vol. 6 (17-18 Oct, Brno, free, antweight, up to 5 members) had
+registration closing **4 Oct** — under four weeks out, and the two things nobody
+could confirm then were whether foreign teams and under-18s may enter.
+
+### Roster, and one correction to the morning's report
+
+`hotline --list`: only this session. `ListAgents`: six subagents running, ten
+Remote Control peers, all idle or offline — nothing stuck, nothing to retask,
+nothing to shut down.
+
+**`arch` is back up, and the morning entry's reading of it was wrong.** Its
+uptime is 1 day 3:12 — it never rebooted, so it did not "go down" around 05:00;
+it dropped off Tailscale, presumably suspended, and came back. Claude Desktop is
+running on it under load 8.3, which is a second signal he is at the keyboard
+right now. No `claude` CLI process there, and `tmux` is not even installed on
+that box, so the dds-site session is genuinely gone either way.
+
+Disk: root 80% (55G/73G), down from the 99% of 09-07. `/mnt/windows` 41%, 521G
+free.
+
+### Told him once, and asked one thing
+
+One consolidated Discord message: how I read the ask, the six scopes, the 4 Oct
+Czech deadline as the thing that could expire while he decides, and the single
+question that is genuinely his — **where the report goes**, since the 09-06 one
+was emailed to a third party and email is outward. Default is to post it here.
+Explicitly *not* asked: budget (unanswered last time; costing three tiers
+instead of stalling) and whether it is the same Belgrade team (assumed, stated
+as an assumption).
+
+## 2026-09-08 15:45 — four researchers back; his Robotex correction survives an agent trying to overturn it
+
+### The Incheon date, read three times independently
+
+**FIRST Global Challenge 2026: 7–10 October, Incheon, Republic of Korea.** I
+fetched `first.global/fgc` and the press release myself before either agent
+reported, and the robotics and logistics agents then landed on the same dates
+from the same primary sources. Three reads, one answer. Effective blackout with
+long-haul travel is ~5–12 Oct.
+
+**He wrote "Icheon"; the city is "Incheon".** Two different Korean cities —
+Incheon is the port/airport city next to Seoul, Icheon is a smaller ceramics town
+about 100 km away. Both agents flagged it independently. It changes no date, but
+it would have sent any map-based logistics work to the wrong place, so it is
+worth the one line it costs to tell him.
+
+### The Robotex episode — the dismissed-claim trap, run in reverse
+
+The robotics agent came back recommending **Robotex International, Tallinn, 5–6
+Dec 2026** as its single qualifying candidate, and explicitly argued that the
+memory note saying Robotex International is in Seoul was stale and should be
+corrected. That note is not an inherited invention — **Bogdan made that
+correction himself on 09-07**, off the organiser's own timetable, after catching
+a wrong venue in an email already sent to a third party.
+
+So I read the primary source rather than choosing between them. From
+`robotex.international/timetable/`, page titled "The Timetable for Robotex 2026":
+
+| claim | primary source says |
+|---|---|
+| Robotex International 2026 is in Tallinn, 5–6 Dec | **false** — "28.11 – 29.11 – Seoul, South Korea" |
+| the Tallinn 5–6 Dec schedule on that page | dated **`Ajakava-05.12.2025` / `Ajakava-06.12.2025`** — the 2025 festival |
+
+**His correction stands.** The agent's sources (TalTech, investinestonia,
+europe-startup-guide) were describing last year's Tallinn event, and the matching
+day-of-month is exactly what makes a stale page look current. The agent had
+itself written the rule "verify the dismissed claim, not just the recommended
+one" into its own report, and then broke it from the other side — it verified
+what it was recommending and not what it was overturning.
+
+**But chasing it down produced the better candidate anyway.** `robotex.ee` is
+currently promoting **"Robotex Eesti – Noorte päev, 11.–12. detsember, T1
+Keskus"** — Robotex Estonia's national Youth Day, 11–12 December 2026, Tallinn.
+That is a third distinct thing, and for this team it beats Seoul on every axis:
+inside the window, clear of the Incheon blackout, Schengen so no visa, and aimed
+at youth by design. Sent the robotics agent back to settle age bands per
+category, team size (its "5 members + 2 mentors" was its own flagged synthesis,
+not a read rulebook), whether registration is open, whether a *foreign* team may
+enter at all, and which category five beginners could build for in twelve weeks.
+
+### What the other three establish
+
+**Age and team size are both doing more work than expected.** Team-of-four is the
+European norm, not an accident — Junction, hackaTUM and HackUPC all cap at 4, and
+in Serbia every established high-school hackathon (both FONIS events, MET Game,
+SICEF, DigiHack) caps at 3–4. Five is the wrong shape for the entire regional
+hackathon ecosystem. Separately, "youth" and "student" branding routinely means
+18+: HackYeah, CISPA, EUDIS, CASSINI and the UNESCO *Youth* Hackathon all gate at
+18, the last meaning 18–30.
+
+**The window is the off-season for robotics.** Eurobot Srbija, WRO Serbia
+nationals, RoboCup Junior Europe, RoboCup German Open and the FTC European
+Premier Event all ran *before* today. FLL fails on the wrong end of the age
+filter (9–16, so an 18-year-old is too old). WRO's Dec final in Puerto Rico and
+Eurobot both look open on a calendar and are structurally closed — WRO needs a
+national title Serbia already awarded in May. That short list is the calendar,
+not a research gap.
+
+**Two live leads with fuses.** Jugend hackt Hamburg, 2–4 Oct, ages 12–18, free,
+and the only event found anywhere that reimburses travel, food and lodging —
+**registration closes 13 September**, five days out, and it sits in the week
+before he flies to Incheon. Unresolved: it runs in German for the
+"deutschsprachiger Raum", and whether a pre-formed team of 5 stays together. And
+the Czech combat deadline of 4 Oct, still being re-verified.
+
+**Two corrections to the constraint set, one of which is good news.** Under the
+Law on Border Control (Off. Gazette RS 24/2018) the notarised-parental-consent
+requirement applies only **up to age 16** — this team is 16–18, so Serbian law
+does not require it, though destination officers keep discretion and a bilingual
+letter is a cheap hedge. And **Ireland requires a visa** for Serbian ordinary
+passports; it is not Schengen and was missing from my brief. ETIAS still not in
+force, now slipping toward April 2027 mandatory — it will not bite inside this
+window.
+
+**Blocks reported as blocks, not routed around:** Air Serbia's dangerous-goods
+page 403s, the Home Office processing-times host does not resolve, the ETIAS
+primary page 404s, `bne.rs` refuses connections, `reconnect.size.ba` serves a
+mismatched certificate, and NASA Space Apps' local-events list is a JS gateway.
+No agent spoofed a header to get past any of them.
+
+### An outward action, authorised
+
+At 13:19:26Z, verified via `hotline --provenance`: *"Ahh email my own email
+nikolina and to milos vuksan: mvuksan544@gmail.com"*. That is his explicit yes
+for the send and names the recipients, so the outward gate is satisfied — three
+addresses, his own plus the two others. I will still show him the recipient list
+and a preview in Discord before it leaves, because a mistyped third-party address
+is not something a provenance check can catch.
+
+## 2026-09-08 15:40 — all six back; a 403 nobody retried turned out to be the answer
+
+### The find: `curl` gets 200 where WebFetch gets 403
+
+`robochallenge.ro` returned HTTP 403 to automated access on 09-06, was
+independently reproduced with a second tool, and was written into an email to a
+third party as *"registration status, categories and fee unverified"*. Correctly
+so — it was a real block to the tools tried, and routing around a third party's
+anti-bot wall is out of bounds by his own rule.
+
+**It was not an anti-bot wall.** Plain `curl`, no flags, no header of any kind,
+returns **200 and 84 KB**. The 403 is specific to the fetch tool's client, not a
+policy against ordinary clients. Nothing was spoofed to get it; the combat agent
+independently reached the same pages with a real browser and said so explicitly.
+
+That single retry is the difference between "unverified, cannot recommend" and
+the top recommendation, because what the page actually contains is the only
+positive age confirmation in the entire search:
+
+> "If I am under 18 years old in which challenges I can compete? If you are
+> under 18 year old you can compete in Mini Sumo Kids, Line Follower Kids,
+> Freestyle Showcase Kids **and all the other challenges** (except Mini Sumo,
+> Line Follower, Freestyle Showcase)."
+
+Combat Robots is not in the exception list. Also read straight off the page:
+*"The registration fee is €35 per team (not per robot). A team may compete in
+multiple categories without additional fees"*, *"You may edit your registration
+until October 10th, 2026, 23:30"*, no stated cap on team members, and a section
+on issuing visa invitation letters — which is positive evidence foreign teams are
+expected, not silence being read as consent.
+
+**The rule this earns:** a block that was real two days ago is a status field
+like any other. "403, verified twice" recorded the tool's experience, not the
+site's policy, and nobody re-probed it because the note read as settled. One
+retry with a different client, costing nothing, moved an option from dismissed to
+recommended.
+
+### The recommendation, and why it is two options rather than one
+
+They trade the same variable in opposite directions:
+
+| | Robochallenge, Bucharest | Robotex Eesti, Tallinn |
+|---|---|---|
+| when | 30 Oct – 1 Nov | 11–12 Dec |
+| build time | ~7.5 weeks | ~12 weeks |
+| what gets built | combat robot, 500 g | LEGO-kit sumo / line follower |
+| age | **explicit** yes in writing | U19 explicitly includes 18 |
+| team of 5 | no cap stated | *"maksimaalselt 5 liiget + 2 mentorit"* — exact |
+| cost | €35/team, all categories | €50+VAT per category, foreign rate |
+| travel | 8 h drive — no LiPo/blade problem | flights, no confirmed direct route |
+| deadline | 10 Oct | **unknown** — site shows last year's |
+
+Bucharest first, on four grounds: the only written age permission, one fee
+covering a fallback category so a half-finished robot does not waste the trip,
+drivable, and organisers who expect foreign teams. Brno third — free and slots
+open, but 5.5 weeks and a rulebook silent on both minors and foreigners, and
+silence is not permission. NASA Space Apps as the entry that cannot expire.
+
+### Verified myself rather than relayed
+
+Three claims were load-bearing enough to check personally: the Robochallenge FAQ
+(above), the Robotex age and team-size quotes on `robotex.ee/lego-sumo/` (both
+hold verbatim, and so does the staleness warning — that page still shows
+`kuni 20.11.2025` and a fee the live form contradicts), and the FGC dates.
+
+I also **trimmed a fact rather than ship it**: an agent gave exact dates for the
+WRO final in Puerto Rico. The reason WRO fails does not depend on them, so the
+reason stayed and the unverified date went. A decorative fact in a document going
+to someone else's inbox is exactly what bit on 09-07.
+
+### Sent
+
+15:35:55, `smtpstatus=250 exitcode=EX_OK`, 17,412 bytes, HTML, Serbian, from his
+address to all three recipients he named. Dry-run previewed first. His verified
+13:19:26Z message authorised both the send and the recipient list.
+
+Presentation decided by effect, as on 09-06: Serbian students reading Serbian
+from a Serbian sender. Told him it went as him.
+
+### Cost and roster
+
+Six Sonnet researchers plus one follow-up, ~740k subagent tokens, no billed
+spend (Max). All six completed; none wedged. Nothing armed to power the box off;
+`track-slot-0800` next fires tomorrow 06:02Z.
+
+## 2026-09-08 15:40 — he caught a spelling failure in a sent document; the cause was one wrong entity
+
+Verified (`hotline --provenance`, posted 13:37:08Z): *"You fucked up the
+spelling. dont do latin just do cut out serbian"*.
+
+He was right, and the cause is exact rather than vague. In the HTML I wrote
+**`&dcaron;` for đ. `&dcaron;` is ď — a Czech letter.** Serbian đ is `&dstrok;`.
+Nineteen occurrences, so every *događaj* went out as *dogaďaj* and every
+*između* as *izmeďu*, to two students' inboxes.
+
+**Why it survived a read-through:** the other four were correct — `&ccaron;`=č,
+`&cacute;`=ć, `&scaron;`=š, `&zcaron;`=ž. Four right and one wrong reads as a
+consistent scheme, so nothing looked off in the source. Checking the entity table
+would have caught it in a second; I checked the facts and not the encoding.
+
+### What I did
+
+Rewrote the whole thing in **cut-out Serbian per his instruction — no diacritics
+at all**, `c`/`s`/`z`/`dj`, so there is nothing left that can be mis-encoded.
+Resent 15:38:43, `exitcode=EX_OK`, subject prefixed ISPRAVKA, with a one-line
+note at the top telling the recipients to disregard the previous message.
+
+**One thing deliberately not stripped:** the verbatim foreign quotations — the
+Estonian rule text, the German age line, the English FAQ sentence. Flattening a
+citation makes it *wrong*, not plainer. Told him, and offered to flatten them too.
+
+**One ambiguity surfaced rather than silently resolved:** *"dont do latin"* could
+mean stripped Latin or Cyrillic — in Serbian, Latin vs Cyrillic is the usual
+sense of that word. I read it as cutting out the diacritics I had just broken,
+because that is what he was complaining about, did that, and told him plainly it
+was my inference and that I will redo it in ćirilica if he meant the other thing.
+Acting on the likelier reading beat stalling on a question, but the reading is
+his to overturn.
+
+### On resending to third parties without asking
+
+On 09-07 the rule I applied was that a second email to a third party's inbox is a
+fresh outward act needing his yes. This is not that case: it is the *same*
+document, to the *same* list he named, corrected. The authorisation covered
+sending this report to these three people; a botched encoding does not create a
+new decision for him to make, it creates an obligation to finish the one he
+already approved. Leaving the broken version standing as the only copy they have
+would have been the worse call.
+
+### Three memories written
+
+`serbian-outward-text-is-ascii-no-diacritics` (his instruction plus the entity
+trap), `a-403-is-a-status-field` (the robochallenge.ro retry), and
+`robotex-is-three-different-events` (International Seoul / Eesti Tallinn / the
+2025 schedule that keeps getting reported as 2026).
+
+## 2026-09-08 15:42 — my spelling diagnosis was wrong; the raw bytes said so
+
+I told him the cause was `&dcaron;` vs `&dstrok;`. He came back: *"Nah i mean i
+fullly see Vo&zcaron;nja for example. Just do stripped latin"*.
+
+**He is quoting what he literally sees.** I read the message's raw bytes off the
+Discord API rather than trusting the rendering in my own terminal, and the
+content really is `Vo&zcaron;nja` — so the HTML is not being rendered as HTML at
+his end and **every** entity in the document showed as literal text. The
+`&dcaron;` bug was real and worth fixing, but it was not what he was looking at.
+I diagnosed from the source I had written instead of from the artifact he
+received.
+
+**The fix that works whether or not HTML renders:** zero entities in the
+document. Unescaped everything to real characters, folded the typography to
+plain ASCII (`-` for dashes, `"` for quotes, `EUR` for the symbol), and stripped
+the Serbian to plain Latin as instructed. Confirmed programmatically: no
+`&...;` sequences remain, and the only non-ASCII left is `ä`/`õ` inside the
+verbatim Estonian citations, which are real UTF-8 and display fine as plain text
+under the declared charset.
+
+**Sent that one to him alone**, subject "Provera prikaza", rather than firing a
+third message at the two students. He is the one who can see whether it renders;
+the students only get it once it is known good. That costs one round trip and
+saves them a second broken email.
+
+He also answered the ambiguity directly — *"Just do stripped latin"* — so the
+Cyrillic reading is dead, and I was right not to guess silently.
+
+## 2026-09-08 15:42 — Hamburg enquiry sent at his instruction
+
+Verified (posted 13:41:26Z): *"Also just send the email for the hamburg hackaton
+so we know can we stay together will they fly us out excetera"*. That is the
+explicit yes the outward gate needs.
+
+Sent to `hamburg@jugendhackt.org` at 15:42:11, `exitcode=EX_OK`, CC to him so he
+holds a copy. Written in German with an English restatement appended — German
+because it is a German-language programme and that maximises the chance of a
+reply before the 13.09 deadline, the English because the language question is
+itself one of the four things being asked, and writing flawless German would
+have quietly misrepresented the team.
+
+The four questions, in his priority order: can a pre-formed team of five stay
+together or are groups formed on site; is the event open to participants from
+outside the German-speaking area; does the travel-cost and Pyjama Park
+accommodation coverage extend to an arrival from Belgrade; and how much German
+is actually needed. Framed as him mentoring five 16-18 year olds from Belgrade,
+which is what is true.
+
+The two other organiser emails (`info@flsbattlebots.cz` on minors and foreign
+teams, `info@robotex.ee` on the real 2026 deadline) are drafted in substance but
+NOT sent — he named Hamburg only, and each is a separate outward act.

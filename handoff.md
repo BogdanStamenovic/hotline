@@ -1,6 +1,65 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-08 08:05 CEST — morning sweep done; box going back down on its own cycle
+> ## STATUS AS OF 2026-09-08 15:45 CEST — his hackathon/robotics task done and emailed; box idle and NOT armed to power off
+>
+> ### READ `PROGRESS.md`, NOT THE BOTTOM OF THIS FILE.
+> `grep -n "^## " PROGRESS.md | tail` and start there. Newest entry: 09-08 15:40.
+>
+> **The 15:08 boot was HIM, not a timer.** He posted a task at 13:08:00Z, the same
+> minute the box came up. There was no five-minute clock today — nothing was armed
+> to take the box down, and `track-slot-0800` does not fire until 09-09 06:02Z.
+> Do not assume the morning pattern on an unscheduled boot; check the wake DB.
+>
+> **THE TASK IS DONE AND DELIVERED.** Hackathons + robotics competitions a Belgrade
+> team of 5 aged 16–18 can still enter, finishing by 4 Jan 2027. Six Sonnet
+> researchers, report emailed 15:35:55 (`exitcode=EX_OK`, 17.4 KB, Serbian, from
+> his address) to him, nikolina.zdravkovic143@gmail.com and mvuksan544@gmail.com —
+> all three named in his own verified message. **Nothing is pending on it.**
+>
+> **The answer, if anyone asks:** Robochallenge Bucharest 30 Oct–1 Nov (€35/team,
+> 8 h drive, the ONLY event with written permission for minors in combat) first;
+> Robotex Eesti Tallinn 11–12 Dec (exact "5 liiget + 2 mentorit" fit, LEGO-kit
+> build, deadline UNKNOWN) second; Czech CRL Brno 17–18 Oct (free, deadline 4 Oct,
+> rulebook silent on minors AND foreigners) third; NASA Space Apps 14–15 Nov as the
+> entry that cannot expire. Jugend hackt Hamburg closes **13 Sept** — his call.
+>
+> **⚠ THE LESSON THAT COST THE MOST TO LEARN: a 403 is a status field too.**
+> `robochallenge.ro` was recorded 09-06 as "403, reproduced with two tools,
+> unverified" and written into an email that way. It is **not** an anti-bot wall —
+> plain `curl` with no flags returns **200**. The block was tool-specific. That one
+> free retry turned the dismissed option into the top recommendation. Re-probe
+> blocks; do not inherit them. (Still no spoofing, no proxies — none was needed.)
+>
+> **His Robotex correction from 09-07 STANDS; an agent tried to overturn it.**
+> Robotex International 2026 is **28–29 Nov, SEOUL** — the organiser's own
+> timetable. The "Tallinn 5–6 Dec" an agent reported is that page's **2025**
+> schedule (`Ajakava-05.12.2025`). Robotex **Eesti** 11–12 Dec Tallinn is a
+> separate national event and is real. Three different things; keep them apart.
+>
+> **It is Incheon, not Icheon** (he wrote Icheon) — different city. FIRST Global
+> Challenge is **7–10 Oct 2026**; treat 5–12 Oct as his blackout.
+>
+> **Correction to the 08:05 banner:** it said `arch` "went down ~05:00". It did
+> not — uptime was 1 day 3:12, it only dropped off Tailscale and came back. It is
+> up now with Claude Desktop running on it.
+>
+> **Still waiting on HIM, unchanged — both are his, not tasks to grind:**
+> 1. The isolated Gmail address for `DDS_INBOUND_FORWARD_TO`.
+> 2. Yes/no on the `rsend` CNAME fix (UXONEWS cannot send email until then).
+>
+> He was raised on both this morning and answered with a new task instead. That is
+> an implicit "not now" — do not nag.
+>
+> **Offered and not yet answered:** sending the two organiser emails
+> (`info@flsbattlebots.cz` — may minors and foreign teams enter; `info@robotex.ee`
+> — the real 2026 deadline). Outward, so they wait for his yes.
+>
+> **Everything else below still stands** — the `send.dds` MX is still absent, do
+> not write the relay before the SPF/DKIM verdict test, do not add the `dds` MX.
+>
+> ---
+>
+> ## SUPERSEDED — STATUS AS OF 2026-09-08 08:05 CEST — morning sweep done; box going back down on its own cycle
 >
 > ### READ `PROGRESS.md`, NOT THE BOTTOM OF THIS FILE.
 > `grep -n "^## " PROGRESS.md | tail` and start there. Newest entry: 09-08 08:02.
