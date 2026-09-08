@@ -9830,3 +9830,42 @@ which is what is true.
 The two other organiser emails (`info@flsbattlebots.cz` on minors and foreign
 teams, `info@robotex.ee` on the real 2026 deadline) are drafted in substance but
 NOT sent — he named Hamburg only, and each is a separate outward act.
+
+## 2026-09-08 15:47 — he is a minor himself, and that invalidates an assumption under the whole report
+
+Verified (posted 13:46:12Z): *"The thing is i will be participating in the
+german one. I mean i do mentor but i will be participating thats kinda of a
+problem you just sent. So reply to that email clarifying. that i am underage
+myself and i act in the role of a mentor meaning im showing them around as i
+have the experience. but i will be participating as well"*.
+
+My Hamburg email said *"ich betreue eine Gruppe von fünf Jugendlichen"* — which
+reads as an adult supervisor writing about children in his care. He is neither
+adult nor outside the group. Correction sent 15:47:08, `exitcode=EX_OK`, CC to
+him: I am a minor myself and inside your 12–18 range; "mentor" meant competition
+experience (he leads Serbia's FIRST team) and showing the others how an event
+runs; I take part as a participant, not a chaperone.
+
+**This is not just an email fix.** The assumption "five minors plus an
+accompanying adult" was load-bearing under the entire report and nobody stated
+it, least of all me — it arrived silently with the word *mentor* on 09-06 and was
+never tested. Consequences, told to him immediately rather than filed:
+
+| option | what changes |
+|---|---|
+| **NASA Space Apps** | its rule requires a guardian to accompany minors *at all times during the event*. With no adult in the group the **in-person** entry is effectively out; the virtual-from-home entry still works, and that is now the reason to prefer it |
+| **Robotex Eesti** | rule is *"maksimaalselt 5 liiget + 2 mentorit"*. The exact-5 fit was my main argument for it; a sixth participant breaks the cap, and a mentor slot probably cannot compete |
+| **Robochallenge** | unaffected — no member cap stated |
+| **combat events generally** | "all competitors are unaccompanied minors" is exactly the case an organiser may have an unwritten pit-side rule about. Added to both pending organiser emails |
+| **border crossing** | consent still not legally required at 16+, but five or six unaccompanied minors is the shape that draws questions. Carry the notarised bilingual letter |
+
+**Asked him one question, because only he can answer it:** is he one of the five
+or a sixth? *"the group should be 5 people"* and *"I will be participating as
+well"* do not resolve it, and it decides whether Robotex Eesti stays on the list.
+Everything not depending on the answer was done first and reported; this is the
+one thing left waiting on him, alongside the rendering check.
+
+**The lesson, and it is the same one as the 403:** an assumption inherited from a
+single word in a two-day-old message, never written down and never tested, sat
+underneath four recommendations. It survived because it was never load-bearing
+enough to notice — until he happened to mention he would be there.
