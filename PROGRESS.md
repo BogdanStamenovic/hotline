@@ -9869,3 +9869,46 @@ one thing left waiting on him, alongside the rendering check.
 single word in a two-day-old message, never written down and never tested, sat
 underneath four recommendations. It survived because it was never load-bearing
 enough to notice — until he happened to mention he would be there.
+
+## SHUTDOWN 2026-09-08 15:48 — stood down at his instruction
+
+Verified (posted 13:48:18Z): *"Thats it stand down right now"*. Stopped there.
+
+Nothing was in flight: no subagents running, no mail queued, no scheduled task
+armed. `track-slot-0800` next fires 09-09 06:02Z with `then_do=poweroff`; the
+box is otherwise idle and was never armed to power off during this session.
+
+**Delivered:** the hackathon/robotics answer he asked for at 13:08, emailed to
+the three addresses he named. Robochallenge Bucharest (30 Oct–1 Nov) first,
+Robotex Eesti Tallinn (11–12 Dec) second, Czech CRL Brno (17–18 Oct) third, NASA
+Space Apps as the entry that cannot expire. Hamburg organiser enquiry sent and
+then corrected at his instruction.
+
+**Left deliberately undone, and it stays undone:**
+1. Forwarding the clean-rendering copy to the two students. He has it; he never
+   said whether it displays right.
+2. The Czech and Robotex organiser emails. Drafted, unsent — he named Hamburg
+   only, and each is a separate outward act.
+3. The fifth-or-sixth question. Unanswered, and it decides whether Robotex Eesti
+   survives.
+
+None of these are a next session's to pick up on its own. They are his.
+
+**What this session is actually worth remembering**, both instances of one
+failure — something recorded once and never re-probed:
+
+- A **403 recorded twice as a block** was a fact about the tool, not the site.
+  Plain `curl` returned 200, and the page behind it held the only written
+  permission for minors in a combat category found anywhere. Dismissed option
+  became the recommendation.
+- The word **"mentor"** carried an unstated assumption — five minors plus an
+  accompanying adult — under four recommendations for two days. It surfaced only
+  because he mentioned in passing that he would be attending.
+- His own **Robotex correction** was challenged by an agent with three sources
+  and held; all three described the 2025 event.
+- My **spelling diagnosis was wrong** and reading the raw bytes of his reply is
+  what showed it: he sees entities as literal text, so the whole document was
+  affected, not the one letter I had blamed.
+
+Three memories written: `a-403-is-a-status-field`,
+`serbian-outward-text-is-ascii-no-diacritics`, `robotex-is-three-different-events`.

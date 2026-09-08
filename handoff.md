@@ -1,6 +1,32 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-08 15:45 CEST — his hackathon/robotics task done and emailed; box idle and NOT armed to power off
+> ## STATUS AS OF 2026-09-08 15:48 CEST — STOOD DOWN at his instruction; task delivered, two items left open BY HIM
+>
+> **He said "Thats it stand down right now" (13:48:18Z, verified).** Work stopped
+> there. Nothing was in flight — no agents running, nothing queued. **Do not
+> resume any of it on the strength of a later boot.** The two open items below are
+> his to reopen, not yours to finish.
+>
+> **NOT SENT, deliberately, and they stay unsent:**
+> 1. The clean-rendering copy of the report to nikolina.zdravkovic143@gmail.com and
+>    mvuksan544@gmail.com. He has it in his own inbox ("Provera prikaza", 15:41:34)
+>    and never confirmed it displays correctly.
+> 2. The two organiser emails — `info@flsbattlebots.cz` (may minors and foreign
+>    teams enter; Czech deadline 4 Oct) and `info@robotex.ee` (the real 2026
+>    deadline). Drafted, never sent.
+>
+> **UNANSWERED QUESTION that changes the answer:** is he the fifth member or a
+> sixth? He is **a minor himself and participating**, not an adult mentor — that
+> arrived at 13:46 and invalidated a silent assumption ("five minors plus an
+> accompanying adult") that had been sitting under the whole report since 09-06.
+> Without an adult: NASA Space Apps' in-person entry falls (guardian must
+> accompany at all times; virtual-from-home still fine), and Robotex Eesti's
+> *"maksimaalselt 5 liiget + 2 mentorit"* may no longer fit. Robochallenge is
+> unaffected.
+>
+> ---
+>
+> ## SUPERSEDED — STATUS AS OF 2026-09-08 15:45 CEST — his hackathon/robotics task done and emailed; box idle and NOT armed to power off
 >
 > ### READ `PROGRESS.md`, NOT THE BOTTOM OF THIS FILE.
 > `grep -n "^## " PROGRESS.md | tail` and start there. Newest entry: 09-08 15:40.
