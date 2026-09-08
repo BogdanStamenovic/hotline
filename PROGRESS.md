@@ -9404,3 +9404,51 @@ Told the dds-site session I am going down, what the one missing record is, and
 not to write the relay before the authentication test.
 
 Going down.
+
+## 2026-09-08 08:02 — operator boot sweep: five minutes, by design, and nothing needed them
+
+Timer-started at 08:02 on the 08:00 WoL wake. Adopted `hotline-80`.
+
+### The first thing found: the box was already counting down to its own poweroff
+
+`track-slot-0800` had fired at 06:02Z and PID 847 (`track run --slot 08:00`) was
+live when I looked. `then_do=poweroff`, `timeout_seconds=1080`. So the operator
+window this morning was the length of a track run — yesterday that was seven
+minutes (`last -x`: boot 08:00, down 08:07). Read straight out of the wake DB,
+not `wake list`, whose `status` column said `pending` for a task that had
+demonstrably fired — the same lie recorded on 09-07.
+
+Nothing else was armed: no RTC alarm (`/sys/class/rtc/rtc0/wakealarm` empty), no
+system timers, no scheduled shutdown, only the two user timers
+(`hotline-watchdog`, `hotline-profile-watch`).
+
+### His last word is 01:17, and nothing arrived while the box was off
+
+Read `#agent-hotline-80` and the main channel back through the shutdown.
+**Nothing was sent during the four-hour outage.** His most recent message is
+still `"Okay so lets shutdown for today"` at 01:17:38. There is no new
+instruction, so there is no work to start — the two things outstanding are
+questions addressed to him (the isolated Gmail address for
+`DDS_INBOUND_FORWARD_TO`, and a yes/no on the `rsend` CNAME fix), and those are
+his to answer, not mine to grind.
+
+### One thing that changed on its own: `arch` is down
+
+I deliberately left the laptop up at shutdown because the dds-site session was
+mid-task on it. It went offline anyway — `tailscale status` says last seen ~3h
+ago (≈05:00), and `ssh arch` times out. So that session is not running, and
+"left it up" did not survive the night. Told him.
+
+### Verdict: let the poweroff happen
+
+Nothing needs the box up. No sessions but this one (`hotline --list`: one pid).
+Holding it up would be inventing work on the strength of having booted, which is
+exactly what this role is told not to do. The daily cycle is correct as built:
+wake, run track, check, go down.
+
+**The structural note worth keeping:** if he ever does leave an overnight
+instruction, the operator that reads it has about five minutes before
+`then_do=poweroff` kills it. The remedy exists — cancel or defer the wake task,
+or hold an inhibitor — but it has to be done deliberately in those five minutes.
+Not needed today; recorded so the next morning session knows the clock is
+running before it starts anything.

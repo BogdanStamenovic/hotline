@@ -1,6 +1,38 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-08 03:25 CEST — SHUT DOWN at his instruction (archserver only)
+> ## STATUS AS OF 2026-09-08 08:05 CEST — morning sweep done; box going back down on its own cycle
+>
+> ### READ `PROGRESS.md`, NOT THE BOTTOM OF THIS FILE.
+> `grep -n "^## " PROGRESS.md | tail` and start there. Newest entry: 09-08 08:02.
+>
+> **Nothing arrived while the box was off.** Both channels read back through the
+> four-hour outage. His last word is still *"Okay so lets shutdown for today"*
+> (01:17:38). **There is no new instruction** — do not start the build on the
+> strength of having booted.
+>
+> **⚠ THE MORNING CLOCK IS ~5 MINUTES.** `track-slot-0800` fires 06:02Z with
+> `then_do=poweroff`, `timeout=1080`. It runs `track run --slot 08:00` and then
+> powers the box off — 09-07 the box was up 08:00→08:07. If you are handed real
+> overnight work, **cancel or defer that wake task first**, in those five
+> minutes, or you will be killed mid-task. Read `then_do` from the wake DB
+> (`sqlite3 ~/.local/state/wake/wake.db`), never from `wake list` — its `status`
+> column said `pending` for a task that had already fired.
+>
+> **`arch` (his laptop) is DOWN.** It was left up on purpose at shutdown for the
+> dds-site session; it went offline anyway ≈05:00 (Tailscale last-seen 3h, ssh
+> times out). That session is not running.
+>
+> **Still waiting on HIM — both are his, not tasks to grind:**
+> 1. The isolated Gmail address for `DDS_INBOUND_FORWARD_TO`.
+> 2. Yes/no on the `rsend` CNAME fix (UXONEWS cannot send email until then;
+>    `POST /emails` 403s, one message ever sent, 2026-08-24).
+>
+> **Everything else below still stands** — the `send.dds` MX is still absent, do
+> not write the relay before the SPF/DKIM verdict test, do not add the `dds` MX.
+>
+> ---
+>
+> ## SUPERSEDED — STATUS AS OF 2026-09-08 03:25 CEST — SHUT DOWN at his instruction (archserver only)
 >
 > ### READ `PROGRESS.md`, NOT THE BOTTOM OF THIS FILE. Its last entry is 09-01.
 > `grep -n "^## " PROGRESS.md | tail` and start there.
