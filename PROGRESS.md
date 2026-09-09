@@ -10344,3 +10344,34 @@ spawned by hand via tmux.
 
 New top banner written; the 14:20Z one marked SUPERSEDED. Box left UP and
 nothing armed — he did not ask for a shutdown and I am not inferring one.
+
+## 2026-09-09 16:15 — he meant now; `media-wire` spawned on Opus
+
+*"Nah j mean now"* (verified, `1547277880319287397`, 16:09:53Z). **My *sutra*
+read was wrong.** Worth recording rather than quietly correcting: the ambiguity
+was real and unresolvable from the text, asking cost one short message, and
+framing it so a single word reversed it meant being wrong cost nothing. Guessing
+either way would have cost an evening or an unwanted spawn.
+
+Spawned `media-wire` by hand:
+
+    tmux new-session -d -s hotline-media -c ~/data/hotline-ios/server \
+      -e HOTLINE_SPAWNED=1 \
+      claude --permission-mode bypassPermissions --model opus --name media-wire "<prompt>"
+
+**By hand and with `--model opus` on purpose** — it changes real code, and
+hotline's own spawn passes no `--model`, so an agent started through the normal
+path silently inherits the CLI default. Pane captured immediately after: no
+folder-trust prompt, which is the failure that is invisible to both `tmux ls`
+and `hotline --list`. It registered as `media-wire [working]`, subagent of
+hotline-80.
+
+The prompt carried the **warrant** — both of his message IDs with the
+`hotline --provenance` command to check them — rather than my say-so, and the
+first thing the agent did unprompted was run those checks. That is the protocol
+working as designed: it verified WHO ASKED, not just who was relaying.
+
+Its definition of done is explicitly **not** the suite. It was told that 313
+green tests are what concealed this bug, that it may not declare the job
+finished, and that it reports to me so the operator can arrange a live call with
+Bogdan holding the phone.
