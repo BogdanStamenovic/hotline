@@ -10130,3 +10130,60 @@ HEAD `1d916fb` == `origin/main`, wake syncing against revision 112 after one
 boot-time failure logged before the network was up.
 
 Said hello, reported the correction, asked what he woke it for. Waiting.
+
+## SHUTDOWN 2026-09-09 14:20 — powered off at his instruction after an accidental boot
+
+He wrote, verified against Discord before acting (`hotline --provenance`,
+message `1547248479448072282`, 14:13:03Z, author = `$DISCORD_USER_ID`):
+
+> I accideny booted you shutdown. But make sure what the todo isnt lodt
+
+Two things in one line. It confirms independently what the sshd log already
+said — the 12:41Z boot was him, from his phone — and adds that it was an
+accident. And the condition on the shutdown is the todo, not the code.
+
+**So "make sure the todo isn't lost" was read literally, in two senses.**
+
+*The list.* It was spread across three superseded banners and the bottom of an
+older one. Consolidated into a single top banner and pushed to GitHub, so it
+survives the disk and not just the poweroff. Split into what only he can do
+(outward actions, decisions, money/time) and engineering items that each carry
+the measurement that closed the question — because the same list read as a
+to-do queue is what has misled workers on this project repeatedly. Pulled the
+deadlines out into their own table: **Jugend hackt Hamburg closes 13 Sept, four
+days out and it will pass while the box is off.**
+
+*The unsaved work.* Swept every git repo under `~/data`, not just hotline.
+hotline, hotline-ios, cvoice, wake, track, wd_gen and track-web are all clean
+and in sync. Three exceptions, all left as found:
+
+- **`dds-site` is 3 commits ahead, 0 behind** (`92026b6`, `698cfcc`, `b3994ba`).
+  Deliberately not pushed: its remote is `dds@uxonews.com:/opt/dds/repo.git`, a
+  **deploy target** — a push ships to the live site, which is outward and his.
+  Surfaced instead of taken. A poweroff does not endanger local commits anyway.
+- **`uxonews/src/middleware.ts`** carries an uncommitted dev auth bypass
+  (`UXONEWS_DEV_NO_AUTH=1`, gated on `NODE_ENV=development`). Uncommitted almost
+  certainly on purpose — it is an auth bypass inside auth middleware. Recorded
+  with a note *not* to tidy it into git.
+- `.claude/worktrees/agent-ab23888fda6d7ba7b`, a leftover worktree on
+  `split-packages`. Checked rather than assumed: `38bf807` ==
+  `origin/split-packages`, so nothing is stranded. Litter, not loss.
+
+**Verified before taking the box down, not assumed:**
+
+| way back | state |
+|---|---|
+| Pigion WoL | `enp4s0` UP, `Wake-on: g`, MAC `a8:a1:59:fd:4d:13`, Pigion pinged |
+| RTC alarm | armed by the backstop's `ExecStop` on the way down — the ExecStop itself tested by hand today, `1789019880` = 2026-09-10 05:58 UTC |
+| scheduled wake | 2026-09-10 06:00Z WoL, `track` run + `poweroff` at 06:02Z, both `pending`, `repeat_seconds` 86400 |
+
+Nothing to destroy: one live session (this one), GPU 2 MiB with no compute
+apps, ollama holding no models, no mail spool (msmtp is send-only), no
+`/run/systemd/shutdown`, no systemd jobs, no `at`, no crontab.
+
+Handoff banner and this log pushed as `73e9d38` before the poweroff, confirmed
+with `git ls-remote` against the remote rather than against the local
+`origin/main` ref.
+
+Total work today: a boot sweep, one corrected fact, and this. No build work —
+he did not ask for any, and an accidental boot is not a task.
