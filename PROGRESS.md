@@ -10187,3 +10187,51 @@ with `git ls-remote` against the remote rather than against the local
 
 Total work today: a boot sweep, one corrected fact, and this. No build work —
 he did not ask for any, and an accidental boot is not a task.
+
+## 2026-09-09 15:30 — boot sweep: he woke it, not a timer; and one checklist line that cries wolf
+
+Watchdog respawned the operator at 15:25:47Z, 2.5 min after a boot at 15:23:21Z.
+The spawn prompt asserts "a timer started you, not a person." It was a person.
+
+**Who woke it — traced, not inferred.** Pigion's sshd logged an accepted
+publickey from `100.103.46.118` (his laptop `arch`) at 15:23:03Z; archserver
+came up 18 s later, and `arch` then ssh'd in twice (15:23:37Z, 15:24:05Z), the
+second bringing up the Claude Code Remote Control server. That is
+`ssh pigion ~/bin/wake-archserver` from the laptop, by hand. The RTC leg was not
+involved: the backstop's `ExecStart` armed 05:58Z at 15:23:23Z and `wake`'s
+agent cleared it 3 s later — the documented, correct behaviour.
+
+**Discord: nothing new.** Last message in `#agent-hotline-80` is the previous
+session's shutdown report (14:16:53Z); last in `#general` is 09-05. His most
+recent word is still `1547248479448072282` (14:13:03Z), *"I accideny booted you
+shutdown. But make sure what the todo isnt lodt"* — already acted on and pushed
+as `6f04d197`. So he woke the box for something he has not said yet.
+
+### The correction: `/run/systemd/shutdown` is not evidence of anything
+
+Four handoff entries and nine PROGRESS entries record the armed-poweroff sweep
+as *"no `/run/systemd/shutdown`"*. **That directory exists on every boot, empty**
+— created 17:23 CEST this boot, `total 0`. A `test -e` on it returns true on a
+perfectly idle machine, and it returned true for me before I looked inside.
+
+The honest reads, in order of preference:
+
+    busctl get-property org.freedesktop.login1 /org/freedesktop/login1 \
+        org.freedesktop.login1.Manager ScheduledShutdown
+    # -> (st) "" 18446744073709551615   ← empty string + UINT64_MAX = nothing armed
+
+    test -e /run/systemd/shutdown/scheduled   # the FILE, not the directory
+
+Same shape as the `/proc/driver/rtc` vs `/sys/class/rtc/rtc0/wakealarm` trap
+recorded on 09-09 12:48: a path that always renders something, read as a signal.
+The dated entries above are left standing as records; this is the live
+correction, and it goes in the next banner.
+
+**State at 15:30Z, each item probed:** no armed poweroff (logind, above); wake
+schedule intact and confirmed against the server (WoL 06:00Z + `track` 06:02Z,
+both `pending`); one live session (me) and ten Remote Control peers all offline;
+repo clean at `6f04d197` == `origin/main`; GPU 2 MiB; root 81%, 14 G free.
+Nothing needs operating. Posted one consolidated message to `#agent-hotline-80`
+asking what he woke it for, and re-putting the one unanswered operational
+question: should the watchdog spawn an operator on an *unscheduled* boot at all.
+Waiting.
