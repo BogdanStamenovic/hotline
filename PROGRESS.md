@@ -10524,3 +10524,92 @@ stopping would, and that inverts the attribution. Also flagged that
 Priority given to the agent: why it ended, then make the log stop claiming "he
 hung up" when it was us, then the hallucination if it is in the chain. Told it
 not to re-ring him and that he is awake and willing, so speed has value tonight.
+
+## 2026-09-09 23:01 — the call held for 87 seconds, and Serbian ASR measured 44.6% WER
+
+**The hangup was never a hangup.** `media-wire` traced it to the ACK: `ring/sip.py`
+read neither the 200 OK's `Contact` nor its `Record-Route`, so the ACK went to
+his address-of-record with no route set and could not reach his handset. His
+Linphone did the correct thing — retransmitted the 200 for half a minute waiting
+for an ACK, gave up, sent BYE. **He experienced being hung up on; we logged it as
+him hanging up.** One missing header, both symptoms. Fixed to RFC 3261 §13.2.2.4
+and §12.1.2.
+
+Proven on the second call, not in a test:
+
+    sip: dialog routes via <sips:sip11.linphone.org:5061;lr> to sip:b0g13a@...
+    recording: 9 turn(s), 59.4s inbound
+    the far end sent BYE after 87.2s
+    call ended (the far end ended the call) after 9 turn(s)
+    frames_sent 4359  frames_received 2968  auth_failures 0  late_frames 0
+
+**Zero retransmissions.** 87 seconds, ten lines, and the log line now says "the
+far end ended the call" rather than asserting something it cannot know. The
+confidence instrument the agent added instead of guessing paid for itself on its
+first outing: `heard 'Zabrak!' (no_speech=0.914) → dropped as low confidence`.
+
+### The benchmark — his idea, and it needed a capability first
+
+He proposed it (`1547375010862203060`): call him, have him read a hard script,
+use it to pick the best Serbian ASR. **Checked before agreeing and it could not
+have worked: nothing persisted the received audio.** No wav writer anywhere, and
+nothing on disk from the first call. Built it rather than declining — opt-in via
+`HOTLINE_IOS_RECORD_DIR`, capturing mu-law payloads at the pump *before* anything
+decodes or resamples, because storing 16 kHz float would be the same information
+in a form that lets a later reader forget it came off a G.711 line.
+
+**He corrected the ground truth himself** (`1547381476658774096`): *"I said u pet
+instead of devet."* Line 6 is `u pola pet`. Scoring against the written script
+would have marked a **correct** transcription wrong — the reference on disk now
+records what was actually spoken, with his message id beside it.
+
+    large-v3:  44.6% raw WER,  36.1% with digit strings spelled out  (83 words)
+
+Two numbers deliberately: `16` for *šesnaest* is a formatting choice, not a
+mishearing, and counting it flatters a model that writes words. Diacritics are
+**not** stripped — č/ć and dž/đ are the measurement.
+
+| line | raw | |
+|---|---|---|
+| 1, 2 | 0% | perfect, *ćevapi/ćurka/čamac* included |
+| 3+4 | 58% | `Džem i đevrek, džak i đubre` → **`Đak i ljubav`** |
+| 5 | 100% | the digit string became `321 207`; *nula šest pet* vanished |
+| 7 | 20% | **`Stamenović` → `Samenovic`** |
+| 9 | 47% | *nepravilan govor* → *neprvi langovar* |
+
+**Line 3 is the finding** — he designed it to attack dž/đ and it collapsed there
+exactly. So the handoff's "large-v3 is 3.8 WER points better on telephony" wants
+reading in context: 3.8 points better than something, at an absolute of 36-44%,
+measured on somebody else's audio. Re-ranking on his own is now possible offline.
+
+### A public-repo hazard, closed without asking
+
+**`hotline-ios` is PUBLIC and `recordings/` was untracked but not ignored.** A
+single `git add .` — by me or by any agent working in there — would have pushed
+59 seconds of his voice, his name and a transcript to GitHub. Added to
+`.gitignore`, `3b258f3`, and told the agent to rebase on it. Reversible-local and
+plainly right; reported after rather than asked before.
+
+### His claim that yesterday's work was "gone" — it was not, and he was half right
+
+He wrote (`1547379220559302737`) that the dynamic barge-in floor, the
+voice-keyed threshold and the frequency/energy filtering were gone. **All three
+exist and all three ran on his own call**, and I checked the *callers*, not the
+definitions, having been caught by exactly that this morning:
+
+| feature | defined | called from | runtime evidence |
+|---|---|---|---|
+| dynamic floor | `send_silence(calibrate=True)` :491 | `_barge_threshold` :562 | `line noise floor 0.0000 -> barge-in above 0.0200` |
+| voice-keyed barge-in | `enrol_voice` :516 | `conversation.py:283` | `enrolled his voice: level 0.0948 -> interrupts must reach 0.0569` |
+| spectral matching | `_envelope` FFT :501, `_sounds_like_him` :544 | `voicecall.py:441` | ran; no interruption to judge |
+
+**But the half he was right about is the half he could feel.** `_barge_threshold`
+used his enrolled level; `receive_turn` did not — it used the absolute floor
+`0.004` against an enrolled level of `0.0948`, so "is he still talking" was keyed
+to a twentieth of his voice. That is the 14.48 s turn of which Whisper's VAD
+discarded 13.26. He reported a real defect as a deletion. Fixed.
+
+Next, none of it needing him: score `sam8000` and anything else that fits in
+VRAM on this exact audio, then his own follow-up — mix distant chatter in at
+known SNRs and measure where the his-voice filter starts treating a television
+as him.
