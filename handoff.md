@@ -12,6 +12,16 @@
 > 2026-09-10 06:00 UTC with a poweroff behind it at 06:02. Two independent paths;
 > the RTC one is new as of last night and re-arms itself at every shutdown.
 >
+> > **CORRECTED 2026-09-09 12:48 by the next operator — the RTC line above is
+> > half wrong.** The arm is real only *across a clean shutdown*: `ExecStop`
+> > writes the alarm (verified by hand, `1789019880` = 2026-09-10 05:58 UTC).
+> > While the box is UP the alarm is **empty** — `wake`'s agent clears it two
+> > seconds after boot as a "leftover", by its own deliberate design. So an
+> > **unclean** stop (power cut, crash, hard reset) leaves no RTC leg at all.
+> > `alarm_IRQ: yes` in the banner came from `/proc/driver/rtc`, which renders a
+> > date for an alarm that does not exist; `/sys/class/rtc/rtc0/wakealarm` is the
+> > only honest read. See PROGRESS.md `## 2026-09-09 12:48`.
+>
 > ### THE ONE THING TO KNOW
 >
 > **Nothing built after the last successful call has been tested on a real call.**

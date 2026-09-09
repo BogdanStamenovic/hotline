@@ -10059,3 +10059,74 @@ longer held. Told him rather than switching quietly.
 176.31.149.179 rather than the tailnet. It works; it is simply less private than
 the rest of the stack, and that should be a choice rather than something
 inherited.
+
+## 2026-09-09 12:48 — boot sweep: the launcher was wrong about who booted the box, and the RTC backstop is disarmed while up
+
+Woke at 14:41 CEST / 12:41 UTC. Prompt said "a timer started you." Two separate
+claims hide in that, and only one is true.
+
+**The session** was the watchdog: `hotline-80 (f53d29f9) is not among 0 live
+sessions; restarting`. hotline-80's record was left `[working]` at last night's
+deliberate poweroff, so the watchdog resurrects the operator on any boot. Worth
+knowing: a clean shutdown at his instruction does not mark the operator done.
+
+**The boot was him.** Not the RTC (its alarm was set for 09-10), not `wake` (its
+only pending tasks are the daily 06:00Z/06:02Z pair, next due tomorrow). Pigion's
+sshd:
+
+    14:41:02  Accepted password for bodas from 100.108.255.28 port 50396
+    14:41:03  Received disconnect ... 11: NMSSH: Disconnect
+    14:41:06  (again)   14:41:09  (again)
+
+`100.108.255.28` is `phone`, his iPhone; `NMSSH` is an iOS SSH library, so these
+are one-shot commands from a phone app, not an interactive session — which is
+also why Pigion's `~/.bash_history` still ends at 09-08 15:08 and shows nothing
+today. The history holds a run of manual `wakeonlan a8:a1:59:fd:4d:13` and Pigion
+has no crontab. Kernel came up 14:41:21, ~12 s after the third packet.
+
+Recorded because "a timer started you" is a launcher's self-description, and the
+launcher only knows that it fired. Cost of getting it wrong: I would have said
+hello and idled while he was waiting on something.
+
+### The RTC backstop is not armed while the box is up, and /proc says it is
+
+The 09-09 09:05 banner: "RTC alarm armed `2026-09-10 05:58 UTC`, `alarm_IRQ: yes`
+... re-arms itself at every shutdown." `/sys/class/rtc/rtc0/wakealarm` was empty.
+
+    14:41:23  rtc-wake-backstop: armed for 2026-09-10 05:58 UTC
+    14:41:25  wake agent: cleared a leftover rtc alarm set for 1789019880
+
+`1789019880` is 2026-09-10 05:58 UTC — wake cleared the backstop's own alarm two
+seconds after it was set. `wake`'s `clear_wakealarm()` runs once at agent start
+and is deliberate, with a measurement behind it (a WoL wake on 09-05 left an
+alarm armed for 20:49:15 that would have powered the box on at a time nobody
+chose). The backstop arms at `ExecStart` *and* `ExecStop`. Neither knows about
+the other; both are individually correct. Boot order decides the outcome, which
+makes it a race, not a design — if wake started first the alarm would survive all
+day and do exactly what wake exists to prevent.
+
+Meanwhile `/proc/driver/rtc` reported `alrm_date: 2026-09-09`, `alrm_time:
+12:46:24` for an alarm that did not exist. The backstop's own header warns about
+this; the shutdown report read it anyway.
+
+**Probed rather than inherited.** Ran the unit's `ExecStop` by hand:
+`wakealarm` → `1789019880`, i.e. 2026-09-10 05:58 UTC, confirmed by readback.
+So the shutdown-time arm is real and tomorrow's two-leg return path is real.
+Restored the cleared up-state afterwards.
+
+The true gap is narrower than the banner and wider than nothing: an **unclean**
+stop — power cut, crash, hard reset — leaves no alarm at all, because `ExecStop`
+never runs and the boot-time arm was wiped 2 s in. WoL from Pigion is then the
+only leg. Two candidate fixes posted to him (teach `wake` to spare an alarm that
+matches a scheduled task; or make the backstop shutdown-only). Neither built —
+this is his call and not urgent.
+
+### Rest of the sweep
+
+One session alive (me). Yesterday's `hotline-72` and `cvoice-4d` both closed
+their own records. Nothing armed to power off today. 0 failed units, GPU
+2/8188 MiB, root 81% / 14 G free (unchanged from the banner), hotlined healthy,
+HEAD `1d916fb` == `origin/main`, wake syncing against revision 112 after one
+boot-time failure logged before the network was up.
+
+Said hello, reported the correction, asked what he woke it for. Waiting.
