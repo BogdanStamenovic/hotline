@@ -1,6 +1,69 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-08 15:48 CEST — STOOD DOWN at his instruction; task delivered, two items left open BY HIM
+> ## STATUS AS OF 2026-09-09 09:05 UTC — SHUT DOWN at his instruction, box powered off
+>
+> Voice calls work end to end. Five live calls on 09-08; he heard it and it heard
+> him, in Serbian, over SRTP. Everything is committed and pushed. The box was
+> powered off deliberately — it is not an always-on server and it had been up
+> 20 hours.
+>
+> **Coming back:** WoL from Pigion (`ssh pigion ~/bin/wake-archserver`), RTC alarm
+> armed for 05:58 UTC by `rtc-wake-backstop.service`, and a scheduled wake at
+> 2026-09-10 06:00 UTC with a poweroff behind it at 06:02. Two independent paths;
+> the RTC one is new as of last night and re-arms itself at every shutdown.
+>
+> ### THE ONE THING TO KNOW
+>
+> **Nothing built after the last successful call has been tested on a real call.**
+> That is the media thread, the intent speculation, and the RTC backstop. 321
+> tests pass and they prove nothing about a phone. The last two call attempts got
+> `100 Trying` and silence because **his Linphone loses SIP registration when
+> backgrounded** — our REGISTER and INVITE were both fine. He has to open the app
+> before a call will ring.
+>
+> ### OPEN, AND HIS TO DECIDE — NOT a to-do list to pick up off a boot
+>
+> | item | state |
+> |---|---|
+> | Media relays via `176.31.149.179`, not the tailnet | works; less private than the rest of the stack. His call. |
+> | Speculative ANSWERS (not just intents) | measured WRONG 25% of the time at every prefix. Unsafe unvalidated. Deliberately not built. |
+> | Streaming TTS | the only structural fix for cvoice's 1.7s floor. OmniVoice CANNOT stream — architectural, maintainer-confirmed. Needs CosyVoice2/Qwen3-TTS, i.e. a different engine. |
+> | `sam8000` turbo-serbian Whisper | converted, cached at `/mnt/windows/.../ct2-converted/`. NOT adopted: large-v3 is 3.8 WER points better on telephony and all three models fit in VRAM (6870/8188 MiB). |
+> | SRTP replay window (RFC 3711 §3.3.2) | not implemented. Fine on a tailnet call to one known peer; write it before this faces a network he does not control. |
+> | Energy endpointing | cannot tell his voice from a television, and ends a turn on a long enough mid-sentence pause. Inherent to the approach. |
+> | Root at 81%, 14 G free | drift from model downloads, not a leak. Has hit 99% twice historically. |
+>
+> ### STILL HIS FROM 09-08 AND EARLIER
+>
+> - Forwarding the hackathon report to nikolina.zdravkovic143@gmail.com and
+>   mvuksan544@gmail.com — he has the clean copy in his own inbox.
+> - Two drafted-but-unsent organiser emails: `info@flsbattlebots.cz` and
+>   `info@robotex.ee`.
+> - Is he the fifth team member or a sixth? Decides whether Robotex Eesti survives.
+> - The isolated Gmail address for `DDS_INBOUND_FORWARD_TO`.
+> - Yes/no on the `rsend` CNAME fix.
+>
+> ### WHAT WAS BUILT 09-08, with the measurements
+>
+> SRTP from scratch (AES_CM_128_HMAC_SHA1_80), tested against RFC 3711's own
+> Appendix B vectors rather than against itself. Two-way audio. Turn-taking,
+> pre-rendered fillers, barge-in calibrated against the line's measured noise AND
+> his own enrolled speaking level, chunked transcription (4.38s of dead air → 0.45s),
+> a dedicated RTP thread, and intent speculation via bge-m3 embeddings (12/12 on
+> unseen Serbian at 10ms, where every generative model tested lost to a regex).
+>
+> Nine bugs were found, and **every one came from a real call, not the test suite**:
+> false barge-in on our own echo, a dead RTP stream while listening, SIP framing
+> that read one packet and assumed a whole message, `ćao` treated as a farewell
+> when it is a greeting, Whisper hallucinating "Hvala vam." out of silence,
+> discarded phrases, a threshold above his own speaking level, and two the new
+> tests caught (`Thread._stop` shadowing, barge-in leaving audio queued).
+>
+> Full narrative in PROGRESS.md under `## LONG RUN 2026-09-08 20:00`.
+
+# HOTLINE — worker handoff
+
+> ## SUPERSEDED — STATUS AS OF 2026-09-08 15:48 CEST — STOOD DOWN at his instruction; task delivered, two items left open BY HIM
 >
 > **He said "Thats it stand down right now" (13:48:18Z, verified).** Work stopped
 > there. Nothing was in flight — no agents running, nothing queued. **Do not
