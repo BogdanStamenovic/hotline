@@ -1,5 +1,48 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-09 17:35 UTC — box UP, the wiring LANDED, one call away from proof
+>
+> ### READ THIS FIRST: exactly one thing is outstanding and it is his
+>
+> **A live call.** The media wiring is built, verified and pushed (`e080dbb`, 7
+> commits, `hotline-ios`). He was rung at 17:26:49Z and **declined after 29 s**
+> — fairly, because I had told him I would ring on his word and then rang
+> without it. **Do not ring him again unprompted.** When he says go, ring, and
+> that call either proves this or does not.
+>
+> What a green run does NOT tell you, restated because this session is the
+> cautionary tale: 348 tests pass, mypy is clean, `degradations: []`, and none
+> of that is evidence. The only evidence is him hearing a voice.
+>
+> The first real sign it is live, and it had never appeared in the log before:
+>
+>     19:26:54  sip: sip:b0g13a@sip.linphone.org is ringing (180)
+>     19:26:55  call agent ready in 5.1s (session 7a65c1b9-4e0)
+>     19:27:19  declined after 29s
+>
+> **Expected behaviour on the next call:** it greets him in **Serbian** and
+> waits. It must **not** hang up on him — a silence is him thinking, and an
+> earlier version ended calls on him twice. "ćao" is a greeting, not a farewell.
+>
+> **`media-wire` is still alive** (tmux `hotline-media`, Opus, idle since 17:16Z
+> with ~151k context). If the call misbehaves, retask it rather than starting
+> cold — it holds every decision behind those seven commits.
+>
+> ### What was wrong, and is now fixed
+>
+> | # | cause | fix |
+> |---|---|---|
+> | 1 | the daemon never passed `SipTransport.on_answer` — the path that rang him at 15:44:57Z | `Answer the phone he actually picks up` |
+> | 2 | `SIP_MEDIA_HOST` unset, so the SDP offered an unroutable `192.168.x` | set to `100.72.2.62`; his phone answers on the tailnet 2/2 at 80-170 ms |
+> | 3 | `talk.py:219` called `VoiceCall.PRIMING_SECONDS`, deleted by `1ad8e2b` without updating its only caller — `AttributeError` on answer, then BYE | `Fold talk.py onto the shared conversation, which also un-breaks it` |
+> | 4 | `place()` read `events.latest` *after* `ring()`, so an answer arriving during the ring sat behind the cursor and `hotline-call` would hang for its full 900 s | cursor taken before the ring |
+>
+> Whisper ended up on the GPU after all — `Ears(large-v3 on cuda/int8_float16,
+> sr) ready in 3.4s` — not the `small`-on-CPU compromise. VRAM 2396 MiB
+> (cvoiced) + 1918 MiB (iosd) of 8188.
+>
+> ### SUPERSEDED BELOW — the 16:10Z banner, kept for the reasoning
+>
 > ## STATUS AS OF 2026-09-09 16:10 UTC — box UP, he woke it, and a real call found the bug
 >
 > **A person booted this, not a timer.** His laptop `arch` ssh'd Pigion at
@@ -46,7 +89,7 @@
 > a bench and never put in the car. Ten seconds of his time on a real phone
 > found what 814 tests could not. Grep for the **constructor**, not the class.
 >
-> ### ⚠ `hotline-call` cannot carry a question right now
+> ### ⚠ ~~`hotline-call` cannot carry a question right now~~ — FIXED 17:35Z, pending the proving call
 >
 > The ring works, so a call *connects* — and then neither of you can hear
 > anything. Until cause 1 and 2 land, **calling him conveys nothing**; the
