@@ -1,6 +1,102 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-09 14:20 UTC — SHUT DOWN at his instruction; box powered off after an ACCIDENTAL boot
+> ## STATUS AS OF 2026-09-09 16:10 UTC — box UP, he woke it, and a real call found the bug
+>
+> **A person booted this, not a timer.** His laptop `arch` ssh'd Pigion at
+> 15:23:03Z; the box came up 18 s later and he connected twice. If your spawn
+> prompt says a timer started you, it is wrong today. He then said, verified
+> (`1547268028884844656`, 15:30:44Z): *"Hello im here. Well lets finish the call
+> stuff."*
+>
+> ### THE ONE THING TO KNOW — the media engine is finished code that nothing calls
+>
+> He answered a real call at **15:44:57Z** (`sip: sip:b0g13a@sip.linphone.org is
+> ringing (180)`) and **heard silence**. Not a registration problem: his Linphone
+> was foregrounded and the ring worked. Two independent causes, both live, and
+> **fixing either one alone still gives silence**:
+>
+> | # | cause | evidence |
+> |---|---|---|
+> | 1 | `SipTransport.on_answer` is **never passed by any caller**. `daemon.py:2633` builds `SipTransport()` bare, so `_finish_answered` (`sip.py:559`) ACKs the 200 and hangs up. | `grep -rn 'VoiceCall' src/ tests/` returns its own module and its own test. Nothing else. |
+> | 2 | `SIP_MEDIA_HOST` is **set in neither `.env`**, so the SDP offers a `192.168.x` address that his phone and linphone.org's relay (`176.31.149.179`) cannot reach. | The variable's own comment: *"there is no ICE here, so when it is not, nothing tells us: the call connects and is silent."* |
+>
+> **The generalizable finding: a green suite is a status field too.** `hotline`
+> 501 passed and `hotline-ios` 313 passed with the entire media suite green,
+> while `VoiceCall` was unreachable from the live path. The engine was tested on
+> a bench and never put in the car. Ten seconds of his time on a real phone
+> found what 814 tests could not. Grep for the **constructor**, not the class.
+>
+> ### ⚠ `hotline-call` cannot carry a question right now
+>
+> The ring works, so a call *connects* — and then neither of you can hear
+> anything. Until cause 1 and 2 land, **calling him conveys nothing**; the
+> escalation path is degraded to `hotline-page` and Discord. Do not read a
+> completed `hotline-call` as him having been told something.
+>
+> ### WHAT HE ASKED FOR, AND THE ORDER IT HAS TO HAPPEN IN
+>
+> He narrowed the task (`1547271493807902821`, 15:44:31Z): *"I mean the
+> speculative input. And im not really up to speed on the other things that need
+> finishing."* **The speculator cannot go first.** `speculate.py` has the same
+> defect — imported by `tests/test_speculate.py` and nothing else — and it feeds
+> on partial transcripts from live inbound audio, which does not exist yet:
+>
+>     wire VoiceCall into on_answer → audio both ways → partial transcripts → speculation has an input
+>
+> He was told this plainly and did not dispute it. **The brief for the wiring
+> agent is written and committed at `docs/BRIEF-media-wiring.md`.** It changes
+> real code, so it is an **Opus** job, and `hotline`'s spawn passes no `--model`
+> — spawn it by hand via tmux.
+>
+> ### ⏳ WAITING ON HIM — one word, and it is the only thing blocking
+>
+> His last message (`1547273049093439569`, 15:50:41Z) was **"Sutr start tour
+> plan"**, then silence for 20 minutes after a run of 1-4 minute replies.
+> Read two ways: *"**Sutra** start your plan"* (tomorrow) or *"**Sure**, start
+> your plan"* (now). I asked which and got no answer, so I acted on **sutra** —
+> the plan is approved either way, only the start time is in question, and going
+> quiet mid-exchange is what a sign-off looks like. **If he says "now", spawn the
+> Opus agent with the brief; nothing else needs deciding.**
+>
+> ### State at 16:10Z, each item probed rather than read off a field
+>
+> | thing | state |
+> |---|---|
+> | armed poweroff | **none.** logind `ScheduledShutdown` is empty. See the correction below |
+> | tomorrow's wake | `wake list` against the server: WoL 06:00Z + `track` 06:02Z, both `pending` |
+> | sessions | operator only; ten Remote Control peers, all offline |
+> | repo | clean and pushed |
+> | cvoice | warm, model resident, 6452 MiB on the GPU |
+> | GPU / root | 6452 MiB of 8188 / 81%, 14 G free |
+>
+> ### CORRECTION — `/run/systemd/shutdown` is not evidence of anything
+>
+> Four earlier banners record the armed-poweroff sweep as *"no
+> `/run/systemd/shutdown`"*. **That directory is created empty on every boot.** A
+> `test -e` on it returns true on a perfectly idle machine, and it returned true
+> for me before I looked inside. The honest reads:
+>
+>     busctl get-property org.freedesktop.login1 /org/freedesktop/login1 \
+>         org.freedesktop.login1.Manager ScheduledShutdown
+>     # (st) "" 18446744073709551615  ← empty + UINT64_MAX = nothing armed
+>     test -e /run/systemd/shutdown/scheduled    # the FILE, not the directory
+>
+> Same shape as `/proc/driver/rtc` vs `/sys/class/rtc/rtc0/wakealarm`: a path
+> that always renders something, read as a signal.
+>
+> ### Still his, unchanged from the 14:20Z banner below
+>
+> Everything in the **HIS** list of the superseded banner still stands — the two
+> unsent organiser emails, the hackathon report forward, the fifth-or-sixth-member
+> question, `DDS_INBOUND_FORWARD_TO`, the `rsend` CNAME, the media-relay privacy
+> call, `llama-turbo3`, and the RTC/`wake` race. **⏰ Jugend hackt Hamburg closes
+> 13 Sept — four days out.** The three local-only-state exceptions (`dds-site` 3
+> commits ahead of a deploy remote, the `uxonews` middleware auth bypass, the
+> `split-packages` worktree) are all still exactly as found.
+
+# HOTLINE — worker handoff
+
+> ## SUPERSEDED — STATUS AS OF 2026-09-09 14:20 UTC — SHUT DOWN at his instruction; box powered off after an ACCIDENTAL boot
 >
 > **He wrote (verified, `1547248479448072282`, 14:13:03Z):** *"I accideny booted
 > you shutdown. But make sure what the todo isnt lodt"* — so the 12:41Z boot was

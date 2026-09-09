@@ -10296,3 +10296,51 @@ with him, since that call is the only thing that can prove it.
 hotline 501 passed (9.4 s); hotline-ios 313 passed, 8 skipped (67 s); cvoice TTS
 warm, model resident at 6452 MiB; iosd `ring=sip+confirmed`,
 `rings_when_closed=true`.
+
+## 2026-09-09 16:10 — the second cause, and reading "Sutr" as sutra
+
+**Second cause of the silence, independent of the first.** `SipTransport`
+reads `SIP_MEDIA_HOST` for the address it advertises in the SDP offer, and that
+variable is set in **neither** `.env` — and those two files are the only ones
+`load_env()` reads. Empty means the offer names whatever local address the SIP
+socket ended up with, a `192.168.x`, which neither his phone nor linphone.org's
+media relay (`176.31.149.179`) can route to. The variable's own comment says the
+symptom outright: *"there is no ICE here, so when it is not, nothing tells us:
+the call connects and is silent."* **So wiring `on_answer` alone would very
+likely have reproduced the same silence and read as the wiring having failed.**
+
+One methodological note so nobody repeats it: `/proc/619/environ` shows no
+`SIP_*` at all for the running daemon. That is not evidence they are unset —
+`load_env()` puts them into `os.environ` after exec, and `/proc/<pid>/environ` is
+the exec-time snapshot. The `.env` files are the honest read here.
+
+**An operational consequence worth its own line:** the ring works and the audio
+does not, so `hotline-call` now *connects* and conveys nothing in either
+direction. Until this lands, the escalation ladder is effectively Discord and
+`hotline-page` only, and a completed `hotline-call` must not be read as him
+having been told anything.
+
+### The ambiguity, and how it was resolved
+
+At 15:50:41Z he wrote **"Sutr start tour plan"** and went quiet. Two readings
+with opposite consequences: *"**Sutra** start your plan"* (tomorrow) or
+*"**Sure**, start your plan"* (now). His typing drops letters — *accideny*,
+*lodt*, *aswell* — which fits `sutra`→`Sutr`; it also transposes, which fits
+`Sure`. I could not settle it from the text, and it is the one case worth asking
+about, so I asked in one short message rather than guessing.
+
+No answer in 17 minutes, after a run of replies 1-4 minutes apart, and no laptop
+session since 15:38Z. Went with **sutra**: the plan is approved under either
+reading and only the start time differs, and going quiet mid-exchange is what a
+sign-off looks like rather than what "go now" looks like. Nothing spawned. Told
+him the reading and that one word reverses it.
+
+Wrote `docs/BRIEF-media-wiring.md` — the task for the agent that does the
+wiring, naming both causes, the exact seam (`daemon.py:2601-2653`), the existing
+`VoiceCall` API, the three things not to "clean up", and a definition of done
+that explicitly refuses a green suite as evidence. It is an Opus job because it
+changes real code, and `hotline`'s spawn passes no `--model`, so it must be
+spawned by hand via tmux.
+
+New top banner written; the 14:20Z one marked SUPERSEDED. Box left UP and
+nothing armed — he did not ask for a shutdown and I am not inferring one.
