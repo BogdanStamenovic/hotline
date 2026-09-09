@@ -10473,3 +10473,54 @@ not carry which, so I cannot say whether he pressed decline or the phone was
 busy, and I am not ringing again to find out.
 
 **One thing outstanding, and it is his: the proving call.** Nothing else blocks.
+
+## 2026-09-09 22:26 — "I heard all of it"
+
+He was asleep, not annoyed: *"Nah i was sleeping sorry lets test it out now"*
+(verified, `1547372329984729128`, 22:25:12Z). Re-verified the stack was still
+good — iosd active with `ring_ready: true` and `degradations: []`, his phone on
+the tailnet 2/2 — and rang.
+
+**It worked.** First two-way audio on a real phone:
+
+    00:25:46,525  ANSWERED -- his media at 176.31.149.179:15662
+    00:25:47,732  line noise floor 0.0000 -> barge-in above 0.0200
+    00:25:59,973  turn 1 (endpointed): 'Čao, dobrodan, dalem je čuš.'
+    00:25:59,988  enrolled his voice: level 0.0948 -> interrupts must reach 0.0569
+    00:26:16,872  turn 2 (endpointed): 'Hello there!'
+    00:26:23,767  call ended after 2 turn(s):
+                  frames_sent 1862, frames_received 1571,
+                  auth_failures 0, late_frames 0
+
+`auth_failures 0` and `late_frames 0` across 1862 sent and 1571 received frames:
+SRTP held and the 20 ms clock never starved. cvoiced logged two `POST /speak
+200`. His verdict, verified (`1547372804142399518`, 22:27:05Z): **"I heard all
+of it."**
+
+### And the bug he caught, which the log actively concealed
+
+*"It hanged up on me at the end but yeah"* (`1547372760681029652`, 22:26:54Z).
+My log line reads **`call ended (he hung up)`** — `conversation.py:219` sets that
+from `gone()`, and `sip.py:358` logs "the far end hung up" on reading a BYE.
+
+**So the log asserted the opposite of what happened to him, and it is the one
+rule he has stated explicitly and that has already cost two calls.** Had I
+trusted that field I would have reported the no-hangup rule working. Tenth
+instance of this project's signature failure, and the first where the field was
+not merely uninformative but actively wrong about an instruction being obeyed.
+The user on the other end knew in one sentence what the log denied.
+
+Handed `media-wire` the evidence and four undiagnosed leads, explicitly marked
+as leads: only two `/speak` calls for a greeting plus two turns, so turn 1 may
+never have been answered aloud; the end came 2.3 s after the last reply began
+synthesising, too fast to have finished, so he may have been cut mid-sentence;
+`'Hello there!'` came from 1.2 s of residue after VAD stripped 13.26 of 14.48 s,
+which looks like a Whisper hallucination of the `Hvala vam.` family; and a BYE
+genuinely arrived, so the question is what made his phone send one — our media
+stopping would, and that inverts the attribution. Also flagged that
+`hotline-call` returned at the same instant with turn 1's text, and that
+`place()` closing on answer has been real behaviour since `868c298`.
+
+Priority given to the agent: why it ended, then make the log stop claiming "he
+hung up" when it was us, then the hallucination if it is in the chain. Told it
+not to re-ring him and that he is awake and willing, so speed has value tonight.
