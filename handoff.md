@@ -1,6 +1,118 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-09 09:05 UTC — SHUT DOWN at his instruction, box powered off
+> ## STATUS AS OF 2026-09-09 14:20 UTC — SHUT DOWN at his instruction; box powered off after an ACCIDENTAL boot
+>
+> **He wrote (verified, `1547248479448072282`, 14:13:03Z):** *"I accideny booted
+> you shutdown. But make sure what the todo isnt lodt"* — so the 12:41Z boot was
+> him, by accident, and the todo below is the reason this banner exists. Nothing
+> was worked on today beyond a boot sweep and one correction. **This is not a
+> list to start grinding off the next boot** — the split between "his" and
+> "engineering" below is the whole point.
+>
+> **Coming back:** WoL from Pigion (`ssh pigion ~/bin/wake-archserver`, Pigion
+> verified up and reachable at 12:46Z), the RTC alarm the backstop writes at
+> `ExecStop`, and the scheduled wake at 2026-09-10 06:00 UTC with a `track` run
+> and a poweroff behind it at 06:02.
+>
+> ### THE ONE THING TO KNOW — unchanged from 09-09 09:05
+>
+> **Nothing built after the last successful call has been tested on a real call.**
+> That is the media thread, the intent speculation, and the RTC backstop. 321
+> tests pass and they prove nothing about a phone. The last two call attempts got
+> `100 Trying` and silence because **his Linphone loses SIP registration when
+> backgrounded** — our REGISTER and INVITE were both fine. He has to open the app
+> before a call will ring.
+>
+> ### ⏰ TIME-SENSITIVE — will pass while the box is off
+>
+> | item | deadline |
+> |---|---|
+> | **Jugend hackt Hamburg** applications close | **13 Sept 2026** — four days out |
+> | Czech CRL Brno entry (`info@flsbattlebots.cz` email drafted, unsent) | 4 Oct 2026 |
+> | iOS signing profile re-sign (his chore, reported once, no reminders wanted) | ~7-day rolling |
+>
+> ### HIS — decisions and outward actions nobody else can take
+>
+> 1. Forward the clean-rendering hackathon report to **nikolina.zdravkovic143@gmail.com**
+>    and **mvuksan544@gmail.com**. He has the copy in his own inbox ("Provera
+>    prikaza", 09-08 15:41:34) and never confirmed it displays correctly.
+> 2. The two drafted-but-unsent organiser emails: **`info@flsbattlebots.cz`** (may
+>    minors and foreign teams enter) and **`info@robotex.ee`** (the real 2026
+>    deadline).
+> 3. **Is he the fifth team member or a sixth?** He is a minor himself and
+>    participating, not an adult mentor. Without an adult, NASA Space Apps'
+>    in-person entry falls and Robotex Eesti's *"maksimaalselt 5 liiget + 2
+>    mentorit"* may no longer fit. Robochallenge is unaffected.
+> 4. The isolated Gmail address for **`DDS_INBOUND_FORWARD_TO`**.
+> 5. Yes/no on the **`rsend` CNAME fix** — UXONEWS cannot send email until then.
+> 6. **Media relays via `176.31.149.179`, not the tailnet.** Works; less private
+>    than the rest of the stack.
+> 7. **`~/data/llama-turbo3`** keep or delete — 670 MB, load-bearing for 262k.
+> 8. **The RTC backstop / `wake` race, found today.** Two candidate fixes, neither
+>    built: teach `wake` to spare an alarm matching a scheduled task, or make the
+>    backstop shutdown-only. Detail below and in PROGRESS.md `## 2026-09-09 12:48`.
+>
+> ### ENGINEERING — open, each with the measurement that closed the question
+>
+> | item | state |
+> |---|---|
+> | ⭐ **Make phone-app messages verifiable** | server half DONE — `kind=phone` is Ed25519-verifiable. The **app half is the blocker**: the Shortcut cannot sign. |
+> | Speculative ANSWERS (not just intents) | measured WRONG 25% of the time at *every* prefix. Unsafe unvalidated. Deliberately not built. |
+> | Streaming TTS | the only structural fix for cvoice's 1.7 s floor. OmniVoice CANNOT stream — architectural, maintainer-confirmed. Needs CosyVoice2/Qwen3-TTS, a different engine. |
+> | `sam8000` turbo-serbian Whisper | converted, cached at `/mnt/windows/.../ct2-converted/`. NOT adopted: large-v3 is 3.8 WER points better on telephony and all three models fit in VRAM (6870/8188 MiB). |
+> | SRTP replay window (RFC 3711 §3.3.2) | not implemented. Fine on a tailnet call to one known peer; write it before this faces a network he does not control. |
+> | Energy endpointing | cannot tell his voice from a television, and ends a turn on a long enough mid-sentence pause. Inherent to the approach. |
+> | The three frozen files + acceptance test | open since 08-26. They are **unfinished agent work, not his** — he said finish them. |
+> | The `CLAUDE.md` snapshot line | open since 08-28. |
+> | Root at 81%, 14 G free | drift from model downloads, not a leak. Has hit 99% twice historically. |
+>
+> ### ⚠ LOCAL-ONLY STATE — exists on this disk and nowhere else
+>
+> Swept every repo under `~/data` before powering off. All of hotline,
+> hotline-ios, cvoice, wake, track, wd_gen and track-web are committed and pushed.
+> Three exceptions, **left exactly as found on purpose**:
+>
+> 1. **`~/data/dds-site` is 3 commits ahead of its remote** (`92026b6`, `698cfcc`,
+>    `b3994ba` — inbound mail at contact@, the reply relay, a signing-secret
+>    diagnosis). Clean fast-forward, 0 behind. **Not pushed, deliberately: that
+>    remote is `dds@uxonews.com:/opt/dds/repo.git`, a deploy target — pushing ships
+>    it to the live site.** His call, one command when he wants it.
+> 2. **`~/data/uxonews/src/middleware.ts` has an uncommitted dev auth bypass**
+>    (`UXONEWS_DEV_NO_AUTH=1`, gated on `NODE_ENV=development`). Almost certainly
+>    uncommitted on purpose — **it is an auth bypass in auth middleware and should
+>    stay out of git.** Do not "tidy" it in.
+> 3. `.claude/worktrees/agent-ab23888fda6d7ba7b` is a leftover agent worktree on
+>    branch `split-packages`. That branch **is** pushed (`38bf807` ==
+>    `origin/split-packages`), so nothing is stranded; the checkout is just litter
+>    and is safe to `git worktree remove`.
+>
+> ### The RTC backstop is not armed while the box is up — and that is normal
+>
+> The previous banner said the alarm "is armed for 05:58 UTC and re-arms itself at
+> every shutdown." Half true, and the false half is the kind that gets believed:
+>
+>     14:41:23  rtc-wake-backstop: armed for 2026-09-10 05:58 UTC
+>     14:41:25  wake agent: cleared a leftover rtc alarm set for 1789019880
+>
+> `wake`'s agent clears any alarm it did not set, once at start, for its own
+> measured reason. So **an empty `wakealarm` on a running box is correct, not a
+> fault.** `ExecStop` genuinely arms it — verified by running the ExecStop by hand
+> today, not by reading a log line. The real gap: an **unclean** stop (power cut,
+> crash, hard reset) leaves no RTC leg at all, and Pigion's packet is then the only
+> way back. `/proc/driver/rtc` renders a date for an alarm that does not exist;
+> `/sys/class/rtc/rtc0/wakealarm` is the only honest read.
+>
+> ### One operational note about accidental boots
+>
+> A deliberate poweroff leaves `hotline-80` marked `[working]`, so
+> `hotline-watchdog` respawns the operator on **any** boot — including this
+> accidental one, which cost a session before anyone knew a person had woken it.
+> That is arguably correct (it is how the 06:00 wake gets an operator) and was
+> **not** changed. Noting it, not fixing it.
+
+# HOTLINE — worker handoff
+
+> ## SUPERSEDED — STATUS AS OF 2026-09-09 09:05 UTC — SHUT DOWN at his instruction, box powered off
 >
 > Voice calls work end to end. Five live calls on 09-08; he heard it and it heard
 > him, in Serbian, over SRTP. Everything is committed and pushed. The box was
