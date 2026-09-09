@@ -10235,3 +10235,64 @@ Nothing needs operating. Posted one consolidated message to `#agent-hotline-80`
 asking what he woke it for, and re-putting the one unanswered operational
 question: should the watchdog spawn an operator on an *unscheduled* boot at all.
 Waiting.
+
+## 2026-09-09 15:45 — the live call: the media thread is finished code that nothing ever calls
+
+He woke the box to *"finish the call stuff"*, then narrowed it: *"I mean the
+speculative input. And im not really up to speed on the other things that need
+finishing. First explain media thread and rtc backstop"* (verified,
+`1547271493807902821`, 15:44:31Z).
+
+I had already placed a real call at 15:44:5x with `--no-fallback`. He answered
+it. Then: *"It ringed i connected and then i just didnt hear anything"*
+(verified, `1547271792832282746`, 15:45:42Z). **That is the first real-call
+result for anything built since the last working call, and it is a failure.**
+
+**Ring worked.** `hotline-ios` logged `sip: sip:b0g13a@sip.linphone.org is
+ringing (180)` at 17:44:57 CEST. REGISTER, INVITE and the 180 are all fine, and
+his Linphone was foregrounded — the backgrounding problem the banner leads with
+was not in play this time.
+
+### The cause, found in two greps
+
+    $ grep -rn 'on_answer' src/ tests/
+    src/hotline_ios/ring/sip.py:164,188,528,559,561    # defined, stored, called
+    (nothing else)
+
+    $ grep -rn 'VoiceCall' src/ tests/
+    src/hotline_ios/media/voicecall.py:231:class VoiceCall:
+    tests/test_voicecall.py:...
+
+`SipRing.__init__` takes `on_answer=None` and **no caller anywhere passes it**.
+So `_finish_answered` ACKs the 200, evaluates `if self.on_answer is not None`,
+falls through, and hangs up. The 706-line media engine — RTP pump on its own
+thread, SRTP both ways, barge-in that retains frames arriving mid-utterance — is
+reachable only from its own test file. He answered a call whose remaining job
+was to be silent and end.
+
+313 tests pass in that repo, the media suite among them. **The engine is tested
+on a bench and was never put in the car.** Same shape as the nine prior
+status-field failures, one level up: a green suite read as evidence about a
+system the suite never touches. The handoff called it in one line — *"321 tests
+pass and they prove nothing about a phone"* — and it took ten seconds of his
+time on a real call to convert that warning into a fact.
+
+### Why this reorders what he asked for
+
+`speculate` has the identical defect: imported by `tests/test_speculate.py` and
+by nothing else. It classifies a **partial transcript** mid-sentence so a holding
+phrase can be spoken the moment he stops. Partial transcripts are produced by
+inbound call audio. With no media leg there is no inbound audio, so the
+speculator has no input and cannot fire at all:
+
+    wire VoiceCall into on_answer → audio both ways → partial transcripts → speculation has an input
+
+Told him plainly that his instruction has to be taken in the other order, with
+the reason, and offered to do it his way if he still wants that. Proposed handing
+the wiring to an Opus agent (it changes real code) and then a second live call
+with him, since that call is the only thing that can prove it.
+
+**Pre-flight measured before the call, all green and all beside the point:**
+hotline 501 passed (9.4 s); hotline-ios 313 passed, 8 skipped (67 s); cvoice TTS
+warm, model resident at 6452 MiB; iosd `ring=sip+confirmed`,
+`rings_when_closed=true`.
