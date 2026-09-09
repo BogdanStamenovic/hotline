@@ -68,3 +68,31 @@ nothing** — the media suite was fully green while the engine was dead code. Do
 means a real call where he hears a voice and it hears him. That call needs him
 present, and the operator arranges it. Report back with the diff and the stats
 from `VoiceCall.stats()`; do not claim it works without a call.
+
+---
+
+## CORRECTION 2026-09-09 16:45 — Cause 1 above is overstated
+
+`media-wire` found this and it is right; the operator then confirmed it from git
+rather than relaying it.
+
+**"Nothing anywhere passes it" is false.** `server/talk.py:361` does
+`SipTransport(on_answer=on_answer)`. The grep quoted as evidence was
+`grep -rn 'VoiceCall' src/ tests/`, and `talk.py` is in the repo root — in
+neither directory. Cause 1 is true **of the daemon**, which is the path that
+rang him at 15:44:57Z, and false of the codebase.
+
+**A third cause, in the other path.** `talk.py:219` calls
+`voicecall.VoiceCall.PRIMING_SECONDS`. Commit `1ad8e2b` ("Put RTP on its own
+thread", 8 Sept 21:36) deleted `PRIMING_SECONDS = 1.2` and did not update the
+caller, so `on_answer` raises `AttributeError` the moment he answers and the
+call BYEs. **Both routes to his ear are broken, by different bugs, with the same
+symptom.**
+
+**`talk.py` is the worked example for this task, not a duplicate to replace.**
+379 lines tuned across live calls on 8 Sept, carrying his own instructions:
+Serbian with real diacritics (the TTS mispronounces stripped ASCII); never hang
+up on him — wait for his hangup, a silence is him thinking; "ćao" is a Serbian
+greeting and must not be treated as a farewell; fillers pre-rendered because
+synthesising one costs 1.7 s. Fold its behaviour into the shared module; do not
+ship a second loop beside it.

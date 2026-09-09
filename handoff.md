@@ -17,8 +17,28 @@
 >
 > | # | cause | evidence |
 > |---|---|---|
-> | 1 | `SipTransport.on_answer` is **never passed by any caller**. `daemon.py:2633` builds `SipTransport()` bare, so `_finish_answered` (`sip.py:559`) ACKs the 200 and hangs up. | `grep -rn 'VoiceCall' src/ tests/` returns its own module and its own test. Nothing else. |
+> | 1 | **The daemon** never passes `SipTransport.on_answer`. `daemon.py:2633` builds `SipTransport()` bare, so `_finish_answered` (`sip.py:559`) ACKs the 200 and hangs up. This is the path that rang him at 15:44:57Z. | `daemon.py:2633`, read directly. |
+> | 1b | **`server/talk.py:361` DOES pass it** — and crashes anyway: line 219 calls `voicecall.VoiceCall.PRIMING_SECONDS`, which commit `1ad8e2b` deleted (`- PRIMING_SECONDS = 1.2`) without updating the caller. `AttributeError` the instant he answers → BYE → silence. | `git show HEAD:server/talk.py`, verified by the operator, not relayed. |
 > | 2 | `SIP_MEDIA_HOST` is **set in neither `.env`**, so the SDP offers a `192.168.x` address that his phone and linphone.org's relay (`176.31.149.179`) cannot reach. | The variable's own comment: *"there is no ICE here, so when it is not, nothing tells us: the call connects and is silent."* |
+>
+> ### ⚠ A CORRECTION THE OPERATOR OWES: "nothing anywhere passes it" was wrong
+>
+> The first version of this banner, and `docs/BRIEF-media-wiring.md` as written,
+> asserted that **no caller anywhere** passes `on_answer`. That is false, and the
+> evidence quoted for it shows exactly how it was missed: the grep was
+> `grep -rn 'VoiceCall' src/ tests/`, and **`talk.py` lives in the repo root, in
+> neither directory.** `media-wire` caught it and was right; the operator then
+> confirmed it from git rather than taking the agent's word. The true claim is
+> narrower and split into rows 1 and 1b above: **both** routes to his ear are
+> broken, by two different bugs with the same symptom.
+>
+> `talk.py` is not junk — it is 379 lines tuned across live calls on 8 Sept, and
+> it carries his own instructions: the call is in Serbian with real diacritics
+> because the TTS mispronounces stripped ASCII; **it must never hang up on him**
+> (an earlier version did, twice, while he was still there); "ćao" is a greeting
+> in Serbian and is not a farewell word; fillers are pre-rendered because
+> synthesising one costs 1.7 s, which is most of the gap it exists to hide. Any
+> rewrite that does not carry those forward re-learns them on his time.
 >
 > **The generalizable finding: a green suite is a status field too.** `hotline`
 > 501 passed and `hotline-ios` 313 passed with the entire media suite green,

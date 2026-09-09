@@ -10375,3 +10375,54 @@ Its definition of done is explicitly **not** the suite. It was told that 313
 green tests are what concealed this bug, that it may not declare the job
 finished, and that it reports to me so the operator can arrange a live call with
 Bogdan holding the phone.
+
+## 2026-09-09 16:45 — the brief was wrong, and the agent was right
+
+`media-wire` came back with *"Stop — the brief is wrong about Cause 1"*, and it
+is. **I wrote that no caller anywhere passes `on_answer`. `server/talk.py:361`
+does.** The evidence I quoted for the claim is exactly what hid it from me:
+`grep -rn 'VoiceCall' src/ tests/` — and `talk.py` sits in the repo root, in
+neither directory. I searched two places and reported as though I had searched
+everywhere.
+
+Confirmed from git rather than taken on the agent's word, and my first attempt at
+confirming was itself wrong in a way worth recording: I ran
+`git show HEAD:talk.py` and `git show HEAD:src/...` from `server/`, but
+`git show` resolves paths from the **repo root**, so both silently returned
+nothing with stderr suppressed. I nearly read that empty output as "confirmed
+absent". Re-run with `server/`-prefixed paths:
+
+    server/talk.py:361   ring = SipTransport(on_answer=on_answer)
+    server/talk.py:219   call.send_silence(voicecall.VoiceCall.PRIMING_SECONDS, calibrate=True)
+    git show 1ad8e2b -- server/src/hotline_ios/media/voicecall.py
+    -    PRIMING_SECONDS = 1.2
+
+So there is a **third** cause: `1ad8e2b` ("Put RTP on its own thread", 8 Sept
+21:36) deleted the constant and did not update its only caller, so `talk.py`'s
+`on_answer` raises `AttributeError` the instant he picks up and the call BYEs.
+**Both routes to his ear are broken, by two different bugs, with one symptom.**
+The daemon explains the 15:44 call; `talk.py` would have failed too.
+
+`talk.py` is not a duplicate to be replaced — 379 lines tuned across live calls
+on 8 Sept, carrying instructions he gave in person: Serbian with real diacritics
+because the TTS mispronounces stripped ASCII; **never hang up on him**, wait for
+his hangup, because an earlier version ended the call twice while he was still
+there; "ćao" is a Serbian greeting and not a farewell word; fillers pre-rendered
+because synthesising one costs 1.7 s, most of the gap it exists to hide. The
+agent had written an English loop that hung up after two quiet turns — directly
+against his instruction — and caught it only by reading that file.
+
+Corrected in place: the banner's cause table now has rows 1 and 1b, a section
+naming the error, and `docs/BRIEF-media-wiring.md` carries the correction at its
+foot so nobody works from the wrong version. Endorsed the agent's course change
+— fold `talk.py`'s proven behaviour into the shared module rather than ship a
+second, worse loop beside it.
+
+**Also settled, and it was mine to settle:** his guess that a standalone cvoice
+run had left VRAM unflushed. Falsified from the timeline — GPU was 2 MiB at
+15:26Z and 6452 MiB by 15:41Z, and the only thing that touched cvoiced in that
+window was me warming it as pre-flight. His run was ~16:03Z, after the
+allocation already existed, and `nvidia-smi --query-compute-apps` shows one
+entry: pid 617, the boot-time `cvoiced` unit, never restarted. Nothing clogged.
+Routed the fact to the agent to answer him in its own channel rather than
+answering over it.
