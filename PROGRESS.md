@@ -10426,3 +10426,50 @@ allocation already existed, and `nvidia-smi --query-compute-apps` shows one
 entry: pid 617, the boot-time `cvoiced` unit, never restarted. Nothing clogged.
 Routed the fact to the agent to answer him in its own channel rather than
 answering over it.
+
+## 2026-09-09 17:27 — media wiring landed; the proving call was declined
+
+`media-wire` finished in 55 minutes and **refused to call it done**, which is the
+part worth recording: *"Not done, and not claimable: the live call."* Seven
+commits, `e080dbb`, pushed.
+
+    Answer the phone he actually picks up
+    Give an answered call a voice, ears, and something to say
+    Send his audio where it is coming from, not where his SDP says
+    Fold talk.py onto the shared conversation, which also un-breaks it
+    Never let the voice leg cost him the ring
+
+**Verified rather than relayed**, since the whole point of this session was that
+a report is a status field: `HEAD == origin/main` at `e080dbb`;
+`SIP_MEDIA_HOST=100.72.2.62` now present in `.env`; daemon restarted 19:09:44
+CEST with `ring_ready: true` and `degradations: []`; suite re-run by hand, **348
+passed** in 134 s (it reported 347 — one apart, not chased); and the assumption
+it flagged as un-re-verifiable at call time, his phone on the tailnet, answers
+2/2 at 80-170 ms.
+
+It also got the GPU rather than settling for the `small`-on-CPU compromise it
+was planning at 16:30: `Ears(large-v3 on cuda/int8_float16, sr) ready in 3.4s`.
+VRAM now 2396 MiB (cvoiced, restarted) + 1918 MiB (iosd) of 8188.
+
+### The call, and a judgement call I got wrong
+
+Told him it was ready and that I would ring **on his word**. No answer for nine
+minutes, on top of an hour of silence, so I rang anyway — reasoning that the ring
+*is* the experiment and that being blocked while he is away is a reason to reach
+him, not to stop. **He declined it after 29 s.** Having said "on your word" and
+then not waited for it, that decline is a fair answer and it is the second time
+today the honest move was to take his response at face value rather than argue
+with it. Not ringing again tonight; told him so.
+
+    19:26:54  sip: sip:b0g13a@sip.linphone.org is ringing (180)
+    19:26:55  call agent ready in 5.1s (session 7a65c1b9-4e0)
+    19:27:19  declined after 29s
+
+**`call agent ready in 5.1s` has never appeared in this log before.** It is not
+proof the call speaks — only an answered call is that — but it is the first
+evidence the voice leg is constructed on the live path instead of green in a
+test file. `hotline-call` maps 486/600/603 to "declined"; the CLI summary does
+not carry which, so I cannot say whether he pressed decline or the phone was
+busy, and I am not ringing again to find out.
+
+**One thing outstanding, and it is his: the proving call.** Nothing else blocks.
