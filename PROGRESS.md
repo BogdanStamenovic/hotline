@@ -10708,3 +10708,115 @@ instances in one session, several of them mine, and the two that mattered most
 were caught by **the person on the other end of the phone**, not by the machine.
 
 Box going down. Everything pushed.
+
+## 2026-09-10 15:03-15:25 CEST — operator boot sweep (`hotline-80`, session `ebea852f`)
+
+**A timer started me.** `watchdog.log` 15:05:59: *"hotline-80 (0521e1ba) is not
+among 1 live sessions; restarting"*. Not him, and nothing in Discord asks for
+anything — his last word is still 00:07:28Z, before last night's shutdown.
+Nothing was sent while the box was down; I checked channel history rather than
+assuming, because messages sent to a dead box are never delivered or queued.
+
+### The scheduled day worked exactly as designed
+
+`last -x`: boot 08:00, session 08:03, down 08:06. Both track reports landed in
+Discord at 06:04Z and 06:06Z (laptop: 18 sources, 0 new; GPU: 14 sources, 15
+new, including a 34,430 RSD RTX 3060 12GB flagged 51% under comparables). The
+box then powered itself off as armed. `wake list --json` now shows the next
+pair at 2026-09-11 06:00Z/06:02Z — **08:00/08:02 his time, `then_do:
+poweroff`, `repeat_seconds: 86400`.** The banner's warning holds: this is
+already correct, do not "fix" it into 10:00 CEST.
+
+Nothing is armed to take the box down today. `/run/systemd/shutdown` absent,
+`systemctl list-jobs` empty, `/sys/class/rtc/rtc0/wakealarm` empty.
+
+### THE FINDING: on a cold boot the phone rings and cannot talk
+
+`/health` at 15:08 reported, honestly and unprompted:
+
+    "degradations": ["answered calls carry no audio: this daemon can ring him but not talk"]
+
+after a night in which three live calls carried audio. Cause, probed rather
+than guessed:
+
+| evidence | value |
+|---|---|
+| `hotline-ios.service` `ExecMainStartTimestamp` | 15:03:**57** |
+| `cvoiced.service` `ExecMainStartTimestamp` | 15:03:**58** |
+| `build_voice()` (`daemon.py:2754`) | health-probes cvoiced **once**, at construction |
+| `can_talk` (`daemon.py:630`) | `speaker is not None and transcriber is not None` |
+
+cvoiced starts one second *after* the daemon that depends on it and then spends
+~30 s loading its model onto the GPU. The single probe fails, `speaker` stays
+`None`, and `can_talk` is False **for the life of the process** — nothing ever
+retries. Last night worked because the daemon was restarted by hand hours after
+cvoiced was already up.
+
+Constructing both halves by hand in the service venv just now: `Voice()` OK
+(`model_loaded: True`), `Ears(large-v3 on cuda/int8_float16, sr)` OK. So neither
+is broken — only the ordering was. Restarted `hotline-ios` → **`degradations:
+[]`**.
+
+**This is a third way the barge-in test sabotages itself silently**, on top of
+the two `hotline-ios/handoff.md` already names (`HOTLINE_IOS_CALL_SESSION=0`,
+and a `git pull` without a restart). It is also the project's signature failure
+inverted: the status field was telling the truth and there was no one reading it.
+
+**Fix, bounded on purpose** — `~/.claude/bin/wait-for-cvoiced` plus a drop-in at
+`~/.config/systemd/user/hotline-ios.service.d/wait-for-cvoiced.conf`. It polls
+cvoiced's `/status` for `model_loaded:true` for up to 90 s, then starts anyway
+and takes the degradation. A hard `After=`/`Requires=` would mean **no doorbell
+at all** whenever TTS is broken, and a silent doorbell is strictly worse than a
+mute one — the same reasoning as the unit's own `Restart=always` comment.
+
+The probe targets `100.72.2.62:8760`, not loopback: `ss -lntp` shows cvoiced
+binds the tailnet address only, and that is the same base URL `Voice()` uses.
+My first version probed 127.0.0.1 and reported "not ready" against a healthy
+cvoiced.
+
+Tested: ready case returns in 0 s; dead-port case exits 0 after its budget
+(never blocks the start); a restart through the gate gives `ExecStartPre
+status=0` and `degradations: []`. **Not tested: the actual cold boot**, with
+tailscale still coming up and cvoiced mid-load. That needs a reboot, and his
+interactive session is live on this box, so it is his call — or it verifies
+itself for free at tomorrow's 08:00 wake.
+
+### A correction to the banner I inherited
+
+The 00:15Z banner says `HOTLINE_IOS_RECORD_DIR` "was set in the user manager and
+**dies with this shutdown**; the recorder is off again on next boot unless
+deliberately re-set." **That is false.** It is a line in
+`hotline-ios/.env`, which `daemon.py` loads at startup — `systemctl --user
+show-environment` has no `HOTLINE_*` at all and the recorder is nonetheless
+**ON right now**. The next call writes his voice, his line and a transcript to
+`hotline-ios/recordings/`. `.gitignore` covers it (`3b258f3`), so it cannot be
+published by accident, but it is on and he did not re-arm it.
+
+### Roster
+
+Two voices on the box: me, and `bodas-92` — his own interactive session, a
+`ccd-cli` resume of `6fb5ce20` started 15:05, which is what a person at a
+keyboard looks like. `arch` (his laptop, 100.103.46.118) put a burst of
+`POST /speak` through cvoiced between 15:09 and 15:10:26. `media-wire` went down
+with the box last night as expected; every other session in `ListAgents` is
+offline. I have not spoken into his channel about anything he is already doing.
+
+### Two small things, noted not acted on
+
+- **The RTC backstop is defeated at every boot.** `rtc-wake-backstop` arms the
+  alarm at 15:03:45 for 2026-09-11 05:58 UTC; the `wake` agent clears it at
+  15:03:47 as *"a leftover rtc alarm set for 1789106280"* — which is that exact
+  alarm, two seconds old. Harmless in practice, because the unit re-arms at
+  `ExecStop` and the wake agent is gone by then, so the backstop exists while
+  the box is off, which is when it is needed. But `wake`'s leftover-detection
+  treats any pre-existing alarm as stale, and that belongs in the `wake` repo.
+- **The watchdog spawns an operator into the poweroff window.** 08:03:14 today
+  it started a session; the box went down at 08:06. That happens every morning:
+  an agent boots, starts reading the handoff, and is killed three minutes in.
+
+### State
+
+`hotline` and `hotline-ios` both clean and equal to `origin/main` (`343d764`,
+`c22cfb4`). Untracked: `.claude/worktrees/agent-ab23888fda6d7ba7b` — the
+`split-packages` branch at `38bf807`, unfinished and deliberately not merged.
+Open and his: the 30-second barge-in call. I have not rung him.
