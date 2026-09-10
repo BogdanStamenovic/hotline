@@ -10653,3 +10653,58 @@ Told him plainly, including that it will take `media-wire` down with it —
 everything is pushed so nothing is lost, but ~250k of context and every decision
 behind tonight's commits goes with it, and the barge-in test would restart cold.
 Gave him three options and am touching none of them without his word.
+
+## 2026-09-10 00:15 — SHUTDOWN at his instruction: what we did, what comes next
+
+*"Then handofs then shutdown. log the findings what we did and what comes next"*
+(verified, `1547398066103910421`, 00:07:28Z).
+
+### The 8am request, which was already true
+
+He asked to move the daily run to 8am, make it recurring, and make it shut down
+after. **All three were already the case and I changed nothing.** `wake list`
+prints UTC; he is CEST (+2), so `06:00 UTC = 08:00 CEST` — the slot is named
+`--slot 08:00` for exactly that reason, and its last real run was 08:03 CEST.
+`repeat_seconds = 86400` and `then_do = 'poweroff'` were already set.
+
+**Executing that instruction literally would have moved his research to 10:00 his
+time**, and he would have found it two hours late with no visible cause. Told him
+instead of doing it. This is the second time today his instruction rested on a
+reading of a display rather than the system — the first was "yesterday's work is
+gone" — and both times the useful move was to check and report, not to comply and
+not to argue.
+
+### What we did
+
+| | |
+|---|---|
+| **voice calls work** | three live calls, longest 110 s, `auth_failures 0` and `late_frames 0` on all of them. *"I heard all of it"* |
+| five bugs | `on_answer` never passed; `SIP_MEDIA_HOST` unset; `PRIMING_SECONDS` deleted from under `talk.py`; the `place()` cursor race; and the ACK with no Route set |
+| the log lying | `"he hung up"` when it was our own missing ACK. Now `"the far end ended the call"`, and self-diagnosing via re-ACK + retransmission counting |
+| recording | built from nothing, mu-law captured at the pump before any decode |
+| ASR measured | `large-v3` 36.1% best, `sam8000-turbo-serbian` 41.0%, on his own line |
+| barge-in | two coupled bugs found — enrolment measuring his pauses (factor of 78) and a 25-frame run against a 16-frame maximum. Rebuilt |
+| a public-repo leak | `recordings/` unignored on a PUBLIC repo, holding his voice. Closed |
+
+### What comes next
+
+1. **Barge-in on a real call. 30 seconds, and it is the only open item.** Built,
+   tested, deployed, never once on a phone. `hotline-ios/handoff.md` names the
+   two ways that test silently sabotages itself, both of which happened tonight.
+2. **36% WER is the ceiling.** Nothing built on top of this should assume it
+   hears him correctly.
+3. The three-and-a-half repos of local-only state in the banner, `llama-turbo3`
+   in particular — two commits of real CUDA work on an unpushed fork.
+
+### The pattern of the day, stated once
+
+Every significant thing found today was a **field that described something
+without being it**: a green suite over an engine nothing constructed; a
+`grep` of two directories reported as "nowhere"; `/run/systemd/shutdown` existing
+empty on every boot; `git show` from the wrong cwd returning nothing with stderr
+suppressed; `then_do` invisible in the summary listing; `06:00` meaning 08:00;
+and a log line asserting he hung up on a call our own ACK had killed. Eleven
+instances in one session, several of them mine, and the two that mattered most
+were caught by **the person on the other end of the phone**, not by the machine.
+
+Box going down. Everything pushed.

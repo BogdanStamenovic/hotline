@@ -1,5 +1,103 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-10 00:15 UTC — VOICE CALLS WORK. Shut down at his instruction
+>
+> **He ended the day** (verified, `1547398066103910421`, 00:07:28Z): *"Then
+> handofs then shutdown. log the findings what we did and what comes next."*
+> Box powered off deliberately. `media-wire` went down with it — everything
+> pushed, `hotline-ios` at `c22cfb4`, 366 tests.
+>
+> **Coming back:** `ssh pigion ~/bin/wake-archserver`, the RTC alarm written at
+> `ExecStop`, or the daily 08:00 CEST wake below.
+>
+> ### ⚠ THE 08:00 SCHEDULE IS ALREADY CORRECT — do not "fix" it
+>
+> He asked to move the daily run from 6am to 8am, make it recurring, and make it
+> shut down after. **All three were already true and I changed nothing.**
+> `wake list` prints **UTC**; he is on **CEST (+2)**:
+>
+>     06:00 UTC = 08:00 CEST      the slot is named --slot 08:00 for that reason
+>     last actual run: 08:03 CEST
+>     repeat_seconds = 86400      already daily
+>     then_do = 'poweroff'        already powers off after
+>
+> Setting it to 08:00 UTC as literally asked would move his research to **10:00
+> his time**. If a future session is asked this again, this is the answer.
+>
+> **`then_do` only appears under `wake list --json`.** The plain listing hides it,
+> and I published the wrong reading into PROGRESS.md this morning off the summary
+> view before catching it. Three other representations disagree with each other —
+> `track`'s `--then-poweroff` flag is absent, the assignments' `poweroff_after` is
+> `True`, and `slots.py:195` folds them at schedule time — and **only `wake`'s
+> stored record decides.**
+>
+> ### ⏳ WHAT COMES NEXT — one item, 30 seconds of his time
+>
+> **Barge-in has never run on a real call.** Built, swept, unit-tested, deployed.
+> Never once on a phone, and tonight is the whole lesson about what that is worth.
+> The test: ring him, talk over it mid-reply. No script, no scoring.
+>
+> `media-wire`'s own handoff in `~/data/hotline-ios/handoff.md` names **two ways
+> that test gets silently sabotaged, both of which already happened tonight**:
+> `HOTLINE_IOS_CALL_SESSION=0` leaves no reply to interrupt, and the daemon loads
+> code once — a `git pull` without a restart tests the old build. Read it first.
+>
+> ### THE HEADLINE: he heard it, talked to it, and it answered
+>
+> *"I heard all of it"* — verified, `1547372804142399518`, 22:27:05Z. Three live
+> calls, the longest 110 s. `auth_failures 0`, `late_frames 0` on every one.
+>
+> Five bugs stood between him and audio this morning. All fixed:
+>
+> | # | cause | found by |
+> |---|---|---|
+> | 1 | the daemon never passed `SipTransport.on_answer` | the 15:44:57Z call that rang and was silent |
+> | 2 | `SIP_MEDIA_HOST` unset → SDP offered an unroutable `192.168.x` | the variable's own comment |
+> | 3 | `talk.py:219` called `VoiceCall.PRIMING_SECONDS`, deleted by `1ad8e2b` | `media-wire`, correcting the operator's brief |
+> | 4 | `place()` read the cursor *after* `ring()` — a hang of 900 s | `media-wire`, unprompted |
+> | 5 | **our ACK went to his address-of-record with no Route set**, so his phone retransmitted the 200 for 30 s and gave up with a BYE | he said *"it hanged up on me"* while the log said *"he hung up"* |
+>
+> **#5 is the one to carry forward.** The log asserted the opposite of his
+> experience and would have told the next reader the no-hangup rule was working.
+> Fixed to RFC 3261 §13.2.2.4/§12.1.2 and now self-diagnosing — a retransmitted
+> 200 is counted, logged loud and re-ACKed. Last two calls: zero.
+>
+> ### Serbian ASR settled with numbers — read the ceiling, not the ranking
+>
+> `hotline-ios/docs/MEASURED-telephony-voice.md`. Best: **`large-v3` + Serbian
+> prompt at 36.1%** (83-word set; 38.0% across the combined 166 words),
+> `sam8000-turbo-serbian` at 41.0%. **The old ranking survived contact with his
+> voice** — but the top two are about four word-errors apart, which is not
+> significant alone; the direction holding across six runs is what makes it
+> actionable.
+>
+> **36% is the ceiling and it is bad.** `Stamenović` → `Samenovic`; his dž/đ line
+> came back `Đak i ljubav`. Do not build anything that assumes it hears him.
+> The scorer has a **transliteration** column because two working models answer in
+> Cyrillic and scored 96-101% against a Latin reference — nearly discarded for
+> being right in the other alphabet.
+>
+> ### ⚠ His voice is on this disk; `hotline-ios` is PUBLIC
+>
+> `recordings/` was untracked and **not ignored** — one `git add .` publishes his
+> voice, his name and a transcript. Fixed (`3b258f3`). `HOTLINE_IOS_RECORD_DIR`
+> was set in the user manager and **dies with this shutdown**; the recorder is
+> off again on next boot unless deliberately re-set.
+>
+> ### ⚠ LOCAL-ONLY STATE — swept at shutdown, none of it mine to push
+>
+> | repo | state | why left |
+> |---|---|---|
+> | `uxonews` | **7 commits ahead**, plus `src/middleware.ts` dirty | the commits are map/globe work; the dirty file is a dev **auth bypass** that belongs uncommitted. Do not tidy it in |
+> | `llama-turbo3` | **2 commits ahead** of the `turbo3-cuda` fork | real work — a CUDA 13 build fix and the measured 262k context on 8 GB. Unpushed and easy to lose |
+> | `dds-site` | 3 commits ahead | remote is `dds@uxonews.com:/opt/dds/repo.git`, a **deploy target**. Pushing ships the live site. His call |
+> | `track` | untracked `uv.lock` | trivial, noted for completeness |
+>
+> A poweroff does not endanger commits. This is about the next person knowing
+> they exist.
+>
+> ### SUPERSEDED BELOW
+>
 > ## STATUS AS OF 2026-09-10 00:10 UTC — VOICE CALLS WORK. Three live calls, and one thing left
 >
 > ### The headline: he heard it, talked to it, and it answered
