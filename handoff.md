@@ -1,5 +1,89 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-10 00:10 UTC — VOICE CALLS WORK. Three live calls, and one thing left
+>
+> ### The headline: he heard it, talked to it, and it answered
+>
+> *"I heard all of it"* — verified, `1547372804142399518`, 2026-09-09 22:27:05Z.
+> Three real calls tonight, the longest 87 seconds over ten scripted lines.
+> `auth_failures 0` and `late_frames 0` on every one: SRTP held and the 20 ms
+> clock never starved.
+>
+> ### ⏳ THE ONE THING LEFT, and it needs 30 seconds of him
+>
+> **Barge-in has never been on a phone.** It was rebuilt tonight and the tests
+> are green, and tonight is precisely the lesson about what that is worth. The
+> test is one sentence: **ring him, and talk over it mid-reply.** No script, no
+> scoring. He has been told and it is waiting for whenever he wants it.
+>
+> Two coupled bugs were behind it, and either fix alone would have made things
+> worse:
+> - `enrol_voice` took everything above the 60th percentile as his voice. Across
+>   eleven turns that are 39-86% silence each, `his_level` came back **0.0010 to
+>   0.0776 — a factor of 78**, tracking the silence fraction rather than his
+>   volume. On one call it put the interrupt bar *below the line's own ambient*.
+>   Now p85: 0.0647-0.1497, factor 2.3.
+> - Barge-in needed **25 consecutive** loud frames; his longest unbroken run is
+>   **16**. Against a correct level the old rule fires on **0 of 11** of his
+>   turns. Now six of any ten, **same bar** — the bar was never the problem.
+>
+> ### What was broken this morning and is now fixed
+>
+> | # | cause | how it was found |
+> |---|---|---|
+> | 1 | the daemon never passed `SipTransport.on_answer` | the call that rang him at 15:44:57Z and was silent |
+> | 2 | `SIP_MEDIA_HOST` unset → SDP offered an unroutable `192.168.x` | the variable's own comment predicted the symptom |
+> | 3 | `talk.py:219` called `VoiceCall.PRIMING_SECONDS`, deleted by `1ad8e2b` without updating its only caller | `media-wire`, correcting the operator's brief |
+> | 4 | `place()` read the cursor *after* `ring()` — an answer during the ring would hang `hotline-call` for 900 s | `media-wire`, unprompted |
+> | 5 | **the ACK went to his address-of-record with no Route set.** `ring/sip.py` read neither the 200 OK's `Contact` nor its `Record-Route`, so his phone retransmitted the 200 for half a minute and gave up with a BYE | he said *"it hanged up on me"* while the log said *"he hung up"* |
+>
+> **#5 is the one to remember.** He experienced being hung up on; the log asserted
+> the opposite, and the log would have told the next person the no-hangup rule was
+> working. Fixed to RFC 3261 §13.2.2.4 and §12.1.2, and now self-diagnosing: a
+> retransmitted 200 is counted, logged loud and re-ACKed, so the next call reports
+> `unacked: 0` instead of costing a call to find out. Last two calls: zero.
+>
+> ### Serbian ASR is settled, with numbers, on his own line
+>
+> `docs/MEASURED-telephony-voice.md` in `hotline-ios`. 83 reference words from one
+> 87-second call, 8 kHz G.711 through linphone's relay.
+>
+> | model | VRAM | median/turn | best WER |
+> |---|---|---|---|
+> | **`large-v3` + Serbian prompt** | 2005 MiB | 0.38 s | **36.1%** |
+> | `sam8000-turbo-serbian` beam 5 | 1173 MiB | 0.23 s | 41.0% |
+> | `medium` | 1109 MiB | 0.26 s | 51.8% |
+>
+> **The handoff's old ranking survived contact with his voice** — `large-v3` still
+> wins, by about 4-5 points, which on 83 words is four words. Not significant
+> alone; worth acting on because the direction held across six runs.
+>
+> **Read the ceiling, not the ranking: 36% is bad.** The best model available gets
+> a third of his words wrong on a phone. `Stamenović` → `Samenovic`; his dž/đ line
+> came back `Đak i ljubav`. Do not build anything that assumes it hears him.
+>
+> The scorer has a **transliteration** column because two working models answer in
+> Cyrillic and scored 96-101% against a Latin reference — they were nearly thrown
+> away for being right in the other alphabet.
+>
+> ### ⚠ His voice is on this disk and `hotline-ios` is a PUBLIC repo
+>
+> `recordings/` was untracked but **not ignored** — one `git add .` would have
+> published 59 seconds of his voice, his name and a transcript. Added to
+> `.gitignore` (`3b258f3`). The recorder is opt-in via `HOTLINE_IOS_RECORD_DIR`
+> and that variable is currently **set** in the user manager, pointing at
+> `recordings/20260910-asr-benchmark`. `systemctl --user unset-environment
+> HOTLINE_IOS_RECORD_DIR` turns it off; decide deliberately rather than leaving it.
+>
+> ### `media-wire` is alive and holds all of it
+>
+> tmux `hotline-media`, Opus, ~250k context. Every decision behind fifteen-odd
+> commits lives in it. **Retask it rather than starting cold**, and note it caught
+> a real error in the operator's own brief — an agent that pushes back is the one
+> worth keeping.
+>
+> ### SUPERSEDED BELOW — the 17:35Z banner
+>
 > ## STATUS AS OF 2026-09-09 17:35 UTC — box UP, the wiring LANDED, one call away from proof
 >
 > ### READ THIS FIRST: exactly one thing is outstanding and it is his
