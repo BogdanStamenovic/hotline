@@ -1,5 +1,102 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-10 13:25 UTC — box UP, and the cold-boot doorbell was MUTE
+>
+> **Nothing needs him and nothing is armed.** A timer started this session
+> (`watchdog.log` 15:05:59 CEST), not a person. His last word is still
+> **00:07:28Z**, before last night's shutdown — nothing was sent while the box
+> was down, checked against channel history rather than assumed.
+>
+> ### ⚠ THE FINDING: on a cold boot the phone rings and cannot talk
+>
+> `/health` said so itself, unprompted, after a night of three working calls:
+>
+>     "degradations": ["answered calls carry no audio: this daemon can ring him but not talk"]
+>
+> `hotline-ios.service` starts at 15:03:**57**, `cvoiced.service` at 15:03:**58**
+> — one second later, and cvoiced then spends ~30 s loading its model.
+> `build_voice()` (`daemon.py:2754`) health-probes cvoiced **once**, at
+> construction. The probe fails, `speaker` stays `None`, `can_talk`
+> (`daemon.py:630`) is False **for the life of the process**, and nothing
+> retries. Last night worked only because the daemon was restarted by hand hours
+> after cvoiced was up.
+>
+> **This is a third way the barge-in test sabotages itself silently**, on top of
+> the two `hotline-ios/handoff.md` names (`HOTLINE_IOS_CALL_SESSION=0`, and a
+> `git pull` without a restart). Check `/health` for an empty `degradations`
+> before any call that is supposed to carry audio.
+>
+> **Fixed and pushed** (`hotline-ios` `58ce25a`): `systemd/wait-for-cvoiced` plus
+> a drop-in, polling cvoiced's `/status` for `model_loaded:true`. **Bounded at
+> 90 s and always exits 0** — a hard dependency would cost the doorbell entirely
+> when TTS is broken, and a silent doorbell is worse than a mute one. It probes
+> `100.72.2.62:8760`, not loopback: cvoiced binds the tailnet address only.
+> Running state restarted → **`degradations: []`**.
+>
+> **Not verified: the actual cold boot.** Tailscale still coming up, cvoiced
+> mid-load. That needs a reboot and his session is live on this box, so it is his
+> call — or it proves itself at tomorrow's 08:00 wake. Do not report this as
+> proven until a boot has shown `degradations: []` without a hand restart.
+>
+> ### ⚠ CORRECTION to the 00:15Z banner: the recorder did NOT turn itself off
+>
+> That banner says `HOTLINE_IOS_RECORD_DIR` "was set in the user manager and dies
+> with this shutdown; the recorder is off again on next boot." **False.** It is a
+> line in `hotline-ios/.env`, which `daemon.py` loads at startup.
+> `systemctl --user show-environment` has no `HOTLINE_*` at all and the recorder
+> is **ON right now**. The next call writes his voice, his line and a transcript
+> to `hotline-ios/recordings/`. `.gitignore` covers it (`3b258f3`) so it cannot
+> be published by accident — but it is on, and he did not re-arm it.
+>
+> ### The scheduled day worked exactly as designed
+>
+> Boot 08:00, session 08:03, down 08:06 (`last -x`). Both track reports landed in
+> Discord at 06:04Z and 06:06Z. Next pair: **2026-09-11 06:00Z/06:02Z = 08:00/08:02
+> his time**, `then_do: poweroff`, `repeat_seconds: 86400`. **Already correct —
+> do not "fix" it into 10:00 CEST.** Nothing is armed to take the box down today:
+> no `/run/systemd/shutdown`, no systemd jobs, `wakealarm` empty.
+>
+> ### Roster
+>
+> Two voices on the box: this operator, and `bodas-92` — **his own interactive
+> session**, a `ccd-cli` resume started 15:05, which is what a person at a
+> keyboard looks like. His laptop `arch` put a burst of `POST /speak` through
+> cvoiced at 15:09-15:10. `media-wire` died with the box last night as expected;
+> everything else in `ListAgents` is offline. Do not talk over him.
+>
+> ### ⏳ STILL THE ONE OPEN ITEM, and it is his
+>
+> **Barge-in has never run on a real call.** Ring him, talk over it mid-reply. No
+> script, no scoring. He has not been rung and must not be rung unprompted.
+>
+> ### Two small things, noted not acted on
+>
+> - **The RTC backstop is cleared at every boot.** `rtc-wake-backstop` arms it at
+>   15:03:45 for 05:58Z tomorrow; the `wake` agent clears it at 15:03:47 as "a
+>   leftover rtc alarm" — that exact alarm, two seconds old. Harmless, because
+>   the unit re-arms at `ExecStop` and the wake agent is gone by then, so the
+>   backstop exists while the box is off, which is when it is needed. But
+>   `wake`'s leftover-detection treats any pre-existing alarm as stale; that
+>   belongs in the `wake` repo.
+> - **The watchdog spawns an operator into the poweroff window** — 08:03:14 today,
+>   box down 08:06. Every morning an agent boots, starts reading this file, and is
+>   killed three minutes in.
+>
+> ### ⚠ `systemd/hotline-iosd.service` in the repo is NOT the unit that runs
+>
+> The live one is `~/.config/systemd/user/hotline-ios.service` — different name,
+> `sip` not `telegram,sip`, and **no `KillMode=process`** where the tracked file
+> calls it "not optional". Two restarts today took nothing down with them. See
+> `hotline-ios/systemd/README-units.md`; nobody has reconciled the two.
+>
+> ### Still local-only, unchanged from last night
+>
+> `uxonews` 7 ahead + a deliberate dirty middleware auth bypass; `llama-turbo3`
+> 2 ahead on `turbo3-cuda`; `dds-site` 3 ahead of a **deploy** remote. Both
+> hotline repos are clean at `origin/main` (`a6a9691`, `58ce25a`).
+>
+> ### SUPERSEDED BELOW
+
 > ## STATUS AS OF 2026-09-10 00:15 UTC — VOICE CALLS WORK. Shut down at his instruction
 >
 > **He ended the day** (verified, `1547398066103910421`, 00:07:28Z): *"Then
