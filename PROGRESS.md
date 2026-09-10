@@ -10820,3 +10820,56 @@ offline. I have not spoken into his channel about anything he is already doing.
 `c22cfb4`). Untracked: `.claude/worktrees/agent-ab23888fda6d7ba7b` — the
 `split-packages` branch at `38bf807`, unfinished and deliberately not merged.
 Open and his: the 30-second barge-in call. I have not rung him.
+
+## 2026-09-10 17:44-17:55 UTC — he called for it, and asked about speculative input
+
+**The call.** He wrote *"So call me to tell me all these things"* (verified,
+`1547664131190951939`, 17:44:43Z). Rang with `--no-fallback`, because he said
+call and the fallback would have paged him with the thing he ruled out.
+
+Pre-flighted the voice path **at the moment of calling**, not from the sweep
+20 minutes earlier: `degradations: []`, cvoiced `model_loaded: true`,
+`HOTLINE_IOS_CALL_SESSION` unset (so on), his phone answering pings on the
+tailnet at 76-172 ms.
+
+**Answered after 47 s and audio worked both ways** — the first live call since
+the cvoiced gate went in. `frames_sent 1840`, `frames_received 1804`,
+`auth_failures 0`, `late_frames 0`, 36.8 s of speech out, one turn of his in,
+`ended: "he said goodbye"`. Not a cold-boot test, but the fix has now carried a
+real call.
+
+His turn, through the 36% WER path and therefore **not** a quotation:
+*"Ok, kao s kontusom da je upaljen. Tako da, samo reci, foton 80 da sve radi
+perfektno. I to je to."* — "foton 80" is `hotline-80`. The readable content is
+that he is content and that the recorder being on is fine.
+
+I tried a second opinion on that clip with beam 5 and a Serbian prompt and it
+died on `libcublas.so.12 is not found` — an ad-hoc process outside the service's
+environment. Dropped it rather than chase it, and then found in
+`docs/MEASURED-telephony-voice.md` that it would have proved nothing anyway:
+beam 5 buys nothing and the prompt is a one-word wash. The live `beam_size=1`,
+no-prompt config is the measured winner, not a shortcut.
+
+### "Wait so is speculative input already coded in"
+
+Verified (`1547664674378489866`, 17:46:52Z). **Half.**
+
+- **Live:** `conversation.py:listen()` submits each phrase to a worker as he
+  finishes it, so a partial transcript really does exist mid-turn.
+- **Not live:** `speculate.py` is imported by **nothing** in `src/` — the only
+  file that names it is its own test. `grep -rnoE` over every filler name shows
+  all ten intent-keyed `hold_*` phrases appear *only* inside `speculate.py`,
+  while `conversation.py:417` plays a hardcoded `hold_nejasno_2` — the neutral
+  intent — on every turn without exception.
+- Everything else it needs is already present: the ten phrases pre-rendered in
+  `server/fillers/`, `bge-m3` pulled in ollama, 12/12 measured on unseen Serbian.
+  `ack_aha`, `ack_dobro`, `wait_sekund`, `wait_vidim` and `hold_nejasno_1` are
+  referenced nowhere at all.
+
+**The point I made sure he had:** wiring it does **not** make replies faster.
+The latency win was already banked by playing a filler from disk the instant he
+stops. Speculation buys the phrase *fitting* what he said — aptness, not speed.
+Assuming otherwise would make it look like a regression when it lands.
+
+Not wiring it off my own back: it changes what he hears on a live call. Offered,
+and said it goes to an Opus builder rather than to the operator.
