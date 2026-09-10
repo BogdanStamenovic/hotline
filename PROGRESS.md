@@ -10928,3 +10928,122 @@ both resident, and pre-synthesis means takes rendered for nothing.
 Offered to hand it to an Opus builder with that brief. Proposed metric, to be
 built in from the start rather than researched later: **the fraction of turns
 with an answer ready the instant he stops talking**, measured on real calls.
+
+## 2026-09-10 17:44 – 2026-09-11 00:10 UTC — the speculative-input night
+
+He rang for a call, then designed speculative input properly, then had me build
+toward it. Four verified instructions, one phone call, one finetune that failed
+usefully.
+
+### The call he asked for
+
+*"So call me to tell me all these things."* Rang with `--no-fallback` because he
+said call, and the fallback would have paged him with the thing he ruled out.
+Pre-flighted at the moment of calling rather than trusting the morning's sweep.
+**Answered after 47 s, audio both ways** — the first live call since the cvoiced
+gate: `frames_sent 1840`, `frames_received 1804`, `auth_failures 0`,
+`late_frames 0`, `ended: "he said goodbye"`.
+
+### He corrected my reading of speculative input, and he was right
+
+What `speculate.py` does is classify a partial into four buckets to pick a nicer
+*noise*. What he means is **speculative execution**: predict how the sentence
+finishes, run the real turn on that prediction, squash and relaunch on
+contradiction. The built module attacks neither the agent leg nor the TTS leg.
+
+Also corrected his reading of the call: the "immediate answer" he got was
+`bye.npy` off the disk on a branch (`conversation.py:290`) that **never calls the
+agent** — and because the farewell check sits above the first-turn branch, he has
+still never experienced the agent leg at all.
+
+### Read-only forks (`b5a640d`), his top priority
+
+`--tools=Read,Grep,Glob --restricted --permission-prompts none`. An allow-list
+so it cannot be wrong by omission; settings ignored so a broad rule cannot leak
+in; prompts denied rather than waited on, because a prompt nobody can see is a
+silent phone line.
+
+**Two bugs found only by running it rather than trusting the flags:**
+- `subprocess` inherited stdin and `claude -p` **reads stdin when there is any**,
+  so a harness heredoc became "his sentence" and the agent answered in English
+  about source code mid-call.
+- **`--tools` is variadic.** As two argv entries it swallowed the prompt and
+  claude exited with "Input must be provided" — a **silently mute call**, not a
+  crash anyone notices.
+
+### Translation: Whisper does it itself (milestone 2)
+
+`task="translate"` on the resident model. **44.8 s to translate 9 clips against
+47.2 s to transcribe them** — no second model, nothing to load or unload. Argued
+against his load/unload cycle with the numbers: `large-v3` costs 4.78 s to load
+and the whole prize is 3-5 s a turn.
+
+Quality is ambiguous and both halves are recorded: **36.1% Serbian control vs
+52.5% English** against a hand-written reference — but that set is phonetic
+tongue-twisters and single-reference WER punishes paraphrase. On his one real
+sentence it inverted: Serbian carried `fotovoltačnom mesaju` forward, English
+produced *"everything is working perfectly and that's it"*. n=1.
+
+### On-demand loading, and a live latency bug
+
+Both models already load lazily; **neither unloads**. Measured: whisper
+**4.78 s, +1,923 MiB**; constructing `Ears` costs nothing. Because `Ears.load()`
+is called from `transcribe()`, **that 4.78 s is currently paid in the middle of
+his first sentence** on the first call after any restart. The fix is his idea
+plus one detail: **load on RING, not on ANSWER** — `CallAgent.start()` already
+uses exactly that pattern.
+
+### The corpus (`~/data/si-corpus`, outside both repos on purpose)
+
+407 of his messages, 6,016 words, median 5 words, **239 English-only and zero
+Serbian-only** — he types to agents in English, which is why the predictor can
+work in English at all. His spoken corpus is **7 voice messages of which four are
+the word "doctor"**; total real spoken material in existence is **4 utterances**,
+held out. 182 synthetic spoken-register utterances written to cover the gap.
+1,086 pairs — but **362 distinct utterances**, which is the honest number.
+
+Dropped 9 source messages carrying an email, a credential, an IP or a long
+number: a finetuned model that memorised a third party's address **can recite it
+out loud on a phone call**.
+
+### The finetune failed, and the failure is the result (`73026b6`)
+
+Qwen2.5-1.5B chosen over the 3B specifically so it fits beside cvoice and **never
+took his phone offline**. 316 s, eval loss 1.153 → 0.797 → 0.737.
+
+| model | set | F1 | first-3 | latency |
+|---|---|---|---|---|
+| base | val (109) | 0.074 | 0/109 | 152 ms |
+| LoRA | val (109) | **0.300** | 18/109 | 363 ms |
+| base | real spoken (4) | **0.332** | 0/4 | 232 ms |
+| LoRA | real spoken (4) | **0.041** | 0/4 | 442 ms |
+
+**Four times better on its own val set, eight times worse on real speech.** Given
+`"Now all the"` it answered *"agents are dead except hotline-ac..."* — it
+memorised his topics. **Do not deploy the adapter; the base model is better.**
+Latency misses the 200 ms budget too. The blocker is the corpus, not the method.
+
+### What the call Sonnet actually gets, and what it was being told
+
+He asked before implementation. The answer: manners, `server/call_context.txt`,
+and two lines naming caller and reason. **Nothing live.** That file was
+hand-written 2026-09-08, nothing regenerates it, it opens *"WHAT HAPPENED TODAY
+(2026-09-08)"*, and it said **"You can actually run commands on his machine"** —
+false as of that evening's read-only change, so the agent held two contradictory
+instructions. Fixed and dated (`2257434`).
+
+### Then he said I had misunderstood the whole point (`001b4e2`)
+
+His design: an agent rings, **hands the spawned Sonnet everything it needs**, the
+Sonnet talks and relays back. That did not exist — `--context` was appended to
+the app conversation **for him to read** and never reached the model.
+
+`CallTarget` now carries the caller's context; the seed puts it first and labels
+it as outranking the static file. Verified: briefed as a GPU tracker, asked in
+Serbian which card went off sale, it answered with model and price; asked to
+change the search itself it said **"Ne mogu, to radi onaj drugi agent — važi,
+prosleđujem mu."** — the read-only rule and the relay, unprompted. 366 tests.
+
+**Still missing, deliberately not built:** only his **first** answer returns to
+the calling agent. Everything after is written to the conversation and never
+handed back. That is `hotline-call`'s contract and it needs his word.
