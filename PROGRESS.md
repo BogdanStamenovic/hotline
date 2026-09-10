@@ -10613,3 +10613,43 @@ Next, none of it needing him: score `sam8000` and anything else that fits in
 VRAM on this exact audio, then his own follow-up — mix distant chatter in at
 known SNRs and measure where the his-voice filter starts treating a television
 as him.
+
+## 2026-09-10 00:10 — correcting my own correction: the 06:02 poweroff is real
+
+He asked what the 06:00 wake does (`1547397401474502747`). Answering it exposed a
+mistake of mine from this morning. I had written that the handoff's claim of "a
+poweroff behind it at 06:02" was unsupported because `wake list` showed no such
+task. **The handoff was right and I was wrong.**
+
+`wake list` renders a summary. The field is `then_do` and it only appears under
+`--json`:
+
+    track-slot-0800-resume  06:00:00Z  wol    on Pigion      then_do = ''
+    track-slot-0800         06:02:00Z  shell  on archserver  then_do = 'poweroff'
+                                                             timeout_seconds = 1080
+
+So the sequence is: Pigion sends WoL at 06:00 (a no-op while the box is up),
+`track run --slot 08:00` fires at 06:02 — his two standing searches, the laptop
+on run 18 and the local-LLM GPU on run 13 — and **the box powers itself off when
+that finishes or 18 minutes in, whichever comes first.** Both repeat every
+86400 s; this is the daily rhythm, not something armed tonight.
+
+Getting there took three wrong turns worth recording, because they are the same
+turn: `track`'s CLI help says `--then-poweroff` is "ignored unless every
+assignment asks for it", and the scheduled command carries no such flag, which
+reads as "no poweroff". The assignments' own `poweroff_after` is `True`, which
+reads as "poweroff". Neither is the answer — `slots.py:195` folds the
+assignments into one decision at schedule time and hands it to `wake`, and
+**`wake`'s stored record is the only thing that decides what happens.** I also
+grepped the JSON for `"then"` and found nothing, and nearly concluded from that
+absence; the key is `then_do`.
+
+**Four representations of one fact, three of them misleading, and the summary
+view was the most misleading of all.** Tenth-and-eleventh instance of this
+project's signature failure, and the first where *I* published the wrong reading
+into PROGRESS.md and had to take it back.
+
+Told him plainly, including that it will take `media-wire` down with it —
+everything is pushed so nothing is lost, but ~250k of context and every decision
+behind tonight's commits goes with it, and the barge-in test would restart cold.
+Gave him three options and am touching none of them without his word.
