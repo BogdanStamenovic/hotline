@@ -10873,3 +10873,58 @@ Assuming otherwise would make it look like a regression when it lands.
 
 Not wiring it off my own back: it changes what he hears on a live call. Offered,
 and said it goes to an Opus builder rather than to the operator.
+
+### 17:55Z — he corrected my reading of speculative input, and he is right
+
+Verified (`1547666871086489640`). Two things.
+
+**"I got the answer immediately after saying okay hanging up now bye."** It was
+not an answer. `conversation.py:290`: `is_farewell(said)` hands his words to
+whoever waited on the ring, plays the pre-rendered `bye.npy` and **returns** —
+the agent is never called. And because that check sits *above* the "first turn
+gets a real spoken answer" branch, and this was turn 1, **he never experienced
+the agent leg on that call at all.** What felt instant was a WAV file. Answered
+plainly rather than letting him keep a wrong model of the latency.
+
+**His SI is not the built SI, and his is the right one.** What exists classifies
+a partial into four buckets to pick a nicer *noise*. What he means is
+speculative execution: predict how the sentence finishes from the partial plus
+call and build context, launch the real Sonnet turn on that prediction now,
+squash and relaunch on contradiction, and if the prediction held when he stops,
+the answer is already there. That attacks the ~3 s agent leg and, with
+pre-synthesis, the ~2 s TTS leg. The built module attacks neither.
+
+**The docs' own objection does not apply to his design.** `speculate.py` records
+that a speculative *answer* is contradicted 25% of the time and concludes
+answers must never be spoken unvalidated — true, and he never speaks it
+unvalidated. Read as a speculative-execution figure, **25% contradicted is 75%
+of forks landing**, which is a good hit rate. That note conflated "speculate"
+with "speak speculatively" and killed the wrong thing.
+
+**Three things his sketch does not account for**, given him in that order:
+
+1. **There is no reorder buffer.** `callagent.py:76` runs `claude -p --model
+   sonnet` with **no `--allowedTools`**, cwd `/home/bodas/data`, and `MANNERS`
+   tells it to run commands when it needs to. A speculative fork can push,
+   restart a daemon or delete something, and killing it undoes none of it.
+   Speculative runs need a read-only tool policy; only the validated survivor
+   may act. This is the one I would not ship without.
+2. **`--resume` mutates, it does not branch.** "The sonnet fork deleted" assumes
+   a fork primitive that does not exist — a squashed speculation has already
+   appended to the session the next turn resumes from. Cheap fix: a pool of
+   pre-seeded sessions, seeded in parallel during the ring, which is time
+   already being paid (~4.7 s for exactly one today).
+3. **Contradiction is the easy case; incompleteness is the dangerous one.**
+   "Restart the daemon" → "...but not tonight" contradicts nothing and the
+   precomputed answer is wrong. Chunk-by-chunk contradiction checking is the
+   early-squash optimisation; the gate at the end must compare whole transcripts.
+
+Not worried about cost (keyless `claude -p` on Max — wall-clock, not money) or
+about 36% WER making speculation relatively worse (the transcript it is
+validated against is equally noisy; false squashes cost a fork). The real limit
+is the **GPU** if the TTS leg is included: ~3.5 GB free with whisper and cvoice
+both resident, and pre-synthesis means takes rendered for nothing.
+
+Offered to hand it to an Opus builder with that brief. Proposed metric, to be
+built in from the start rather than researched later: **the fraction of turns
+with an answer ready the instant he stops talking**, measured on real calls.
