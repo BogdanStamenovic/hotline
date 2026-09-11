@@ -11296,3 +11296,17 @@ laptop `arch` hits it), so I did not just do it.
 `/unload` now returns torch's own `allocated_mib`/`reserved_mib`, so the next
 person can tell a leak from allocator fragmentation without squinting at
 `nvidia-smi`.
+
+### 09:39Z — he said shutdown (verified `1547904406299615283`)
+
+*"Perfext now shitdown"*. Pre-flight, checked rather than assumed: no other
+agents (`hotline --list` shows only me), nothing on the GPU at all — his ollama
+had unloaded too — no systemd jobs, and all three repos clean at `origin/main`
+(`hotline` `965a483`, `hotline-ios` `9bba26c`, `cvoice` `5e80ee2`).
+
+**Not done, deliberately:** the RTC backstop fix. I proposed
+`Conflicts=shutdown.target` at 08:39Z and he answered "shutdown" instead, so the
+box goes down with no RTC alarm and WoL as the only way back. WoL is armed and
+he used it himself this morning, so that is a redundancy gap and not a trap —
+but it is the second time it has gone down this way and it stays on the open
+list as his.

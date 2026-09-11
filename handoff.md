@@ -1,5 +1,113 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-11 09:45 UTC — on-demand models BUILT and deployed; box SHUT DOWN at his instruction
+>
+> **He said: "Perfext now shitdown"** (verified, `1547904406299615283`, 09:39:29Z).
+> Everything pushed, three repos clean at `origin/main`, nothing mid-training,
+> no other agents. **He was at the keyboard all morning** — he woke the box
+> himself from his iPhone at 10:30 CEST and drove the whole session.
+>
+> ### ⚠ NOTHING IS LOADED AT STARTUP ANY MORE — that is deliberate, do not "fix" it
+>
+> His instruction, twice: *"nothing should be loaded prematurely. Everything
+> should be loaded on demand. If an agent does hotline call then everything
+> needed gets loaded and then the call made. After the call is done then
+> everything unloaded."*
+>
+> `hotline-ios` `9bba26c` (372 tests), `cvoice` `5e80ee2`. **If you see
+> hotline-ios start with 0 MiB of VRAM and no `Ears ... ready` line, that is
+> correct.** The old startup warm is gone.
+>
+> **The seam was already there:** `on_answer` runs *inside* `doorbell.ring()`
+> (`ring/sip.py`, `_invite_and_watch` calls it synchronously), so `_voice_leg`'s
+> `with` block spans ring-through-hangup and its `finally` is reached however
+> the call ended. Warm on entry, cool in the finally. **Refcounted, not a bool**
+> — two agents can ring in the same minute.
+>
+> New: `Ears.unload()`, `Voice.load()/unload()`, and on cvoice `POST /load` +
+> `POST /unload`. That model is in another process and there had been **no way
+> to ask it to let go at all**.
+>
+> | | VRAM |
+> |---|---|
+> | idle, before any call | **0 MiB** (was 1,918 from boot) |
+> | after warm (9.6 s, both halves in parallel) | 3,978 MiB |
+> | after the call | **1,026 MiB** |
+>
+> Speaking warm **2.64 s** vs **9.25 s** cold. **The 09-10 banner's "~30 s" for
+> the cvoice load was wrong — it is ~7.6 s.**
+>
+> ### ⚠ 1,026 MiB DOES NOT COME BACK, and it is not our bug
+>
+> Whisper's half is clean: 1,918 → 94 MiB, and the 94 is just the CUDA context
+> (measured bare at 108). **cvoice returns only 1,464 of its 2,396.**
+>
+> Chased properly before giving up: a bare load→unload with no generation
+> returns to **0.0 MiB allocated**, so the unload is correct. After a real
+> generation, **768 MiB of `omnivoice`'s `HiggsAudioV2TokenizerModel` stays
+> referenced inside the vendor package** — no OmniVoice instance survives, no
+> transformers Pipeline survives, five `gc.collect()` passes free nothing, and
+> the surviving tensors fragment the allocator so `empty_cache()` cannot hand
+> the segments back either.
+>
+> **The clean fix is his call and he has not given it:** socket-activate cvoiced
+> so it starts on first connection and exits when idle — then the context goes
+> too and it is genuinely zero. It changes how every consumer reaches cvoiced
+> (his laptop `arch` hits it), so do not just do it.
+>
+> `/unload` returns torch's own `allocated_mib`/`reserved_mib`, so next time this
+> is diagnosable from the response instead of by squinting at `nvidia-smi`.
+>
+> **One deviation he was told about and did not overrule:** he said load *then*
+> ring; it warms *beside* the ring. Literal would delay the INVITE by 9.6 s in a
+> project whose speculative-input work exists to save 3-5, and the ring already
+> absorbs a 4.7 s CallAgent seed for the same reason.
+>
+> ### ⚠ THE RTC BACKSTOP IS NOT ARMED. WoL IS THE ONLY WAY BACK.
+>
+> Corrected from the 09-10 banner, which called this harmless: the unit's
+> `ExecStop` re-arm **has never run**. `DefaultDependencies=no` with
+> `Conflicts=reboot.target` and nothing else means systemd never stops it on a
+> **poweroff**, so ExecStop never fires — confirmed by the absence of any
+> ExecStop line in `journalctl -b -1` and `-b -2`. The `wake` agent also clears
+> the boot-time alarm three seconds after it is set.
+>
+> **Proposed fix — `Conflicts=shutdown.target` — was put to him at 08:39Z and he
+> did not answer it before saying shutdown. So it is still unfixed and still
+> his.** Do not report the backstop as working.
+>
+> **Coming back:** `ssh pigion ~/bin/wake-archserver`. WoL is armed
+> (`Wake-on: g` on `enp4s0`) and proven — he used it himself this morning.
+>
+> ### Also fixed today: the 08:00 doorbell was SILENT for seven minutes
+>
+> Yesterday's cold-boot fix shipped untested and polled cvoiced for
+> `model_loaded:true`. cvoiced loads **lazily**, so that never came true;
+> `ExecStartPre` burned its full 90 s against a 90 s `TimeoutStartSec` and the
+> start job was killed before `ExecStart` ran — four failed starts, 08:00:27 to
+> 08:07:27, **no doorbell at all**. A fix meant to stop a *mute* call produced a
+> *silent* one. The 08:00 session corrected and deployed it and the 08:06
+> poweroff killed it before it could commit; rescued from the working tree and
+> pushed as `dcfa42b`. **His 10:30 cold boot verified it**: `reachable after 1s`,
+> `degradations: []`.
+>
+> ### His shopping list, recovered
+>
+> Never lost: `pigion.service` on Pigion, `/var/lib/pigion/pigion.db`, todo
+> **id 17 "Kelco Shopping"**, still `pending`, due 12 Aug. 989.90 RSD budgeted
+> (re-added; it matches) plus TP4056 modules and FR4 plates outside it. Three
+> independent copies agree. **But that db has lost rows** — todos reached id 21
+> with 5 surviving, messages 164 with 24 left, `freelist_count` 0 on a 10-page
+> file, so ids 1-16 are **genuinely unrecoverable**. He was told.
+>
+> ### Still open and still his
+>
+> **Barge-in has never run on a real call.** The RTC backstop fix. Socket
+> activation for cvoiced. And the 03:00Z recommendation stands: stop training,
+> build the no-model prototype, log real call transcripts.
+>
+> ### SUPERSEDED BELOW
+
 > ## STATUS AS OF 2026-09-11 08:40 UTC — HE woke the box, not a timer; one fix rescued from the poweroff, one safety net found dead
 >
 > **Nothing is outstanding from him.** His last word anywhere is still
