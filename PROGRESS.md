@@ -11047,3 +11047,76 @@ prosleđujem mu."** — the read-only rule and the relay, unprompted. 366 tests.
 **Still missing, deliberately not built:** only his **first** answer returns to
 the calling agent. Everything after is written to the conversation and never
 handed back. That is `hotline-call`'s contract and it needs his word.
+
+## 2026-09-11 00:00-02:55 UTC — his architecture, three corpora, and a correction
+
+He diagnosed the v1 failure himself and was right: *"you tried to make a 3.5b
+param model guess intent from thin air."* Then corrected the first fix too:
+*"you're asking a 3.5b model to do horizontal thinking [...] the point is for the
+model to get tags also [...] the least possible entropy."* Then: *"as well as the
+previous question/answer from the agent from the call."*
+
+### The three-way ablation
+
+Same base, same LoRA recipe, same scoring. Only the conditioning changes.
+
+| corpus | conditions on | val F1 base/LoRA | real-spoken F1 base/LoRA | first-3 |
+|---|---|---|---|---|
+| v1 | nothing | 0.074 / 0.300 | **0.332 / 0.041** | 0/4 |
+| v2 | prose brief | 0.110 / 0.215 | 0.123 / 0.113 | 0/4 |
+| v3 | tags + affected + last exchange | 0.098 / 0.214 | 0.079 / 0.090 | 0/4 |
+
+**His diagnosis was right.** v1's finetune scored eight times worse than its own
+base on real speech; v2 and v3 are level with theirs. The collapse is gone.
+
+**Tags did not beat prose.** v3 ≈ v2 everywhere. Not evidence tags are wrong —
+evidence that 393 distinct utterances cannot resolve a difference this size.
+
+**The deciding number is zero everywhere.** First-three-words on real speech is
+**0/4 in every configuration**, trained or not, with context or without. That is
+the only metric that lets an answer start early.
+
+**v1's base 0.332 is a trap in my own numbers.** An uninformed model answers
+generically and three of the four real utterances are generic sentences, so the
+smoke set rewards whichever configuration knows least. Named in the spec so it
+does not get quoted as a baseline.
+
+### Corpus v3
+
+`~/data/si-corpus`, outside both repos. Full 1,528-message timeline harvested
+both sides, split into 56 working-session windows on a 45-minute gap, one brief
+per window in the shape `TAGS / AFFECTED / GOAL / DONE / WORKED / FAILED / NOW`
+plus `LAST EXCHANGE`. **174 of 195 of his utterances carry the agent turn that
+actually preceded them.** Synthetic half regenerated as VOICE/HIM dialogue so the
+pairing exists on both halves. **390 distinct contexts against 393 utterances**,
+where v2 had 77.
+
+### The whole conversation comes back (`c8c473c`)
+
+`_await_transcript` collects both sides until the call ends. It only runs once a
+spoken turn has happened, so a typed answer still returns instantly, and the
+sentinel `"not started"` means the call has not terminated. `CallOutcome.transcript`
+had been typed for this since it was written and the daemon never filled it.
+
+### Two corrections
+
+1. **I claimed whisper's 4.78 s load lands mid-sentence. Wrong.**
+   `daemon.py:3058` warms it at startup deliberately. I read one call site and
+   did not grep for the others — the failure this project keeps repeating, in my
+   own work, on the same day I wrote it into the banner.
+   **What is true is his objection:** both models are resident from boot. A fresh
+   daemon holds 1,918 MiB, cvoiced 2,716 MiB; that 4.6 GB idled six hours after
+   the evening call and then OOMed my own training at 02:24.
+2. **358 passed / 8 skipped** where it had been 366. Probed rather than accepted:
+   the only skip condition is ollama availability and my training was starving
+   the GPU. Re-ran with the card free — 15 passed. Environmental.
+
+### Other things worth keeping
+
+- `--tools` is variadic; two argv entries swallow the prompt and produce a
+  **silently mute call**. Use the `=` form.
+- `claude -p` reads stdin when there is any; `subprocess` inherits it.
+- **`$(...)` in a commit message is executed by the shell.** It ate a line of
+  `c8c473c` before I noticed; amended and force-pushed with lease.
+- Training tuned by measurement, not guess: median 369 tokens, p99 582, max 732,
+  so `MAXLEN` 768 and batch 1 × accum 8. The first guess of 1024 × batch 2 OOMed.
