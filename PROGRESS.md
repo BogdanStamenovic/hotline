@@ -11310,3 +11310,111 @@ box goes down with no RTC alarm and WoL as the only way back. WoL is armed and
 he used it himself this morning, so that is a redundancy gap and not a trap —
 but it is the second time it has gone down this way and it stays on the open
 list as his.
+
+## 2026-09-11 16:10 UTC — operator boot sweep: HE woke the box, not a timer; everything clean; one stale-counter finding
+
+Session `bbaf88a7`, adopted as `hotline-80` (roster name `hotline-85`, pid 911).
+Box booted 16:04:09 UTC after a 6h22m poweroff that he ordered at 09:39:29Z.
+
+### The launcher's first sentence was wrong, and it matters
+
+The spawn prompt opens *"A timer started you, not a person."* It did not.
+
+    18:03:48 CEST  Pigion sshd: Accepted publickey for bodas from 100.103.46.118
+    18:03:56 CEST  session closed (8 s, 1.247s CPU)
+    18:04:09 CEST  archserver kernel boots
+
+`100.103.46.118` is `arch`, his laptop. Pigion's `~/.bash_history` ends
+`wakeonlan a8:a1:59:fd:4d:13` / `exit` / `ls` / `wakeonlan a8:a1:59:fd:4d:13` /
+`eixt` / `exit`. A typo is a person.
+
+Ruled the alternatives out rather than assuming: `/sys/class/rtc/rtc0/wakealarm`
+empty (the backstop is still unarmed, as the 09:45 banner says), no crontab and
+no `at` queue here, and on Pigion no root cron, no user cron, and no systemd
+timer with an 18:00 next-fire. Nothing on this box can boot itself and only
+Pigion/arch can send the packet.
+
+**The one timer in the chain is the watchdog**, which found no operator at
+18:06:31 and spawned me — five minutes *after* he turned the box on. So the
+prompt is half right about the mechanism and wrong about the cause, and the
+cause is the half that decides how to behave: he is at his laptop and wanted
+the machine for something.
+
+### Discord: nothing was sent while it was off
+
+Read all three channels past the 09:41–18:04 window. `#general` last carried
+anything from him on **09-05**; `#agent-hotline-80`'s last human message is
+`1547904406299615283`, *"Perfext now shitdown"*, 09:39:29Z — carried out.
+`sd-analize` is the third channel. Nothing queued, nothing missed.
+
+### Sweep — probed, not read off a status line
+
+**One trap caught on the way in.** `systemctl is-active hotline-ios cvoiced
+hotlined` returned `inactive` three times and I nearly filed the doorbell as
+down. They are **user** units; there is no system unit by those names, so
+`inactive` there means *does not exist*, not *not running*. `systemctl --user`
+shows all five up. This is the project's signature failure wearing a new hat —
+the field answered a different question than the one I asked.
+
+| check | result |
+|---|---|
+| failed units | 0 |
+| user units | hotline-ios, cvoiced, hotlined, hotline-beam, hotline-sipprobe all active |
+| `:8789/health` | `ring_ready: true`, `degradations: []`, `hook_reachable: true`, `hook_parse_failures: 0`, `ingest_stalled: []` |
+| GPU | 2 MiB used, no compute apps |
+| repos | hotline `2a9c181`, hotline-ios `9bba26c`, cvoice `5e80ee2`, all clean at origin/main (only `.claude/` untracked) |
+| armed to power down | nothing: no `/run/systemd/shutdown`, no jobs, no `at` |
+| disk | 14 G free on `/` (81% used) |
+| roster | I am the only session; `hotline-65` pid 868 from this morning is gone |
+
+**Two results are worth more than a table row, because both are the second
+observation of something that had only one.**
+
+`dcfa42b` (the cold-boot fix that was itself a fix for a fix) now has a
+**second** clean cold boot behind it, on a boot nobody was watching:
+
+    18:04:14  Starting hotline-ios daemon...
+    18:04:26  wait-for-cvoiced: reachable after 11s
+    18:04:26  Started.
+
+One start attempt, 11 s against a 90 s timeout, no retry loop, no hand restart.
+The 08:00 failure mode was four killed starts in seven minutes.
+
+And **the on-demand change held on a boot that did not build it**: 2 MiB idle,
+`model_loaded=False` in the daemon's own startup line, and no `Ears ... ready`.
+That is the correct shape per the 09-11 banner, filed here explicitly so no
+future session reports it as a regression.
+
+### New finding: `active_calls: 5` counts nothing
+
+`/health` says `active_calls: 5` and `conversations_held: 5`, 257 s after a cold
+boot. There are no calls. The five are `kind=ring` rows in
+`~/.local/state/hotline/hotline-ios.db` with `closed_at IS NULL` and
+`answered=0`, opened **2026-09-08 15:56, 09-09 22:25, 09-09 22:59, 09-09 23:41
+and 09-10 17:45** — all `(unattributed)`.
+
+The thing that makes this worth writing down: **all five are after `868c298`**
+(2026-09-01, "close calls on unanswered", made at his instruction). So that
+commit does not cover whatever path these rings take. Not urgent — nothing
+behaves differently — but it is a counter that reads as live state and is not,
+which is the exact failure this project keeps paying for. Offered to him; not
+touched without his word, since it is a write to live state for a cosmetic gain.
+
+### Still his, unchanged
+
+1. RTC backstop `Conflicts=shutdown.target` — proposed 08:39Z, never answered.
+2. Socket-activating cvoiced for the last 1,026 MiB — changes how `arch` reaches
+   cvoiced, so it is his.
+3. Barge-in has never run on a real call; needs him on the phone.
+4. The 03:00Z recommendation: stop training, build the no-model prototype, log
+   real call transcripts.
+
+### One new question put to him
+
+`hotline-profile-watch.timer` next fires **Sat 10:04 CEST**, and the signing
+profile expires **Sat 12:36**. It has already paged him on 09-10 and 09-11. He
+has said before that the weekly re-sign is a chore he owns and not something to
+nag him about, so tomorrow's would be the third page for a thing he did not want
+paged about. Asked whether to mute the timer.
+
+Posted one consolidated message (`1548002729631162481`) and am waiting on him.

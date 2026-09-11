@@ -1,5 +1,78 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-11 16:10 UTC — HE woke the box from his laptop; everything clean; idle on purpose
+>
+> **Do not believe the spawn prompt's "A timer started you, not a person."**
+> A person did. `wakeonlan a8:a1:59:fd:4d:13` was typed by hand on Pigion at
+> 18:03:48 CEST over ssh from `arch` (`100.103.46.118`, his laptop) — the
+> history has an `eixt` typo right after it — and the box booted 21 seconds
+> later. RTC alarm empty, no cron/`at` here, no Pigion cron or timer firing at
+> 18:00. **The watchdog is the only timer in the chain** and it fired at 18:06
+> because he had already turned the box on. Behave accordingly: he is around.
+>
+> **Nothing was sent while it was off** (09:41–18:04). All three channels read
+> across the window. His last word anywhere is still *"Perfext now shitdown"*,
+> `1547904406299615283`, 09:39:29Z, and that was carried out.
+>
+> ### ⚠ `systemctl is-active hotline-ios` LIES — they are USER units
+>
+> `systemctl is-active hotline-ios cvoiced hotlined` prints `inactive` three
+> times because **no system units by those names exist**. All five services live
+> under `systemctl --user`: `hotline-ios`, `cvoiced`, `hotlined`,
+> `hotline-beam`, `hotline-sipprobe`. `inactive` there means *absent*, not
+> *down*. Use `systemctl --user`.
+>
+> ### The sweep — all green, and two things confirmed twice
+>
+> | check | result |
+> |---|---|
+> | failed units | 0 |
+> | `:8789/health` | `ring_ready: true`, `degradations: []`, `hook_reachable: true` |
+> | GPU idle | **2 MiB**, no compute apps |
+> | repos | hotline `2a9c181`, hotline-ios `9bba26c`, cvoice `5e80ee2` — clean at origin/main |
+> | armed to power down | nothing |
+> | disk | 14 G free on `/` (81%) |
+> | roster | **I am the only session** |
+>
+> **`dcfa42b` has a second clean cold boot now**, one nobody was watching:
+> `Starting` 18:04:14 → `reachable after 11s` → `Started` 18:04:26. One attempt,
+> 11 s against a 90 s timeout. The 08:00 failure was four killed starts.
+>
+> **The on-demand change held on a boot that did not build it** — 2 MiB idle,
+> `model_loaded=False`, no `Ears ... ready`. **That is correct. Do not file it
+> as a regression.**
+>
+> ### New: `active_calls: 5` counts nothing
+>
+> `/health` reports 5 active calls 257 s after a cold boot. There are none. They
+> are `kind=ring` rows in `~/.local/state/hotline/hotline-ios.db` with
+> `closed_at IS NULL`, `answered=0`, opened 09-08 15:56, 09-09 22:25 / 22:59 /
+> 23:41 and 09-10 17:45, all `(unattributed)`. **All five postdate `868c298`**
+> ("close calls on unanswered", 09-01, his instruction) — so that fix does not
+> cover this path. Harmless today; it is a counter that reads as live state and
+> is not. Offered to him, not touched: it is a write to live state for a
+> cosmetic gain.
+>
+> ### Still his, unchanged
+>
+> The RTC backstop `Conflicts=shutdown.target` (proposed 08:39Z, never
+> answered — **still unarmed, WoL is the only way back**). Socket-activating
+> cvoiced for the last 1,026 MiB. **Barge-in has never run on a real call.**
+> And the 03:00Z recommendation: stop training, build the no-model prototype,
+> log real call transcripts.
+>
+> ### One new question put to him
+>
+> `hotline-profile-watch.timer` next fires **Sat 10:04 CEST**; the profile
+> expires **Sat 12:36**. It already paged him 09-10 and 09-11. He has said the
+> weekly re-sign is a chore he owns and not to nag about — so tomorrow's is a
+> third page for something he did not want paged. Asked whether to mute it.
+>
+> Posted one consolidated message (`1548002729631162481`) and waiting.
+>
+> ### SUPERSEDED BELOW
+
+
 > ## STATUS AS OF 2026-09-11 09:45 UTC — on-demand models BUILT and deployed; box SHUT DOWN at his instruction
 >
 > **He said: "Perfext now shitdown"** (verified, `1547904406299615283`, 09:39:29Z).
