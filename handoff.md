@@ -1,5 +1,96 @@
 # HOTLINE — worker handoff
 
+> ## STATUS AS OF 2026-09-11 08:40 UTC — HE woke the box, not a timer; one fix rescued from the poweroff, one safety net found dead
+>
+> **Nothing is outstanding from him.** His last word anywhere is still
+> 00:12:54Z (`1547761820817694794`) and the 03:00Z session carried it out.
+> All three Discord channels read, **including the 08:08–10:30 window the box
+> was off** — nothing was sent. I posted one consolidated status at 08:39Z and
+> am waiting on him. Roster: **I am the only session**; no other agents.
+>
+> ### A person started this box. Do not assume a timer.
+>
+> A timer spawned the *session* (`watchdog.log` 10:33:22 CEST), but `Pigion`'s
+> sshd shows `Accepted password for bodas from 100.108.255.28` — his iPhone —
+> at **10:30:30 and 10:30:33**, and the box booted **10:30:46**. That is him
+> waking it by hand, sixteen seconds earlier. It is **not** the 08:00 scheduled
+> wake; that one ran and powered off at 08:08. **He is around.**
+>
+> ### ⚠ THE 08:00 DOORBELL WAS SILENT FOR SEVEN MINUTES — by yesterday's "fix"
+>
+> The 09-10 cold-boot fix shipped **explicitly untested against a real boot**,
+> and it was wrong in the worst direction. It polled cvoiced's `/status` for
+> `model_loaded:true`. **cvoiced loads lazily** — at idle it reports
+> `model_loaded:false` and stays there until something asks it to speak — so the
+> condition never came true, `ExecStartPre` burned its full 90 s, and systemd's
+> default `TimeoutStartSec` is **also 90 s**, killing the start job before
+> `ExecStart` ever ran.
+>
+>     08:00:27  Starting hotline-ios daemon...
+>     08:01:57  start-pre operation timed out. Terminating.
+>     ... restart counter 1, 2, 3 ...
+>     08:07:27  wait-for-cvoiced: reachable after 0s
+>
+> **A fix meant to prevent a *mute* call produced a *silent* one**, which is
+> strictly worse. The 08:00 session diagnosed it, corrected it and deployed it
+> live — then the 08:06 poweroff killed it before it could commit, so it existed
+> only as uncommitted working-tree changes. **Committed and pushed: `dcfa42b`.**
+>
+> **The cold boot is now actually verified.** His 10:30 boot — powered off since
+> 08:08, no hand restart — gives `wait-for-cvoiced: reachable after 1s`, then
+> `degradations: []` and `ring_ready: true`. That is the test the previous
+> version never had.
+>
+> ### ⚠ CORRECTION: the RTC backstop is NOT "harmless". It has never been armed while the box is off.
+>
+> The banner below says the `wake` agent clearing the alarm at boot is harmless
+> *"because the unit re-arms at `ExecStop`"*. **I checked the unit instead of the
+> sentence. It does not.**
+>
+>     10:30:48  rtc-wake-backstop: armed for 2026-09-12 05:58 UTC
+>     10:30:51  wake agent: cleared a leftover rtc alarm set for 1789192680
+>
+> 1789192680 **is** that alarm, three seconds old. And `journalctl -b -1` and
+> `-b -2` for the unit show the ExecStart arming line and **no ExecStop line at
+> either shutdown** — the re-arm has never run, on any boot.
+>
+> **Root cause** (`systemctl show`): `DefaultDependencies=no` with
+> `Conflicts=reboot.target` **and nothing else**. On a *reboot* the unit is
+> stopped and re-arms; on a **poweroff** nothing conflicts with it, systemd never
+> stops it, ExecStop never fires. Exactly inverted — the alarm matters when the
+> box is *off*.
+>
+> `/sys/class/rtc/rtc0/wakealarm` is **empty right now** and will still be empty
+> when the box goes down. `/proc/driver/rtc` renders a date for it anyway, the
+> same lie that file's own comment warns about.
+>
+> **Not urgent, not rung:** WoL is armed (`Wake-on: g`, unit enabled+active) and
+> he used it himself at 10:30. What is gone is the redundancy — the 2026-09-08
+> condition ("one failed packet and the box stays dark with nothing behind it")
+> is live again. **Proposed fix, awaiting his go because it touches boot:** add
+> `Conflicts=shutdown.target` to `/etc/systemd/system/rtc-wake-backstop.service`,
+> then prove it across a real poweroff. **Do not report the backstop as working.**
+>
+> ### State
+>
+> Nothing armed to power the box off: no `/run/systemd/shutdown`, no systemd
+> jobs, `wakealarm` empty. Both repos clean at `origin/main` — `hotline`
+> `80a10ed`, `hotline-ios` **`dcfa42b`**. Zero failed units, six user services
+> up. GPU 1,928 / 8,188 MiB (whisper resident; cvoiced not loaded, lazy by
+> design). Root 81%, `/mnt/windows` 45%.
+>
+> Two noted, not acted on: `/health` shows `active_calls: 5` on a five-minute-old
+> box — `open_calls()` counts conversations never answered, read back from the
+> DB, so it is genuine and not a leak. The iOS profile expires **12 Sep 12:36**;
+> he was told once on 09-10, it is his chore, no second page.
+>
+> ### Still open and still his
+>
+> **Barge-in has never run on a real call.** And the 03:00Z recommendation
+> stands: stop training, build the no-model prototype, log real call transcripts.
+>
+> ### SUPERSEDED BELOW
+
 > ## STATUS AS OF 2026-09-11 03:00 UTC — speculative input measured three ways; box SHUT DOWN at his instruction
 >
 > **He said: report findings, then shutdown, log everything.** Done, in that
