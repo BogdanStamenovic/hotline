@@ -1,86 +1,95 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-11 00:15 UTC — speculative input specced and part-built; box UP, nothing armed
+> ## STATUS AS OF 2026-09-11 03:00 UTC — speculative input measured three ways; box SHUT DOWN at his instruction
 >
-> **One thing waits on him and it is a question, not a task:** should the calling
-> agent get the **whole** phone conversation back, or only his first answer as
-> today? That changes `hotline-call`'s contract, so it was not touched.
+> **He said: report findings, then shutdown, log everything.** Done, in that
+> order. Everything pushed; `hotline` and `hotline-ios` clean at `origin/main`.
 >
-> ### ⚠ DO NOT DEPLOY THE FINETUNED ADAPTER — it is worse than the base model
+> ### ⚠ THE RESULT: context stops the collapse and does NOT make it work
 >
-> `/mnt/windows/ml/si-finetune/out/lora`. Qwen2.5-1.5B, trained and measured.
+> Same base model, same LoRA recipe, same scoring. Only the conditioning changes.
 >
-> | model | set | F1 | first-3 words | latency |
+> | corpus | conditions on | val F1 base/LoRA | **real speech base/LoRA** | **first-3** |
 > |---|---|---|---|---|
-> | base | val (109) | 0.074 | 0/109 | 152 ms |
-> | LoRA | val (109) | **0.300** | 18/109 | 363 ms |
-> | base | **real spoken (4)** | **0.332** | 0/4 | 232 ms |
-> | LoRA | **real spoken (4)** | **0.041** | 0/4 | 442 ms |
+> | v1 | nothing | 0.074 / 0.300 | **0.332 / 0.041** | 0/4 |
+> | v2 | prose brief | 0.110 / 0.215 | 0.123 / 0.113 | 0/4 |
+> | v3 | tags + affected + last exchange | 0.098 / 0.214 | 0.079 / 0.090 | 0/4 |
 >
-> Four times better on its own val set, **eight times worse on real speech** — it
-> memorised his topics and recites them. Given `"Now all the"` it produced
-> *"agents are dead except hotline-ac..."*. It also misses the 200 ms budget.
-> **The blocker is the corpus, not the method**: 362 distinct utterances, half
-> written by a model, none of them him actually speaking. Full numbers and the
-> failure samples in `hotline-ios/docs/SPEC-speculative-input.md`.
+> **His diagnosis was right** — v1 had nothing to condition on, so the only thing
+> it could learn was his vocabulary, and it scored eight times worse than its own
+> base. v2 and v3 are level with theirs. The collapse is gone.
 >
-> **Next, in his stated order:** the **no-model prototype** — fire the real
-> Sonnet turn early on the partial and cancel on contradiction. It needs no
-> predictor. And start logging real call transcripts so a corpus of his actual
-> speech accumulates.
+> **Tags did not beat prose.** v3 ≈ v2 on everything. That is not evidence tags
+> are wrong; 393 distinct utterances cannot resolve a difference this size.
 >
-> ### What landed tonight, all pushed
+> **The deciding number is zero everywhere.** First-three-words on real speech is
+> **0/4 in every configuration** — trained or not, with context or without. It is
+> the only metric that lets an answer start early.
+>
+> **⚠ Do not quote v1's base 0.332 as a baseline.** An uninformed model answers
+> generically and three of the four real utterances are generic sentences, so the
+> smoke set rewards whichever configuration knows least. n=4.
+>
+> **None of the three adapters should ship.** `/mnt/windows/ml/si-finetune/out*`.
+>
+> ### ⏳ WHAT TO DO NEXT — stop training, start collecting
+>
+> 1. **The no-model prototype.** Fire the real Sonnet turn early on the partial,
+>    cancel on contradiction. **Needs no predictor at all** and it is what the
+>    production vendors ship. Amazon's purpose-built predictor got 28% of
+>    utterances; beat nothing first.
+> 2. **Log every real call transcript**, so an eval set of him actually speaking
+>    accumulates. There are **four** real spoken utterances in the world today.
+> 3. **On-demand models** — his instruction, still unbuilt. See below.
+>
+> ### What landed, all pushed
 >
 > | | |
 > |---|---|
-> | `b5a640d` | **call forks are read-only.** `--tools=Read,Grep,Glob --restricted --permission-prompts none` |
-> | `2257434` | `call_context.txt` no longer claims the agent can run commands |
-> | `001b4e2` | **the calling agent can brief the voice** — `CallTarget.context`, seeded first |
-> | `453ca8f`, `73026b6` | the spec, and the measured finetune failure |
+> | `b5a640d` | call forks read-only — they relay, they do not act |
+> | `001b4e2` | **the calling agent briefs the voice** (`CallTarget.context`) |
+> | `c8c473c` | **the whole conversation comes back**, both sides, until the call ends |
+> | `2257434` | the call context no longer claims the agent can run commands |
+> | `42f5e74`, `d5faa6a`, `1a6079f` | the spec: architecture, results, my correction |
 >
-> ### ⚠ Two traps that cost real time tonight — do not re-learn them
+> ### ⚠ TWO CORRECTIONS — believe these, not the older text
 >
-> - **`claude -p` reads STDIN when there is any.** `subprocess` inherits it, so a
->   heredoc harness fed the call agent leftover text as "his sentence" and it
->   answered in English about source code, mid-call. `stdin=DEVNULL` now.
-> - **`--tools` is VARIADIC.** Written as two argv entries it swallows the
->   prompt and claude exits "Input must be provided" — **a silently mute call**,
->   not a visible crash. Use the `=` form.
+> - **Whisper is NOT loaded mid-sentence.** `daemon.py:3058` warms it at startup
+>   on purpose. An earlier banner of mine said otherwise; I read one call site and
+>   did not grep for the others. **What IS true is his objection:** both models
+>   are resident from boot — a fresh daemon holds **1,918 MiB**, cvoiced **2,716
+>   MiB**, and that 4.6 GB idled six hours after the evening call and then OOMed a
+>   training run. On-demand is therefore small: move the existing async warm-up
+>   from startup to ring, add the unload that has never existed.
+> - **A suite reading `358 passed / 8 skipped` is fine** if the GPU is busy. The
+>   only skip condition in the repo is ollama availability. With the card free,
+>   `test_speculate.py` is 15/15. Do not file it as a regression.
 >
-> ### ⏳ Two live defects, measured, NOT fixed
+> ### ⚠ Three traps that cost real time — do not re-learn them
 >
-> - **Both models are resident from boot, whether a call happens or not.**
->   Measured: a freshly restarted daemon holds **1,918 MiB**, cvoiced **2,716
->   MiB** beside it. That 4.6 GB sat idle for six hours after the evening call
->   and then **OOMed a training run**. His instruction is on-demand loading, and
->   it is a small change: `daemon.py:3058` already warms the transcriber
->   asynchronously at startup — move that to ring time and add the unload at
->   call end that has never existed.
->   **An earlier banner said the 4.78 s load lands in the middle of his first
->   sentence. That was wrong** — the warm-up at 3058 is deliberate and predates
->   it. I read one call site and did not grep for the others.
-> - **`server/call_context.txt` is regenerated by nothing.** It now carries a
->   dated warning, but it is still hand-written history from 2026-09-08. The real
->   fix is generating it at ring time from the handoff, `git log`, `/health` and
->   the roster.
+> - **`--tools` is VARIADIC.** Two argv entries swallow the prompt; claude exits
+>   "Input must be provided". That is a **silently mute call**, not a crash. Use
+>   `--tools=a,b,c`.
+> - **`claude -p` reads STDIN when there is any**, and `subprocess` inherits it.
+>   A heredoc harness fed the call agent leftover text as "his sentence".
+> - **`$(...)` in a commit message is executed by the shell.** It ate a line of
+>   `c8c473c`; amended and force-pushed with lease.
 >
 > ### Facts worth keeping
 >
-> - **Whisper translates Serbian→English itself**, `task="translate"`, on the
->   resident model: 44.8 s vs 47.2 s to transcribe the same 9 clips. **No second
->   model, nothing to load.** Do not build a translation service.
-> - **He types to his agents in English** — 239 English-only messages, zero
->   Serbian-only. That is why the predictor works in English.
-> - **`~/data/si-corpus` is outside both repos on purpose.** 407 of his private
->   messages; `hotline-ios` is public. Do not `git init` it.
-> - Training lives on **`/mnt/windows/ml/si-finetune`** — root is at 81%.
+> - **Whisper translates Serbian→English itself** (`task="translate"`, resident
+>   model, 44.8 s vs 47.2 s on the same 9 clips). Do not build a translation
+>   service, and do not swap models per turn — `large-v3` costs 4.78 s to load and
+>   the whole prize is 3-5 s.
+> - **He types to his agents in English** — 239 English-only, zero Serbian-only.
+> - **`~/data/si-corpus` is outside both repos on purpose** (407 of his private
+>   messages; `hotline-ios` is public). Training venv and weights on
+>   **`/mnt/windows/ml`** — root is at 81%.
+> - Barge-in has **still** never run on a real call.
 >
-> ### The morning still holds
+> ### The morning schedule is unchanged and correct
 >
-> The **08:00 CEST** slot is correct and daily with `then_do: poweroff` — do not
-> "fix" it into 10:00. Nothing is armed today. `hotline` and `hotline-ios` both
-> clean at `origin/main`; 366 tests pass. Barge-in has **still** never run on a
-> real call.
+> **08:00 CEST**, daily, `then_do: poweroff`. Do not "fix" it into 10:00.
 >
 > ### SUPERSEDED BELOW
 
