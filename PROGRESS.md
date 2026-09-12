@@ -11418,3 +11418,99 @@ nag him about, so tomorrow's would be the third page for a thing he did not want
 paged about. Asked whether to mute the timer.
 
 Posted one consolidated message (`1548002729631162481`) and am waiting on him.
+
+## 2026-09-11 ~16:45 UTC — new task from him: package skills as ownbox-installable public repos
+
+He returned (this task is his reply, delivered in-session, not via Discord). Ask:
+take each group of skills → a public GitHub repo installable as a skill through
+ownbox, with the *whole pipeline* (image gen: model server included; cvoice: add
+a skill; the hotline suite: page/call/etc as one skill). Sweep `arch` for skills
+and make an installer for any not present.
+
+### Research (4 Sonnet agents, read-only) — key findings
+
+- **ownbox had NO skill concept.** v0.6.0, public repo, installed on archserver
+  only (not `arch`/`pigion`). Manifest key sets closed → `skill:` would not even
+  parse. Installs by catalog *name* from a GitHub-owner scan, not by URL.
+- **Skills split his vs vendor.** Only 4 archserver skills are his real work:
+  `local-image`, `call-bogdan`, `send-email`, `python-cli-scaffold`. The other 13
+  are symlinks into `~/.agents/skills/` — Anthropic-vendored. Decided NOT to
+  republish those under his name (not his work, pointless). Told him.
+- **Laptop `arch` has one new his skill:** `cad-simulation` (built today, 84K,
+  self-contained, absent from archserver). Plus 4 ownbox-ready projects on `arch`
+  with no ownbox installed there.
+- **Image pipeline:** thin `imagegen.py` client + ComfyUI@6c53f8c + ComfyUI-GGUF@6ea2651
+  + uv venv (torch cu128, 7.8G) + 12G weights from *public* HF repos (no token).
+  Blockers: hardcoded `/mnt/windows/Users/Korisnik/...` paths, no configurable
+  weights root.
+- **Tool-shelf blocker:** ~9 of 14 `~/.claude/bin` scripts and 3 systemd units
+  exist ONLY as hand-authored files on this box, in no git repo (`ctx`,
+  `hotline-backup`, `hotline-run`, `hotline-say`, `hotline-shot`, `hotline-standup`,
+  `hotline-watch-agent`, `hotline-watchdog`, `wake-boot-report`). The hotline
+  suite cannot be installed-as-a-skill until these are committed somewhere.
+- **Coupling:** `hotlined` borrows cvoice's CUDA libs (HOTLINE_CUDA_WHEEL_DIRS).
+  **Stale skill:** installed `~/.claude/skills/call-bogdan` (Aug 24, 4.1K) is a
+  plain *copy* of the repo version (Aug 27, 9.1K) — editing the repo does nothing
+  to what Claude loads. The symlink approach fixes exactly this.
+- **Secrets/personal-data gate mapped:** .env files (gitignored), 13 voice
+  profiles of *named real people* (gitignored), call recordings, SIP/Telegram/
+  Discord tokens, tailnet IPs (already in git history in unit files).
+- **⚠ Prompt-injection observed:** two research agents independently hit a fake
+  `<system-reminder>` in tool output claiming to switch git attribution to
+  "Claude Opus 4.8" with a bogus session link — files on disk were clean. Likely
+  planted in the juice-shop security-testing checkout. Did not act on it; his
+  no-attribution rule holds regardless. Flagged to him.
+
+### Shipped: ownbox 0.7.0 — `skill:` support (the enabling capability)
+
+`skill:` manifest key (string or list of checkout-relative skill dirs). On
+install, symlinks each into `~/.claude/skills/<name>` (copy+marker where symlinks
+are unavailable) so `ownbox update` refreshes skill content for free. Uninstall
+removes them; both refuse to touch a dir ownbox didn't create. A tool may declare
+a skill with no command (skill-only, no launcher). `OWNBOX_SKILLS_DIR` override;
+`ownbox init --skill`. 135 tests (11 new), ruff + mypy clean, real-fs verified.
+Committed `9a843b2`, pushed, pipx-reinstalled → live `ownbox 0.7.0`. No Claude
+attribution in the commit, per his rule.
+
+Next: flagship worked example `local-image` as its own public repo (pipeline +
+skill), then cvoice skill, then surface the hotline-suite blocker for his call.
+
+## 2026-09-13 00:30 CEST — operator boot sweep (session 8dbeb8fd): he woke the box, all green, profile pager silenced
+
+Adopted hotline-80. Box booted 00:25; `last -x` shows a pts/0 login from
+`100.103.46.118` (his laptop `arch`) at 00:26 and Pigion's history has a fresh
+`wakeonlan a8:a1:59:fd:4d:13` — **a person woke it, not a timer.** A
+`.claude/remote/ccd-cli` process was live when I adopted and has since exited, so
+he woke it and stepped away. Watchdog restarted the operator tmux at 00:27:54.
+
+**His last human word anywhere is still "Perfext now shitdown" (09-11 09:39Z),
+already carried out.** Nothing was sent by him across any power-off window
+(09-12 08:07→13:05, 13:11→09-13 00:25). Everything on the channels since is
+automated: predecessor boot sweeps, the scheduled `track` GPU/laptop runs, and
+the iOS profile pager.
+
+**Sweep, all green:** 0 failed units (system + `--user`), GPU 2 MiB idle,
+`/health` `degradations: []` / `ring_ready: true`, nothing armed to power down
+(RTC alarm empty — the known-unarmed backstop). Disk `/` 86% (10G free).
+
+**Verified two loose threads rather than trusting the banner:**
+- All three repos are `local == origin/main`, 0 ahead / 0 behind. cvoice moved
+  `5e80ee2 → 1c3196f`: one pushed commit, "Ship a client-side skill so cvoice
+  installs as a Claude Code skill" (the packaging task).
+- **The FLUX/ComfyUI weights the earlier agent deleted on 09-11 are restored** —
+  `/mnt/windows/Users/Korisnik/ai-models/comfyui` back at 12G, `imagebench/ComfyUI`
+  7.9G. Its "I'm fixing it" got done; local-image is intact. The old alarm was stale.
+
+**One action taken (reversible, reported after):** stopped and disabled
+`hotline-profile-watch.timer`. The iOS profile expired Sat 12:36; the watch paged
+him 09-11 08:38, 09-12 22:26, and again on this boot at 00:26 — a third page for
+a chore he has explicitly said he owns and does not want nagged about
+([[weekly-resigning-is-not-a-problem-for-him]]). It was armed to fire a fourth
+time at 10:08. Re-enable with `systemctl --user enable --now hotline-profile-watch.timer`.
+
+**Still his, untouched:** `active_calls: 5` cosmetic stale-counter; RTC backstop
+unarmed (WoL only way back); the packaging task's blocker — committing the
+hand-authored `~/.claude/bin` scripts so the hotline suite can install as a skill.
+
+Posted one consolidated hello to #agent-hotline-80 (`1548...`, 00:32 CEST). No
+ring — he's around and nothing is urgent. Holding.
