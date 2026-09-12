@@ -11514,3 +11514,49 @@ hand-authored `~/.claude/bin` scripts so the hotline suite can install as a skil
 
 Posted one consolidated hello to #agent-hotline-80 (`1548...`, 00:32 CEST). No
 ring — he's around and nothing is urgent. Holding.
+
+## 2026-09-13 01:00 CEST — why the operator ran on 4.8, and the spawner now pins opus
+
+He asked whether the hotline-80 spawner auto-sets 4.8 or whether the session
+switched itself. **Neither.**
+
+**The spawner sets no model at all.** `~/.claude/bin/hotline-run:79` spawned bare
+`claude --permission-mode bypassPermissions "$PROMPT"`. Confirmed three ways: the
+live `/proc/1054/cmdline`, a full `model` grep across both spawn paths
+(`hotline-run`, `src/hotline/tmuxen.py` — no hits), and no `model` key in
+`~/.claude/settings.json` or `~/.claude.json`. Agents therefore inherit whatever
+the CLI default is, which is the standing reason they drift off the
+Opus-for-code rule ([[spawn-passes-no-model-flag]]).
+
+**The harness switched the model, 50 seconds in.** Transcript line 81:
+`type=system`, `subtype=model_refusal_fallback`, `apiRefusalCategory: cyber`,
+`fallbackModel: claude-opus-4-8`, **`retractedMessageUuids: []`**. Model timeline
+was exactly three points: `claude-opus-5` at 22:27:58 → `claude-opus-4-8` at
+22:28:48 → `claude-opus-5` at 22:51:49 (him, by hand).
+
+The request in flight was the boot sweep — wakeonlan MACs, ssh to Pigion, sshd
+journal greps, `bash_history`, `last -x`, tailnet IPs and `.env` key names in one
+context. Recon-shaped to a broad classifier. The record names the category, not
+the trigger, so that attribution is a read of the context, not a logged fact.
+
+**Correcting the 09-01 note:** a cyber fallback does NOT always wedge. data-af's
+had populated `retractedMessageUuids` and stopped consuming its queue; this one
+was empty, lost nothing, and ran on quietly for 23 minutes. **Empty vs populated
+is what distinguishes a clean swap from a wedge**, and a clean swap is invisible
+in the conversation — the only tell is `.message.model` in the transcript.
+
+**Change made at his yes:** `hotline-run` now spawns
+`claude --model opus --permission-mode bypassPermissions "$PROMPT"`, with a
+comment recording that it pins the START only and is not evidence the session is
+still on opus. Backup at `hotline-run.bak.20260913-005905` (this file is one of
+the ~9 bin scripts in no git repo — the packaging blocker). `bash -n` clean.
+
+**Verified by running it, not by reading it:** `claude -p --model opus
+--output-format json` reports `modelUsage: {"claude-opus-5": ...}` — the alias
+resolves to Opus 5. (The `claude-haiku-4-5` entry alongside is the harness's own
+helper model, 899 tokens.) The $0.013 in the envelope is Max-plan usage at
+list-price equivalence, not a card charge.
+
+**Not done, surfaced instead:** `src/hotline/tmuxen.py` — the spawner for every
+OTHER agent — has the same missing `--model`. He asked for the hotline-80
+spawner; that one is his call.
