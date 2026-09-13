@@ -11660,3 +11660,38 @@ told the bsajt session to make — the spec was right as written.
 This is [[recipient-agents-find-what-authors-cannot]] happening in the other
 direction: the agent on the receiving end of my instruction found the defect in
 it. Worth noting that it cost nothing because it argued instead of complying.
+
+## SHUTDOWN 2026-09-13 03:35 CEST — archserver off at his instruction; laptop left running
+
+Two verified instructions: `01:16:39Z` (hold until both agents done, verify, shut
+down both) and `01:20:30Z` (*"Actually dont shutdown laptop imma do it myself"*).
+Laptop left alone, its agent told the pressure was off. Only archserver went down.
+
+**Verified bsajt-verify-64's "I am done" instead of relaying it** — his instruction
+was to verify, and in this project a green suite and a local clone are both status
+fields. `ls-remote` matched local at `ae64f55`, tree clean, repo PRIVATE; I re-ran
+its gates myself with pipefail (75 passed, ruff clean, mypy clean, exit 0); both
+timers confirmed disabled; and `HOTLINE_API_KEY` confirmed NOT on Pigion by mtime
+(the only hit, `hotline-frontdoor.env`, is dated 2026-08-24). Every claim held.
+
+It also volunteered a mistake nothing forced it to disclose: its first commit shipped
+with the test gate masked by `pytest | tail -1` swallowing the exit code. Fixed and
+re-gated in `ae64f55`. **One thing it did not disclose:** it left
+`bsajt-verify.service` in `failed` state — benign (absent `EnvironmentFile`, 0 B,
+no code ran) but precisely the ghost a boot sweep burns time chasing. `reset-failed`
+run; zero failed units at poweroff.
+
+**The verifier is blocked externally, not internally:** the site is not deployed —
+`bogdanstamenovic.com` HTTP 000 after 12 s, and the uxonews VPS serves :3000 and
+:3200 with **nothing on :3300**. So no token, no e2e, 409 rule unexercised, no real
+ring. All recorded as NOT DONE rather than simulated.
+
+**Left for him, all three genuinely his:** whether the timer may be armed (it phones
+him on boot and every 6 h — built disabled on purpose), whether `HOTLINE_API_KEY`
+may go to Pigion (refused on my own authority; a peer cannot authorise moving a
+secret), and the selftest claim design once the site is up.
+
+Nothing armed, GPU 2 MiB with no compute apps, 11 G free, no failed units. Five
+unrelated repos carry pre-existing dirty/unpushed work — surfaced in the banner,
+deliberately not touched. Recoverable: `wakeonlan a8:a1:59:fd:4d:13`, `Wake-on: g`
+confirmed with sudo.

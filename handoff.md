@@ -1,49 +1,85 @@
 # HOTLINE — worker handoff
 
-> ## STATUS AS OF 2026-09-13 00:30 CEST — HE woke the box from his laptop; all green; profile pager silenced; idle on purpose
+> ## SHUTDOWN 2026-09-13 03:35 CEST — powered off at his instruction; bsajt-verify delivered; three questions waiting
 >
-> **A person woke it, not a timer.** Box booted 00:25; `last -x` has a pts/0
-> login from `100.103.46.118` (laptop `arch`) at 00:26 and Pigion's history a
-> fresh `wakeonlan a8:a1:59:fd:4d:13`. A `.claude/remote/ccd-cli` was live at
-> adopt and has since exited — he woke it and stepped away. Watchdog restarted
-> the operator tmux at 00:27:54.
+> **Two verified instructions, the second narrowing the first.** `01:16:39Z`:
+> hold until both agents are done, verify with each, then shut down archserver
+> and the laptop. `01:20:30Z`: *"Actually dont shutdown laptop imma do it myself
+> tell the laptop agent that the shutdown was a fluke and not to rush."* So the
+> laptop is HIS and was left running; only archserver went off. The laptop agent
+> was told the pressure was off.
 >
-> **His last human word anywhere is still "Perfext now shitdown" (09-11 09:39Z),
-> already done.** Nothing was sent by him across either power-off window
-> (09-12 08:07→13:05, 13:11→09-13 00:25) — everything on the channels since is
-> automated (predecessor sweeps, scheduled `track` runs, the iOS pager).
+> **WoL IS THE ONLY WAY BACK, and it is verified.** `wakeonlan a8:a1:59:fd:4d:13`
+> — `Wake-on: g`, `Link detected: yes`, carrier 1, checked with sudo minutes
+> before poweroff (unprivileged `ethtool` prints nothing, which is not "off").
+> RTC alarm empty as always; the backstop has still never armed.
 >
-> ### The sweep — all green
+> ### bsajt-verify — delivered, and VERIFIED rather than relayed
+>
+> A fresh Opus agent (`bsajt-verify-64`) built the claim verifier for
+> bogdanstamenovic.com. It said it was done; I checked every claim myself:
 >
 > | check | result |
 > |---|---|
-> | failed units (system + `--user`) | 0 |
-> | `:8789/health` | `ring_ready: true`, `degradations: []`, `hook_reachable: true` |
-> | GPU idle | **2 MiB** |
-> | repos | hotline `8fe20ad`, hotline-ios `9bba26c`, cvoice `1c3196f` — all `== origin/main`, 0/0 |
-> | armed to power down | nothing (RTC alarm empty = backstop still unarmed, WoL only way back) |
-> | disk `/` | 10 G free (86%) |
-> | roster | **operator is the only session** |
+> | `git ls-remote` vs local | both `ae64f55`; tree clean, nothing unpushed |
+> | repo visibility | **PRIVATE** (it documents the ops API) |
+> | gates, re-run by me with pipefail | **75 passed**, ruff clean, mypy clean, exit 0 |
+> | archserver `bsajt-verify.timer` | **disabled**, service static, not in list-timers |
+> | Pigion `bsajt-verify-watch.timer` | **disabled** |
+> | `HOTLINE_API_KEY` copied to Pigion? | **NO** — only hit is `hotline-frontdoor.env`, dated 2026-08-24, pre-existing |
 >
-> **Two Friday alarms verified STALE, not relayed:** the FLUX/ComfyUI weights the
-> 09-11 agent deleted are **restored** (`/mnt/windows/.../comfyui` 12G, imagebench
-> 7.9G — local-image intact); cvoice's `1c3196f` skill commit is pushed, not just
-> local.
+> **NOT DONE, and honestly recorded in its own handoff.md:** no token and no
+> env file, because **the site is not deployed** — `bogdanstamenovic.com` returns
+> HTTP 000 after 12 s and the uxonews VPS has **nothing on :3300**. So no
+> end-to-end run, the 409 rule is unexercised, and no real call was rung. Its
+> `--no-fallback` proof (real `hotline-call` against a dead port and stub
+> doorbells, with a tripwire `hotline-page` on PATH) is good evidence and proves
+> only what it proves: no fallback on a dead or fake doorbell, nothing about the
+> live SIP path.
 >
-> ### One action taken (reversible, reported after)
+> **Its service was left in `failed` state** — benign (`EnvironmentFile` absent,
+> 0 B memory, no code ran) but exactly the ghost a boot sweep wastes time on.
+> `reset-failed` run. No failed units at poweroff.
 >
-> Stopped + disabled `hotline-profile-watch.timer`. The iOS profile expired Sat
-> 12:36 and the watch paged him 09-11 08:38, 09-12 22:26 and again 00:26 on this
-> boot — a chore he owns and has said not to nag about, armed to fire a 4th time
-> at 10:08. Re-enable: `systemctl --user enable --now hotline-profile-watch.timer`.
+> ### ⚠ THREE QUESTIONS WAITING FOR HIM — none answered, none blocking
 >
-> ### Still his, untouched
+> 1. **May `bsajt-verify.timer` be armed?** It rings his phone on every boot and
+>    every 6 h. Built and installed **disabled** on purpose: a peer agent can
+>    authorise a build, not a standing loop that phones him.
+> 2. **May `HOTLINE_API_KEY` be copied to Pigion?** Pigion has no hotline-call,
+>    no Discord token, so its "nothing decided in 14 days" detector currently
+>    only fails its own unit and **nobody ever sees it**. Refused on my own
+>    authority — moving a secret between machines is his call.
+> 3. **Selftest claim design** when the site is up: a past event with one named
+>    mention and no official source is the version that actually exercises the
+>    ring, but it needs a real call he answers.
 >
-> `active_calls: 5` cosmetic stale-counter (five never-closed rings from last
-> week). RTC backstop `Conflicts=` never arms on poweroff — WoL is the only way
-> back. Barge-in has never run on a real call. The packaging task's blocker:
-> committing the hand-authored `~/.claude/bin` scripts so the hotline suite can
-> install as a skill (his call — some carry tailnet IPs).
+> ### Not mine, not destroyed, but note it
+>
+> Five repos hold work that predates tonight: `dds-site` and `llama-turbo3`
+> (unpushed commits), `local-image` (`install.py`/`uninstall.py` modified —
+> possibly the fix for the uninstaller that deleted 21 GB on 09-11), `track`
+> (`uv.lock`), `uxonews` (`middleware.ts` + unpushed). **A poweroff destroys none
+> of it** — it is on disk. But it is unpushed, so it lives on this box only.
+> Left alone deliberately; committing another session's WIP is not mine to do.
+>
+> ### Also tonight
+>
+> `hotline-profile-watch.timer` **stopped and disabled** — it had paged him three
+> times about a chore he owns. The operator spawner now pins `--model opus`
+> (verified: the alias resolves to `claude-opus-5`). This session silently ran on
+> **Opus 4.8 for 23 minutes** after a `model_refusal_fallback` (`cyber`) tripped
+> on the boot sweep — `retractedMessageUuids: []`, so a clean swap, nothing lost;
+> the tell is `.message.model`, never the conversation. The hotline-ios
+> improvisation account for the website is at
+> `~/data/bsajt-improvisation-account.md` (secret-scanned) — a reconstruction
+> from that project's logs, **not** an agent remembering: its registry record was
+> swept weeks ago.
+>
+> **Two hotline bugs found the hard way:** `hotline --declare` retasks the
+> CALLING session (it overwrote my own record), and the bare spawn path dies on
+> long output — `LimitOverrunError`, `fresh.py:146`, asyncio's default 64 KB line
+> limit. Both unfixed. Use `claude -p` for one-shots.
 >
 > ### SUPERSEDED BELOW
 
