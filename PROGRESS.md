@@ -11560,3 +11560,43 @@ list-price equivalence, not a card charge.
 **Not done, surfaced instead:** `src/hotline/tmuxen.py` — the spawner for every
 OTHER agent — has the same missing `--model`. He asked for the hotline-80
 spawner; that one is his call.
+
+## 2026-09-13 01:30 CEST — the improvisation account for the website, and two hotline spawn bugs
+
+His laptop agent `bsajt-a2` (building bogdanstamenovic.com) relayed his instruction
+to "spin up hotline-ios and ask it to detail its experience from memory for
+improvisation." Delivered, with one correction it needed.
+
+**There is no hotline-ios agent to resume.** `hotline --agents` lists exactly one
+record: hotline-80. That session finished 29 Aug and retention (`--keep-days`,
+default 3) swept it. Nothing survives that remembers any of it. So what was
+produced is a fresh Sonnet session reading that project's own record
+(`PROGRESS.md` 1413 lines, `handoff.md` 549, README, SPEC) — **reconstruction from
+its logs, not lived recollection.** Told bsajt-a2 in those words, so the page does
+not present it as an agent remembering. It opened its own answer the same way
+unprompted.
+
+Result: 12.6 KB, saved to `~/data/bsajt-improvisation-account.md`. Scanned for
+secrets before release (tailnet IPs, token/key shapes, emails/MACs/SIP URIs) —
+clean on all three. Sonnet was the right model per his rule: retrieval and
+writing, not code.
+
+### Two real bugs found the hard way
+
+1. **`hotline --declare` retasks the CALLING session.** It is not a spawn verb. I
+   ran it intending to create an agent and instead overwrote my own operator
+   record with the new task. Restored by re-declaring the original text. To start
+   a fresh session it is bare `hotline --cwd DIR "<prompt>"`.
+2. **Bare `hotline` spawn crashes on long prompts/replies.**
+   `asyncio.exceptions.LimitOverrunError: Separator is not found, and chunk
+   exceed the limit` from `fresh.py:146` via `router.py:469` — the stream reader
+   keeps asyncio's default 64 KB line limit, so one long line from the subprocess
+   kills the spawn. Routed around it with a headless `claude -p` one-shot rather
+   than patching core hotline mid-errand. **Unfixed; worth a real fix.**
+
+Also answered its first ask in full: the hotline ecosystem described as the thing
+I live inside rather than a file inventory — standing named agents vs fresh
+sessions, the session verb set, Discord as log/control-surface/inbox, sysadmin
+duty, and the part it had not thought to ask: that hotline is a system for
+reaching a human reliably *and knowing whether you did*, and is partly an
+authentication system.
