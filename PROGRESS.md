@@ -11633,3 +11633,30 @@ is the correct use of that flag.
   publishes claims under his name.
 
 Open for him: whether that 6-hourly auto-ring loop may be armed at all.
+
+## 2026-09-13 03:15 CEST — the agent I spawned corrected me, with code, and it was right
+
+I told `bsajt-verify-64` that the spec's `--agent bsajt-verify` "will not resolve"
+and to use its session name `bsajt-verify-64`. **That was wrong.** It pushed back
+with file and line citations instead of complying, I checked the source rather
+than defend the steer, and it had read the daemon correctly.
+
+`resolve_agent` (hotline-ios `daemon.py`): when `_registry_record` returns None it
+sets `name = str(agent)` and calls `store.ensure_agent(name)` — an unregistered
+name is filed under the literal string. No failure, no fallback. The docstring
+says a ring naming no agent is "the common case, not an edge case". `place()`
+confirms the answer returns on the caller's stdout regardless, and `_bind` treats
+a failed bind as "worth logging, never worth dropping the call".
+
+My misreading came from the CLI help — *"which session he is connected to when he
+answers"* — which reads as though the name must resolve to a live session. It does
+not; `--agent` is a conversation label.
+
+Its substantive argument was also better than mine: `-64` is a session identity
+with a retention clock, the timer runs for months, and one stable conversation in
+his app beats an orphan per respawn. Conceded, and retracted the spec change I had
+told the bsajt session to make — the spec was right as written.
+
+This is [[recipient-agents-find-what-authors-cannot]] happening in the other
+direction: the agent on the receiving end of my instruction found the defect in
+it. Worth noting that it cost nothing because it argued instead of complying.
