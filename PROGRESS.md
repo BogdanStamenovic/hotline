@@ -11600,3 +11600,36 @@ sessions, the session verb set, Discord as log/control-surface/inbox, sysadmin
 duty, and the part it had not thought to ask: that hotline is a system for
 reaching a human reliably *and knowing whether you did*, and is partly an
 authentication system.
+
+## 2026-09-13 02:56 CEST — delegated the bsajt verifier build to a fresh Opus agent
+
+The bsajt session relayed his instruction to delegate the archserver + Pigion half
+of the portfolio verification system. Read the spec myself before handing it over
+(`/home/bodas/data/bsajt-verify-spec.md`, 13 K) rather than delegating blind: it is
+coherent, cites the loopback-doorbell incident and the user-unit mistake correctly,
+and contains nothing destructive.
+
+**Spawned `bsajt-verify`** in tmux, `--model opus` (it writes real code), cwd
+`/home/bodas/data/bsajt-verify`, `HOTLINE_SPAWNED=1` so the AskUserQuestion bridge
+covers it. Pane captured after spawn — no folder-trust wedge; it was reading the
+spec and the `wake` unit shapes within 25 s. Spawned by hand via tmux because
+`hotline --declare` retasks the caller and the bare spawn path crashes on long
+prompts (both found tonight); the agent runs `--declare` in its OWN session, which
+is the correct use of that flag.
+
+**Four constraints attached that the spec does not cover:**
+
+- **A. No real ring.** It is 03:00. Testing the unreachable path is free; a call
+  that actually rings him needs clearing with me first. A verifier that wakes him
+  at 4am proving it works has failed at its purpose.
+- **B. Build the timer, do not arm it.** This constructs something that will
+  autonomously phone him on every boot and every 6 hours. Installing it is
+  reversible; letting it start ringing on a schedule is **his** decision, not mine
+  and not a peer agent's. Left disabled pending him.
+- **C. The token does not exist yet.** Stop cleanly at the wiring seam; do not
+  invent one, do not fabricate API responses to make a test pass.
+- **D. Never fake a green result** — the whole system exists because a component
+  reported success for 2h35m while contacting nobody, and here a false pass
+  publishes claims under his name.
+
+Open for him: whether that 6-hourly auto-ring loop may be armed at all.
