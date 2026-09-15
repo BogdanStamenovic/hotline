@@ -11695,3 +11695,33 @@ Nothing armed, GPU 2 MiB with no compute apps, 11 G free, no failed units. Five
 unrelated repos carry pre-existing dirty/unpushed work — surfaced in the banner,
 deliberately not touched. Recoverable: `wakeonlan a8:a1:59:fd:4d:13`, `Wake-on: g`
 confirmed with sudo.
+
+## 2026-09-15 08:02 CEST — operator `hotline-80` (session `a9bf38ea`): his 09-13 yes was never actioned; the 08:00 wake kills every operator
+
+Booted by the 08:00 `wake` schedule (track slots), not by him. Roster: me only.
+
+**Discord, all three text channels since 09-13 00:00Z:** one human message not
+reflected anywhere in handoff/PROGRESS — `1548505816867274875`, 01:29:16Z, author
+`bogdan028304` (read directly from the Discord API, not relayed): *"move it sure.
+ALso for the timer arm it sure. tommorow we will test the desing"*. That answers
+the banner's three questions: arm `bsajt-verify.timer` yes, move `HOTLINE_API_KEY`
+to Pigion yes, design test "tomorrow" (= 09-14). It landed the minute the box
+went off.
+
+**Why it is still undone:** the 09-13 08:03 and 09-14 08:02 operator sessions
+both died at ~08:05/08:07 with nothing logged. Cause is not a mystery unit: the
+`wake` agent fires `track-slot-0800` with `then_do=poweroff`, and at the end of
+the slot runs `sudo systemctl poweroff` (journal 09-14 08:07:50, `wake.server
+WARNING powering off (rtc armed for track-sl ...; watchdog suppressed: True)`).
+The 09-14 session had found his message and was checking the verifier's
+failure mode when it was killed. It never posted.
+
+**Live probes 08:04:** site HTTP 000 after 12 s (still not deployed);
+`bsajt-verify.timer` disabled/inactive; Pigion `bsajt-verify-watch.timer`
+disabled. Pigion key presence NOT checked (home-wide grep timed out).
+
+**Did not arm or move anything** — not with a poweroff minutes away, and not
+before confirming what an armed verifier does against a dead site (possible
+ring every boot + 6 h). Posted one consolidated message to #agent-hotline-80
+proposing to do both in a session without a fuse, and asking "now" if he wants
+the box held.
