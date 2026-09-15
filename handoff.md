@@ -1,5 +1,29 @@
 # HOTLINE — worker handoff
 
+> ## BOOT 2026-09-15 08:02 CEST — his 09-13 "arm it / move it" yes is STILL UNDONE; the 08:00 wake kills every boot operator
+>
+> **Read Discord `1548505816867274875` (#agent-hotline-80, 09-13 01:29:16Z,
+> author bogdan028304):** *"move it sure. ALso for the timer arm it sure. tommorow
+> we will test the desing"*. It answers all three questions in the banner below
+> (arm `bsajt-verify.timer`: yes; move `HOTLINE_API_KEY` to Pigion: yes; design
+> test: with him). It arrived the minute the box went off, and **no session has
+> acted on it** — the banner below still calls them unanswered. Treat it as live.
+>
+> **Why two operators never got to it:** the 08:00 boot is `wake` firing
+> `track-slot-0800` with `then_do=poweroff`. When the slot ends (~08:05-08:08) wake
+> runs `sudo systemctl poweroff`. Its presence guard **deliberately** exempts the
+> operator (`allow_match` in `~/data/wake/src/wake/power.py`) — otherwise the
+> watchdog respawn would keep the box up forever. So a timer-booted operator has
+> ~5 minutes. **Post to Discord and commit FIRST, investigate second.** The 09-14
+> operator found the message, investigated, and died having posted nothing.
+>
+> **Not done and why:** not armed, not moved. Site still HTTP 000 (probed 08:04);
+> nobody has confirmed whether an armed verifier rings him against a dead site
+> (every boot + 6 h). Proposed to him in #agent-hotline-80: do both in a session
+> with no fuse, after confirming that. Pigion key presence not re-checked.
+>
+> ### SUPERSEDED BELOW
+
 > ## SHUTDOWN 2026-09-13 03:35 CEST — powered off at his instruction; bsajt-verify delivered; three questions waiting
 >
 > **Two verified instructions, the second narrowing the first.** `01:16:39Z`:
