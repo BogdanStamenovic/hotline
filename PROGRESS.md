@@ -11742,3 +11742,19 @@ the box held.
 - **"move it sure" (HOTLINE_API_KEY → Pigion) is still undone.** The only hit on Pigion is `~/.config/hotline-frontdoor.env`, and `bsajt-verify-watch.timer` there is disabled. I asked him to re-confirm rather than acting on a 4-day-old yes while the site is down.
 - **Not new (I first reported it as new, then corrected on Discord):** `rtc-wake-backstop` armed the RTC for 1789711080 (09-18 05:58Z) at 11:52:12. At 11:52:14 the `wake` agent logged "cleared a leftover rtc alarm set for 1789711080". So `/sys/class/rtc/rtc0/wakealarm` ends up empty on every boot, and the two units undo each other. The boot-time clear is by design. The real bug was found on 09-11: ExecStop never re-arms on poweroff. The fix (`Conflicts=shutdown.target`) is still waiting for his go.
 - Reading Discord needs `HOTLINE_BOT_TOKEN`. There is no `DISCORD_BOT_TOKEN` key, and guessing it returns a 401.
+
+## 2026-09-17 12:05 — his instruction: fix the bug, todo the rest, quiet wake command on Pigion ASAP
+
+Relayed and **provenance-verified** (`1550083615906463785`, posted 09:58:53Z).
+
+**Quiet wake.** My first idea was for Pigion to ssh back in and stop `hotline-watchdog.timer` for this boot only. That doesn't work: Pigion has no key for archserver (`Permission denied (publickey)`). Adding one would create a new trust path just for this. So the direction is reversed, because archserver can already reach Pigion:
+- Pigion `~/bin/wake-archserver-quiet` writes an epoch to `~/.local/state/archserver/quiet-wake`, then execs the unchanged `wake-archserver`.
+- `hotline-watchdog` runs `quiet_boot()` just before it would spawn. If the marker falls within [boot - 15 min, boot + 60 s], it writes `/run/user/1000/hotline-quiet-boot` (tmpfs, so it lasts one boot), logs once and doesn't spawn. If Pigion can't be reached, it tries 3 times and then spawns as before. A "No such file" answer counts as a real answer, not a network failure.
+- Clocks: Pigion and archserver agree to 1 ms, and both are NTP-synced. ssh to Pigion works from a systemd context without an agent.
+- Tests: 7/7 using the watchdog's own function, real ssh, and scratch flag and marker paths. The real unit ran with Result=success. **The full path was not exercised**, since that needs a poweroff and he has a shell on the box.
+- Gotcha: `ssh pigion wake-archserver-quiet` fails because a non-login shell doesn't have `~/bin` on PATH. Use the full path.
+- My first heredoc to Pigion broke on an apostrophe inside `ssh '...'`. I wrote the file locally and used scp instead.
+
+**RTC backstop.** Changed `Conflicts=reboot.target` to `shutdown.target`, with a comment in the unit explaining why. The `wake` agent clears the alarm only at startup (`cli.py:335`) and never on stop, so the re-arm at shutdown will stick. The script only needs `date` and sysfs, so it is safe late in shutdown. **No timeshift snapshot:** root is at 86% with 11G free and a snapshot is about 8G. The change is one directive in a oneshot that nothing needs to boot, so a targeted `.bak` is the right-sized safety net. Verified: `shutdown.target` ConflictedBy lists the unit; `systemctl stop` armed `/sys` for 1789711080, and I started it again. The alarm stays armed while the box is up. That's harmless: it's the 07:58 CEST backstop it's supposed to be. The unit is in no repo; `/etc` plus the backup is its only history.
+
+**Todo.** Created `TODO.md` with the key move and the track-slot poweroff. I didn't write into Pigion's todo app (live and in daily use) on a guess; I asked him which list he meant.

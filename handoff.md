@@ -1,5 +1,13 @@
 # HOTLINE — worker handoff
 
+> ## 2026-09-17 12:05 CEST — he's here (woke the box from `arch`); quiet wake built; RTC backstop fixed
+>
+> Instruction verified (`1550083615906463785`): fix the bug, move the rest to the todo list, and build a Pigion command that wakes archserver without an operator, ASAP.
+>
+> - **`wake-archserver-quiet` on Pigion** (`~/bin`). It writes `~/.local/state/archserver/quiet-wake` and then sends WoL. `~/.claude/bin/hotline-watchdog` (not in git; backup `.bak.20260917-1200`) asks Pigion before it spawns. A marker written up to 15 min before boot sets `/run/user/1000/hotline-quiet-boot`, and that boot gets no operator. **If you were started on a boot that should have been quiet, something is broken.** Tested as a unit (7/7 against real ssh); the full wake-to-boot path has not been run.
+> - **RTC backstop:** `/etc/systemd/system/rtc-wake-backstop.service` now has `Conflicts=shutdown.target` (backup `.bak.20260917`). Verified that `shutdown.target` ConflictedBy lists it and that a stop arms `/sys` for 05:58Z. It has not been proven through a real poweroff yet: after the next boot, check `journalctl -b -1 -u rtc-wake-backstop` for a second "armed" line at shutdown.
+> - Deferred items are in `TODO.md`.
+
 > ## BOOT 2026-09-17 08:02 CEST — nothing new from him; 09-15 banner below is STALE on item 1
 >
 > The 09-16 operator ARMED `bsajt-verify.timer` (verified 09-17: enabled, fires at boot).
