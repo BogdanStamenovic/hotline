@@ -11758,3 +11758,20 @@ Relayed and **provenance-verified** (`1550083615906463785`, posted 09:58:53Z).
 **RTC backstop.** Changed `Conflicts=reboot.target` to `shutdown.target`, with a comment in the unit explaining why. The `wake` agent clears the alarm only at startup (`cli.py:335`) and never on stop, so the re-arm at shutdown will stick. The script only needs `date` and sysfs, so it is safe late in shutdown. **No timeshift snapshot:** root is at 86% with 11G free and a snapshot is about 8G. The change is one directive in a oneshot that nothing needs to boot, so a targeted `.bak` is the right-sized safety net. Verified: `shutdown.target` ConflictedBy lists the unit; `systemctl stop` armed `/sys` for 1789711080, and I started it again. The alarm stays armed while the box is up. That's harmless: it's the 07:58 CEST backstop it's supposed to be. The unit is in no repo; `/etc` plus the backup is its only history.
 
 **Todo.** Created `TODO.md` with the key move and the track-slot poweroff. I didn't write into Pigion's todo app (live and in daily use) on a guess; I asked him which list he meant.
+
+## SHUTDOWN 2026-09-18 00:05 CEST — powered off at his instruction
+
+*"You did perfect now poweroff goodnight"* — provenance-verified `1550266258161672256` (09-17 22:04:38Z), one minute before I acted on it.
+
+**What a poweroff would have destroyed — checked, not assumed:**
+- Live sessions: only me. His `arch` shell on pts/1 from 11:54 is gone, so nothing of his was interrupted.
+- `hotline` clean and pushed (`1090ee4` == origin/main). `~/data/wake` clean.
+- Nothing armed: no `/run/systemd/shutdown`, no systemd jobs, no crontab, no `at` (not installed).
+- GPU 2 MiB / 0 %, no ollama model resident, so nothing mid-inference.
+- `bsajt-verify.service` was the only failed unit (the dead site, as designed). `reset-failed` run so the next boot sweep doesn't chase a ghost.
+
+**Recovery, verified with sudo minutes before:** `Wake-on: g`, link detected, carrier 1 on enp4s0. Pigion has been up 60 days and `pigion.service` is active, so the 06:00Z WoL slot has a sender. The RTC was already armed for 09-18 05:58Z going in, from this afternoon's stop/start cycle.
+
+**This poweroff is the first real test of today's `Conflicts=shutdown.target` fix.** I could not prove it while up. Next boot must read `journalctl -b -1 -u rtc-wake-backstop` and look for a second "armed" line from ExecStop. Worth being precise about what that proves: the alarm was already armed before the shutdown, so a *set* alarm next boot is not evidence by itself — only the ExecStop journal line is.
+
+Left unanswered at goodnight: whether "the todo list" is this repo's new `TODO.md` or his Pigion todo app.

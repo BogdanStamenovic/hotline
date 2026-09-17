@@ -1,5 +1,18 @@
 # HOTLINE — worker handoff
 
+> ## SHUTDOWN 2026-09-18 00:05 CEST — off at his instruction; both wake paths armed; the RTC fix gets its first real test on this poweroff
+>
+> *"You did perfect now poweroff goodnight"* — verified `1550266258161672256`, posted 09-17 22:04:38Z. He had a shell here from `arch` earlier and logged out before saying it.
+>
+> **FIRST THING NEXT BOOT — verify the RTC fix, don't assume it:**
+> `journalctl -b -1 -u rtc-wake-backstop --no-pager` must show a SECOND "armed for ..." line at 00:05-ish, from ExecStop. If it does, `Conflicts=shutdown.target` works and the box can wake itself. If only the boot-time line is there, the fix did NOT work and WoL is still the only path — say so plainly, in those words.
+>
+> **State at power-off:** only the operator was live; hotline and wake trees clean and pushed (`1090ee4`); no armed jobs, no at/cron, GPU 2 MiB, no ollama model; `bsajt-verify.service` reset-failed. Recovery: `wakeonlan a8:a1:59:fd:4d:13` from Pigion (up 60 days) — `Wake-on: g` and link up, checked with sudo minutes before. RTC was ALSO already armed for 09-18 05:58Z before the poweroff, so the morning has two independent paths even if ExecStop misfires.
+>
+> **Tomorrow's 08:00 boot still ends in poweroff** (`track-slot-0800`, `then_do=poweroff`), so that operator gets about 5 minutes: post first, investigate second. That is `TODO.md` item 2 and it is his call. `TODO.md` item 1 (the Pigion key move) is his too, blocked on the site being deployed.
+>
+> **Unanswered question:** which todo list he meant — `TODO.md` in this repo (where I put the items) or his Pigion todo app. Asked, not answered before goodnight.
+
 > ## 2026-09-17 12:05 CEST — he's here (woke the box from `arch`); quiet wake built; RTC backstop fixed
 >
 > Instruction verified (`1550083615906463785`): fix the bug, move the rest to the todo list, and build a Pigion command that wakes archserver without an operator, ASAP.
