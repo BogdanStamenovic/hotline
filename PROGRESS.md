@@ -11732,3 +11732,13 @@ the box held.
 - Discord: no message from him since 09-13 01:29Z. The 09-16 operator's post says it armed `bsajt-verify.timer` and asked him about the slot's `then_do=poweroff`. That operator never updated the handoff banner, so the 09-15 banner saying "STILL UNDONE" is stale.
 - Checked: `bsajt-verify.timer` enabled, fired 08:03:43. Only live session is this operator.
 - Posted one status message to #agent-hotline-80. No work invented.
+
+## 2026-09-17 11:52 — operator reboot, woken from `arch`, not a timer
+
+- **Who woke it:** Pigion sshd shows `arch` (100.103.46.118) logged in at 11:51:50. The box booted at 11:52. `arch` then ssh'd into archserver at 11:54:59 and left an idle interactive zsh on pts/1. That is most likely him. No `.claude/remote/ccd-cli` process.
+- **Discord:** his last message in any channel is still 09-13 01:29Z. Only three channels are active: #agent-hotline-80, #general (last post 09-12) and #sd-analize (last post 09-08).
+- **Fuse:** no `wake` slot fires this boot. The next ones are 09-18 06:00Z (wol) and 06:02Z (track). No poweroff armed, no systemd jobs.
+- **bsajt-verify against a dead site does not ring.** The 09-16 operator armed the user timer. It fired at 08:03 and 11:55, timed out on `/api/ops/queue`, exited 1 and left the unit `failed`, with no call. That answers the question left open on 09-15. The site still returns HTTP 000.
+- **"move it sure" (HOTLINE_API_KEY → Pigion) is still undone.** The only hit on Pigion is `~/.config/hotline-frontdoor.env`, and `bsajt-verify-watch.timer` there is disabled. I asked him to re-confirm rather than acting on a 4-day-old yes while the site is down.
+- **New bug:** `rtc-wake-backstop` armed the RTC for 1789711080 (09-18 05:58Z) at 11:52:12. At 11:52:14 the `wake` agent logged "cleared a leftover rtc alarm set for 1789711080". So `/sys/class/rtc/rtc0/wakealarm` ends up empty on every boot, and the two units undo each other. I reported it to him and didn't fix it, because it's the wake project and WoL is the working path.
+- Reading Discord needs `HOTLINE_BOT_TOKEN`. There is no `DISCORD_BOT_TOKEN` key, and guessing it returns a 401.
