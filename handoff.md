@@ -1,5 +1,12 @@
 # HOTLINE — worker handoff
 
+> ## BOOT 2026-09-17 08:02 CEST — nothing new from him; 09-15 banner below is STALE on item 1
+>
+> The 09-16 operator ARMED `bsajt-verify.timer` (verified 09-17: enabled, fires at boot).
+> No message from him since 09-13 01:29Z. Open and his: change `track-slot-0800`'s
+> `then_do=poweroff` if boot operators should get more than ~5 minutes (asked 09-16 06:05Z).
+> Read #agent-hotline-80 from 09-16 for the 09-16 operator's full account.
+
 > ## BOOT 2026-09-15 08:02 CEST — his 09-13 "arm it / move it" yes is STILL UNDONE; the 08:00 wake kills every boot operator
 >
 > **Read Discord `1548505816867274875` (#agent-hotline-80, 09-13 01:29:16Z,

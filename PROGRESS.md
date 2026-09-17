@@ -11725,3 +11725,10 @@ before confirming what an armed verifier does against a dead site (possible
 ring every boot + 6 h). Posted one consolidated message to #agent-hotline-80
 proposing to do both in a session without a fuse, and asking "now" if he wants
 the box held.
+
+## 2026-09-17 08:02 — boot operator (timer), quiet
+
+- 08:00 `track-slot-0800` wake boot again; `wake agent` running, poweroff expected ~08:07.
+- Discord: no message from him since 09-13 01:29Z. The 09-16 operator's post says it armed `bsajt-verify.timer` and asked him about the slot's `then_do=poweroff`. That operator never updated the handoff banner, so the 09-15 banner saying "STILL UNDONE" is stale.
+- Checked: `bsajt-verify.timer` enabled, fired 08:03:43. Only live session is this operator.
+- Posted one status message to #agent-hotline-80. No work invented.
