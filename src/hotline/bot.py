@@ -498,7 +498,7 @@ def build_bot(pool: SessionPool, log: Callable[[str], None]) -> HotlineBot | Non
         raw = os.environ.get(name)
         return int(raw) if raw and raw.isdigit() else None
 
-    return HotlineBot(
+    bot = HotlineBot(
         pool=pool,
         user_id=int(user_id),
         guild_id=as_int("DISCORD_GUILD_ID"),
@@ -507,6 +507,37 @@ def build_bot(pool: SessionPool, log: Callable[[str], None]) -> HotlineBot | Non
         voice_channel_id=as_int("DISCORD_VOICE_CHANNEL_ID"),
         voice=os.environ.get("HOTLINE_VOICE", "1") not in ("0", "false", "no"),
     )
+    _load_registry_cog(bot, log)
+    return bot
+
+
+def _load_registry_cog(bot: HotlineBot, log: Callable[[str], None]) -> None:
+    """Mount hotline-registry's `#registry` form on this connection, if it is installed.
+
+    **Why it rides here instead of on its own client.** A bot has one gateway
+    identity and this is it -- the thing carrying every agent's contact with
+    Bogdan. hotline-registry is a separate tool with a separate repository and
+    keeps its own logic; what it cannot have is a second connection on this
+    token. So it ships a cog and this loads it.
+
+    Wrapped in a bare except on purpose, which is not the house style anywhere
+    else in this file. The registry is a feature; the bridge is the thing agents
+    depend on to reach him at all. An import error, a py-cord version skew or a
+    bad decorator in a DIFFERENT repository must not be able to stop Discord
+    coming up here -- it may only make the button stop working, which is
+    visible, local, and nobody's emergency.
+    """
+    if os.environ.get("HOTLINE_REGISTRY_COG", "1") in ("0", "false", "no"):
+        return
+    try:
+        from hotline_registry.cog import setup as registry_setup
+
+        registry_setup(bot)
+        log("registry cog loaded")
+    except ImportError:
+        log("hotline-registry is not installed; the #registry form is not served")
+    except Exception as exc:  # noqa: BLE001 -- see docstring: never fatal to the bridge
+        log(f"registry cog failed to load ({type(exc).__name__}: {exc}); Discord continues")
 
 
 async def run_bot(
