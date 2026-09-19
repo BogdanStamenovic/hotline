@@ -12543,3 +12543,55 @@ would have reported 0 and I would have "confirmed" the wrong thing), memory note
 
 All three sessions healthy on the wedge check. Nothing armed. Nothing outstanding between the
 agents. Open and his: `desktop off`, the HDMI dummy plug, and which backtick mitigation.
+
+## 2026-09-19 21:15 CEST — seed-prompt fix applied (and I broke hotline-run doing it)
+
+Verified the agent's closing state a fourth time; all of it held. Zero AutomaticLogin lines, no
+mutter udev rules, vkms unloaded, 0 listeners on 3389, GPU 13 MiB / 7877 free, guard exits **2**
+without `--yes`, both memory notes present, report 505 lines, `jev-research.md` untouched at 102.
+
+Checked the guard's exit code directly rather than through a pipe — `... | head` reports the
+pipeline's status and would have shown 0, "confirming" the opposite of the truth. Same family as
+everything else tonight.
+
+### `pgrep -f` matches its own shell
+
+Reproduced: `pgrep -cf "kev.serve"` returns 1 here with zero real matches (the agent got 2; the
+difference is our shells' command lines, which is itself the proof). **This is what swallowed
+the SIGTERM on pid 8750 hours earlier** — it reported a process killed that was still alive, and
+a wrong diagnosis ("headless mutter is broken") got built on top of a shell that had simply never
+been signalled. Saved as its own memory note: anchor the pattern or filter the shell out, and
+**re-probe the pid after any kill** — `kill` succeeding means the signal reached whatever you
+named, not that you named the right thing.
+
+### The seed-prompt fix — and the same bug, in the fix
+
+Put the backtick rule into the operator's own prompt in `bin/hotline-run`. That is the place that
+travels: the operator posts constantly and spawns everything else, and the prompt now tells it to
+carry the rule into every seed prompt it writes. The memory note could never have reached an
+agent working outside this project, which is exactly how it bit.
+
+**My first attempt embedded a literal `"` and a `$(` inside `PROMPT="..."` and broke the script
+outright.** `hotline-run` is what the watchdog calls to restart a dead operator, so the recovery
+path was briefly broken by the edit meant to document the hazard. Caught it immediately because I
+ran the thing rather than trusting the write, restored from git (the reason it was worth
+versioning an hour earlier), and redid it with both escaped.
+
+**Verified by RENDERING the prompt, not just by `bash -n`.** A syntax check would have passed a
+prompt containing the wrong text; only sourcing it and printing `$PROMPT` proves the agent will
+read `pass "$(cat file)"` literally and that `${DIR}` still expands. Parse-clean is a status
+field for correct.
+
+So four of the same family tonight, not three: the agent's nine-from-ten, its pgrep self-match,
+my stale-`ls`-timestamp reasoning, and me writing a quoting bug into the warning about quoting
+bugs. That last one argues for the structural fix over the documented one better than either of
+us managed in argument.
+
+`cfc1c40`, pushed. Watchdog re-verified through systemd afterwards: `Result=success`.
+
+### Open — his
+
+1. `desktop off`?
+2. The ~5 EUR HDMI dummy plug.
+3. Which backtick mitigation — the seed-prompt half is done and was mine to do; the
+   `hotline-say` usage warning and the global CLAUDE.md line are still his.
