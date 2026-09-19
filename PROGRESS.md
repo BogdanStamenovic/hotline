@@ -12644,3 +12644,46 @@ untouched. All load-bearing scripts versioned. Repo clean and pushed at `3d5d800
 2. The ~5 EUR HDMI dummy plug.
 3. Which backtick mitigation — the seed-prompt half is done; the `hotline-say` usage warning and
    the global CLAUDE.md line remain his.
+
+## 2026-09-19 21:25 CEST — the backtick warning is in `hotline-say --help`
+
+Verified (`hotline --provenance`, 19:21:42Z): "Make it a warning in hotline-say usages test".
+He picked the usage-text option.
+
+Needed more than adding text. `argparse.ArgumentParser(description=__doc__)` with the default
+formatter **reflows the description into one paragraph** — it had already collapsed the existing
+examples into an unreadable run-on (`hotline- say --file report.md echo "..." | hotline-say -`),
+and it would have done the same to a multi-line warning. Checked `--help` output before writing
+anything, which is why this surfaced. Switched to `RawDescriptionHelpFormatter`; the warning now
+renders as written and the old examples read correctly for the first time as a side effect.
+
+The warning states the mechanism (backticks in double quotes are command substitution, run
+before the program exists, so an agent executes any path it merely MENTIONS), carries tonight's
+incident as the concrete case **including the detection detail** — nine of ten spans failed as
+command-not-found and the tenth's silence was the only sign — and contrasts a SAFE block
+(quoted heredoc, `--file`, stdin) with the UNSAFE inline form, plus the same trap in
+`git commit -m`.
+
+Verified three ways: `--help` renders correctly, the usage path still exits 2, and the report to
+him was posted *with the changed tool* — the functional test is the delivery.
+
+### Deliberately did NOT adopt hotline-say into the repo
+
+It is still outside git like the other three were, and the reason is specific rather than
+caution: it does `Path(__file__).with_name("hotline-shot")` to hand PNGs to the screenshot tool.
+Through the `~/.claude/bin` symlink that still resolves (checked: True), but the repo copy called
+directly would look for `hotline-shot` beside itself and fail (checked: False). So it is **not**
+the same one-line symlink move `hotline-watchdog` and `hotline-run` were — adopting it needs the
+sibling lookup made robust first, or it plants a latent break. Flagged to him with the offer;
+backup at `hotline-say.bak.20260919-2125`.
+
+That distinction is the point: three scripts took an identical pattern and the fourth does not,
+and noticing that before applying the pattern is cheaper than discovering it from a broken
+screenshot path weeks later.
+
+### Open — his
+
+1. `desktop off`?
+2. The ~5 EUR HDMI dummy plug.
+3. Whether `hotline-say` goes in the repo (needs the `__file__` lookup fixed first).
+4. The global CLAUDE.md line — the last untouched piece of the three; his document, his call.
