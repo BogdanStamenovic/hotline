@@ -5,16 +5,26 @@ times, broadcast to the local segment. Pigion and archserver are on the same /24
 and the same layer-2 domain, so a broadcast reaches -- no directed-broadcast
 routing needed.
 
-**This has never woken anything, by design.** archserver's `enp4s0` is
-`NO-CARRIER`: the ethernet cable is not plugged in and will not be for a while.
-Bogdan's explicit instruction was to build the wake layer as though it works, make
-the OS side self-arm when carrier appears, and not block on it. So what is tested
-here is that the correct bytes leave Pigion; the end-to-end wake is
-**UNVERIFIED-BY-DESIGN** and is marked as such everywhere it is reported.
+**This works, and has since 2026-08-27.** It is the primary way archserver comes
+back, and it is exercised routinely -- on 2026-09-19 the box was powered off at
+14:50 CEST and woken from Pigion at 18:00, with nothing else able to have started
+it. `enp4s0` is up with carrier, MAC `a8:a1:59:fd:4d:13`, and `Wake-on: g`.
 
-Two BIOS settings also gate it, and neither can be set remotely on an ASRock
+This paragraph used to say the opposite -- "has never woken anything, by design",
+the cable unplugged, the end-to-end wake UNVERIFIED-BY-DESIGN. That was true when
+written and stayed in the file for weeks after it stopped being true, which is
+the more useful lesson: a doc claiming something is impossible outlives the
+impossibility and then misleads whoever reads it next.
+
+**Checking it before a poweroff:** `ethtool enp4s0 | grep Wake-on` must be read
+**with sudo**. Unprivileged it prints nothing at all for that field -- not "off",
+*nothing* -- so an empty result is a failed check, never a negative one.
+
+Two BIOS settings gate it, and neither can be set remotely on an ASRock
 B550M-HVS SE (no IPMI): ErP/ErP Ready **disabled**, and PCIE Devices Power On /
-PME Event Wake Up **enabled**.
+PME Event Wake Up **enabled**. Both are currently set correctly -- worth knowing
+if the CMOS is ever cleared, because the symptom is a box that simply never
+comes back.
 """
 
 from __future__ import annotations
