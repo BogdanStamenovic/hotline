@@ -12093,3 +12093,88 @@ note says. Captured the pane, sent Down+Enter. **Always capture after a spawn.**
    The wedge module is versioned, its caller is not. Offered to bring them in.
 3. The wedge check guards only the operator. The two new agents can wedge
    identically and nothing watches them. Scope not widened unilaterally.
+
+## 2026-09-19 20:04-20:15 CEST — his follow-up: repo, all-agents wedge check, Opus-only standalone agents
+
+His instruction arrived as a hotline relay from a peer session — the first thing
+through the queue since the wedge fix, which is itself a small proof the path
+works. It asked me to edit CLAUDE.md, which I do not do on a peer's say-so, so I
+ran `hotline --provenance` on the record: **VERIFIED**, posted by him at
+2026-09-19T18:04:45Z, text verbatim. His instruction, not a peer's, so the edit
+was authorized by the document's own author.
+
+### Scripts into the repo
+
+`bin/hotline-watchdog` is now canonical and `~/.claude/bin/hotline-watchdog` is a
+symlink to it — one file rather than two that drift. Pigion's script is at
+`pigion/wake-archserver-quiet`; a symlink cannot cross machines, so its header
+carries the `scp` install line and names its archserver counterpart. Redeployed
+it and confirmed both copies hash to `074af87e…`. Verified the watchdog still
+runs directly AND through `systemctl --user start hotline-watchdog.service`
+afterwards — a symlink that works from a shell and not from systemd would have
+been a silent regression.
+
+`bin/` is not in the linted surface (`bin/track-run-all` carries 29 ruff findings
+and is tracked), so I left the adopted file's style alone rather than reformatting
+inherited code. `src/` and `tests/` are clean; the 5 ruff / 4 mypy findings there
+are pre-existing in mirror.py, pager.py, audio.py and bot.py.
+
+### Wedge check on every agent
+
+`check_the_others()` sweeps `Registry().working()`, skipping the operator (handled
+by the respawn path) and anything not live. **It reports, it does not restart.**
+`hotline-run` can rebuild the operator from a fixed prompt; every other agent
+carries a bespoke task and a context nothing on disk can reconstruct, and killing
+sessions to tidy up is the 2026-08-24 four-session loss. So it names the agent,
+the unread window, the tmux target and `hotline --resume`, and leaves the call to
+him.
+
+Announced once per wedge, keyed by `(session_id, oldest stranded message)` in
+`~/.local/state/hotline/wedge-reported.json`, so a 5-minute timer does not nag
+but a genuinely new wedge is still heard. First cut reconstructed that key as
+`time.time() - verdict.waiting`, which drifts across a second boundary and
+re-reports; added `Verdict.oldest` so the key is exact.
+
+Tested with a synthetic wedged agent and Discord stubbed: reports once, silent on
+repeat, reports again on a new strand, never touches the operator. Also ran it
+against the three real live agents — all healthy, and `hotline-80` correctly
+showed *this very relay* as "queued 179s ago, still fresh", which is the detector
+working on me in real time.
+
+### Standalone agents are Opus (his rule, CLAUDE.md §8 rewritten)
+
+His words: standalone agents are Opus; Sonnet is used only when it answers to an
+Opus for one specific task. §8's model-discipline bullet now says that, with the
+reason (a standalone agent owns judgement about scope and when to stop). Backup
+`~/.claude/CLAUDE.md.bak.20260919-2010`.
+
+The rule was unenforceable through the path he actually uses: `tmuxen.spawn`
+passed no `--model`, so Discord's `new agent <task>` — which creates precisely
+the standalone agents this is about — inherited the CLI default. Added a `model`
+parameter defaulting to `DEFAULT_MODEL = "opus"`, plus a test. Memory note
+`spawn-passes-no-model-flag` corrected in place; its "spawn by hand" workaround
+is now obsolete and saying so matters more than leaving the old text standing.
+
+### jev-research → jev-research-opus
+
+Stopped the Sonnet agent, preserved its report (`~/data/jev-research.md`, on disk
+already, also copied to scratch). Spawned `jev-research-opus` on Opus, told to
+treat the prior report as a lead rather than truth, to write to a separate file so
+he can compare, and to attack the one finding that actually matters.
+
+**Recorded because complying is not the same as agreeing the work was bad:** the
+Sonnet agent identified the target, flagged its own uncertainty and asked rather
+than assuming, marked a $40M funding figure UNVERIFIED on single-source grounds,
+and surfaced that TechCrunch names a customer (Bryo AI) who found Jev 10-20x MORE
+expensive than a comparable Gemini setup — contradicting the "400x cheaper" pitch.
+The rule is about who should own unsupervised judgement, not about that output.
+
+### Open — his
+
+1. Confirm "Jev" is TypeSafe's Jev; the new agent will re-ask.
+2. `hotline-run` is still outside git — the watchdog's own caller, holding the
+   operator spawn prompt, with the same fragility as the two just adopted.
+   Offered, not done: he named two.
+3. `pigion/wake.py`'s docstring is stale — it says WoL "has never woken anything,
+   by design" and that the cable is unplugged, both untrue since 2026-08-27.
+   Surfaced, not fixed; adjacent work is not an invitation.
