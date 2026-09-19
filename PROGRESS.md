@@ -12738,3 +12738,44 @@ project has been hurt far more by stale documents than by missing ones. Left as 
 ### Open — his
 
 1. The CLAUDE.md line (recommended against; his call).
+
+## 2026-09-19 21:35 CEST — his "keep desktop on" made a dormant script dangerous
+
+Passing the monitor decision to `jev-research-opus` paid off immediately, and for a sharper
+reason than "the script is untested": **his decision to keep the desktop up turned
+`redo-desktop-setup.sh` into a live hazard.** It enabled autologin and ran
+`systemctl restart gdm` **unconditionally** — written when the box had no session to lose.
+Running it would have **killed his live graphical session**, and it is the same artifact that
+already executed itself once tonight through the backtick bug. Second time the same file would
+have caused harm.
+
+The agent rewrote it as a checker: reports what is missing, changes as little as possible,
+`--autologin` and `--restart-gdm` separate and neither default, `--restart-gdm` refusing outright
+while a seat0 session exists, `--yes` guard retained.
+
+**Verified the guard by reading it and testing its detection against live output — not by running
+it.** Running `--restart-gdm` to find out whether it protects his session is not a test worth
+performing on his session; the guard is `if RESTART_GDM && [ -n "$SESSION" ] -> refuse`, and
+`$SESSION` populates correctly right now (ids 11 and 12), so it would refuse.
+
+Running it end to end found a real bug in itself: it read SEAT from **column 3** of
+`loginctl list-sessions --no-legend` when it is **column 4**, so it reported "no seat0 session"
+while two were running. Confirmed both halves against live output — the fixed awk finds 11 and
+12, the old one finds nothing. A false FAIL that would have sent someone chasing a login problem
+that did not exist. It also now uses an anchored `pgrep` pattern, the fix for the self-match trap
+that swallowed its SIGTERM hours earlier.
+
+Two lessons compounding: **an artifact written for one system state becomes dangerous when the
+state changes**, and the thing that surfaced it was routing a decision to the agent that owned
+the affected code rather than just filing it.
+
+### Not re-asked, deliberately
+
+`tesseract` (system package, last red line in `use-computer doctor`) is a question the agent has
+already put to him **with its own recommendation**. Pointed at it so he does not miss it; did not
+ask again or add an opinion — ONE VOICE, and I am not its mouthpiece.
+
+### Open — his
+
+1. The CLAUDE.md line (recommended against).
+2. tesseract — in the agent's channel, not mine.
