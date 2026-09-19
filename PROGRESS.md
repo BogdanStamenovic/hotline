@@ -12304,3 +12304,46 @@ Whether the reboot happens. My recommendation: settle the NVIDIA question first,
 since a reboot that cannot work is the only genuinely wasteful option. Sequence
 ready if he says go: handoffs written → back up `/etc/default/grub` → edit +
 grub-mkconfig → reboot → `hotline --resume` both agents and verify channels/files.
+
+## 2026-09-19 20:41 CEST — reboot DENIED by him; relayed with warrant
+
+Verified (`hotline --provenance`, posted 18:39:46Z). His decision verbatim:
+
+> "If it very likely ignorea the flag then the cost isnt worth the low chance of
+> a reword so reboot is denied it everything else is tried after llmserver ahent
+> finishes then reboot but ask me first as always. Relay the reboot denied to
+> jev agent"
+
+An expected-value call, not a veto on the approach: low probability of a result
+does not justify the cost of a reboot. **No boot config was ever touched** —
+GRUB is untouched and `/etc/default/grub` was never even backed up, because I
+never got to that step.
+
+Relayed to `jev-research-opus` verbatim, carrying the provenance record so it can
+confirm the denial came from Bogdan rather than from me — the operator prompt's
+"pass --warrant so it can check WHO ASKED, not just who is relaying", done by
+embedding the checkable record.
+
+Three readings made explicit to it, because two parts of his message invite
+over-reading:
+
+1. Denied **on the odds**. If it finds hard evidence the 5xx driver honours
+   `video=...e`, the premise changes and it is worth re-asking. Evidence, not
+   argument.
+2. **"everything else is tried" is the real instruction.** The cheapest untried
+   option is still open: two gnome-shells (headless `--virtual-monitor` at 8750,
+   gdm autologin at 12948) with Mutter reporting zero monitors — find which owns
+   `org.gnome.Mutter.DisplayConfig`. If its own GDM change is shadowing the
+   headless one they are fighting, and stopping one unblocks it with no reboot.
+3. **"then reboot but ask me first as always" is NOT standing pre-approval.**
+   Told it explicitly not to treat llmserver-work finishing as a trigger; that
+   request comes back through me and I take it to him.
+
+Also told it — and him — that the GDM autologin and the two udev rules persist
+across reboots, so an autologin desktop is now a standing change to how a box
+that boots headless by policy comes up, not a test artifact. Revert offered,
+not performed; it is not mine to undo while it is mid-task.
+
+### Open — his
+
+Nothing pending. A later reboot needs his yes at that time, by his own words.
