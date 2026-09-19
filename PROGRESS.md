@@ -12210,3 +12210,40 @@ All three formerly-loose scripts are now in git: `bin/hotline-watchdog`,
 1. `pigion/wake.py`'s docstring is stale (claims WoL "has never woken anything,
    by design" and that the cable is unplugged; both untrue since 2026-08-27).
    Surfaced twice now, not fixed — it is adjacent work, not an instruction.
+
+## 2026-09-19 20:21 CEST — the stale wake.py docstring, corrected against measurement
+
+"Fix the line" — relayed, VERIFIED (posted 18:21:14Z).
+
+Measured before rewriting rather than correcting from memory, because the whole
+point of the item was a document that outlived its own truth:
+
+- `ip -br link show enp4s0` → UP, LOWER_UP, `a8:a1:59:fd:4d:13` — carrier present,
+  so the "cable is not plugged in" claim is false.
+- `sudo ethtool enp4s0` → `Wake-on: g`.
+- Conclusive end-to-end evidence: the box was powered off at 14:50 CEST today and
+  booted at 18:00, five seconds after a `wake-archserver-quiet` marker was written
+  on Pigion. Nothing else could have started it. `watchdog.log` 18:02:40 confirms
+  that boot was recognised as the quiet wake.
+
+Checked the docstring's own claim that UNVERIFIED-BY-DESIGN is "marked as such
+everywhere it is reported" — grep found the phrase in exactly one place, this
+docstring. The other `unverified` hits are provenance semantics, unrelated. So
+the marking went away with the claim.
+
+Left the old assertion *named* in the new text instead of silently deleting it.
+The failure it demonstrates is this project's recurring one: a doc asserting
+something is impossible survives the impossibility and misleads the next reader.
+Same family as the "never touch these files" rule that cost a week.
+
+Also folded in the `ethtool` sudo trap, since that docstring is where someone
+will look before a poweroff: unprivileged, ethtool prints *nothing* for Wake-on,
+so an empty result is a failed check and not a negative one. Reading it wrong
+strands the machine.
+
+512 tests green, ruff clean. `484cdb0`.
+
+### Open
+
+Nothing assigned. Both agents working (`llmserver-work`, `jev-research-opus`),
+nothing armed to power off, all load-bearing scripts versioned.
