@@ -12779,3 +12779,77 @@ ask again or add an opinion — ONE VOICE, and I am not its mouthpiece.
 
 1. The CLAUDE.md line (recommended against).
 2. tesseract — in the agent's channel, not mine.
+
+## 2026-09-20 00:20 CEST — #registry-admin: a live mirror of the contact registry
+
+Verified (19:22:13Z... actually 22:13:20Z): "inside the server claude contacts. Make me an admin
+channel where i can see the full registru of all the people who registered".
+
+Did it myself rather than delegating: he addressed it to me, it is roster administration, and
+spawning an agent would have cost more coordination than the build. Built in
+`hotline-registry` (`6494eec`, pushed).
+
+### It is a mirror, not a snapshot
+
+The obvious build is to post the roster once. **That is a status field** — true when written,
+quietly wrong the first time somebody registers, which is this project's signature failure with
+a new coat of paint. So `admin.publish()` is called from the cog on every registration, plus a
+`hotline-registry publish` subcommand for what the cog cannot cover (a channel recreated by
+hand, a mirror that failed while Discord was down).
+
+Rewrites wholesale rather than editing one tracked message: edit-in-place has to remember which
+message it owns, and that memory is one more thing that can drift out of step with the registry
+it claims to describe. Deleting only the bot's own messages and reposting cannot drift.
+
+**The mirror can never fail a registration.** The registry is the record; the channel is a view.
+A Discord outage is logged and swallowed — the person IS registered, and saying otherwise
+because a mirror post failed would be a lie.
+
+### Privacy, verified per person rather than assumed
+
+The channel holds Lena's and Milos's SIP addresses and Discord ids. Created with @everyone
+denied VIEW_CHANNEL and an explicit member allow for him. Checked each registered person
+individually: Lena NO, Milos NO, Bogdan YES (guild owner). **Also checked that no role but the
+bot's carries Administrator** — an admin bit anywhere bypasses channel overwrites entirely and
+would have shown everyone everything, and the deny would have *looked* correct.
+
+Guild-member enumeration 403s (privileged intent), so the per-member check went through
+`GET /guilds/{id}/members/{user_id}` with ids from the registry itself.
+
+### Two judgement calls
+
+Capabilities reproduced **in full**, not truncated — the point is reading what somebody can do
+without a terminal, and a summary he cannot trust is worth less than none. Revoked people shown
+struck through rather than dropped, because dropping them makes "who used to be reachable"
+unanswerable.
+
+### What testing caught
+
+- **`person.channels` is a method, not a property** — caught by rendering before posting, not by
+  reading the class. It would have published `<bound method Person.channels of Person(...)>`,
+  dumping the full dataclass repr including SIP addresses, into a channel, from a unit intended
+  to be careful about exactly that.
+- **`EXIT_FAIL` does not exist**; the constant is `EXIT_FAILED`. A NameError on the failure path
+  — the path that only runs when something is already wrong.
+- **A real splitting bug**: `rfind` returns -1 with no line break to split on, and `-1 or LIMIT`
+  is -1, so an over-long entry was trimmed by one character instead of split and stayed over
+  Discord's limit. Would have failed immediately after somebody registered. Caught by a test
+  written for the case, not by reading.
+- Reused `contact.load_env_file()` instead of adding a second env mechanism — without it the CLI
+  (which has no environment of its own) would have found neither token nor channel.
+
+Verified end to end: published live, ran twice to confirm no duplication (one message, not two),
+restarted hotlined and confirmed `registry cog loaded` + `3 people on file` with all three
+agents surviving. 69 tests, ruff and mypy clean.
+
+**Public repo, so the commit was scanned**: no channel id, guild id, user id or token in the
+source; the channel id lives in `.env` and `registry.json` is untracked.
+
+Incidental: Discord returned a **503** on the first report post. `hotline-say` retries 429 but
+not 5xx, so it failed outright; a retry succeeded. Not fixed — noting it as a real gap.
+
+### Open — his
+
+1. The CLAUDE.md line (recommended against).
+2. tesseract — in the agent's channel, not mine.
+3. `hotline-say` does not retry 5xx. Small, unasked.
