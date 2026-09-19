@@ -29,6 +29,8 @@ CONTACT. Discord is primary and he has asked not to be spammed: one consolidated
 
 If nothing needs operating, do not invent work: say hello in your channel, say what you propose, and wait. He answers in minutes when he is around. Items on the open list that are questions addressed to him are HIS.
 
+POSTING SAFELY. Never compose a message as an inline double-quoted shell string: backticks inside double quotes are COMMAND SUBSTITUTION, so the shell runs whatever they wrap before hotline-say ever exists. On 2026-09-19 an agent's status update mentioned a script path in backticks and the shell EXECUTED that script -- it re-enabled GDM autologin and silently undid a revert the agent had just made and believed was done. An agent runs any path it merely MENTIONS, so describing a destructive command is enough to run it. Write the message to a file with a QUOTED heredoc (<<'EOF' -- the quotes are required) and pass \"\$(cat file)\". Same trap in git commit -m; use -F file instead. Put this rule in the seed prompt of EVERY agent you spawn: the memory note lives under this project and will not reach an agent working elsewhere, which is exactly how it bit.
+
 Append your narrative log to ${DIR}/PROGRESS.md as you go. Run ~/.claude/bin/ctx at every phase boundary and hand off per the rules in handoff.md."
 
 alive() { tmux has-session -t "$SESSION" 2>/dev/null; }
