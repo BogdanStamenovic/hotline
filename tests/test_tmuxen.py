@@ -8,6 +8,8 @@ reused pane that should have been replaced.
 
 from __future__ import annotations
 
+import contextlib
+
 import pytest
 
 from hotline import tmuxen
@@ -259,3 +261,27 @@ def test_no_tmux_server_is_no_sessions_not_an_error(monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr(tmuxen, "_tmux", Failing())
     assert tmuxen.sessions() == set()
+
+
+async def test_a_spawned_agent_is_opus(monkeypatch) -> None:
+    """Every agent spawned here is standalone, and standalone means Opus.
+
+    Bogdan's rule of 2026-09-19. Before this, the CLI default decided and nothing
+    visible in the pane, the registry or `--list` showed which model a session
+    actually got.
+    """
+    seen: list[list[str]] = []
+
+    def fake(*args: str):
+        seen.append(list(args))
+        raise SystemExit  # stop before the descriptor wait
+
+    monkeypatch.setattr(tmuxen, "_detached_tmux", fake)
+    monkeypatch.setattr(tmuxen, "exists", lambda name: False)
+    with contextlib.suppress(SystemExit):
+        await tmuxen.spawn("pinned", timeout=0.01)
+
+    assert seen, "spawn never reached tmux"
+    argv = seen[0]
+    assert "--model" in argv
+    assert argv[argv.index("--model") + 1] == "opus"

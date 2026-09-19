@@ -1,0 +1,41 @@
+#!/bin/sh
+# Wake archserver WITHOUT the hotline operator spawning on that boot.
+#
+# LIVES ON PIGION, at ~/bin/wake-archserver-quiet. This repo holds the canonical
+# copy; a symlink cannot cross machines, so deploying it is a copy:
+#   scp pigion/wake-archserver-quiet pigion:bin/wake-archserver-quiet
+# Its archserver-side counterpart is bin/hotline-watchdog, which reads the tag
+# this writes. Change one and check the other.
+#
+# The tag is PUBLISHED over HTTP, not read over ssh. archserver fetches
+# http://100.114.148.69:8790/quiet-wake on its way up, before hotline-watchdog
+# decides whether to spawn an operator; a tag written within 15 minutes before
+# a boot makes that whole boot operator-free, and an older one is ignored so a
+# later plain `wake-archserver` or timer boot is normal.
+#
+# Why HTTP: ssh needs a key, an agent, a live sshd and a resolvable host at the
+# one moment in a boot when the network is least settled, and Bogdan asked on
+# 2026-09-19 that it not be required. beamd.py already serves this directory on
+# the tailnet for the iOS sideload kit, so this adds a file, not a service.
+# ~/.local/state/archserver/quiet-wake is still written as the local record and
+# as the fallback ssh still reads.
+#
+# To get an operator after all, on archserver:
+#   rm /run/user/1000/hotline-quiet-boot && ~/.claude/bin/hotline-run start
+set -eu
+now=$(date +%s)
+state="$HOME/.local/state/archserver"
+mkdir -p "$state"
+echo "$now" > "$state/quiet-wake"
+
+# The served copy. Written to a temp file and moved, so archserver can never
+# fetch a half-written tag.
+beam="$HOME/hotline-beam"
+if [ -d "$beam" ]; then
+  echo "$now" > "$beam/.quiet-wake.tmp" && mv "$beam/.quiet-wake.tmp" "$beam/quiet-wake"
+else
+  echo "WARNING: $beam missing; archserver can only get the tag over ssh" >&2
+fi
+
+echo "quiet-wake marker written ($(date -Is)); archserver will boot without an operator"
+exec "$HOME/bin/wake-archserver" "$@"

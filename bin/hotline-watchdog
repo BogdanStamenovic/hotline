@@ -1,0 +1,273 @@
+#!/home/bodas/data/hotline/.venv/bin/python
+"""Restart the hotline worker if it has actually died.
+
+The previous version asked `tmux has-session -t hotline`, which is not a
+liveness test for the worker -- it is a liveness test for *one particular way of
+starting* the worker. A worker that came up in a Discord-spawned pane, or was
+adopted by a replacement living somewhere else, is invisible to that check by
+construction, so the watchdog cannot tell "the worker moved" from "the worker
+died" and manufactures a duplicate every time the timer fires. It did exactly
+that on 2026-08-25: a second worker appeared and started editing the same files
+as the live one.
+
+The identity is the registry record, not the tmux name. `hotline --adopt` moves
+that record onto whichever session is currently doing the job, so resolving the
+worker by name and then asking whether *its* session is live answers the real
+question. Two agents in one tree is a worse failure than a few minutes of no
+worker, so when in doubt this does nothing.
+
+Liveness is not health, which is the 2026-09-19 lesson. The worker stopped
+taking turns ten seconds into its life and kept its session descriptor open; the
+registry check below passed on every pass for 31 minutes while two of Bogdan's
+instructions sat unread in its queue, and he had to power cycle the box to get an
+operator that would answer. So a live worker is now also asked whether it is
+still consuming what it is sent (`hotline.wedge`), and a wedged one is respawned.
+
+Does NOT judge progress -- context exhaustion is the worker's own job, via
+`~/.claude/bin/ctx`. Judging *responsiveness* is different: it asks only whether
+messages handed to the session are ever picked up, never whether the work is good.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+sys.path.insert(0, "/home/bodas/data/hotline/src")
+
+from hotline import tmuxen  # noqa: E402
+from hotline.agents import Registry  # noqa: E402
+from hotline.ccsocks import discover  # noqa: E402
+from hotline.wedge import check as wedge_check  # noqa: E402
+
+WORKER = os.environ.get("HOTLINE_WORKER", "hotline-80")
+# Its own file. The narrative log is Bogdan's to read and an automated heartbeat
+# scribbling into the middle of it is noise -- and worse, it collides with the
+# worker's own appends.
+LOG = Path("/home/bodas/data/hotline/watchdog.log")
+
+# A quiet wake is requested on Pigion (`wake-archserver-quiet`), which cannot
+# reach into this box at the moment it matters -- the box is off -- so the
+# request is pulled from there on the way up. The verdict is cached in /run
+# (tmpfs) so it lasts exactly one boot and Pigion is asked only once.
+#
+# The tag is fetched over HTTP, not ssh. Bogdan asked for that on 2026-09-19
+# ("ssh access is not required"), and he is right that it should not be load
+# bearing: ssh here needs a key, an agent, a reachable sshd and a resolvable
+# host at the one moment in a boot when the network is least settled. Pigion
+# already runs a static file server for the sideload kit
+# (`beamd.py`, tailnet-only, :8790), so publishing one more small file there
+# costs no new service and no new unit that can fail to start. ssh is kept only
+# as a fallback for when the HTTP fetch fails -- required by neither path.
+QUIET_FLAG = Path(f"/run/user/{os.getuid()}/hotline-quiet-boot")
+QUIET_HOST = os.environ.get("HOTLINE_QUIET_HOST", "pigion")
+QUIET_MARKER = "~/.local/state/archserver/quiet-wake"
+QUIET_URL = os.environ.get("HOTLINE_QUIET_URL", "http://100.114.148.69:8790/quiet-wake")
+
+# Every wedged agent is reported once, not once per timer pass. Keyed by session
+# and by *which* message stranded, so an agent that wedges again after being
+# unstuck is reported again rather than silently suppressed forever.
+WEDGE_SEEN = Path("/home/bodas/.local/state/hotline/wedge-reported.json")
+# The marker is written seconds before WoL; the slack covers firmware POST and a
+# retry. Anything older belongs to an earlier boot.
+QUIET_WINDOW_BEFORE = 15 * 60
+QUIET_WINDOW_AFTER = 60
+
+
+def say(message: str) -> None:
+    line = f"{datetime.now().astimezone().isoformat(timespec='seconds')} {message}"
+    print(line)
+    with LOG.open("a") as fh:
+        fh.write(line + "\n")
+
+
+def _parse_tag(text: str) -> float | None:
+    try:
+        return float(text.strip())
+    except ValueError:
+        return None
+
+
+def _fetch_tag() -> tuple[float | None, bool]:
+    """The quiet tag Pigion published, and whether we got a real answer at all.
+
+    Returns `(marked, answered)`. `answered=False` means neither transport could
+    reach Pigion, which is the only case worth retrying; `(None, True)` is the
+    perfectly ordinary "there is no tag, this is a normal boot".
+    """
+    try:
+        result = subprocess.run(
+            ["curl", "-fsS", "--max-time", "8", QUIET_URL],
+            capture_output=True, text=True, timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        result = None
+    if result is not None and result.returncode == 0:
+        return _parse_tag(result.stdout), True
+    # curl exits 22 on 404: the server answered, and its answer is "no tag".
+    if result is not None and result.returncode == 22:
+        return None, True
+
+    # Fallback only. Kept because a second chance costs nothing when the first
+    # already failed, not because anything depends on it.
+    try:
+        result = subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
+             QUIET_HOST, f"cat {QUIET_MARKER}"],
+            capture_output=True, text=True, timeout=20,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None, False
+    if result.returncode == 0:
+        return _parse_tag(result.stdout), True
+    if "No such file" in result.stderr:
+        return None, True
+    return None, False
+
+
+def quiet_boot() -> bool:
+    """Was this boot requested without an operator?
+
+    Fails open: if Pigion cannot be asked, spawn as before. A missing operator
+    on a timer boot is the worse outcome, and the network can lag at boot, so
+    it retries before giving up.
+    """
+    if QUIET_FLAG.exists():
+        return True
+    booted = time.time() - float(Path("/proc/uptime").read_text().split()[0])
+    for attempt in range(3):
+        marked, answered = _fetch_tag()
+        if answered:
+            if marked is None:
+                return False  # no tag published: a normal boot, and a real answer
+            if booted - QUIET_WINDOW_BEFORE <= marked <= booted + QUIET_WINDOW_AFTER:
+                QUIET_FLAG.write_text(f"{int(marked)}\n")
+                return True
+            # An older tag belongs to a previous boot. Not an error -- it is how
+            # a later plain wake stays noisy.
+            return False
+        if attempt < 2:
+            time.sleep(10)
+    say(f"could not ask {QUIET_HOST} about a quiet wake; spawning as usual")
+    return False
+
+
+def _tell_him(message: str) -> None:
+    """Best effort. A watchdog that crashes because Discord is down helps nobody."""
+    try:
+        subprocess.run(
+            ["/home/bodas/.claude/bin/hotline-say", message],
+            capture_output=True, text=True, timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        say(f"could not post the wedge notice to Discord: {exc}")
+
+
+def _already_reported(session_id: str, oldest: float) -> bool:
+    """Has this exact wedge been announced already?
+
+    The key is (session, oldest stranded message). A new message stranded on an
+    agent that is still wedged changes the key, which is correct -- that is new
+    information Bogdan wants, not a repeat of the old one.
+    """
+    try:
+        seen = json.loads(WEDGE_SEEN.read_text())
+    except (OSError, ValueError):
+        seen = {}
+    key = str(int(oldest))
+    if seen.get(session_id) == key:
+        return True
+    seen[session_id] = key
+    try:
+        WEDGE_SEEN.parent.mkdir(parents=True, exist_ok=True)
+        WEDGE_SEEN.write_text(json.dumps(seen))
+    except OSError:
+        pass  # Reporting twice beats not reporting at all.
+    return False
+
+
+def check_the_others(registry: Registry, live: set[str], worker: str) -> None:
+    """The same question, asked of every other agent that is supposed to be working.
+
+    Deliberately reports rather than restarts. The operator can be respawned
+    because `hotline-run` knows how to rebuild it from a fixed prompt; every
+    other agent is carrying a bespoke task and a context nothing on disk can
+    reconstruct, and killing sessions to tidy up is how this project lost four of
+    them on 2026-08-24. So this names the wedge, the pane and the way back in,
+    and leaves the decision to a human.
+    """
+    for agent in registry.working():
+        if agent.name == worker or agent.session_id not in live:
+            continue
+        verdict = wedge_check(agent.session_id)
+        if not verdict.wedged:
+            continue
+        if _already_reported(agent.session_id, verdict.oldest):
+            continue
+        say(f"{agent.name} ({agent.session_id[:8]}) is LIVE BUT WEDGED: {verdict.reason}")
+        _tell_him(
+            f"**`{agent.name}` is alive but has stopped taking turns** — {verdict.reason}. "
+            f"Anything sent to it since then is sitting unread.\n"
+            f"I have NOT restarted it: it is carrying a task and a context that "
+            f"nothing on disk can rebuild, so that call is yours. "
+            f"Look at it with `tmux attach -t {tmuxen.tmux_name(agent.name)}`, or "
+            f"bring it back with `hotline --resume {agent.name}`."
+        )
+
+
+def main() -> int:
+    registry = Registry()
+    agent = registry.by_name(WORKER)
+    if agent is None:
+        say(f"no agent called {WORKER!r} in the registry; not spawning one uninvited")
+        return 0
+    if agent.done:
+        say(f"{WORKER} finished at {agent.completed_at}; nothing to restart")
+        return 0
+
+    live = {s.session_id for s in discover(include_self=True, include_programmatic=True)}
+    check_the_others(registry, live, WORKER)
+    if agent.session_id in live:
+        verdict = wedge_check(agent.session_id)
+        if not verdict.wedged:
+            return 0
+        # Alive, and not answering. Respawning costs this session's context, but
+        # the session is already spending Bogdan's messages into a hole, so the
+        # context is worth nothing and the silence is worth less than nothing.
+        say(f"{WORKER} ({agent.session_id[:8]}) is LIVE BUT WEDGED: {verdict.reason}; respawning")
+        _tell_him(
+            f"Your operator (`{WORKER}`) was alive but had stopped taking turns — "
+            f"{verdict.reason}. I restarted it automatically. If you sent it "
+            f"something in the last {verdict.waiting / 60:.0f} minutes it did not read it, "
+            f"so please send it again."
+        )
+        result = subprocess.run(
+            ["/home/bodas/.claude/bin/hotline-run", "respawn"],
+            capture_output=True, text=True, timeout=180,
+        )
+        say((result.stdout + result.stderr).strip() or f"respawn exited {result.returncode}")
+        return 0
+
+    already = QUIET_FLAG.exists()
+    if quiet_boot():
+        if not already:
+            say(f"{WORKER} not running, but this boot was a quiet wake; not spawning "
+                f"(rm {QUIET_FLAG} to allow it)")
+        return 0
+
+    say(f"{WORKER} ({agent.session_id[:8]}) is not among {len(live)} live sessions; restarting")
+    result = subprocess.run(
+        ["/home/bodas/.claude/bin/hotline-run", "start"],
+        capture_output=True, text=True, timeout=120,
+    )
+    say((result.stdout + result.stderr).strip() or f"hotline-run exited {result.returncode}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

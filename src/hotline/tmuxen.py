@@ -32,6 +32,19 @@ from time import monotonic
 
 from .ccsocks import LiveSession, discover, refuse_if_self
 from .config import CLAUDE_BIN
+
+# Everything spawned through here is a standalone agent: it gets its own tmux
+# pane, its own registry record and its own Discord channel, and it answers to
+# Bogdan rather than to another model. His rule of 2026-09-19 is that such an
+# agent is always Opus -- Sonnet is a subagent that answers to an Opus for one
+# bounded task, and there is no way to spawn one of those through this function.
+#
+# Without this the CLI default decides, which is how agents drifted off the
+# Opus-for-code rule silently: nothing in the pane, the registry or `--list`
+# shows which model a session got, so the violation is invisible until you read
+# /proc/<pid>/cmdline. Pins the START only; `model_refusal_fallback` can still
+# swap it mid-session, so this is not a guarantee the session is *still* on opus.
+DEFAULT_MODEL = "opus"
 from .errors import ClaudeLaunchFailed, HotlineError, SessionNotFound
 
 log = logging.getLogger(__name__)
@@ -240,6 +253,7 @@ async def spawn(
     bypass: bool = True,
     timeout: float = 90.0,
     name: str | None = None,
+    model: str | None = DEFAULT_MODEL,
 ) -> LiveSession:
     """Start a claude in its own tmux session and wait until it can be messaged.
 
@@ -257,6 +271,8 @@ async def spawn(
     argv = [CLAUDE_BIN]
     if bypass:
         argv += ["--permission-mode", "bypassPermissions"]
+    if model:
+        argv += ["--model", model]
     if name:
         # The CLI's own display name, which is what `session list`, the session
         # picker and the terminal title all show. Without it a resumed agent comes

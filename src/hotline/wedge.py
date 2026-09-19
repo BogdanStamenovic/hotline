@@ -67,6 +67,10 @@ class Verdict:
     pending: int = 0
     # Seconds the oldest unconsumed message has been waiting.
     waiting: float = 0.0
+    # When that message was handed over. Callers that want to recognise "this
+    # same wedge again" key on this rather than recomputing it from `waiting`,
+    # which drifts by a second depending on when they ask.
+    oldest: float = 0.0
     # Why not wedged, when it is not -- so a caller can log something truer than
     # a bare False.
     reason: str = ""
@@ -131,13 +135,13 @@ def scan(path: Path, *, now: float | None = None, stale_after: float = STALE_AFT
     count = sum(len(times) for times in pending.values())
 
     if waiting < stale_after:
-        return Verdict(False, count, waiting, reason=f"queued {waiting:.0f}s ago, still fresh")
+        return Verdict(False, count, waiting, oldest, reason=f"queued {waiting:.0f}s ago, still fresh")
     if last_assistant > oldest:
         # It answered *after* the message landed, so it is taking turns; the
         # message is queued behind a turn in flight rather than stranded.
-        return Verdict(False, count, waiting, reason="answered since the message arrived")
+        return Verdict(False, count, waiting, oldest, reason="answered since the message arrived")
 
-    return Verdict(True, count, waiting, reason=f"{count} message(s) unread for {waiting / 60:.0f} min")
+    return Verdict(True, count, waiting, oldest, reason=f"{count} message(s) unread for {waiting / 60:.0f} min")
 
 
 def check(session_id: str, *, now: float | None = None, stale_after: float = STALE_AFTER) -> Verdict:
