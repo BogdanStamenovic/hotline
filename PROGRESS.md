@@ -12595,3 +12595,52 @@ us managed in argument.
 2. The ~5 EUR HDMI dummy plug.
 3. Which backtick mitigation — the seed-prompt half is done and was mine to do; the
    `hotline-say` usage warning and the global CLAUDE.md line are still his.
+
+## 2026-09-19 21:20 CEST — a near-miss of my own, and a quiet close
+
+The jev agent signed off; its report is 536 lines and it added the fourth instance (mine) to
+section 7. Its closing framing is the best statement of tonight's theme and worth keeping:
+**a check that shares a failure mode with the thing it checks cannot detect it.** Every one of
+the four was caught by probing the *effect* — `stat`, an exit code read directly rather than
+through a pipeline, a rendered string — and none by re-reading a command's own output.
+
+### I nearly filed a false alarm on llmserver-work
+
+Routine check: `ps -p 20700` returned nothing and `build-i2v.log`'s last entry was 20:42, forty
+minutes stale. The obvious reading was that the 68 GB build had died.
+
+**It had not.** Probing instead of reporting: the script is alive as pid **21310** (PPID 1,
+restarted ~20:42 after the agent's own script-overwrite incident), with `hfget.py` and a curl on
+shard 6 of 6 under it, and `dl-i2v-high.log` written within the last minute. I had checked a
+stale pid and the wrong log — during a download phase the build log is idle by design and
+`dl-i2v-high.log` is the live one.
+
+Exactly [[an-absence-in-a-filtered-view-is-a-status-field]], and I was one message away from
+reporting a dead build to Bogdan. The discipline held only because I probed before filing —
+which is the same habit that caught three of the agent's errors tonight, applied to myself.
+
+Second near-alarm, same check: disk at **93%**. Also fine — the high expert download completed
+(57.16 GB in 28.1 min), 69 GiB free, and the established pattern converts ~57 GB of fp32 shards
+to an ~8.4 GB safetensors and then deletes the source, as it already did for the low expert. The
+headroom is ample. Said nothing to llmserver-work: it is managing space deliberately and telling
+it what it already knows is noise.
+
+### Deliberately did not post
+
+Nothing new for Bogdan — three questions of his are still open and he has had twelve messages
+tonight. llmserver-work reports to him directly and posts its own progress; duplicating it would
+break the ONE VOICE rule. No message sent.
+
+### State at close
+
+Three sessions, none wedged. `jev-research-opus` idle with its work delivered (536-line report,
+memory notes written, environment fully reverted and verified four times). `llmserver-work` busy
+and healthy, past the 57 GB download, conversion next. Nothing armed to power off. GRUB
+untouched. All load-bearing scripts versioned. Repo clean and pushed at `3d5d800`.
+
+### Open — all his
+
+1. `desktop off`? (gdm still active with two leftover autologin sessions.)
+2. The ~5 EUR HDMI dummy plug.
+3. Which backtick mitigation — the seed-prompt half is done; the `hotline-say` usage warning and
+   the global CLAUDE.md line remain his.
