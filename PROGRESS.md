@@ -12687,3 +12687,54 @@ screenshot path weeks later.
 2. The ~5 EUR HDMI dummy plug.
 3. Whether `hotline-say` goes in the repo (needs the `__file__` lookup fixed first).
 4. The global CLAUDE.md line — the last untouched piece of the three; his document, his call.
+
+## 2026-09-19 21:30 CEST — hotline-say versioned; desktop stays on; a real monitor is coming
+
+Verified (19:24:51Z): "Hotline say in the repo. / As for the claude md line u forogot whats thst.
+/ Keeep desktop on. As for the dummy plug il plug a real monitor in."
+
+### hotline-say adopted, after fixing the thing that would have broken quietly
+
+`bin/hotline-say` canonical, `~/.claude/bin/hotline-say` a symlink. **Fixed the sibling lookup
+first rather than symlinking over it**, which was the whole reason I had held off: it resolved
+`hotline-shot` with `Path(__file__).with_name()`, correct only while both scripts lived in
+`~/.claude/bin`. Through a symlink `__file__` is the invoked path, so the repo copy called
+directly would have failed and **the image handoff would have died silently** — no traceback,
+just a screenshot that never posted.
+
+Order now: sibling, then PATH, then the install location. PATH alone is insufficient here and
+that is not hypothetical — [[operator-starts-without-claude-bin-on-path]] — so a `which` miss is
+not evidence the tool is absent. Verified resolution from all three invocation paths (via
+`~/.claude/bin`, via the repo path, and from an unrelated directory), plus `--help`, the usage
+path (exit 2), and real posting through the symlink. `6a67116`.
+
+Four load-bearing scripts now versioned: `bin/hotline-watchdog`, `bin/hotline-run`,
+`bin/hotline-say`, `pigion/wake-archserver-quiet`.
+
+### Desktop stays on; the display problem gets hardware
+
+No action on gdm — he wants it left running, so the two autologin sessions stay. And he is
+plugging in a **real monitor** rather than buying a dummy plug, which is a better answer than
+the one I proposed.
+
+Told `jev-research-opus`, because that was its wall and it should hear it is coming down.
+Flagged one thing to it: `redo-desktop-setup.sh` was written from an environment it then tore
+down and has **never been run end to end against a working display**, so it is worth checking
+while the reasoning is fresh rather than trusting it cold on the day the monitor arrives.
+
+### The CLAUDE.md line — answered, and recommended AGAINST
+
+He asked what it was, having forgotten. It was never his idea: both the agent and I proposed it
+and I deliberately did not do it. Explained the proposal (put the backtick rule in the global
+CLAUDE.md so it reaches every agent on every project, argued for by the fact that tonight's
+incident happened *because* the rule was filed where the agent could not see it).
+
+**Recommended against it now**, which is the opposite of what I was pushing an hour ago: the two
+places that actually intercept an agent about to make the mistake are already done —
+`hotline-say --help`, where someone looks while using the tool, and the operator spawn prompt,
+which propagates it into every agent started. A third copy is a third thing to drift, and this
+project has been hurt far more by stale documents than by missing ones. Left as his call.
+
+### Open — his
+
+1. The CLAUDE.md line (recommended against; his call).
