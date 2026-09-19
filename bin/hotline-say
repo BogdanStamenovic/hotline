@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+"""Post a progress note into this agent's own Discord channel.
+
+The pager is for questions and blocks until Bogdan answers; this is the other
+half -- news, with nobody waiting on it. Deliberately not routed through
+`hotlined`: an agent must be able to narrate what it is doing even when the
+daemon is down.
+
+!! DO NOT PASS YOUR MESSAGE AS AN INLINE DOUBLE-QUOTED SHELL STRING !!
+
+  Backticks inside double quotes are COMMAND SUBSTITUTION. The shell runs
+  whatever they wrap BEFORE this program is ever invoked, so an agent writing
+  ordinary Markdown executes any path it merely MENTIONS. Describing a
+  destructive command is enough to run it.
+
+  On 2026-09-19 an agent's status note mentioned a script path in backticks.
+  The shell executed that script; it re-enabled GDM autologin and restarted
+  gdm, silently undoing a revert the agent had just made and believed was
+  done. Nine of the ten backticked spans failed as command-not-found -- the
+  tenth was the one that was executable, and its silence was the only sign.
+
+  SAFE -- a QUOTED heredoc (the quotes on 'EOF' are what disable substitution):
+
+    cat > /tmp/note.md <<'EOF'
+    Fixed `foo.py`; see `~/bin/deploy.sh` for the rollout.
+    EOF
+    hotline-say "$(cat /tmp/note.md)"
+
+  Also safe: --file, or piping on stdin.
+
+    hotline-say --file report.md
+    echo "..." | hotline-say -
+
+  UNSAFE -- runs foo.py and deploy.sh:
+
+    hotline-say "Fixed `foo.py`; see `~/bin/deploy.sh` for the rollout."
+
+  The same trap applies to git commit -m; use -F <file> there.
+
+Exit codes: 0 posted, 1 could not deliver, 2 usage.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ENV = Path.home() / "data/hotline/.env"
+REGISTRY = Path.home() / ".local/state/hotline/agents.json"
+API = "https://discord.com/api/v10"
+LIMIT = 1900  # Discord's hard cap is 2000; leave room for the fence markers.
+
+
+def load_env() -> dict[str, str]:
+    env = dict(os.environ)
+    if ENV.exists():
+        for line in ENV.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            env.setdefault(key.strip(), value.strip().strip("'\""))
+    return env
+
+
+def channel_for(session_id: str, name: str | None) -> int | None:
+    if not REGISTRY.exists():
+        return None
+    agents = json.loads(REGISTRY.read_text()).get("agents", [])
+    for agent in agents:
+        if name and agent.get("name") == name:
+            return agent.get("channel_id")
+        if not name and agent.get("session_id") == session_id:
+            return agent.get("channel_id")
+    return None
+
+
+def chunks(text: str) -> list[str]:
+    """Split on line boundaries so code and lists survive the cut."""
+    out, current = [], ""
+    for line in text.splitlines(keepends=True):
+        while len(line) > LIMIT:  # a single monstrous line still has to go somewhere
+            if current:
+                out.append(current)
+                current = ""
+            out.append(line[:LIMIT])
+            line = line[LIMIT:]
+        if len(current) + len(line) > LIMIT:
+            out.append(current)
+            current = ""
+        current += line
+    if current.strip():
+        out.append(current)
+    return out or [text]
+
+
+def post(token: str, channel: int, content: str) -> None:
+    request = urllib.request.Request(
+        f"{API}/channels/{channel}/messages",
+        data=json.dumps({"content": content}).encode(),
+        method="POST",
+        headers={
+            "Authorization": f"Bot {token}",
+            "User-Agent": "DiscordBot (https://github.com/BogdanStamenovic/hotline, 1.0)",
+            "Content-Type": "application/json",
+        },
+    )
+    for attempt in range(4):
+        try:
+            urllib.request.urlopen(request, timeout=20).read()
+            return
+        except urllib.error.HTTPError as exc:
+            if exc.code == 429 and attempt < 3:
+                try:
+                    wait = float(json.loads(exc.read()).get("retry_after", 1.0))
+                except Exception:
+                    wait = 1.0
+                time.sleep(min(wait + 0.25, 30.0))
+                continue
+            raise SystemExit(f"hotline-say: discord refused ({exc.code}): "
+                             f"{exc.read().decode(errors='replace')[:200]}")
+        except OSError as exc:
+            raise SystemExit(f"hotline-say: discord unreachable: {exc}")
+
+
+def find_hotline_shot() -> str:
+    """Where `hotline-shot` lives, without assuming it sits next to this file.
+
+    It used to be `Path(__file__).with_name(...)`, which held only while both
+    scripts lived in ~/.claude/bin. This file is now versioned in the hotline
+    repo and reached through a symlink, so `__file__` is whatever path invoked
+    it: the sibling is right when called through ~/.claude/bin and wrong when
+    the repo copy is called directly. The sibling is still tried first so the
+    normal case is unchanged, then PATH, and only then a refusal that names the
+    problem -- an agent handing over a screenshot should not get a traceback.
+    """
+    sibling = Path(__file__).with_name("hotline-shot")
+    if sibling.exists():
+        return str(sibling)
+    found = shutil.which("hotline-shot")
+    if found:
+        return found
+    # PATH is not dependable here: the operator routinely starts WITHOUT
+    # ~/.claude/bin on it, which is a documented failure on this box, so a
+    # `which` miss is not evidence the tool is absent. This file already
+    # resolves ~/data/hotline/.env and the registry from $HOME; the install
+    # location is the same kind of fact.
+    installed = Path.home() / ".claude/bin/hotline-shot"
+    if installed.exists():
+        return str(installed)
+    raise SystemExit(
+        "hotline-say: that file is not text, and hotline-shot (which posts images) "
+        "is neither beside this script nor on PATH"
+    )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        prog="hotline-say",
+        description=__doc__,
+        # Default argparse reflows the description into one paragraph, which
+        # collapsed the examples below into an unreadable run-on and would do
+        # the same to the substitution warning. The warning is the reason this
+        # help text exists at all, so it has to survive being printed.
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("text", nargs="*", help="the note; '-' reads stdin")
+    parser.add_argument("--file", help="read the note from a file")
+    parser.add_argument("--agent", help="post to this agent's channel instead of your own")
+    parser.add_argument("--channel", type=int, help="explicit channel id, bypassing the registry")
+    parser.add_argument("--session-id", default=os.environ.get("CLAUDE_CODE_SESSION_ID", ""))
+    args = parser.parse_args()
+
+    if args.file:
+        try:
+            body = Path(args.file).read_text()
+        except UnicodeDecodeError:
+            # A PNG's first byte is not UTF-8, and this used to be a traceback.
+            # An agent that has just taken a screenshot and reaches for the tool
+            # it narrates with should not have to know there is a second tool --
+            # hotline-shot already does the multipart upload and the 8MB ceiling
+            # check, so hand it the same arguments rather than growing a second
+            # encoder here that would drift from it.
+            shot = find_hotline_shot()
+            argv = [shot, args.file]
+            if args.agent:
+                argv += ["--agent", args.agent]
+            if args.channel:
+                argv += ["--channel", str(args.channel)]
+            if args.text:
+                argv += ["--text", " ".join(args.text)]
+            os.execv(shot, argv)
+    elif args.text == ["-"] or (not args.text and not sys.stdin.isatty()):
+        body = sys.stdin.read()
+    else:
+        body = " ".join(args.text)
+    if not body.strip():
+        print("hotline-say: nothing to say", file=sys.stderr)
+        return 2
+
+    env = load_env()
+    token = env.get("HOTLINE_BOT_TOKEN")
+    if not token:
+        print("hotline-say: HOTLINE_BOT_TOKEN is not set", file=sys.stderr)
+        return 1
+
+    channel = args.channel or channel_for(args.session_id, args.agent)
+    if not channel:
+        print("hotline-say: no channel for this session -- run `hotline --declare` first",
+              file=sys.stderr)
+        return 1
+
+    for chunk in chunks(body):
+        post(token, int(channel), chunk)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
