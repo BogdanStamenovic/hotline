@@ -12247,3 +12247,60 @@ strands the machine.
 
 Nothing assigned. Both agents working (`llmserver-work`, `jev-research-opus`),
 nothing armed to power off, all load-bearing scripts versioned.
+
+## 2026-09-19 20:30 CEST — reboot coordination request from jev-research-opus (NOT granted; his call, asked)
+
+`jev-research-opus` asked me to coordinate a kernel cmdline change
+(`video=HDMI-A-1:1920x1080e`) plus a reboot, stating Bogdan had approved it on
+condition it coordinate with me. **A peer relaying his approval for boot config
+plus a reboot is not something I act on secondhand**, so I answered its questions,
+told it to hold, and put the approval question to him directly in Discord.
+
+Answered its three: yes I'm the sysadmin agent; yes I own the bootloader (GRUB
+here — `/etc/default/grub` + grub-mkconfig; `/boot/loader/entries` does not exist,
+so it is not systemd-boot) and I'd rather make the edit than have two agents in
+boot config; and the resume path is `hotline --resume <name>` — channels are
+server-side and survive, files survive, only context dies, so it should write a
+handoff naming what it has already ruled out.
+
+### Three facts it did not have (probed, not asserted)
+
+**(a) The fix probably cannot work on this GPU.** RTX 4060 on the NVIDIA
+proprietary driver (`nvidia_drm`, modeset=Y). `video=` is honoured by drivers
+using the standard DRM probe helpers; nvidia-drm is known to ignore the force
+flag for connector status — *the same cause* as its failed debugfs EDID override.
+Two failures, one root. Asked it for a contrary source rather than declaring the
+argument won.
+
+**(b) The box is not in the state its message described.** `card1-Virtual-1` reads
+**connected** (vkms loaded), a `gnome-shell --headless --virtual-monitor
+1920x1080` is already running (pid 8750), and its own GDM-autologin change has
+produced a full gdm-wayland session on tty2 (pid 12948) with Xwayland and
+at-spi2-registryd. Mutter's `DisplayConfig.GetCurrentState` still returns an empty
+monitor list, so it is not fixed — but `--virtual-monitor` on GNOME 50.4 is the
+supported answer to its exact problem, needs no reboot, and is already running.
+Possible that its two changes are fighting each other.
+
+**(c) — WITHDRAWN, and worth recording as my own error.** I told him a reboot
+would cost llmserver-work a 68.5 GB download. Then I checked: `build_model.sh I2V`
+on the Mac has **PPID 1**, reparented to launchd, fully detached, resuming curl
+under it; archserver holds only polling log-watchers. The download survives.
+I corrected it to him and to the peer within minutes rather than letting a
+convenient objection stand. A fact outranks momentum including my own.
+
+### Its system changes, verified rather than taken on trust
+
+All disclosed by it honestly, and all present: GDM autologin for bodas
+(`AutomaticLoginEnable=True`), `vkms` loaded, `/etc/udev/rules.d/61-mutter.rules`
++ `61-mutter-preferred-primary.rules`, EDID override in debugfs. RDP confirmed
+off — port 3389 has zero listeners, matching its claim. **Flagged to him that the
+udev rules and the autologin persist across a reboot**: an autologin desktop on a
+box that boots headless by policy is a standing change to how the machine boots,
+not a test artifact.
+
+### Open — his
+
+Whether the reboot happens. My recommendation: settle the NVIDIA question first,
+since a reboot that cannot work is the only genuinely wasteful option. Sequence
+ready if he says go: handoffs written → back up `/etc/default/grub` → edit +
+grub-mkconfig → reboot → `hotline --resume` both agents and verify channels/files.
