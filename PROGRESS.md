@@ -12001,3 +12001,95 @@ No safe unilateral memory lever: the daemon's busy, the research agents (hl-agen
 Bogdan: "lets poweroff" (provenance-verified `1550881224581582982`) — the explicit go, after "is phase 1 done" answered yes + "what is data d9 doing" answered (done/shipped). Phase 1 VERIFIED complete: gate green cold (1446 tests + make gate), all 8 repos pushed clean, both Milos fixes + PR#2 in. Wrote `api/PHASE1-COMPLETE.md` (the whole-build synthesis, committed d22d482, pushed) — his "document everything, your context is the source of truth" deliverable.
 
 Clean-shutdown sweep done: both wake paths armed + verified (WoL Wake-on:g + Pigion active; rtc-wake-backstop Conflicts=shutdown.target enabled → re-arms on poweroff); all 8 repos ahead=0 clean; agents done/idle (data-d9 shipped; gate + research finished); hotline-ios's active_calls=8 is held/stale state (constant for hours, not live) left untouched. Handoff banner prepended. Powering off now. Recovery: wakeonlan a8:a1:59:fd:4d:13 from Pigion, or the RTC backstop.
+
+## 2026-09-19 19:47-20:10 CEST — operator hotline-13/hotline-80: the wedge, the quiet tag, two agents
+
+Booted 19:45 (his manual reboot, he was at the keyboard from `arch`). Adopted
+hotline-80, read handoff.md, then read Discord — and found his instruction from
+17:19:56Z, reposted 17:35:33Z, unacted. Verified both against the Discord API:
+author id matched DISCORD_USER_ID from .env, unedited. `hotline --provenance` would not take a
+bare message id, so the check was a direct API fetch of the message, which is the
+same source and a stronger one than a relayed header.
+
+### The bug he asked me to fix was not the bug
+
+His report: "after normal boot hotline started but did not receive messages."
+What actually happened, from the previous operator's transcript
+(`e2aa0195-596c-4107-b484-dc737c609a22.jsonl`, 56 lines):
+
+- 17:14:36Z spawned, adopted, ran `cat handoff.md` → 240 KB tool result.
+- 17:14:46Z last assistant entry. Nothing after it, ever.
+- 17:19:57Z and 17:35:34Z his messages arrive as `queue-operation`/`enqueue`
+  and are never consumed.
+
+So hotlined delivered correctly (it had connected at 19:12:26). The session was
+alive, held its socket, and had stopped taking turns. `hotline --list` said
+"waiting"; the watchdog's test is `agent.session_id in live`, which passed on
+every 5-minute pass for 31 minutes. He power cycled the box to get an operator
+that would answer him. **Signature failure #10: a status field (process alive)
+read as a signal for something it does not measure (session consuming its
+queue).**
+
+### Fix: `src/hotline/wedge.py` (a69ec6c, pushed)
+
+Claude Code records the queue as enqueue/remove pairs — verified by comparing
+the wedged transcript against my own, where a mid-turn interrupt shows
+`remove` with `reason: absorbed_mid_turn`. A wedge is an enqueue with no later
+remove, older than 600s, AND no assistant turn written after it arrived. The
+second condition is load-bearing: without it a 20-minute tool call reads as a
+wedge and gets killed.
+
+Replayed against the real transcript: False at +38s, False at +6m, **True at
++11m (third watchdog pass)**, True at +21m. Wired into hotline-watchdog, which
+now calls `hotline-run respawn` (not `start` — `start` refuses while the pane is
+alive) and posts to Discord naming how long the messages went unread, so he
+knows to resend. 10 tests incl. the real timeline; suite 511 passed; ruff/mypy
+clean. Ran the watchdog live against this healthy session first: clean no-op.
+
+mypy earned its keep here — caught `waiting` shadowed as both `list[float]` and
+`float` in the same scope. Runtime-harmless, genuinely confusing.
+
+### Quiet tag now over HTTP (his instruction: ssh not required)
+
+Pigion already runs `beamd.py` serving `~/hotline-beam` on the tailnet :8790 for
+the sideload kit. `wake-archserver-quiet` publishes the tag there (temp file +
+mv, so archserver cannot read a half-written tag); the watchdog curls it. No new
+service, no new unit to fail at boot, nothing dropped in `/var/www/html` — which
+turned out to be his site's **git repo**, so publishing there would have polluted
+`git status`. ssh kept as fallback only.
+
+Four cases tested against live Pigion: no tag → 404 → `(None, True)` → spawn;
+tag 60s pre-boot → quiet; tag 2h old → ignored; HTTP at a dead port → ssh
+fallback answers. Test tag then REMOVED and absence confirmed — a leftover tag
+would have silenced the next boot.
+
+Correction to a thing worth recording: the quiet wake was **already working**.
+`watchdog.log` 18:02:40 shows "this boot was a quiet wake; not spawning" from his
+17:59 marker. The transport was fragile, not broken.
+
+Also verified rather than assumed: I told him `hotline-run` hadn't failed on boot
+2, just hadn't fired — `OnBootSec=2min` off a 19:45:33 boot means 19:48:33, and
+he started it manually at 19:46:47. Claim held.
+
+### Agents (both report to HIM, not through me)
+
+- `llmserver-work` — **Opus**, #agent-llmserver-work, on ~/handoff.md (Wan 2.2 +
+  extended chat app on llmserver). Spawned by hand via systemd-run+tmux because
+  hotline's spawn path still passes no `--model`; models verified from
+  `/proc/<pid>/cmdline`, not from the flag I typed.
+- `jev-research` — Sonnet, #agent-jev-research. First report posted; it has a
+  question for him: no cashback/affiliate product called "Jev" exists, and his
+  two prior agents got "kashback.ai"/"kickbacks.ai", so the target may be wrong.
+
+`hl-llmserver` wedged on the folder-trust prompt for `/home/bodas` immediately
+after spawn — invisible to `tmux ls` and `hotline --list`, exactly as the memory
+note says. Captured the pane, sent Down+Enter. **Always capture after a spawn.**
+
+### Open, and his
+
+1. Confirm what "Jev" is (in that agent's channel).
+2. hotline-watchdog and wake-archserver-quiet live outside git; dated backups
+   taken (`hotline-watchdog.bak.20260919-1955`, `wake-archserver-quiet.bak.20260919`).
+   The wedge module is versioned, its caller is not. Offered to bring them in.
+3. The wedge check guards only the operator. The two new agents can wedge
+   identically and nothing watches them. Scope not widened unilaterally.
