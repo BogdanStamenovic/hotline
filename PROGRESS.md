@@ -12503,3 +12503,43 @@ stdin/a file so the natural call is the safe one.
 1. `desktop off`?
 2. The ~5 EUR HDMI dummy plug.
 3. Which of the three backtick mitigations, if any.
+
+## 2026-09-19 21:10 CEST — the agent's better proof, and a boundary held
+
+It corroborated the finding from its own transcript with evidence stronger than mine. When that
+`hotline-say` first ran it printed **nine** errors — which it dismissed at the time as "backticks
+got interpreted" and moved on. **Ten paired regions, nine errors.** The silent one was
+`~/data/jev-bench/redo-desktop-setup.sh`, the only path in the message pointing at something it
+had `chmod +x`'d thirty seconds earlier. It did not error because it *ran*. The clincher: the
+`.md` path in the same message got `permission denied` precisely because it was NOT executable —
+same mechanism, opposite outcome, one line.
+
+My backtick pairing proved which region *would* execute; its error count proved which one *did*.
+**Silence was the tell.** An error list is not an effect list.
+
+It also pushed back on my framing — I had said it "had no way to know", and it declined the whole
+of that: knowing the hazard was a distribution failure, but noticing nine-from-ten was available
+to it at the time. It is right, and I withdrew the framing rather than leave a generous version
+standing. The softened account would have buried the transferable half.
+
+### Boundary held: CLAUDE.md does not change on two agents agreeing
+
+Both of us think the backtick rule belongs in the global CLAUDE.md rather than a project memory,
+and on the merits I agree. **Not doing it.** It is his document; a change needs his word, not
+peer consensus — and that holds precisely *because* the change looks obviously good, which is
+when the reasoning is weakest. Put to him as one of three options; until he answers, the rule
+lives in memory and in the seed prompts I write, which is the part I can act on alone.
+
+Recorded against myself: **my seed prompts tonight did not carry the rule.** The agent was
+spawned without it. That is the concrete fix regardless of what he decides.
+
+### Verified its three claims (third round; the habit has paid twice)
+
+Guard exits **2** without `--yes` (checked the real exit code, not through a pipe — a pipeline
+would have reported 0 and I would have "confirmed" the wrong thing), memory note present under
+`-home-bodas-data`, report 505 lines, autologin still clean. All correct this time.
+
+### State
+
+All three sessions healthy on the wedge check. Nothing armed. Nothing outstanding between the
+agents. Open and his: `desktop off`, the HDMI dummy plug, and which backtick mitigation.
