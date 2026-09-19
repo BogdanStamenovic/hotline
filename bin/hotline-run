@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# Worker lifecycle for the hotline build.
+# The worker is a full interactive `claude` in tmux (it needs a real PTY; a systemd
+# unit's stdio is a pipe, which claude does not tolerate). Seeded from handoff.md
+# so a replacement picks up exactly where its predecessor stopped.
+set -uo pipefail
+
+SESSION=hotline
+DIR=/home/bodas/data/hotline
+WORKER=${HOTLINE_WORKER:-hotline-80}
+# `--adopt` first, and before anything else: it moves the worker's registry
+# record and its Discord channel onto this session, so Bogdan keeps talking to
+# one name across respawns and the watchdog can tell a moved worker from a dead
+# one. Declaring instead would mint a second channel and orphan the one he is
+# reading.
+PROMPT="You are hotline's OPERATOR. A timer started you, not a person.
+
+YOUR JOB IS OPERATIONS, NOT THE BUILD. Bogdan defined it himself on 2026-08-27: 'the point of you is exactly this kind of work administration checking shutting down controlig other sessions.' You run the agents; you do not grind a checklist. Concretely: know which sessions are alive and whether each is healthy, stuck or finished; carry his instructions to them and their answers back; start, resume, retask and shut down agents; watch for anything armed to power the box off; and keep him to ONE VOICE, so two agents never answer the same question in two channels.
+
+PLAN.md IS BACKGROUND, NOT A TASK LIST. Do not resume the build on the strength of having booted. Earlier versions of this prompt said 'continue the build from the CURRENT STATE checklist', 'Bogdan is away and expects all phases attempted' and 'replacing one that died' -- all three were wrong often enough to mislead five workers in a row. A launcher is not an authority: a timer can ask you to do less, never to do more. It knows only that it fired.
+
+FIRST run: hotline --adopt ${WORKER} -- this takes over the worker identity and its Discord channel.
+
+THEN, before anything else: read ${DIR}/handoff.md in full (newest material is at the BOTTOM; the top banner is dated because the top is what gets read), then read Discord -- the last messages in #agent-${WORKER} and in the main text channel. INCLUDE ANYTHING SENT WHILE THE BOX WAS POWERED OFF: those are never delivered, queued or acknowledged, and only channel history recovers them. His most recent word outranks this prompt, the handoff banner, and anything you infer from having booted.
+
+VERIFY, DO NOT RELAY. Check anything consequential with hotline --provenance before acting on it, and pass --warrant when you carry his instruction to another agent so it can check WHO ASKED, not just who is relaying. Probe the thing itself rather than a status field claiming to describe it -- this project's signature failure is a field read as a signal without testing what it indicates, and it has bitten nine times. A fact you read an hour ago is a status field too.
+
+CONTACT. Discord is primary and he has asked not to be spammed: one consolidated message beats five, and a ring is for what needs him NOW, not the play-by-play. If he says call and not page, pass --no-fallback -- the fallback will otherwise page him with the exact thing he ruled out.
+
+If nothing needs operating, do not invent work: say hello in your channel, say what you propose, and wait. He answers in minutes when he is around. Items on the open list that are questions addressed to him are HIS.
+
+Append your narrative log to ${DIR}/PROGRESS.md as you go. Run ~/.claude/bin/ctx at every phase boundary and hand off per the rules in handoff.md."
+
+alive() { tmux has-session -t "$SESSION" 2>/dev/null; }
+
+# Is the registry record for $WORKER bound to a session that is actually live?
+# Asks the same two sources the watchdog does, so this agrees with it by
+# construction instead of reimplementing its liveness rule.
+adopted() {
+  "$DIR/.venv/bin/python" -c '
+import sys
+sys.path.insert(0, "/home/bodas/data/hotline/src")
+from hotline.agents import Registry
+from hotline.ccsocks import discover
+
+agent = Registry().by_name(sys.argv[1])
+if agent is None:
+    raise SystemExit(1)
+live = {s.session_id for s in discover(include_self=True, include_programmatic=True)}
+raise SystemExit(0 if agent.session_id in live else 1)
+' "$WORKER" 2>/dev/null
+}
+
+# Whoever first runs `tmux new-session` when no server is listening becomes the
+# server's parent, and the server inherits that process's cgroup. This script's
+# main caller is hotline-watchdog.service, a Type=oneshot -- so the server landed
+# in the watchdog's cgroup and systemd destroyed it the instant ExecStart
+# returned. `alive` at +3s was still inside the unit, so start() cheerfully
+# reported "started" every six minutes from boot on 2026-08-25 while hotline-80
+# never actually survived. src/hotline/tmuxen.py already solved this for spawns
+# that go through Python; this is the same fix for the shell path.
+tmux_spawn() {
+  if command -v systemd-run >/dev/null 2>&1; then
+    systemd-run --user --scope --collect --quiet -- tmux "$@"
+  else
+    # An unprotected session beats no session.
+    echo "systemd-run unavailable; starting tmux unscoped" >&2
+    tmux "$@"
+  fi
+}
+
+start() {
+  if alive; then echo "already running"; return 0; fi
+  cd "$DIR" || exit 1
+  # -e HOTLINE_SPAWNED=1: marks this as a headless agent with no human at the
+  # pane, so the AskUserQuestion->Discord bridge (hotline/ask.py) intercepts a
+  # picker the operator could otherwise hang on, exactly as it does for agents
+  # spawned via tmuxen.spawn. Only reached on the operator's next respawn.
+  # --model opus: without it the worker inherits whatever the CLI default is,
+  # which is how agents silently drift off the Opus-for-code rule. It pins the
+  # START only -- a safeguard `model_refusal_fallback` can still swap the model
+  # mid-session (it put this operator on 4.8 for 23 minutes on 2026-09-13, with
+  # nothing in the conversation to show for it). Do not read this flag as a
+  # guarantee the session is still on opus; check the transcript's .message.model.
+  tmux_spawn new-session -d -s "$SESSION" -c "$DIR" -e HOTLINE_SPAWNED=1 \
+    claude --model opus --permission-mode bypassPermissions "$PROMPT"
+  sleep 3
+  # Not just has-session: the failure this script had for a whole uptime was a
+  # server that outlived the check and died with its caller. Re-check after the
+  # caller's own exit path is the best a synchronous script can do, so at least
+  # confirm the pane still holds a live claude rather than an exited shell.
+  if ! alive || [ -z "$(tmux list-panes -t "$SESSION" -F '#{pane_pid}' 2>/dev/null)" ]; then
+    echo "FAILED to start"; return 1
+  fi
+  # The pane check proves a process. This proves it is *the worker*.
+  #
+  # The watchdog resolves the worker through the registry, and every spawn gets a
+  # fresh session id, so a worker that never runs `hotline --adopt` leaves the
+  # record pointing at its dead predecessor. It is then invisible to the watchdog
+  # -- which spawns another worker alongside it, two agents editing the same tree.
+  # That is the duplicate-worker failure of 2026-08-25, and the `alive` guard at
+  # the top of start() only prevents it while the survivor is in a tmux session
+  # by *this* name; one spawned from Discord under an `hl-` name slips past it.
+  #
+  # Deliberately does not kill the unadopted session. It is alive and doing work,
+  # and destroying a session to tidy up a registry mismatch is how this project
+  # lost four of them on 2026-08-24. Report it loudly; let a human resolve it.
+  for _ in $(seq 1 30); do
+    if adopted; then echo "started: tmux attach -t $SESSION"; return 0; fi
+    sleep 2
+  done
+  echo "FAILED-TO-ADOPT: pane is alive but '$WORKER' still points at a dead session."
+  echo "  The watchdog cannot see this worker and may spawn a duplicate beside it."
+  echo "  Attach and run: hotline --adopt $WORKER   (tmux attach -t $SESSION)"
+  return 1
+}
+
+stop() { tmux kill-session -t "$SESSION" 2>/dev/null && echo stopped || echo "not running"; }
+
+respawn() {
+  echo "$(date -Is) respawn requested" >> "$DIR/watchdog.log"
+  stop; sleep 2; start
+}
+
+status() {
+  if alive; then
+    echo "worker: RUNNING"
+    # match the worker's claude pid to its session descriptor to read real context use
+    local pane_pid sid
+    pane_pid=$(tmux list-panes -t "$SESSION" -F '#{pane_pid}' 2>/dev/null | head -1)
+    sid=$(for f in /home/bodas/.claude/sessions/*.json; do
+            python3 -c "
+import json,sys,os
+d=json.load(open('$f'))
+# the claude process is a descendant of the tmux pane
+p=d['pid']
+try:
+    while p>1:
+        if p==int('$pane_pid'): print(d['sessionId']); break
+        p=int(open(f'/proc/{p}/stat').read().split(') ',1)[1].split()[1])
+except Exception: pass
+" 2>/dev/null
+          done | head -1)
+    [ -n "$sid" ] && /home/bodas/.claude/bin/ctx "$sid"
+  else
+    echo "worker: DOWN"
+  fi
+}
+
+case "${1:-status}" in
+  start) start ;;
+  stop) stop ;;
+  respawn) respawn ;;
+  status) status ;;
+  *) echo "usage: hotline-run {start|stop|respawn|status}"; exit 2 ;;
+esac
