@@ -12347,3 +12347,57 @@ not performed; it is not mine to undo while it is mid-task.
 ### Open — his
 
 Nothing pending. A later reboot needs his yes at that time, by his own words.
+
+## 2026-09-19 20:50 CEST — jev-research-opus stood down; its cleanup verified, and 2 of 7 claims were false
+
+It withdrew the reboot request itself: looked for evidence that nvidia-drm honours
+`video=...e` on 5xx, found none, said so plainly rather than arguing. It also
+settled objection (b) properly and reported the result against its own hypothesis
+— pid 8750 was *hung* (org.gnome.Shell unresponsive), which is what made the first
+`CreateSession` time out; on a clean headless shell CreateSession still timed out,
+so the real cause is no logind-backed graphical session, and the two gnome-shells
+were never fighting (separate buses). Good agent behaviour throughout.
+
+### Verified its cleanup rather than filing it — and it was wrong twice
+
+**This is the signature failure arriving from the other direction**: a peer's
+status report is a status field. Checked all seven claims.
+
+FALSE:
+1. `/etc/gdm/custom.conf` **still had `AutomaticLoginEnable=True` / `AutomaticLogin=bodas`**
+   (lines 4-5). mtime 20:43, so something ran during its revert, but the content
+   still enabled autologin. No `custom.conf` backup existed anywhere in `/etc/gdm/`,
+   so whatever it "restored from the backup" was not there.
+2. gdm still `active`, with **two** fresh autologin sessions (tty2 session 11,
+   tty3 session 12) and a new `gnome-shell --mode=user` at pid 18299. The loop:
+   every shell it killed, autologin spawned another on the next tty. Its kills
+   were working; the config kept undoing them.
+
+TRUE: both udev files gone; `vkms` unloaded (no card1 connector); RDP disabled,
+0 listeners on 3389; GPU idle 13 MiB used / 7877 free; `redo-desktop-setup.sh`,
+`~/data/jev-research-opus.md` and its memory note all present.
+
+**Fixed it myself** rather than bouncing it back — boot policy is the operator's
+job and the agent believed it was already done, so it would not have revisited it.
+`sudo cp -a` to `/etc/gdm/custom.conf.bak.20260919-2050`, both lines removed, zero
+AutomaticLogin lines. Tier-1 reversible-local: back up first, tell him after.
+
+**Did NOT run `desktop off`.** CLAUDE.md names it explicitly as needing his
+confirmation. The stated *reason* is that it kills a session of his — and I
+verified that reason does not apply here (his presence is the ssh session,
+`Remote=yes`; tty2/tty3 are autologin artifacts minutes old). But the rule is his,
+it is the one thing named by name, and asking cost nothing since I was posting
+anyway. Asked; gdm left running meanwhile. Harmless — GPU idle.
+
+### Raised as his call: buy an HDMI dummy plug
+
+This box having no display has now cost one agent an entire evening across nine
+failed approaches. ~5 EUR deletes the class permanently — no kernel flags, no
+reboot, no udev overrides. Both the agent and I reached it independently. Money is
+his, so it is asked, not done. This is the CLAUDE.md §12 move: the solution space
+includes buying a thing.
+
+### Open — his
+
+1. Run `desktop off`? (gdm still up with two leftover sessions.)
+2. Buy the dummy plug?
