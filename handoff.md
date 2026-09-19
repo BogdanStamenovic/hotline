@@ -1,5 +1,16 @@
 # HOTLINE — worker handoff
 
+> ## SHUTDOWN 2026-09-19 ~14:50 CEST — off at his instruction ("lets poweroff") after PHASE 1 SHIPPED
+>
+> **kinreply Phase 1 is COMPLETE and certified.** Gate green on a cold DB (`make check` 1446 tests / 0 skips / race-clean, `make gate` green driving the real binaries). All 8 repos pushed and clean — nothing local-only. **Full record: `~/data/kinreply/api/PHASE1-COMPLETE.md`** (the whole-build synthesis) + `api/BUILD-LOG.md` (per-chunk). Heads: api `d22d482`, kinreply-db `phase1-sql-schema` 13 migrations, docs `phase1-api-spec`, lifecycle, kinreply-app (Milos's client regenerated, PR#2 merged), hotline-registry (data-d9's build, shipped public).
+>
+> **Both wake paths armed, verified minutes before poweroff:** WoL `Wake-on: g`, link up, Pigion up 8w and `pigion.service` active (`wakeonlan a8:a1:59:fd:4d:13`); AND `rtc-wake-backstop` `Conflicts=shutdown.target` + enabled, which re-arms the RTC on this poweroff (proven working on the 09-18 boot). Two independent paths back.
+>
+> **State:** all agents were done/idle at poweroff — data-d9 (registry) shipped + pushed (public repo, private DB); the gate link and research agent finished. hotline-ios showed active_calls=8 / GPU 2.5GB, but that count was CONSTANT for hours = held/stale conversation state, not live calls; left untouched (it's live infra). No armed at/cron beyond the RTC backstop and the standing wake timers.
+>
+> **His to decide (flagged, not blocking):** whether to send Milos the follow-up DM that the test passed; and the Serbian ASR on telephony is not decision-grade yet (garbled a test phrase) — fine for tests, not for acting on call speech. Deployment blockers before Track-O go-live are in docs ROADMAP §8 (per-IP rate limit collapses behind Caddy; `docker kill` doesn't auto-restart). Milos's `phase1-sql-schema` (13 migrations) awaits his merge to `main` — he asked to be pinged.
+
+
 > ## SHUTDOWN 2026-09-18 00:05 CEST — off at his instruction; both wake paths armed; the RTC fix gets its first real test on this poweroff
 >
 > *"You did perfect now poweroff goodnight"* — verified `1550266258161672256`, posted 09-17 22:04:38Z. He had a shell here from `arch` earlier and logged out before saying it.
