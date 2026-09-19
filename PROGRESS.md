@@ -12853,3 +12853,57 @@ not 5xx, so it failed outright; a retry succeeded. Not fixed — noting it as a 
 1. The CLAUDE.md line (recommended against).
 2. tesseract — in the agent's channel, not mine.
 3. `hotline-say` does not retry 5xx. Small, unasked.
+
+## 2026-09-20 00:25 CEST — my test suite was posting into his private channel
+
+He caught it: "Who is ana? That person isnt registered." **Ana is a fixture from
+`tests/conftest.py`.** The suite had overwritten the real roster with its own test data.
+
+### The chain
+
+Registering republishes the admin channel → `test_cog.py` drives `RegistryModal.callback` →
+my new `publish(self.registry)` runs → `publish` resolves token and channel from
+`~/data/hotline/.env` **exactly as the real thing does** → `pytest` posts `ana#0` and a Bogdan
+who "can do: everything" over his roster.
+
+"It was correct for a second" is precisely right: I published the truth, then ran the test
+suite, and the tests overwrote it. **I ran the tests after publishing and never looked at the
+channel again.** Re-reading the artifact after the last thing that could change it is the check
+I have been applying to everyone else all night and did not apply to myself.
+
+### Fixed at the level that matters, not the narrow one
+
+Mocking that one call would not be enough: any future code on a tested path can reach the
+network the same way, and the credentials are always there to be found. So an autouse fixture in
+`conftest.py` closes the network for the whole suite, and a test that wants it must say so.
+
+Two tests keep it honest: one asserts the guard bites, the other swaps it for a recorder and
+shows a single modal submit reaching a real `/channels/<id>/messages` path — so the guard is
+demonstrably load-bearing, and it fails the day the registration path stops republishing, which
+is the day the guard could be reconsidered.
+
+**Corroboration I had already seen and not questioned: the suite ran in ~8 seconds and now runs
+in 0.22.** It had been making real HTTP calls to Discord on every run for as long as the mirror
+existed. An eight-second 69-test suite with no heavy fixtures was evidence sitting in plain
+sight, and "tests pass" was the status field I read instead.
+
+Verified the thing, not the fix: republished, ran the full suite **again**, re-read the channel —
+three real people, no `ana#0`. `b02e301` pushed.
+
+### Deleted and re-registered him, in my own words
+
+Genuinely deleted (`del r.people[did]` + save), not revoked — a revoked row sits in the channel
+struck through as "do not contact", which is not what he asked for. SIP and Discord identity
+preserved so he stays callable; `registered_at` is now, which is what "register me again" means.
+Store backed up to `registry.json.bak.20260920-0025` first.
+
+Wrote the capabilities field for its actual reader — an agent deciding whether to contact him and
+what for — rather than as a biography: what he builds, what he owns, what only he can answer
+(direction, money, outward actions, his own machines), and how he wants to be dealt with.
+
+### Open — his
+
+1. Whether my wording of his registry entry is what he wants.
+2. The CLAUDE.md line (recommended against).
+3. tesseract — in the agent's channel.
+4. `hotline-say` does not retry 5xx (hit a real 503 tonight).
