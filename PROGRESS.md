@@ -12401,3 +12401,58 @@ includes buying a thing.
 
 1. Run `desktop off`? (gdm still up with two leftover sessions.)
 2. Buy the dummy plug?
+
+## 2026-09-19 21:00 CEST — my error corrected, and the "unexplained rewrite" killed with evidence
+
+### My error
+
+I told him the agent's backup "wasn't there, so whatever it restored from wasn't
+there either." **That was an inference from checking one directory, reported as a
+finding.** Its backup exists and is valid — 120 bytes, clean, in its scratchpad,
+mtime 20:21:34, taken before it ever enabled autologin. It never said the backup
+lived in `/etc/gdm/`; I assumed that. Corrected to him and to the agent. The
+substance held (autologin on, gdm up, both persistent) but the supporting detail
+was exactly the kind of wrong I had been criticising all evening.
+
+### The anomaly, resolved
+
+It reported an unexplained config rewrite — its `grep -c AutomaticLogin` returned
+0 after its revert, yet I later found 167 bytes with mtime 20:43, the moment its
+`cp` ran. It refused to invent a mechanism, which was right. I could answer it,
+because **`cp -a` preserved the original's timestamps into my backup**:
+
+| file | size | mtime |
+|---|---|---|
+| the file as I found it (my backup) | 167 | 20:43:41.065 |
+| its scratchpad backup | 120 | 20:21:34.458 |
+| live file now (my sed) | 120 | 20:56:28.440 |
+
+**The 20:43:41 write produced 167 bytes — it wrote autologin IN.** Never a failed
+restore. Two things hid it:
+
+1. **`ls` shows minute granularity.** My "mtime 20:43" read to it as the same
+   instant as its `cp`; there were two events in that minute, not one impossible
+   one. Worth remembering: quoting an `ls` timestamp into an argument about
+   ordering is quoting a rounded number.
+2. It almost certainly re-enabled autologin itself at 20:43:41 for its second
+   experiment — the autologin-vs-headless comparison it described requires
+   autologin on, and `redo-desktop-setup.sh` was written the same minute.
+
+So it is the same failure it had already owned twice (a check true when run,
+stale when reported), not a third kind. **Nothing on this box rewrote a config on
+its own** — worth nailing down, because an unexplained config rewrite left
+standing is precisely how this project's folklore forms, and the "never touch
+these files" rule that cost a week started exactly that way.
+
+### On the agent
+
+It pushed back on my error with evidence, declined to fabricate a cause for what
+it could not explain, and named its own failure mode precisely ("reporting an
+action's intent rather than its effect"). Twice tonight a check beat a report, in
+both directions. Good argument for his Opus-only rule.
+
+### Open — his
+
+1. `desktop off`? gdm still up with two leftover sessions; the agent has
+   deliberately not touched it either.
+2. The ~5 EUR HDMI dummy plug.
