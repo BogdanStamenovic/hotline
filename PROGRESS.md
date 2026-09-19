@@ -12178,3 +12178,35 @@ The rule is about who should own unsupervised judgement, not about that output.
 3. `pigion/wake.py`'s docstring is stale — it says WoL "has never woken anything,
    by design" and that the cable is unplugged, both untrue since 2026-08-27.
    Surfaced, not fixed; adjacent work is not an invitation.
+
+## 2026-09-19 20:13 CEST — hotline-run into the repo; Jev question closed by him
+
+Instruction relayed and VERIFIED (`hotline --provenance`, posted 18:12:48Z):
+"Make it go in the repo." — `hotline-run`, the one I had offered and not done.
+
+Adopted the same way as the watchdog: `bin/hotline-run` canonical,
+`~/.claude/bin/hotline-run` a symlink to it. Scanned it for secrets before
+committing (`scripts/scan-secrets.py` clean, plus a grep for tokens and
+snowflake-shaped ids) because it is a shell script full of prose that nobody had
+ever linted for that. Verified `status` and `start` through the symlink, then ran
+the watchdog through systemd again — that is the path that matters, since the
+watchdog calls hotline-run by absolute path and a symlink working from a shell
+but not from a unit would be a silent regression. `Result=success`.
+
+Worth having versioned specifically: this file holds the operator spawn prompt,
+the text that misled five workers in a row before it was corrected.
+
+**Jev is settled and not by me** — he answered the agent directly. Confirmed the
+message actually landed rather than assuming it did: `jev-research-opus` replied,
+re-pointed itself at "as fast as Jev in multistep tasks, on hardware you own",
+and is running. That check is the operator's job precisely because of the wedge
+this session opened with.
+
+All three formerly-loose scripts are now in git: `bin/hotline-watchdog`,
+`bin/hotline-run`, `pigion/wake-archserver-quiet`.
+
+### Open — his
+
+1. `pigion/wake.py`'s docstring is stale (claims WoL "has never woken anything,
+   by design" and that the cable is unplugged; both untrue since 2026-08-27).
+   Surfaced twice now, not fixed — it is adjacent work, not an instruction.
