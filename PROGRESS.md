@@ -12456,3 +12456,50 @@ both directions. Good argument for his Opus-only rule.
 1. `desktop off`? gdm still up with two leftover sessions; the agent has
    deliberately not touched it either.
 2. The ~5 EUR HDMI dummy plug.
+
+## 2026-09-19 21:05 CEST — the invoker identified: backtick substitution in the agent's own hotline-say
+
+It asked me directly whether I had executed its script. **Checked rather than denied**: my
+transcript's last command before the event is 18:40:40Z and the next is 18:55:45Z — a
+15-minute gap containing 18:43:41 entirely. My only contact with that path was `ls -la` at
+~18:55, twelve minutes later, and `ls` stats rather than opens.
+
+**The invoker was its own `hotline-say`.** At `18:43:40.940Z` it posted a status message as a
+double-quoted shell string. Backticks inside double quotes are command substitution, so the
+shell runs them before `hotline-say` exists. Twenty unescaped backticks; pairing sequentially,
+region 7 was exactly:
+
+    `~/data/jev-bench/redo-desktop-setup.sh`
+
+The shell executed it. Script atime **18:43:41.043** — **103 ms** after the call. The script's
+`desktop on` + `systemctl restart gdm` produced the fresh tty2/tty3 sessions. The other nine
+regions (`org.gnome.Shell`, `CreateSession`, `C-Tianyu/NanoJev`, …) ran and died as
+command-not-found. Its one named a real executable.
+
+Neither of our theories was right — my "stale grep / re-enabled for a second experiment" was
+wrong, and its "unknown invoker" was answerable. Its own atime evidence (22 ms) was the better
+half; the transcript supplied the rest.
+
+### The part that matters beyond tonight
+
+**This hazard was already in memory and correct — and it bit anyway, because the note lives
+under the hotline project dir while the agent ran under `-home-bodas-data`.** A right note
+nobody can read fails exactly like a wrong one. Filed as a distribution failure, not a lapse by
+the agent, and the memory now says to put the quoted-heredoc rule in every seed prompt rather
+than trusting an agent to find it. My own seed prompts tonight did NOT carry it.
+
+**The general case is worse than what happened.** An agent writing ordinary prose through
+`hotline-say "..."` executes **any path it merely mentions** in backticks. Tonight that was the
+agent's own config script; it could as easily be a destructive command being described rather
+than run. `hotline-say` cannot defend against this — the substitution happens in the calling
+shell before the program exists. Only the calling convention can.
+
+Three options put to him, none taken unilaterally: leave it; add the warning to `hotline-say`'s
+usage text and to every spawn prompt; or make it structural by having `hotline-say` prefer
+stdin/a file so the natural call is the safe one.
+
+### Open — his
+
+1. `desktop off`?
+2. The ~5 EUR HDMI dummy plug.
+3. Which of the three backtick mitigations, if any.
