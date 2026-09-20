@@ -14244,3 +14244,47 @@ in one minute of each hour. Its phrasing sharpens link 9's lesson — **a fixed 
 blindfold when it hides a change and a coin flip when what it is compared against is a real
 clock**. It verified the fix at :03, :31 and :58 rather than declaring it fixed. The worst part
 of that bug is that its obvious reading is that somebody else broke your code.
+
+## 2026-09-20 17:00 CEST — the reviewer insistence pays, and the wall resolves to one cause
+
+**Chunk 17's echo half is reviewed and done** (api `be11e0e`, docs `cd12355`): 2140 tests, 0
+skips, gate green. Link 11 is on chunk 18; link 10 retired after two and a half chunks.
+
+**I overruled link 10's plan to hand off with the echo path pushed and unreviewed, and the
+eighteenth reviewer found a bug its own test had locked in.** It believed a path left a
+conversation's timestamps alone for thread sends, wrote
+`TestAThreadResolutionLeavesTheConversationTimestampsAlone` asserting exactly that, and the path
+does not leave them alone — `convID` is non-nil for a thread precisely because the send needed a
+thread to go into. The consequence is seller-visible: a conversation marked as needing a reply
+forever, an unanswered thread in the inbox for a reply the customer already has. **A builder's
+test encoding the builder's misconception, in the chunk where it was hunting that pattern** —
+the mandate's own sentence coming true, and the first time this phase has caught it in the act.
+
+The same defect predated the chunk in `reconcileReclaimed`: the statement lived inline *after*
+the branch that calls it, so the late-finishing worker correcting its own swept row returned
+before reaching it. One `markConversationAnswered` with three callers now — verified:
+`echoresolve.go:269`, `row.go:244`, `row.go:376`.
+
+Three more, all fixed: a timestamp ingest had **substituted** was read as Meta's own, which
+could have put an unrelated row inside a correlation window and written a delivery record for a
+message that contact never received; a "safely swallowed" error would have poisoned its Postgres
+transaction and taken the echo's own event with it, because swallowing an error in Go does not
+un-poison the transaction it happened in; and a test asserting two zeroes with nothing proving
+its counters could move.
+
+**Eighteen chunks, eighteen reviewers, a real defect every time.** That is now the strongest
+empirical argument in this build for a rule that costs one extra pass.
+
+**The wall has resolved to a single root cause and I showed him the shape rather than mentioning
+it again.** Chunks 14, 15, 16, 17 and 18 all stop at "no connected account, unpublished app".
+The account cannot be connected because the Login for Business config grants 3-4 of the 8 scopes
+the connect flow requests. Two permissions would not add for me and the Messenger use case's
+page was refused by my own classifier. I retried at 16:55: Chrome is closed, so I stopped rather
+than force a window open on his desktop. Asked again, together with the Resend key — between
+them they unblock seven chunks' criteria.
+
+**Housekeeping.** Root 82%, 13 GB free, down from 20 GB this morning; the consumer is the build
+(Go build cache 6.6 GB, uv cache 7.3 GB). Neither is worth clearing — the Go cache refills and
+slows every link, and the uv cache is hardlinks that free ~0, which I measured this morning.
+`/mnt/offload` 9.1 GB free, `/mnt/windows` 434 GB. Threshold set with him at 8 GB on root.
+cvoice holds 6.1 GB of VRAM doing its job; load average 0.1.

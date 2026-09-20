@@ -8,21 +8,26 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **10** is `api-71`, tmux `kr2build-10`, Opus, in
-> `~/data/kinreply/api`. **Chunks 1-16 done and pushed; CHUNK 17 IS HALF DONE ON PURPOSE.**
-> Tree at `make check` 2135 tests / 0 skips, `make gate` green. Latest migration **00021**.
-> It is running adversarial reviewers on the built half at my instruction, then handing off.
+> **What is running:** link **11** is `api-17`, tmux `kr2build-11`, Opus, in
+> `~/data/kinreply/api`, on **chunk 18** (the identity measurement). **Chunks 1-16 done and
+> pushed; CHUNK 17's echo half done and reviewed, its ACTIVE POLL deliberately unstarted.**
+> Links 1-10 retired. Tree at `make check` 2140 tests / 0 skips, `make gate` green. Latest
+> migration **00021**.
 >
-> **CHUNK 17's ACTIVE POLL IS DELIBERATELY NOT BUILT** and the reason is a defect in the chunk
-> spec, written at the top of `docs/phase2-roadmap/chunk-17-reconciliation-poller.md`. The
-> spec's `CONFIRMED_NOT_SENT` re-queue **cannot fire** — `claim` is `internal/send/send.go:276`
-> and `beginSending` is `:371`, so any row that reached SENDING already holds its claim and a
-> new row under the same key returns `StateSkippedDedup` at `:281` before touching Meta. **I
-> verified that in the code myself.** Also: Instagram's `/comments` excludes replies, so the
-> poll's read would never find our own Instagram reply and a false "not sent" would post a
-> DUPLICATE PUBLIC COMMENT. **Do not let a link build this without reworking the design first.**
-> Three candidate fixes are in that banner; I recommended re-queueing the ORIGINAL row plus an
-> `operational_event` for the trail, since `state` is a single enum column with no history table.
+> **CHUNK 17's ACTIVE POLL MUST NOT BE BUILT AS WRITTEN** — the case is at the top of
+> `docs/phase2-roadmap/chunk-17-reconciliation-poller.md`. Its `CONFIRMED_NOT_SENT` re-queue
+> cannot fire (`claim` at `internal/send/send.go:276`, `beginSending` at `:371`,
+> `StateSkippedDedup` at `:281` — I verified it), and Instagram's `/comments` excludes replies,
+> so a false "not sent" would post a **duplicate public comment**. Three candidate fixes are in
+> that banner.
+>
+> **THE WALL IS NOW ONE ROOT CAUSE AND IT IS WITH HIM.** Chunks 14-18 all hit "no connected
+> account / unpublished app". The account cannot be connected because the Login for Business
+> config `3009212886077369` grants 3-4 of the 8 scopes in `graph.LoginScopes`.
+> `pages_read_engagement` and `pages_manage_engagement` would not add for me (four attempts, no
+> error), and the Messenger use case's permissions URL was refused by the permission classifier.
+> **Retried 16:55 — Chrome is closed, so I stopped rather than force a window open on his
+> desktop.** Asked again at 16:58, together with the Resend key.
 >
 > **`make check` GAINED A STEP (chunk 16):** `citations` fails the build when a comment in
 > shipped source or a migration names a `Test` that does not exist. Chunk 15 shipped five stale
