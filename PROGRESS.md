@@ -13605,3 +13605,43 @@ placed than either of us to know, and that is what lets him create the configura
 pass instead of guessing.
 
 Left his browser as I found it: closed the tab I opened, changed no setting.
+
+## 2026-09-20 09:36–09:42 CEST — he made the config; I was told to edit it and browser access was denied
+
+He created the Facebook Login for Business configuration and posted a screenshot, then said
+*"Just make the config yourself"* — overriding my earlier judgement that choosing permissions
+was his call. Fair: he made the decision, so the work became mine.
+
+**Browser access was denied by the permission classifier** on the navigate call, before it
+reached Chrome. Not a refusal of mine and not something to route around, so I did everything
+that did not depend on it and stopped there.
+
+**Checked the code rather than the spec's claim about the code**, which mattered:
+`internal/graph/oauth.go:59` `LoginScopes` lists **eight** permissions and his configuration
+grants **four**. Missing: `pages_read_engagement`, `pages_manage_engagement`,
+`instagram_basic`, `instagram_manage_messages`, `instagram_manage_comments` — so **every
+Instagram capability is absent**, plus two Page scopes. `business_management` is present and
+is not in the code's list.
+
+**The reason this is worse than an ordinary misconfiguration is written in their own code.**
+The comment above `LoginScopes` warns that requesting the wrong Instagram scope family does
+not fail loudly — the login succeeds and the token simply lacks the permission, surfacing
+later as a send failure that looks like anything else. A *missing* permission behaves
+identically. So a live run against the current configuration would plausibly look like a
+pass, hand over a token, and fail several chunks downstream a long way from the cause.
+
+**So the instruction to link 5 is the valuable part:** build chunk 8 in full, but **do not
+accept a successful authorisation as criterion-met — assert on the granted scopes**, via the
+token response or `debug_token`, not on the login succeeding. If the spec does not require
+that assertion, add it and say so. That is the "test that cannot fail" shape again, and this
+time it was visible *before* it bit.
+
+**Stated a limit on my own evidence rather than passing it as fact:** the configuration id
+`1977237352952055` was read off his screenshot and never confirmed against the dashboard,
+because that is exactly when access was denied. A long number transcribed from an image is
+where a digit goes missing. Link 5 reads it from the environment, so a wrong digit costs an
+env edit rather than a code change — flagged to both of them as probably-right, not verified.
+
+Also confirmed and worth keeping: the token type he chose, "User access token", is correct —
+chunk 8's spec wants a long-lived *user* token sealed with chunk 2's key file, not a System
+User token.
