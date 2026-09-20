@@ -13128,3 +13128,37 @@ its 7.46 GiB was real and is where the whole win came from.
 
 Closing state: `hotline-ios` reports `ring_ready: true` with an **empty** degradations list
 — the field that actually tells the truth about whether a call can carry audio.
+
+## 2026-09-20 03:15–03:20 CEST — chunk 1 landed; verified, then relayed
+
+Link 1 reported chunk 1 done. **Spot-checked before relaying it to him as fact**, because a
+peer agent's report is a status field like any other: docs `5992e2c` on `phase1-api-spec`
+and api `9d2d71a` both exist, both trees clean and level with origin, and
+`docs/specs/02-tier1-reply.md` is exactly the 1,324 lines claimed.
+
+**It found two errors in my own mandate and both were real.** `~/.kinreply/phase2.env` is
+mode 600 owned by `bodas`, not root-owned as the table said — which is worse than a typo,
+because a later link could reasonably have designed around a privilege boundary that does
+not exist. And the repo table listed a `.github` repo as an eighth; there are seven on
+disk. Verified both myself before touching the document, then corrected them in place with
+a note saying what the old text claimed, so nobody reinstates it from an older copy
+(`2bdad13`).
+
+The substance is the five traps it found in the existing tree, none of them on the
+roadmap — chief among them that the `SECURITY DEFINER` routing function cannot route a
+Zernio webhook at all, and that the replay guard is not `inbound_event` (13-month
+retention) but `send_claim`, which also cascades away on erasure. And a design constraint
+worth carrying: Zernio exposes none of Meta's rate-limit counters, so coordinating the
+750/hour cap across two providers is impossible rather than merely unbuilt.
+
+**The mandatory reviewers paid for themselves on the first chunk.** Three of ten surviving
+findings would have shipped as settled fact, including one the gate structurally cannot
+catch: two columns classified `class=internal` whose Meta analogues are `seller_pii` with a
+hard-delete erasure rule. The data-map check only demands an erase rule for PII classes, so
+a wrongly-internal column passes CI **while the erasure obligation silently disappears**.
+That is the exact shape this project keeps meeting — a check that shares a failure mode
+with the thing it checks.
+
+Pinged him with all of it, as he asked, and ran the chunk-boundary space check: root 73%,
+20 GB free; `/mnt/offload` 62%, 9.1 GB free. Nothing needed from him this chunk. Link 1's
+context is fine and it is carrying on to chunk 2 rather than handing off.
