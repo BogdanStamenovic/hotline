@@ -13377,3 +13377,48 @@ classification question `internal/alert` dodged by never reading `payload` is li
 to decide deliberately and record it, and that if it thinks the data-map gate's blind spot —
 now surfaced four separate times — deserves a check that can actually catch it, to say so
 and I will take it to Bogdan as a scope question rather than absorb it into a chunk.
+
+## 2026-09-20 06:55–07:05 CEST — Track A complete; link 3 retired at its own request
+
+Link 3 finished chunk 5 and **asked to be replaced** — not wedged, not out of road. Its
+reasoning was about the next chunk rather than itself: chunk 6 brings a new table, a refactor
+of the magic-link path, an advisory-lock branch, the first `/v1` write path reachable by
+anyone on the internet, and an `openapi/kinreply.yaml` change that ripples into Milos's two
+repos. It judged that a context carrying three chunks could not hold that whole ripple at
+once. Agreed and swapped it. **Track A (chunks 1-5) is complete**: api `46ebc0a`, docs
+`aea9b3b`, lifecycle `76a0ca1`, kinreply-db `5468c8f`, all verified clean and pushed.
+
+**It corrected my correction, and it was right.** I had told it `cmd/adm` never calls
+`crypt.LoadKeyringFile`. It does — `cmd/adm/token.go:151`, reached from `cmd/adm/crypt.go:49`,
+and `main.go` opens the database lazily so the keyring loads first. **My original test did
+prove the key file loads; I talked myself out of a correct result.** The cause is exactly the
+failure I have a standing note about: I grepped `cmd/*/main.go` only and read absence in a
+filtered view as evidence. Verified its claim before accepting it, rather than swapping one
+assertion for another.
+
+It then took the proof I had said was its to take, and took it better than I would have: it
+sealed a value with a keyring parsed from my backup's retired variable and opened it with a
+keyring loaded from the new file, and proved the test load-bearing by trying a different key
+("ciphertext failed authentication"). It also named a reason beyond etiquette for not using
+the shared test database — those `channel_account` rows are sealed with fixture keys, so a
+reencrypt dry-run there would report unopenable rows and **mean nothing about production**.
+Its scratch package is gone; I checked, and the `scratchpad/` directory still in the api repo
+is gitignored Phase-1-era mutation tooling from 18-19 Sep, not its leftovers.
+
+**Chunk 5's classification decision is the one I most wanted it to get right, and it read the
+running database rather than the spec.** Excluded `contact_pii` and `contact_content` because
+`erase=null` means erasure works by nulling the column in place — a mechanism that cannot
+reach a copy in Resend's logs or the seller's Gmail. One quote converts a 30-day guarantee
+into an indefinite one **while every run of the sweep keeps reporting success**. It also
+excluded the contact id, which the spec permits, and wrote down that this third reason is
+*weaker* than the other two so a successor does not inherit an overstated argument.
+
+**Took its scope proposal to Bogdan rather than absorbing or dropping it.** The data-map
+blind spot — the gate checks a column HAS a rule, never what a handler PUTS in it — has now
+surfaced four times in five chunks. Its answer was a concrete canary sweep as its own chunk,
+with an honest limit stated up front: 2 of the 4 instances, because the other two were a
+judgement being wrong and no value-shape check sees that. Recommended it to him. A proposal
+that states what it cannot catch is worth more than one that claims to close the hole.
+
+Link 4 is `api-b3` on chunk 6, confirmed working. Handoff banner updated with both open items
+and the Milos ripple, which is an outward action and needs Bogdan's yes when it lands.

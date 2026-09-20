@@ -8,17 +8,28 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **3** is `api-6b`, tmux `kr2build-3`, Opus, in `~/data/kinreply/api`,
-> on **chunk 3 of 33** (the sender seam / Resend). Chunks 1 and 2 are done and pushed. Links 1
-> (`api-8d`) and 2 (`api-46`) were retired. Specs in `~/data/kinreply/docs/phase2-roadmap/`.
+> **What is running:** link **4** is `api-b3`, tmux `kr2build-4`, Opus, in `~/data/kinreply/api`,
+> on **chunk 6 of 33** (signup and workspace provisioning). **TRACK A — chunks 1-5 — IS DONE**
+> and pushed: one mail seam, alerts arriving, escalations arriving. Links 1-3 were retired.
+> Tree at `make check` 1617 tests / 0 skips, `make gate` green.
 >
-> **AWAITING HIS ANSWER — asked 05:23, not blocking.** Chunk 3's criterion 1 needs a real email
-> observed arriving. Two questions put to him: which mailbox to send to, and whether a handful
-> of test sends on the shared Resend key is acceptable. **Verified, not relayed:** the
-> `RESEND_API_KEY` in `~/.kinreply/phase2.env` is byte-identical (SHA-256) to the one his
-> production `dds` service sends on, so test sends eat dds's free-tier budget (~100/day,
-> 3000/month) and exhausting it silently kills dds's mail. Link 3 is building everything else
-> and leaving that one criterion open. **When he answers, relay it to link 3 with `--warrant`.**
+> **TWO THINGS WITH HIM, neither blocking:**
+> 1. **Test email.** Chunk 3's criterion 1 needs a real email observed arriving. Asked 05:23.
+>    Verified: the `RESEND_API_KEY` in `~/.kinreply/phase2.env` is byte-identical (SHA-256) to
+>    the one his production `dds` service sends on, so test sends eat dds's free-tier budget
+>    (~100/day) and exhausting it kills dds's mail silently. Five chunks are built on that
+>    sender with zero outbound messages. **Relay his answer to the live link with `--warrant`.**
+> 2. **A canary sweep as a NEW CHUNK** — proposed by link 3, recommended by me, put to him 07:01.
+>    The data-map gate checks a column HAS a rule, never what a handler PUTS in it; that blind
+>    spot has surfaced four times in five chunks. The sweep mints each credential with a known
+>    value, drives the real flows, then scans every text/jsonb column and every captured log
+>    line for it. Would have caught Phase 1's export-token-in-the-access-log. Honest limit: 2
+>    of the 4 instances — the other two were a judgement being wrong, which no value check sees.
+>
+> **COMING: chunk 6 changes `openapi/kinreply.yaml`**, a client regeneration event for Milos's
+> `kinreply-app` and `webapp`. Milos is a real person; **contacting him is outward and needs
+> Bogdan's yes**. Link 4 writes down what regenerates and reports it up; do not let a link DM
+> him or push to his repos.
 >
 > **Spawning the next link — the recipe, with three things that bit:** write the seed to a file
 > with a QUOTED heredoc and spawn with the `$(cat ...)` *inside* single quotes so your shell
