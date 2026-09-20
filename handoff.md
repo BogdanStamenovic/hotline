@@ -8,28 +8,25 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **4** is `api-b3`, tmux `kr2build-4`, Opus, in `~/data/kinreply/api`,
-> on **chunk 6 of 33** (signup and workspace provisioning). **TRACK A — chunks 1-5 — IS DONE**
-> and pushed: one mail seam, alerts arriving, escalations arriving. Links 1-3 were retired.
-> Tree at `make check` 1617 tests / 0 skips, `make gate` green.
+> **What is running:** link **5** is `api-f0`, tmux `kr2build-5`, Opus, in `~/data/kinreply/api`,
+> on **chunk 8 of 33** (Facebook Login for Business — the first real Meta credential stored).
+> **Chunks 1-7 are done and pushed**; Track A (1-5) complete. Links 1-4 retired. Tree at
+> `make check` 1739 tests / 0 skips, `make gate` green.
 >
-> **TWO THINGS WITH HIM, neither blocking:**
-> 1. **Test email.** Chunk 3's criterion 1 needs a real email observed arriving. Asked 05:23.
->    Verified: the `RESEND_API_KEY` in `~/.kinreply/phase2.env` is byte-identical (SHA-256) to
->    the one his production `dds` service sends on, so test sends eat dds's free-tier budget
->    (~100/day) and exhausting it kills dds's mail silently. Five chunks are built on that
->    sender with zero outbound messages. **Relay his answer to the live link with `--warrant`.**
-> 2. **A canary sweep as a NEW CHUNK** — proposed by link 3, recommended by me, put to him 07:01.
->    The data-map gate checks a column HAS a rule, never what a handler PUTS in it; that blind
->    spot has surfaced four times in five chunks. The sweep mints each credential with a known
->    value, drives the real flows, then scans every text/jsonb column and every captured log
->    line for it. Would have caught Phase 1's export-token-in-the-access-log. Honest limit: 2
->    of the 4 instances — the other two were a judgement being wrong, which no value check sees.
+> **THREE THINGS WITH HIM, none blocking the build:**
+> 1. **Test email.** Chunk 3's criterion 1 needs a real email observed arriving. Verified: the
+>    `RESEND_API_KEY` in `~/.kinreply/phase2.env` is byte-identical (SHA-256) to the one his
+>    production `dds` service sends on, so test sends eat dds's budget (~100/day) and
+>    exhausting it kills dds's mail silently. **Seven** chunks built on that sender, zero sends.
+> 2. **A Meta dashboard step, and it is MINE to do when his browser is reachable.** Chunk 8
+>    needs `https://kinreply.uxonews.com/v1/channels/meta/callback` registered under the
+>    KinReply app's **Facebook Login for Business → Valid OAuth Redirect URIs**. I tried at
+>    08:45 via Claude in Chrome: **no browser connected**. Retry when he is up, or he does it.
+> 3. **Canary sweep as a new chunk — I recommend YES**, scoped to `class=credential` columns.
+>    Chunk 7 supplied the strong case: a state token must appear in exactly two places and
+>    nowhere else, so the flat rule holds with no expected-locations list to rot.
 >
-> **COMING: chunk 6 changes `openapi/kinreply.yaml`**, a client regeneration event for Milos's
-> `kinreply-app` and `webapp`. Milos is a real person; **contacting him is outward and needs
-> Bogdan's yes**. Link 4 writes down what regenerates and reports it up; do not let a link DM
-> him or push to his repos.
+> **Relay any answer to the live link with `--warrant`.**
 >
 > **Spawning the next link — the recipe, with three things that bit:** write the seed to a file
 > with a QUOTED heredoc and spawn with the `$(cat ...)` *inside* single quotes so your shell

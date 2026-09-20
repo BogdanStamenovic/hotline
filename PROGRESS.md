@@ -13476,3 +13476,54 @@ sweep needs a per-value expected-locations list — and that list is the part th
 Chunk 7's CSRF token is the kind of value it would fit, so I asked link 5 for evidence.
 
 Link 5 is `api-f0` on chunk 7, confirmed working.
+
+## 2026-09-20 08:40–08:50 CEST — chunk 7; the spec's safety argument was a second attack
+
+Link 5 finished chunk 7 (the OAuth state store) and offered either to carry on or be
+replaced. **Told it to carry on**: one chunk in, context comfortable, and a swap would pay
+the ramp-up cost of reading the mandate plus a seven-chunk build log for no gain. Verified
+first: api `4c5b098`, docs `4bc9c3f`, kinreply-db `69c7207`, clean and pushed,
+`00016_oauth_state.sql` on disk.
+
+**Its finding is the most valuable thing this build has produced, and it is not a code bug.**
+The chunk spec's own *safety argument* describes an attack as if it were the safe outcome:
+an attacker "only ever completes the connection into the workspace the attacker themselves
+minted the state for" — which is the attacker's goal, stated as a reassurance. The victim
+sees a genuine Meta consent screen for the real app, authorises with their own account, and
+the account lands in the attacker's workspace. **A reviewer checking code against spec would
+have passed it**, because the code was correct and the spec was wrong. That class of finding
+only comes from reading the argument rather than the implementation.
+
+**I verified the premise its fix rests on, because that premise is about his infrastructure
+rather than their code.** `kinreply.uxonews.com`, `dds.uxonews.com` and `uxonews.com` all
+resolve to 208.113.209.196 — genuine siblings under one registrable domain. So anything
+served under `uxonews.com` really can `Set-Cookie` with `Domain=uxonews.com`, and the request
+really does arrive with neither Domain nor Path to discriminate on, which is why only
+`__Host-` closes it. A plausible-sounding architectural claim, checked and true.
+
+The reviewer caught it committing the same error one layer down: a comment conceding
+`__Host-` "would be worth having" sat **two paragraphs above** its own claim that the
+victim's browser does not hold the attacker's cookie. It wrote the refutation of its own
+claim in the same file. Fourth instance in this build of a reassuring sentence standing in
+front of an unchecked fact, and the first inside a security control.
+
+**The Meta dashboard step is mine and I could not do it.** It named the requirement early,
+which is what the mandate asks for. I tried through Claude in Chrome: **no browser connected**
+— his laptop is not reachable at this hour. Queued for him with the exact page, field and
+value, and told link 5 to build chunk 8 in full and report plainly which criteria are unmet
+for want of the registration rather than working around it.
+
+**Its canary-sweep evidence changed my recommendation from "yes" to a confident yes.** Link
+4's case was weak for a real reason — its value was a workspace name the seller sees rendered
+back, so "must appear nowhere" did not fit. Chunk 7's state token must appear in exactly two
+places and nowhere else, so the flat rule is correct **with no expected-locations list to
+rot**, which was the whole objection. Its scoping — `class=credential` columns only, where
+the rule is true by definition and the data map already names the set — is what makes it
+buildable rather than aspirational. Passed to Bogdan with both agents' evidence, including
+the half that weakened it.
+
+Worth keeping from its five spec departures: the table is deliberately **outside** RLS,
+because under forced RLS a no-tenant transaction gets `UPDATE 0`, `DELETE 0` and
+`count(*)=0` from the retention sweep's own verification — **the sweep would report success
+and delete nothing, forever**. And the tenant policy would have been tautological anyway, the
+mint comparing a value to itself.
