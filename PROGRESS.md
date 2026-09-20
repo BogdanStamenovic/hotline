@@ -14380,3 +14380,45 @@ said an alert needed no debounce because the digest groups them — true about t
 reviewer worked out the database rows, and a public comment reply is deliberately exempt from our
 rate limiting, so nothing capped those at all into a table kept ninety days. Debounced, and the
 identical defect in the function next door, unbounded since Phase 1, fixed with it.
+
+## 2026-09-20 19:20 CEST — chunk 20, and the first real delivery in six chunks
+
+**Chunk 20 done and pushed** (api `e177f82`, docs `900bc48`): the Zernio webhook route. `make
+check` and `make gate` green, 0 skips, no migration. Link 12 is carrying on to chunk 21.
+
+**After six chunks ending in "this criterion needs an account nobody can connect", this one ends
+with a real delivery.** A real Zernio `webhook.test` crossed the public internet to
+`https://kinreply.uxonews.com/webhooks/zernio`, verified against our HMAC, reached the handler
+this chunk registers rather than an unrecognised-event branch, and answered 200 in 487 ms —
+inside Zernio's published 5-second budget, with **Zernio's own log row as the evidence rather
+than ours**. Then a signed `comment.received` went over the same public path into the real
+database: one event, one job, one contact, 602 ms end to end. Four measurements taken from the
+real request rather than a fixture, including a third HTTP header Zernio documents nowhere.
+
+**It touched live production, and I verified that myself rather than relay it.** It added a
+temporary `kinreply.uxonews.com` block to uxonews's Caddyfile proxying only `/webhooks/zernio`
+over the tailnet. The carve-outs held, checked the discriminating way rather than by asking
+whether the sites are up: `uxonews.service` and `dds.service` both still report
+`ActiveEnterTimestamp` 2026-09-11 06:55:00 UTC — the value I recorded this morning, so neither
+restarted — and caddy shows 2026-08-24, meaning a reload, not a restart. uxonews.com 307→/login
+→200, dds 200, the new route 502 by design, `/v1` 404.
+
+**A process hazard promoted into the mandate (`933bc1e`).** It spawned its three reviewers while
+a mutation sweep was actively mutating the tree, and two reported mutations as bugs. Its own
+framing is why this matters: the wasted pass is the visible half, and **a reviewer reading
+mutated code can miss a real defect as easily as invent one** — and the adversarial reviewer is
+the control this build leans on hardest, twenty-one chunks with a real defect in every one.
+Sweep, restore, verify clean, then review. Its `caddy validate` finding went in beside it:
+validate checks that the config adapts, not that the process can acquire what it names.
+
+**Third link in a row to make the "silence is not a statement" mistake one turn after it was
+written down.** It got one justification wrong in both directions — first carrying a true
+sentence across from Meta's route without re-deriving it, then writing that Zernio is silent
+about redelivery serialisation when Zernio states it plainly on a page nobody had grepped. It
+ended by *measuring* the answer instead, which is the right ending. The lesson is evidently not
+learned by reading it, so the instruction is now to grep the vendor's pages and put the command
+in the log.
+
+**Two live temporary things I am now tracking as operator**, both in the banner: the Zernio
+subscription pointed at a URL serving 502, which becomes real the moment chunk 22 connects an
+account, and the Caddy block with its backup path.

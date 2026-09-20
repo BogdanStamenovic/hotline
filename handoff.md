@@ -9,19 +9,32 @@
 > operator messages him. Do not undo that.
 >
 > **What is running:** link **12** is `api-96`, tmux `kr2build-12`, Opus, in
-> `~/data/kinreply/api`, on **chunk 20** (the Zernio webhook route — a NEW VENDOR, and likely
-> the first chunk in a while whose criteria are reachable, since we own the secret). **Chunks
-> 1-16, 18 and 19 done and pushed; CHUNK 17's echo half done, its ACTIVE POLL deliberately
-> unstarted.** Links 1-11 retired. Tree at `make check` 2202 tests / 0 skips, `make gate` green.
-> Latest migration **00022**.
+> `~/data/kinreply/api`, on **chunk 21** (the Zernio adapter). **Chunks 1-16 and 18-20 done and
+> pushed; CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.** Links 1-11
+> retired. `make check` and `make gate` green, 0 skips. Latest migration **00022**.
 >
-> **THE MANDATE HAS GAINED SIX RULES TODAY** (`cdc618e`, `6578611`, `d43ae55`): never write a count, write
+> **TWO LIVE, TEMPORARY THINGS FROM CHUNK 20 — track these, they are outside the repos:**
+> 1. A **Zernio webhook subscription** (`6ab01c60a9cd421b6b97d49e`) is registered against
+>    `https://kinreply.uxonews.com/webhooks/zernio`, which currently serves **502**. Harmless
+>    while no account is connected; it becomes real the moment **chunk 22** connects one.
+>    Repoint it with `PUT /v1/webhooks/settings` — never create a second.
+> 2. A temporary `kinreply.uxonews.com` block in **uxonews's Caddyfile**, proxying ONLY
+>    `/webhooks/zernio` to archserver over the tailnet; `/v1` deliberately not exposed. Backup:
+>    `Caddyfile.bak.chunk20-20260920-174715`. **I verified the carve-outs held the discriminating
+>    way:** `uxonews.service` and `dds.service` both still show `ActiveEnterTimestamp`
+>    2026-09-11 06:55:00 UTC (unchanged since this morning — never restarted), and caddy shows
+>    2026-08-24, so it was reloaded, not restarted. uxonews.com 307→/login→200, dds 200.
+>
+> **THE MANDATE HAS GAINED EIGHT RULES TODAY** (`cdc618e`, `6578611`, `d43ae55`, `933bc1e`): never write a count, write
 > the property and the command that checks it; cite tests by names `make check` verifies; a
 > mutation pass scoring 100% first try is a result about your mutations, so write the second pass
 > against the code you did not think about; and when you cannot measure which branch reality
 > takes, prove both branches — a wall is often only half a wall.
 > Plus: before writing "nothing does X", grep properly and say which command you ran; and
 > **silence is not a statement** — a vendor not mentioning something is not a claim about it.
+> And: **never run a mutation sweep and a reviewer at the same time** — a reviewer reading
+> mutated code can miss a real defect as easily as invent one; plus `caddy validate` passing does
+> not mean `caddy reload` will succeed.
 >
 > **CHUNK 17's ACTIVE POLL MUST NOT BE BUILT AS WRITTEN** — the case is at the top of
 > `docs/phase2-roadmap/chunk-17-reconciliation-poller.md`. Its `CONFIRMED_NOT_SENT` re-queue
