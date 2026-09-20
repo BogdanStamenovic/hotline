@@ -12929,3 +12929,42 @@ transient unit is outside this tmux session and survives it.
 
 Banner written at the TOP of handoff.md — the top is what gets read, whatever the spawn prompt
 says about the bottom.
+
+## 2026-09-20 02:28–02:33 CEST — operator respawn at his request; hello posted, waiting
+
+Started 02:28:46, ~80 seconds after he asked for a fresh operator (`1551026970886807555`,
+02:27:26 CEST). Adopted `hotline-80`, read `handoff.md` in full, then both Discord
+channels.
+
+**A false alarm I caught on myself, worth recording because it is the project's signature
+failure in a new costume.** Discord's API returns timestamps in **UTC**; my reader printed
+them raw. Read as local time, his respawn request looked like it landed at 00:27 and the
+old operator's "give it about a minute" like it had gone two hours unanswered — a
+two-hour outage that never happened. I was one step from paging him about it. The
+corroborating evidence that dissolved it: the predecessor's transcript ends at
+00:28:44**Z**, commit `cf5cf55` is timestamped 02:28:25 local, and the watchdog logged
+nothing wrong across sixteen consecutive six-minute checks. **A timestamp is a status
+field too — it does not say which clock it is on.**
+
+**Probed rather than inherited** (the banner was two minutes old and still not taken on
+faith): `/sys/class/rtc/rtc0/wakealarm` empty, no `at`, no crontab, no
+`/run/systemd/shutdown`, GPU 13 MiB, only `bsajt-verify.timer` and the watchdog armed.
+
+**The one real find: both live agents hold an unsubmitted line in their input box.**
+`llmserver-work` has *"yes do the 6-8 step test"*; `jev-research-opus` has *"Build the
+logging loop then"*. Each answers the last thing its agent actually said, and both read
+like him. `hotline --list` calls them `shell` and `idle` — neither word describes an
+agent sitting on an undelivered instruction, which is why the pane capture is the probe
+and the list is the status field.
+
+**Attributed before acting, and it changed the answer.** Neither line arrived over
+Discord: no message from him in either channel after those points, and every relayed
+message carries a provenance header while these are bare text. He has ttys open on this
+box since 20:24 and the desktop is deliberately on, so the likely story is he typed them
+at the console and never pressed enter. **I did not press it for him** — the llmserver
+line spends real GPU time, and "it looks like something he would say" is not provenance.
+Surfaced as his decision instead.
+
+One consolidated message to `#agent-hotline-80`: I am up, what is the task, here are the
+two unsent lines, plus the three items still his. Re-read the channel afterwards to
+confirm it actually landed rather than trusting `hotline-say`'s silent exit. Now waiting.
