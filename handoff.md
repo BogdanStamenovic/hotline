@@ -55,11 +55,17 @@
 > `~/.zshenv` for future sessions. **A tool he installs later lands in `~/.local/bin` and needs
 > one more symlink to be visible here.**
 >
-> **`use-computer` is installed AND registered with ownbox** (`ownbox list` shows it at
-> `87d476d`; `ownbox update use-computer` maintains it). `use-computer doctor` exits 0. Its
-> **MCP tools only load in a NEW session** — in this one, drive it from Bash: `use-computer
-> screenshot` prints a PNG path to Read, then `click --at X,Y` / `--ref`, `type`, `key`, `find`,
-> `ocr`. **It moves his REAL pointer** — say so before taking control, and stop the session after.
+> **`use-computer` is installed and registered with ownbox**, upgraded 2026-09-21 to `af33c31`
+> (`ownbox upgrade use-computer --yes`). `doctor` exits 0. Its **MCP tools only load in a NEW
+> session** — in this one, drive it from Bash: `use-computer screenshot` prints a PNG path to
+> Read, then `click --at X,Y` / `--ref`, `type`, `key`, `find`, `ocr`, `vd`, `watch`.
+>
+> **THE UPGRADE CHANGED THE DEFAULT TARGET.** It now works on an **isolated virtual desktop**
+> (`agent`) — own GNOME session and buses, **not his pointer, no sharing indicator, unattended
+> runs possible.** He can watch with `use-computer watch --tty`. **But a virtual desktop starts
+> EMPTY and nothing is logged in** — so it is the WRONG target for the Meta dashboard, which
+> needs his signed-in Facebook session. For that: the Chrome extension against his real browser,
+> with `--real` only to START Chrome if it is closed, and ask before using the real screen.
 >
 > ### OPERATOR'S NEXT ACTIONS, in order — written down 2026-09-21 00:50 so a compaction costs nothing
 > 1. **Do the Meta dashboard myself** (he asked: *"i ask that you do it yourself as i did not find
