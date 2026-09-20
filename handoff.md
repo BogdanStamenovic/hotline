@@ -4521,50 +4521,55 @@ from here. The confirmation also carried the top task now at the top of this fil
 
 Going down.
 
-## Meta dashboard: the one-pass target (written 2026-09-21, while he cleared a security checkup)
+## Meta dashboard: DONE 2026-09-21, and what it cost to learn
 
-**Blocked at the time of writing.** App `1064625406364662`'s dashboard redirects to
-`developers.facebook.com/r/user/error/` — "Account confirmation needed, unusual activity
-on this developer account", logged in as **Test Testovic**. This is NOT only a UI lockout:
-the **app access token** (no user session in it) returns `"API access blocked."`
-OAuthException **code 200** on both the app object and `/subscriptions`. Recheck with:
+**The config is fixed and verified.** Configuration `kin` / `3009212886077369` (the value
+of `KINREPLY_META_LOGIN_CONFIG_ID`) now carries exactly the eight of `graph.LoginScopes`:
 
-    curl -sS -G "https://graph.facebook.com/v21.0/$APP_ID" --data-urlencode "access_token=$APP_ID|$APP_SECRET"
+    instagram_basic            pages_manage_engagement
+    instagram_manage_comments  pages_manage_metadata
+    instagram_manage_messages  pages_messaging
+    pages_read_engagement      pages_show_list
 
-When that stops saying "API access blocked", access is back. It touches nothing of his.
+Checked by diffing the dashboard list against the source, not by eye:
 
-**Zernio is unaffected and was verified in the same breath** — account
-`6aaf18dd8d284ffb211dec90` / `personamail420420`: `isActive: true`,
-`platformStatus: "active"`, `needsReconnection: false`, and all five permissions still
-granted, `instagram_business_manage_comments` and `instagram_business_manage_messages`
-included. It runs on ZERNIO'S Meta app, which is why our block does not reach it.
+    sed -n '/^var LoginScopes = \[\]string{/,/^}/p' internal/graph/oauth.go \
+      | grep -oE '"[a-z_]+"' | tr -d '"' | sort
 
-**The fix target is the CONFIGURATION, not the use cases.** Facebook Login for Business
-takes its permissions from `config_id` (`KINREPLY_META_LOGIN_CONFIG_ID=3009212886077369`),
-and `scope=` is ignored on that path — see the comment at `internal/graph/oauth.go:158`.
-The use cases only govern what is *offerable* to the configuration. So: open the
-configuration, make its permission set equal `graph.LoginScopes`
-(`internal/graph/oauth.go:61`), and only drop to the use-case screens for a permission the
-configuration will not offer.
+`business_management` is deliberately NOT selected: it is offered, and it is not in
+LoginScopes.
 
-The eight, with the use case that gates each:
+**CORRECTION to what this file said an hour ago.** It carried a table claiming
+`instagram_basic` and `instagram_manage_comments` were already present. False. That table
+described the USE CASES; the CONFIGURATION held only three permissions
+(`pages_manage_metadata`, `pages_messaging`, `pages_show_list`). Five were missing, not
+two. The configuration is what the login dialog reads, so the use-case view was the wrong
+thing to measure.
 
-| Permission | Use case | State on 09-20 |
-|---|---|---|
-| `pages_show_list` | Manage Pages | present |
-| `pages_read_engagement` | Manage Pages | **MISSING — four silent failures** |
-| `pages_manage_engagement` | Manage Pages | **MISSING — four silent failures** |
-| `pages_manage_metadata` | Manage Pages | present |
-| `pages_messaging` | Messenger | unknown, screen never opened |
-| `instagram_basic` | Instagram | present |
-| `instagram_manage_messages` | Messenger/Instagram | unknown |
-| `instagram_manage_comments` | Instagram | present |
+**THE ACTUAL CAUSE OF THE "FOUR SILENT FAILURES" ON 09-20.** Two things, and neither is
+a missing setting:
 
-Do NOT submit App Review and do NOT publish the app — both are standing constraints.
+1. The permission a configuration can offer is gated by the app's USE CASES. Four of the
+   eight were not offerable at all — typing `engagement` into the config's permission
+   search returned "No matching results". The config screen cannot be fixed from the
+   config screen. Add the permission on the use case first (Manage Pages for the two
+   `pages_*_engagement`; Messenger for `instagram_basic` and
+   `instagram_manage_messages`), which propagates to the other use cases via a
+   confirmation modal, and only then does it appear in the configuration's picker.
+2. **`permissions-add/` is flaky and fails with a generic modal**: "Something went wrong.
+   Sorry something went wrong, please try again later." It failed on the FIRST attempt for
+   every one of the four permissions and succeeded on the SECOND, every time. The POST
+   returns HTTP 200 either way, so the status code is not the signal. **Always re-read the
+   row's Status column afterwards — `Add` means it did not take, `Ready for testing` means
+   it did.** Four permissions x one spurious failure each is exactly "four silent
+   failures".
 
-**If the checkpoint demands government ID, this account does not come back**, because the
-account is the persona "Test Testovic". The fallback is not to recreate the app in a
-hurry: the only Instagram account working end to end already runs through Zernio, and
-Zernio already grants the two permissions this whole Meta path kept failing to obtain.
-Recreating under a real account (his, or Stefan's — the company is in Stefan's name, and
-Stefan is pre-authorised to contact) is a decision for him, not a default.
+**STILL OPEN ON THE DIRECT META PATH, and neither is a permission:**
+
+- The app is **Unpublished** (the nav says so). Publishing is a standing prohibition, and
+  without it Meta delivers no webhooks at all.
+- `GET /{app-id}/subscriptions` returns `{"data": []}` — the app has **no webhook
+  subscriptions registered whatsoever**.
+
+So the permission shortfall is closed, and the direct Meta path is still not deliverable
+end to end. The live path remains Zernio, which needs none of this.
