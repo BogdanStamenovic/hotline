@@ -32,7 +32,12 @@
 > ### OPERATOR'S NEXT ACTIONS, in order — written down 2026-09-21 00:50 so a compaction costs nothing
 > 1. **Do the Meta dashboard myself** (he asked: *"i ask that you do it yourself as i did not find
 >    those settings"*). **If Chrome is not running, START IT** — `desktop status`, `desktop on`,
->    launch it with computer-use, or use `arch` if it is online. He corrected me for treating a
+>    then **`use-computer`**, which he had me install on archserver on 2026-09-21 for exactly this
+>    (`~/.claude/bin/use-computer`, `doctor` exits 0; GNOME/Wayland, no sudo was needed).
+>    **Its MCP tools only appear in a NEW session — in this one, drive it from Bash:**
+>    `use-computer screenshot` prints a PNG path to Read, then `click --at X,Y` / `--ref`, `type`,
+>    `key`, `find`, `ocr`. It moves his REAL pointer, so say so before taking control and stop the
+>    session afterwards. He corrected me for treating a
 >    closed browser as a blocker: *"Chrome being down is not a blocker which you cant fix."*
 >    After starting it, re-check with `tabs_context_mcp` — the extension has to attach too. Outstanding there:
 >    `pages_read_engagement` and `pages_manage_engagement` on the **Manage Pages** use case (four
