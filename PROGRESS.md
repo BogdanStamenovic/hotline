@@ -14738,3 +14738,49 @@ because only he can authorise it.
 
 Artifact updated to Version 2 at the same URL: chunk count, the new 429 question, and the second
 Instagram account now wanted by two chunks rather than one.
+
+## 2026-09-21 01:10 CEST — chunk 25, and a link that handed off on the right axis
+
+**Chunk 25 done and pushed** (api `525d5d7`, kinreply-db `a47e733`, docs `d6e425f`), migration
+00024. All 24 migrations cold-applied twice to a fresh database with a clean data-map check both
+times. Link 15 (`api-19`) is on chunk 26; link 14 retired after four chunks — more than any link
+before it.
+
+**It was one report away from calling chunk 25 complete with a third of it unbuilt.** The roadmap
+file names two deliverables; three are assigned to the chunk — `token_health` is named by
+`02-tier1-reply.md`'s data-map row, by that spec's Changed note, and by chunk 13's own build-log
+entry which deferred it here **by name**. A fact-checker pointed at the other sources found it in
+one pass, on the only question that could have caught it: "anything else the spec asks for that
+was NOT built". Rule now in the mandate: **a chunk's spec is not the chunk's scope — the specs
+are**; the roadmap is written once, the specs and log are maintained by everything that touches
+them, so when they disagree the roadmap loses.
+
+**The finding of the chunk is the most dangerous shape this build has produced.** Every `class=`
+predicate in `check-data-map.sql` was an unanchored substring match over a grammar ending in
+free text. The older predicates ask the positive and **misfire loudly** — somebody looks, nothing
+is wrong, they move on. The one added the same day asks the negation, so a poisoned column was
+**excluded and CI reported the data map clean**. Same bug, same file, same day, and only one
+direction is dangerous. All six anchored now.
+
+**A race appeared for the second time and was missed by the same person again** — read the state,
+round-trip the vendor, write at the end, row moved underneath. Chunk 22: a reconnected live
+account taken down. Chunk 25: HEALTHY written beside a `disconnected_at`. It is now the first
+thing in the handoff, stated flatly that it will appear a third time.
+
+**Two judgement calls of its own that I want on the record.** It did not add the second mandate
+rule, because it had already added the first during chunk 25 and would not create two wordings of
+one rule in two files — the defect this build has paid for more than any other. It told me which
+was which and left mine to me; I added it (`d371d4f`). And it **refused to restate Bogdan's lifted
+constraints in the build log**, because they reached it second-hand and it had verified none of
+them: *"a permission written down twice is how the worst inherited facts here got their second
+life."* It marked the seed authoritative instead. That is exactly right, and it is the
+permission-laundering concern from the honest direction.
+
+**It handed off on the right axis, and its formulation is now in every seed.** Budget was not the
+constraint — 1.1M of 15M, ten chunks left. What it reported instead: three reviewers this chunk
+found a missing deliverable, a silent false negative in a check it had just shipped, and four
+defects in already-green code including a race it had personally watched a reviewer catch three
+chunks earlier. Its diagnosis: *"I made confident conclusions from the source I had already read,
+because I felt like I already knew the shape of this. That gets worse with accumulated context,
+not better."* The question is not how much budget is left; it is **whether you are still capable
+of being surprised by a source you have already read.**

@@ -56,13 +56,22 @@
 >    criteria become reachable.
 > 6. **Milos** can be told about `startZernioConnect` whenever — pre-authorised, his scope.
 >
-> **What is running:** link **14** is `api-f1`, tmux `kr2build-14`, Opus, in
-> `~/data/kinreply/api`, on **chunk 25 (Track E, migrations)**. **Chunks 1-16 and 18-24 done and
-> pushed; TRACK D FINISHED. CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.**
-> Links 1-13 retired. `citations`/`vet`/`build` exit 0, `make gate` green. Migration **00023**.
-> It has now done three chunks — more than any link before it — and says its context is fine. I
-> gave it chunk 25 and asked for an unusually honest read at that boundary: **every link that ran
-> out of road said "still comfortable" about one chunk before it stopped being true.**
+> **What is running:** link **15** is `api-19`, tmux `kr2build-15`, Opus, in
+> `~/data/kinreply/api`, on **chunk 26**. **Chunks 1-16 and 18-25 done and pushed; CHUNK 17's
+> echo half done, its ACTIVE POLL deliberately unstarted.** Links 1-14 retired. `make check`
+> green 0 skips, `make gate` green, `citations` exit 0. **Latest migration 00024.**
+>
+> **THE RACE THAT HAS APPEARED TWICE AND WILL APPEAR A THIRD TIME** is at the top of link 14's
+> handoff section in `BUILD-LOG-PHASE2.md`: read the connection state, round-trip a vendor, write
+> the verdict at the end — and the row moved underneath. Chunk 22 saw it take a reconnected live
+> account down; chunk 25 saw it write HEALTHY beside a `disconnected_at`. **Missed both times by
+> the link that had already seen it.** Fix shape: capture the state you computed against, make the
+> write conditional on it still holding, discard otherwise, and LOG the discard.
+>
+> **LINK 14 HANDED OFF ON THE RIGHT AXIS AND ITS FORMULATION IS NOW IN EVERY SEED:** budget is not
+> the question, *"whether you are still capable of being surprised by a source you have already
+> read"* is. It had ten chunks of budget left and handed off anyway, because three chunks running
+> its near-misses were caught only by fresh reviewers.
 >
 > **CONFIRMED, DO NOT LET A LINK RUN IT:** chunk 24's optional test is to drive a `429`
 > deliberately against the vendor. Not run. The deciding reason is one chunk 24 found itself —
