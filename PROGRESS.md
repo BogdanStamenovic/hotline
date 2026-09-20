@@ -13244,3 +13244,36 @@ wrong trade. That is the right call and I said so.
 Pinged him with all of it. Flagged for him, not blocking: `kinreply.uxonews.com` is not a
 verified sending subdomain in Resend, so chunk 3 sends from the already-DKIM-verified
 `@uxonews.com`. Space at the boundary: root 75% / 18 GB free, `/mnt/offload` 62% / 9.1 GB.
+
+## 2026-09-20 05:22–05:26 CEST — link 2 retired, link 3 on chunk 3, and a question put to him
+
+Link 2 finished chunk 2 and stopped rather than starting chunk 3 — it began, hit a design
+fork inside twenty minutes, and judged its context too heavy to carry a chunk that size
+behind it. **Second link running to correct its own earlier "I'll continue"** rather than
+quietly doing either thing. Before stopping it wrote the fork up with three options and a
+recommendation, so link 3 starts from a decided problem. Verified its handoff: api
+`af6fd5b`, lifecycle `e122962`, docs `88bb3c7`, all matching its claims exactly, all clean
+and pushed.
+
+**I verified the claim his decision rests on, not the one I was handed.** Link 2 said the
+Resend key is shared with production dds. Rather than relay that, I compared SHA-256
+fingerprints of `RESEND_API_KEY` in `~/.kinreply/phase2.env` and in `/opt/dds/app/.env.local`
+on uxonews: **byte-identical**. Its first candidate on that box was a `whsec_` webhook
+signing secret, which is a different credential entirely and would have made the risk look
+smaller than it is — worth chasing past the first grep hit. So the exposure is real: test
+sends come out of dds's free-tier budget and exhausting it takes dds's mail down silently.
+Asked him which mailbox and whether a handful of sends is acceptable, with a recommendation
+and the note that a separate kinreply key would remove the coupling permanently. **Not
+blocking** — link 3 builds the whole chunk and leaves that one criterion open.
+
+**A structural finding, and the mandate was wrong.** Both links so far reported "exiting
+now" and both were still at an idle prompt when I looked. It is not disobedience: **sending
+the report is the last act of the turn, so there is nothing left to run an exit from.** The
+instruction was unachievable as written and produced a false claim every time it was
+obeyed. Removed it (`a55e062`): the operator reaps, spawning the successor first so the
+chain never pauses on a link's death. Recorded that claiming to have exited is worse than
+lingering quietly, because it tells the operator not to check — a false status field
+manufactured by the document itself.
+
+Link 3 is `api-6b`, confirmed working by pane capture. Handoff banner updated with the
+spawn recipe and all three traps that have bitten so far.

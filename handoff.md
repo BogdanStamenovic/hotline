@@ -8,39 +8,28 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **2** is `api-46`, tmux `kr2build-2`, Opus, in `~/data/kinreply/api`,
-> on **chunk 2 of 33**. Link 1 (`api-8d`) finished chunk 1 and was retired. Specs are in
-> `~/data/kinreply/docs/phase2-roadmap/`.
+> **What is running:** link **3** is `api-6b`, tmux `kr2build-3`, Opus, in `~/data/kinreply/api`,
+> on **chunk 3 of 33** (the sender seam / Resend). Chunks 1 and 2 are done and pushed. Links 1
+> (`api-8d`) and 2 (`api-46`) were retired. Specs in `~/data/kinreply/docs/phase2-roadmap/`.
 >
-> **Spawning the next link — the recipe, with two things that bit:** write the seed to a file
+> **AWAITING HIS ANSWER — asked 05:23, not blocking.** Chunk 3's criterion 1 needs a real email
+> observed arriving. Two questions put to him: which mailbox to send to, and whether a handful
+> of test sends on the shared Resend key is acceptable. **Verified, not relayed:** the
+> `RESEND_API_KEY` in `~/.kinreply/phase2.env` is byte-identical (SHA-256) to the one his
+> production `dds` service sends on, so test sends eat dds's free-tier budget (~100/day,
+> 3000/month) and exhausting it silently kills dds's mail. Link 3 is building everything else
+> and leaving that one criterion open. **When he answers, relay it to link 3 with `--warrant`.**
+>
+> **Spawning the next link — the recipe, with three things that bit:** write the seed to a file
 > with a QUOTED heredoc and spawn with the `$(cat ...)` *inside* single quotes so your shell
 > does not expand it:
 > `tmux new-session -d -s kr2build-N -x 220 -y 50 "cd ~/data/kinreply/api && exec claude --model opus --permission-mode bypassPermissions \"\$(cat SEEDFILE)\""`
-> In the seed, `hotline --declare` takes its task as the **immediately following** argument —
-> `--declare 'task text' --no-channel --parent hotline-80`. Put `--no-channel` between them and
-> the declare fails; link 2 hit this and fixed it itself, which is not something to rely on.
-> Then **capture the pane** to confirm it is working, and **confirm the previous link actually
-> exited** — link 1 reported "exiting now", the registry said `[done]`, and its process was
-> still sitting at an idle prompt. I killed pid and session by hand.
-> The mandate is `AUTONOMOUS-BUILD-PHASE2.md`, the moving state is `BUILD-LOG-PHASE2.md` — read
-> both; they are strict and they are good.
->
-> **THE ONE DUTY THAT CANNOT LAPSE — the chain does not self-chain any more.** In Phase 1 each
-> link spawned its own successor. It does not now, deliberately: nobody was checking whether the
-> successor actually came up, and an agent wedged on the folder-trust prompt is invisible to
-> `tmux ls`, which lists the session happily either way. **So when a link says it is out of road,
-> YOU spawn the next one.** If you are a fresh operator reading this cold, check immediately:
->
-> ```
-> tmux ls | grep kr2build          # is a link alive?
-> tmux capture-pane -pt kr2build-N # is it WORKING, or sitting on a trust prompt?
-> tail -40 ~/data/kinreply/api/BUILD-LOG-PHASE2.md   # where the chain actually is
-> ```
->
-> If no `kr2build-*` session is alive and the log's last entry says a chunk finished, **the chain
-> is stalled waiting for you.** Spawn the next link with the seed shape in the mandate's "How the
-> chain works" §3, `--model opus`, then capture the pane to confirm it cleared the trust prompt.
-> A `tmux ls` entry is not proof an agent is working — that is this project's signature failure.
+> 1. `hotline --declare` takes its task as the **immediately following** argument —
+>    `--declare 'task' --no-channel --parent hotline-80`. Anything between them fails.
+> 2. **Capture the pane** to confirm it is working; `tmux ls` lists a wedged trust prompt happily.
+> 3. **A link cannot exit itself** — sending its report is the last act of its turn. Links 1 and
+>    2 both said "exiting now" and both were still at an idle prompt. **You reap them**: spawn
+>    the successor FIRST so the chain never pauses, then kill the old pid and its session.
 >
 > **Ping him at the end of every chunk.** That is his explicit instruction. The link reports to
 > you with the chunk summary; you turn it into one message to `#agent-hotline-80`. One message
