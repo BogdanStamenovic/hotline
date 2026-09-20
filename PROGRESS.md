@@ -14693,3 +14693,48 @@ and proves the registration a deployment gets rather than one a test did to itse
 has to do himself. Built and sent as an artifact, organised by where he would actually do each
 thing, with what breaks without each and my recommendation on every question:
 https://claude.ai/artifact/AUfdE5PDtUCDJc11crpB4S
+
+## 2026-09-21 00:25 CEST — chunk 24, Track D finished, and the chain catching a repeat before it repeated
+
+**Chunk 24 done and pushed** (api `8993d47`, kinreply-db `3433cec`, migration 00023): rate limits.
+Green, gate green. **Track D is finished.** Link 14 is taking chunk 25 and Track E.
+
+**The best thing in this chunk is that the chain caught a repeat ahead of the repeat.** Chunk 16
+found, eight chunks ago, that Meta publishes usage on every response while we read it only on
+failures — so the first signal would have been the 429 itself. I asked link 14 to check the second
+vendor for the same shape. It had it, and the fix needed **no new machinery**, because chunk 16's
+plumbing was written provider-neutral. **First time in twenty-four chunks that a finding arrived as
+a question somebody knew to ask rather than a bug somebody had to hit** — which is the entire point
+of making these agents read each other's logs.
+
+**Two reviewer findings, the same shape: a guard applied where its assumptions do not hold is worse
+than no guard, because it gets trusted.** The advisory lock meant to stop two workspaces connecting
+one account was keyed on the *connecting* workspace, so the two it exists to compare never contended
+— both pass, both insert, both commit, two live rows on one real account with ordinary timing. It
+went **through** the guard rather than around it. And the guard compares `username`, which is a
+unique handle on Instagram and a Page's **display name** on Facebook, where two unrelated businesses
+can share one. Not a heuristic with a low error rate — a check whose signal is invalid. Instagram
+only now, with what must change written down.
+
+A third, one layer up: the usage reduction was unit-tested and the four lines that **call** it were
+not. Mechanism tested, connection untested — chunk 14's "nothing tested that the measurement is
+still being taken" and chunk 16's helper that matched nothing, for the third time.
+
+**The spec's load-bearing premise was the pre-chunk-16 world** — it quoted a signature chunk 16
+changed eight chunks ago. The conclusion survived and the *reason* did not, and the reason is what
+the next reader plans against. The current reason has a sharper edge: chunk 16's fix reaches every
+META row and **cannot** reach a ZERNIO one, because the broker exposes no Meta-native id.
+
+**And an omission that mattered more than the seventh misquote:** the spec never mentions that the
+vendor's request budget is **shared across every one of their customers**, which the vendor states
+directly. That changes what our alert *means* — it lands on whichever workspace noticed the
+pressure, not the one causing it.
+
+**It asked me to confirm not running chunk 24's deliberate-429 test, and I did — but its reasons
+were the weak ones.** The strong reason is the fact it had just found: exhausting a shared budget on
+purpose spends other tenants' quota, not only Bogdan's. What it buys is proof of parsing a body the
+vendor documents verbatim and our tests already cover. Recorded on his page as not-done and why,
+because only he can authorise it.
+
+Artifact updated to Version 2 at the same URL: chunk count, the new 429 question, and the second
+Instagram account now wanted by two chunks rather than one.

@@ -9,9 +9,23 @@
 > operator messages him. Do not undo that.
 >
 > **What is running:** link **14** is `api-f1`, tmux `kr2build-14`, Opus, in
-> `~/data/kinreply/api`, on **chunk 24** (rate limits). **Chunks 1-16 and 18-23 done and pushed.
-> CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.** Links 1-13 retired.
-> `citations`/`vet` exit 0, `make gate` green. Migration **00022**.
+> `~/data/kinreply/api`, on **chunk 25 (Track E, migrations)**. **Chunks 1-16 and 18-24 done and
+> pushed; TRACK D FINISHED. CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.**
+> Links 1-13 retired. `citations`/`vet`/`build` exit 0, `make gate` green. Migration **00023**.
+> It has now done three chunks — more than any link before it — and says its context is fine. I
+> gave it chunk 25 and asked for an unusually honest read at that boundary: **every link that ran
+> out of road said "still comfortable" about one chunk before it stopped being true.**
+>
+> **CONFIRMED, DO NOT LET A LINK RUN IT:** chunk 24's optional test is to drive a `429`
+> deliberately against the vendor. Not run. The deciding reason is one chunk 24 found itself —
+> **that request budget is shared across every one of the vendor's customers**, so exhausting it
+> spends other tenants' quota, not only Bogdan's. It buys proof of parsing a body the vendor
+> documents verbatim and our tests already cover. Only Bogdan can authorise it, with that sentence
+> in front of him.
+>
+> **`channel_account.username` IS NOW LOAD-BEARING.** It was display text; chunk 24 made it the
+> input to a guard that can REFUSE a connect. A Track E chunk that backfills or normalises it is
+> changing a control, not a label.
 >
 > **THERE IS NOW A `pre-commit` HOOK in the api repo** (`.git/hooks/pre-commit`, `bb37bc1` in the
 > mandate). It refuses a commit that cannot build, fails `vet`, or cites a test that does not
