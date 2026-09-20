@@ -9,10 +9,16 @@
 > operator messages him. Do not undo that.
 >
 > **What is running:** link **11** is `api-17`, tmux `kr2build-11`, Opus, in
-> `~/data/kinreply/api`, on **chunk 18** (the identity measurement). **Chunks 1-16 done and
-> pushed; CHUNK 17's echo half done and reviewed, its ACTIVE POLL deliberately unstarted.**
-> Links 1-10 retired. Tree at `make check` 2140 tests / 0 skips, `make gate` green. Latest
-> migration **00021**.
+> `~/data/kinreply/api`, on **chunk 19** (failure paths). **Chunks 1-16 and 18 done and pushed;
+> CHUNK 17's echo half done and reviewed, its ACTIVE POLL deliberately unstarted.** Links 1-10
+> retired. Tree at `make check` 2183 tests / 0 skips, `make gate` green. Latest migration
+> **00022**.
+>
+> **THE MANDATE HAS GAINED FOUR RULES TODAY** (`cdc618e`, `6578611`): never write a count, write
+> the property and the command that checks it; cite tests by names `make check` verifies; a
+> mutation pass scoring 100% first try is a result about your mutations, so write the second pass
+> against the code you did not think about; and when you cannot measure which branch reality
+> takes, prove both branches — a wall is often only half a wall.
 >
 > **CHUNK 17's ACTIVE POLL MUST NOT BE BUILT AS WRITTEN** — the case is at the top of
 > `docs/phase2-roadmap/chunk-17-reconciliation-poller.md`. Its `CONFIRMED_NOT_SENT` re-queue

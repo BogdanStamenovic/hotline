@@ -14288,3 +14288,49 @@ them they unblock seven chunks' criteria.
 slows every link, and the uv cache is hardlinks that free ~0, which I measured this morning.
 `/mnt/offload` 9.1 GB free, `/mnt/windows` 434 GB. Threshold set with him at 8 GB on root.
 cvoice holds 6.1 GB of VRAM doing its job; load average 0.1.
+
+## 2026-09-20 17:45 CEST — chunk 18 beat the wall, and the best methodological finding of the build
+
+**Chunk 18 done and pushed** (api `5ae8e11`, docs `1aca5ad`, kinreply-db `463dca5`): the identity
+measurement. 2183 tests, 0 skips, gate green, migration 00022. Link 11 is carrying straight on to
+chunk 19.
+
+**The finding is that the mechanism meant to warn us was blind.** The existing comparison raised a
+warning when the two Meta ids disagreed and recorded *nothing* when they agreed — so silence had
+two causes nobody could distinguish: the ids match, or no private reply has ever gone out. **The
+phase's most dangerous question was resting on a probe that answers the same either way.** Both
+outcomes are recorded now. And there is a test asserting that a *thread* send cannot answer the
+question and does not pretend to, because a thread send is addressed to an id read off our own
+contact row — Meta echoing it back would have "answered" chunk 18 with a fact about our own request.
+
+**I warned it this chunk might be unbuildable and to say so rather than manufacture work. It found
+the wall was only half a wall.** The ids still cannot be measured, but *what happens when they
+differ* can be, exactly, because the divergence is a property of the two webhooks and the webhook
+sender is a parameter. The gate test drives the real binaries and database under both answers on
+both platforms: under a split the payload really is stranded **and** the contact's words are still
+in the seller's inbox marked as needing a reply. A "Done when" the spec had written off.
+
+**Meta, fetched live and re-checked by hand:** the Instagram half is settled from Meta's own words
+— commenting and messaging create the same Instagram-scoped id. The Facebook half is a confirmed
+negative: the Page feed reference gives a comment author's id no id-space label at all. And the
+escape hatch is closed — the old ID Matching API 404s on every URL and is gone from the current
+index. The decisive live test is **not met** and nothing in the tree pretends the ids were measured.
+
+**The best methodological finding in eighteen chunks, and I promoted it into the mandate
+(`6578611`).** Its first mutation pass scored 18 of 18 — and rather than report that as a triumph
+it said: *that is not a result, it is the builder mutating what the builder had already tested.* A
+second pass aimed deliberately at clauses no test was written for killed seven of nine, every one a
+blind test, including a count that had lost its contact scope and silently stopped the whole
+mechanism on any account with more than one message. That explains a pattern the whole chain has
+been hitting without naming — every chunk's first-pass survivors have been blind tests.
+
+I put the half-wall method in beside it, since chunks 19-33 will keep hitting that wall: settle what
+the documentation settles by fetching the live pages, build what is correct under every hypothesis
+it leaves open, leave the log line that reports the answer when real traffic arrives, and prove both
+branches when you cannot measure which one reality takes.
+
+**Nineteen for nineteen on reviewers.** The code reviewer found the new warning is not idempotent
+across a job retry — accepted rather than guarded, because the guard would be a ninety-day unindexed
+scan on the hot path to deduplicate a warning nothing branches on, and pinned with a test named for
+the limitation so nobody reads a row count as an incident count. A known limitation with a test
+under it beats a fix nobody asked for.
