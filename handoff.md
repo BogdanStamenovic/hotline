@@ -8,23 +8,28 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **13** is `api-59`, tmux `kr2build-13`, Opus, in
-> `~/data/kinreply/api`, on **chunk 22 (Zernio provisioning)**. **Chunks 1-16 and 18-21 done and
-> pushed; CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.** Links 1-12
-> retired. `citations`, `go vet`, `go build` all exit 0; `make gate` green. Migration **00022**.
+> **What is running:** link **14** is `api-f1`, tmux `kr2build-14`, Opus, in
+> `~/data/kinreply/api`, on **chunk 22's INTEGRATION half**. **Chunks 1-16 and 18-21 done and
+> pushed. CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted. CHUNK 22's
+> FOUNDATION is built** (`internal/zernio/{profiles,connect,disconnect}.go`) **and its
+> integration half is not begun** — the seam is surveyed in the build log with the obstacle named
+> in each of four places. Links 1-13 retired. `citations`/`build`/`vet` exit 0. Migration 00022.
 >
-> **CHUNK 22 MAY BREAK THE WALL, and I have told link 13 to establish it EARLY and explicitly.**
-> Chunks 8 and 14-19 all end in "needs a connected account", root cause the Meta login config
-> granting a fraction of `graph.LoginScopes` — with Bogdan since this morning. But chunk 20 put a
-> real Zernio webhook over the public internet and got a 200. **If an account can be connected
-> through Zernio without that Meta config, the Zernio half is live-testable end to end today.**
-> The answer due at the next boundary is: which criteria the Zernio path satisfies, and which
-> still genuinely need Meta. It does not retire the Meta ask — chunk 18's identity question can
-> only ever be answered on Meta's route.
+> **SECURITY FINDING CHUNK 22 INHERITS — do not let a later change undo it.** Zernio's `state` is
+> ZERNIO'S OWN CSRF and is **not** round-tripped to us; the params it appends are `connected`,
+> `profileId`, `accountId`, `username`. `channelconnect` binds a callback to its workspace by
+> reading OUR state out of the callback URL, and Meta round-trips it where Zernio does not — so a
+> handler trusting `accountId` with no binding is `channelconnect`'s own documented "direction A"
+> attack. Fix in place: our state rides in the `redirect_url` we hand Zernio (which appends with
+> the URL API, preserving the query string), and a custom app scheme is refused deliberately.
 >
-> **CROSS-CHUNK FACT from chunk 21:** Zernio's private-reply response carries **no recipient
-> id**, so chunk 18's identity measurement CANNOT fire through Zernio. Meta's route still
-> answers it. Do not let a later chunk expect it there.
+> **THREE CONSTRAINTS IN FORCE WHILE HE IS SILENT** (link 13 obeyed all three; I verified):
+> send nothing outward from any account; connect no second account; and the accountId
+> `6aaf18dd8d284ffb211dec90` must appear in **no Go file** — keep it in config or a fixture.
+>
+> **HE HAS NOT REPLIED ALL DAY** — I checked the channel rather than assumed: zero non-bot
+> messages in the last 40. Nothing is on fire and chunks 23-24 are reachable on the Zernio path,
+> so I did not ring him.
 >
 > **AN INSTAGRAM ACCOUNT IS ALREADY CONNECTED THROUGH ZERNIO, AND IT WAS CONNECTED BEFORE THIS
 > CHAIN STARTED.** `personamail420420` / MarkicJavicanski, accountId `6aaf18dd8d284ffb211dec90`,

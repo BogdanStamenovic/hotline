@@ -14549,3 +14549,48 @@ permissions. Our OAuth, token refresh, token health, the dual rate-limit countin
 identity question all live there — and chunk 18 especially, since Zernio's private-reply response
 carries no recipient id. The Facebook permissions ask stands; it just no longer holds up
 everything.
+
+## 2026-09-20 21:55 CEST — chunk 22's foundation, and a hole the spec did not mention
+
+**Chunk 22's foundation is built and pushed** (api `dd9217a`): `internal/zernio` gained
+profiles, connect and disconnect — the self-contained half, no shared code touched, nothing
+stubbed. Link 14 (`api-f1`) is on the integration half; link 13 retired. I verified the three
+constraints I set while Bogdan is away and it obeyed all three, including grepping: the accountId
+appears in **no Go file**.
+
+**The finding is a security hole the chunk spec does not mention.** Zernio's connect response
+carries a `state`, and it is **Zernio's own** CSRF between itself and Meta, validated at its own
+callback — not round-tripped to us. The params it appends to our redirect are `connected`,
+`profileId`, `accountId`, `username`, and nothing else.
+
+`internal/channelconnect` binds a callback to the workspace that started it by reading **our**
+state out of the callback URL, and Meta round-trips it. Zernio does not. A handler trusting
+`accountId` off the query with no binding would connect whatever account an attacker named into
+whatever workspace their session happened to be in — precisely the attack `channelconnect`'s own
+package doc calls direction A and says a persisted state closes completely. **It closes it only
+if the state arrives.**
+
+The fix came off the same vendor page: Zernio appends its result params with the URL API, so an
+existing query string survives, so our state rides in the `redirect_url` we hand it. `ConnectURL`
+now takes a fully-formed redirect rather than assembling one, so the package that owns the state
+is the package that puts it there — and a custom app scheme is refused deliberately, even though
+Zernio accepts one, because a scheme hands the callback to something that cannot read a
+server-side state. None of this was in the spec; it came from reading the vendor's page properly
+after chunk 21's spec turned out to have six factual errors.
+
+It also checked the spec's one load-bearing security claim verbatim — Instagram's default login
+puts no raw Meta token in our redirect URL where the Facebook variants unavoidably do — and drove
+the test named for it **red deliberately** to confirm it can fail.
+
+**One of the four seam obstacles is worth naming.** `channelaccount.UpsertTx`'s own package doc
+says it is "provider-agnostic on purpose" and that Zernio's connect uses the same rules; the code
+writes the literal `'META'` and seals a Meta credential unconditionally. The comment describes the
+intention rather than the code. **That is the fourth time in this build a comment has asserted a
+property the code does not have**, and three of those were found by a reviewer rather than a
+test. Link 14 is told to change the code or the comment and put a test under whichever it picks.
+
+**I checked whether Bogdan had replied rather than assuming.** Zero non-bot messages in the
+channel's last forty — everything today is stacked up unread. I did not ring him: nothing is on
+fire, and chunks 23 and 24 are reachable on the Zernio path without him. (My `pgrep` for a remote
+session matched its own shell, which is the trap in my own notes; `last -x` showed only my
+agents' tmux panes.)
