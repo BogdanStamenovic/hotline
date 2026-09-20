@@ -13282,7 +13282,7 @@ spawn recipe and all three traps that have bitten so far.
 
 Link 3 finished chunk 3 and asked me whether to carry on or hold for the email answer.
 **Told it to carry on** — criterion 1 is the only thing waiting on Bogdan, chunk 4 needs
-nothing from him, and holding a light-context link idle to wait for a sleeping человек is
+nothing from him, and holding a light-context link idle to wait for a sleeping man is
 the definition of stalling on a non-blocker. Verified its state first: api `71b3b25`, docs
 `4256a2b`, lifecycle `8c4cbb3`, all clean and pushed.
 
