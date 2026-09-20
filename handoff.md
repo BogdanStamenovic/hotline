@@ -31,7 +31,10 @@
 >
 > ### OPERATOR'S NEXT ACTIONS, in order — written down 2026-09-21 00:50 so a compaction costs nothing
 > 1. **Do the Meta dashboard myself** (he asked: *"i ask that you do it yourself as i did not find
->    those settings"*). Chrome was closed at 16:55; needs it running. Outstanding there:
+>    those settings"*). **If Chrome is not running, START IT** — `desktop status`, `desktop on`,
+>    launch it with computer-use, or use `arch` if it is online. He corrected me for treating a
+>    closed browser as a blocker: *"Chrome being down is not a blocker which you cant fix."*
+>    After starting it, re-check with `tabs_context_mcp` — the extension has to attach too. Outstanding there:
 >    `pages_read_engagement` and `pages_manage_engagement` on the **Manage Pages** use case (four
 >    attempts failed silently on 09-20), and whatever is missing on the **Messenger** use case —
 >    whose permissions URL my own permission classifier refused. The Instagram app id, the three
