@@ -9,9 +9,14 @@
 > operator messages him. Do not undo that.
 >
 > **What is running:** link **10** is `api-71`, tmux `kr2build-10`, Opus, in
-> `~/data/kinreply/api`, on **chunk 15 of 33** (Facebook comment ingest). **Chunks 1-14 done and
-> pushed.** Links 1-9 retired. Tree at `make check` 2030 tests / 0 skips, `make gate` green at
-> 33s. Latest migration on disk is **00020**; the next is 00021.
+> `~/data/kinreply/api`, on **chunk 16 of 33** (rate-limit scope fix). **Chunks 1-15 done and
+> pushed.** Links 1-9 retired. Tree at `make check` 2086 tests / 0 skips, `make gate` green.
+> Latest migration on disk is **00021**; the next is 00022. Link 10 had road left at the
+> chunk-15 boundary and is carrying on.
+>
+> **NOTE THE BRANCHES — they are not all `main`:** api and lifecycle track `origin/main`,
+> kinreply-db tracks `origin/phase1-sql-schema`, docs tracks `origin/phase1-api-spec`. Checking
+> a repo against `origin/main` will show you an unrelated history and look alarming.
 >
 > **THE ASK BLOCKING THREE CHUNKS' CRITERIA** is with him since 13:10: give kinreply its own
 > **Resend API key** (`KINREPLY_RESEND_API_KEY` is byte-identical to his production `dds`

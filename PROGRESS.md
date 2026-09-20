@@ -14096,3 +14096,56 @@ badly — the third chunk running with a wrong counting comment.
 gate and neither blocks anything today, because the code is correct either way. That is
 information he should have before the question comes up on its own terms, not a decision I
 need from him now.
+
+## 2026-09-20 15:05 CEST — chunk 15, and a bot that could have argued with itself forever
+
+**Chunk 15 done and pushed** (api `f38e9d0`, kinreply-db `c4064d7`, docs `4665b54`): Facebook
+comment ingest. 2086 tests, 0 skips, gate green, migration 00021. **Four of its five criteria
+are not met and not reachable** — they need a connected Page and real deliveries — and it said
+so in its first paragraph rather than reporting five of five.
+
+**The finding is a product-level near miss.** The only thing stopping kinreply from replying to
+its own public comment reply, indefinitely, was one equality between two Meta id fields that
+**Meta documents nowhere**. No page on either platform says whether the account's own comment
+fires a webhook, or what the author id carries when it does; Meta documents an echo mechanism
+for messaging only, with no comment equivalent.
+
+And nothing else bounded it — checked rather than assumed: a public comment reply is neither
+rate-limited nor metered, every turn is a new comment id so the dedup key never repeats, and
+every turn gets a fresh seven-day deadline. The loop needs only the seller's own public reply
+to contain their own trigger keyword, which is how a trigger keyword is ordinarily written.
+A test now drives it four turns deep through the real pipeline.
+
+**It demonstrated the runaway before bounding it**, which is the right order, and the guard
+matches inbound comments against comments we published — so it does not depend on the id-space
+question nobody can check. It *bounds* a run rather than preventing one, because Meta dispatches
+before our write necessarily commits, and there is a test asserting that hole **on purpose**
+rather than a comment claiming the guard closes it.
+
+**A live defect found by reading Meta's pages rather than the spec's quotes.** Facebook's
+comment webhook does carry the comment's own creation time, where our package comment said it
+carries none — so the seven-day reply window was computed from *delivery* time, and since Meta
+redelivers after failures, a redelivered comment's window skewed later, in the direction that
+attempts a send into a window Meta has already closed. The code was also written against three
+verb values where Meta documents twelve, and three item values where it documents thirty-one;
+the filter is an allowlist, so it was right by luck rather than wrong.
+
+**I verified the two claims that damage quietly.** It used `git commit --amend` on an
+already-pushed commit: the remote-tracking reflog shows six plain "update by push" entries with
+no rewrite, and the original commit is on the remote under its original hash — caught before
+the amended version left the machine, nothing lost. And a file-writing tool silently turned
+escape sequences into the characters they denote, putting an invisible **right-to-left
+override** into a test comment and into a build-log paragraph — the paragraph about hostile
+input. I re-swept all four repositories for every Cf/Cc/Co/Cs character independently: five
+hits, every one deliberate test data. Nothing invisible survived where it should not.
+
+**Noted for the banner:** the four repos do not all track `main`. kinreply-db is on
+`phase1-sql-schema` and docs on `phase1-api-spec`, so checking either against `origin/main`
+shows an unrelated history and looks alarming — I did exactly that for a moment while chasing
+the amend.
+
+**Two working-habit failures worth keeping.** Its mutation harness first printed the failing
+test's *duration* instead of its *name* — the uninformative verdict link 6's note exists to
+prevent, reproduced by code written to follow that note. And a fixed clock blindfolded an
+`ORDER BY` one chunk after link 9 wrote that lesson down. Both are in chunk 16's guidance,
+since that chunk is timestamps and ordering end to end.
