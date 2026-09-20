@@ -13422,3 +13422,57 @@ that states what it cannot catch is worth more than one that claims to close the
 
 Link 4 is `api-b3` on chunk 6, confirmed working. Handoff banner updated with both open items
 and the Milos ripple, which is an outward action and needs Bogdan's yes when it lands.
+
+## 2026-09-20 07:45–08:00 CEST — chunk 6 done; an invariant amended after reading the code
+
+Link 4 finished chunk 6, the largest chunk in the phase, and asked to be replaced before
+chunk 7 on the same reasoning link 3 gave: security-critical work deserves a fresh context,
+not the tail of a long one. Agreed. Verified first — api `ce932be`+`ddcfab7`, kinreply-db
+`1e920ec`+`1015bbb`, docs `827062c`, all clean and pushed, and migrations on disk confirm
+00014 (chunk 4) and 00015 (chunk 6), so chunk 7's is 00016 as it said.
+
+**It raised an invariant question instead of quietly widening the rule, and I reviewed the
+code rather than taking its word.** Chunk 6's spec said to provision inside the exchange's
+existing transaction; the database refuses that, because two of five tables are under forced
+RLS and reject inserts in a transaction with no tenant set. It added `Tx.ScopeToTenant`
+inside `internal/store`.
+
+I read it. It uses the same transaction-local `set_config` as `WithTenant`, refuses an empty
+id for the same reason, and **refuses a transaction that is already scoped** — which closes
+the genuinely dangerous misuse, switching tenants mid-transaction. Then I checked the test it
+claimed strengthens the invariant, and ran it: `TestOnlyStoreScopesTheTenantGUC` walks our
+sources for both spellings (`set_config` and `SET LOCAL`), **fails if `internal/store` stops
+setting it** so it cannot pass on an empty search, and was written around the fact that the
+test file is itself in the walk. That is better discipline than the invariant had when it
+named one function.
+
+**Approved, and amended the wording in the mandate.** The amendment is the part that matters
+independently of the decision: invariant 3 said "via `store.WithTenant`", and a link reading
+that against a tree with two setters would conclude the codebase violates it. A stale
+invariant reads as a violation, and the next link's correct response to an apparent violation
+is to stop.
+
+**Fixed a defect in my own tool that had confused two agents.** Both link 4 and an earlier
+link reported that "the operator hotline-80 does not exist", because `hotline --list` printed
+the name derived from the session id (`hotline-70`) while `--agents`, the channel and `--to`
+all use the adopted identity. One link hedged its addressing over it. `describe()` now shows
+the addressable identity with the derived name beside it — beside, not instead, because
+hiding the difference trades one confusion for another the first time somebody greps a pane
+for the name the listing showed. Degrades to the derived name if the registry is unreadable;
+a listing should degrade, not fail. 512 tests green, committed `fc19958`.
+
+**Chunk 6's near-miss is the best cautionary tale of the build.** Addresses were stored as
+typed after validation by a parser that accepts decorated forms, so a bracketed spelling of
+an existing address counted as new — a second *verified* account for one mailbox, invisible
+to both the admin tool and GDPR erasure because both look up by exact spelling. The correct
+normalisation has been in the admin tool since Phase 1 **with a comment describing this exact
+trap**. It shipped anyway because the helper's name promised something it did not do, and
+every caller believed the name. A name is not a contract.
+
+Passed link 4's canary-sweep evidence to Bogdan honestly rather than only the half that
+supports my recommendation: it is narrower **against** than I expected, because chunk 6's
+value is a workspace name the seller sees rendered back, so a flat "must appear nowhere"
+sweep needs a per-value expected-locations list — and that list is the part that rots.
+Chunk 7's CSRF token is the kind of value it would fit, so I asked link 5 for evidence.
+
+Link 5 is `api-f0` on chunk 7, confirmed working.
