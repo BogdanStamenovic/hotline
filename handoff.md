@@ -9,11 +9,25 @@
 > operator messages him. Do not undo that.
 >
 > **What is running:** link **14** is `api-f1`, tmux `kr2build-14`, Opus, in
-> `~/data/kinreply/api`, on **chunk 22's INTEGRATION half**. **Chunks 1-16 and 18-21 done and
-> pushed. CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted. CHUNK 22's
-> FOUNDATION is built** (`internal/zernio/{profiles,connect,disconnect}.go`) **and its
-> integration half is not begun** — the seam is surveyed in the build log with the obstacle named
-> in each of four places. Links 1-13 retired. `citations`/`build`/`vet` exit 0. Migration 00022.
+> `~/data/kinreply/api`, on **chunk 23** (account health on the Zernio path). **Chunks 1-16 and
+> 18-22 done and pushed. CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.**
+> Links 1-13 retired. `citations`/`vet` exit 0, `make gate` green. Migration **00022**.
+>
+> **MILOS HAS A REGENERATION EVENT WAITING** — chunk 22 added `startZernioConnect` to
+> `openapi/kinreply.yaml`, generated clients committed alongside. Additive: nothing removed or
+> renamed, and the one changed field is a documented string rather than an enum so an un-rebuilt
+> client cannot reject a new value. "May regenerate", not "must". **Contacting him is outward and
+> Bogdan's.**
+>
+> **A QUOTE I RELAYED TO HIM WAS NOT REAL.** I described Zernio's `state` as "its CSRF between
+> itself and Meta, which it validates at its own callback" and put it in link 14's seed as a
+> quotation. Chunk 22's fact-checker established the sentence is from Zernio's **WordPress**
+> section, not the Instagram flow, and that "CSRF" appears nowhere in their docs. Our inference
+> in their voice. **The conclusion survives** — the params Zernio appends are documented and
+> exhaustive and `state` is not among them — so the fix stands; the citation did not. Corrected
+> to him 22:20. `internal/zernio/connect.go` now labels it properly;
+> `internal/httpapi/channelconnect_test.go:605` still carried the old version and link 14 is
+> fixing it.
 >
 > **SECURITY FINDING CHUNK 22 INHERITS — do not let a later change undo it.** Zernio's `state` is
 > ZERNIO'S OWN CSRF and is **not** round-tripped to us; the params it appends are `connected`,

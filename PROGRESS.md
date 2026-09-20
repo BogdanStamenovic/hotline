@@ -14594,3 +14594,51 @@ channel's last forty — everything today is stacked up unread. I did not ring h
 fire, and chunks 23 and 24 are reachable on the Zernio path without him. (My `pgrep` for a remote
 session matched its own shell, which is the trap in my own notes; `last -x` showed only my
 agents' tmux panes.)
+
+## 2026-09-20 22:20 CEST — chunk 22 done, a credential leak it created, and a quote I invented
+
+**Chunk 22 done and pushed** (api `f263e3b`, nine commits): Zernio connect end to end over /v1.
+Green, gate green, no migration. A workspace can now connect an Instagram account through
+Zernio — our endpoint mints a state, provisions the profile, and returns Meta's consent dialog
+opened against **Zernio's** Meta app, which is why the permission shortfall blocking chunks 8 and
+14-19 is not on this path. Link 14 is carrying on to chunk 23.
+
+**The finding of the day is a credential leak this chunk created in other chunks' code.** Three
+background jobs sweep `channel_account` with no provider filter — harmless for twenty-one chunks
+because no ZERNIO row could hold a credential that opens. Chunk 22 gave them one, and the AEAD
+binding names the row rather than the provider, so they open perfectly. Two would have been
+noisily wrong: emailing sellers that healthy connections were broken, and recording working
+webhooks as broken. **The third would have put Zernio's team API key into an `Authorization`
+header addressed to `graph.facebook.com`, once per new contact, forever** — one third party's
+credential handed to another, on a schedule, with nothing failing to make anyone look. A reviewer
+found that one; the agent reported it as the one it had missed rather than the two it caught.
+
+I verified all three guards myself, **and my own first grep missed one** because `ProfileRefresher`
+guards in Go at `profilerefresh.go:184` rather than in SQL. I read the file instead of trusting my
+own pattern — the same lesson from the other end.
+
+**A second design finding with a rule worth keeping:** the spec said to map two "denied" codes to
+one shared "the user declined" message. Zernio's is filed beside "profile not found" — it means
+our API key cannot reach a profile, nothing to do with a person declining. A seller would have
+been told they declined a consent screen they never saw. **An error vocabulary belongs to the
+party that emits it, and two parties sharing a spelling is not evidence they share a meaning.**
+
+**And a correction of my own.** I told Bogdan that Zernio's `state` is "its CSRF between itself
+and Meta, which it validates at its own callback", and put that in link 14's seed as a
+*quotation*. Chunk 22's fact-checker established the sentence comes from Zernio's **WordPress**
+documentation, not the Instagram flow, and that the word CSRF appears nowhere in their docs at
+all. Our inference in their voice, and I relayed it as theirs. **The conclusion survives** —
+the appended params are documented and exhaustive and `state` is not among them — which is
+exactly why I told him rather than quietly fixing it: the fix was right and my citation was not.
+
+**And the agent's own correction was incomplete.** `internal/zernio/connect.go` now labels the
+inference, names the WordPress section, and gives both greps to re-derive it — exemplary. But
+`internal/httpapi/channelconnect_test.go:605` still carried the uncorrected version with the
+quote attached. Correcting a fact in one place while the wrong version stands unqualified in
+another is precisely how a "never touch these files" rule misled sessions on this machine for a
+week. Told it to close that and to add a forward pointer at the build log's original entry.
+
+**New for Bogdan:** the disconnect path can now be exercised against his live account and doing
+so would disconnect it — nobody will run it without his word. And the API contract gained
+`startZernioConnect`, so Milos has a regeneration event waiting; additive, "may regenerate" not
+"must", and telling him is outward and therefore Bogdan's.
