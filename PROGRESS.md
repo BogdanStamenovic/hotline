@@ -13527,3 +13527,38 @@ because under forced RLS a no-tenant transaction gets `UPDATE 0`, `DELETE 0` and
 `count(*)=0` from the retention sweep's own verification — **the sweep would report success
 and delete nothing, forever**. And the tenant policy would have been tautological anyway, the
 mint comparing a value to itself.
+
+## 2026-09-20 09:25–09:30 CEST — he says Meta is done; my verification of it was worthless
+
+His word, verified (`1551132087468167240`, 09:25): *"Meta should be taken care of"*. Checked
+whether a browser had appeared first — none connected — so he did the dashboard registration
+himself rather than opening Chrome for me.
+
+**I tried to verify it and the attempt is the thing worth recording.** I probed Meta's OAuth
+dialog unauthenticated with our redirect URI and got `HTTP 302` to login, which reads exactly
+like acceptance. Then I ran a control with `https://definitely-not-registered.example.com/cb`
+and got a **byte-equivalent 302** — same shape, same echoed `cancel_url`. Meta validates
+`redirect_uri` only *after* login, so an unauthenticated probe cannot discriminate registered
+from unregistered at all. **My check could not have failed.** Without the control I would
+have reported a green that meant nothing, to him and to link 5, about a security-relevant
+registration.
+
+That is the same failure the last three chunks kept finding, committed by me, twice in two
+days — the `adm`/keyring one and now this. The lesson that actually generalises is not "probe
+the thing", which I did: it is **run the negative case**. A probe that returns the same answer
+for a true and a false input is a status field I generated myself.
+
+So his claim stands **unverified rather than confirmed**, and I said so plainly to him and to
+link 5 rather than laundering his hedge into a fact. Nothing is blocked by that: chunk 8's
+real authorisation flow is the only discriminating test, and link 5 will hit error 191 or a
+"URL Blocked" page within minutes if the registration is absent. Relayed with `--warrant` so
+link 5 can check who asked, told to proceed with the live criteria but **not** to record them
+met on his word, and explicitly not to register, create or log into anything itself.
+
+**One thing the failed probe did establish**, and one worth flagging early: the app id in
+`~/.kinreply/phase2.env` (`1064625406364662`) is live and Meta answers for it — and the
+dialog came back `is_business_login=0`. **Facebook Login for Business is a different product
+from plain Facebook Login**, with its own dialog and a config id, and it is the one chunk 8
+targets. If he registered the URI under the plain product, chunk 8 fails in a way that looks
+exactly like a missing URI. Told him to check which section, and asked link 5 to confirm it is
+building against the Business dialog rather than the plain one I probed.
