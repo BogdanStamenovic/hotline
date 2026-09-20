@@ -8,10 +8,13 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **12** is `api-96`, tmux `kr2build-12`, Opus, in
-> `~/data/kinreply/api`, on **chunk 21** (the Zernio adapter). **Chunks 1-16 and 18-20 done and
-> pushed; CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.** Links 1-11
-> retired. `make check` and `make gate` green, 0 skips. Latest migration **00022**.
+> **What is running:** link **13** is `api-59`, tmux `kr2build-13`, Opus, in
+> `~/data/kinreply/api`, **finishing chunk 21** (the Zernio adapter). **Chunks 1-16 and 18-20
+> done and pushed. CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted. CHUNK 21
+> is STARTED AND UNFINISHED — nothing stubbed, nothing half-written:** `internal/zernio/` has
+> client/sign/webhooksettings and NOT adapter/tokens/errors, which are not begun. Also left: add
+> the Zernio arm to `TestBothAdaptersShareOneCanSend`. Links 1-12 retired. `citations`, `go
+> build` and `go vet` all exit 0; `make gate` green. Latest migration **00022**.
 >
 > **TWO LIVE, TEMPORARY THINGS FROM CHUNK 20 — track these, they are outside the repos:**
 > 1. A **Zernio webhook subscription** (`6ab01c60a9cd421b6b97d49e`) is registered against
@@ -25,7 +28,7 @@
 >    2026-09-11 06:55:00 UTC (unchanged since this morning — never restarted), and caddy shows
 >    2026-08-24, so it was reloaded, not restarted. uxonews.com 307→/login→200, dds 200.
 >
-> **THE MANDATE HAS GAINED EIGHT RULES TODAY** (`cdc618e`, `6578611`, `d43ae55`, `933bc1e`): never write a count, write
+> **THE MANDATE HAS GAINED TEN RULES TODAY** (`cdc618e`, `6578611`, `d43ae55`, `933bc1e`, `1d734cc`): never write a count, write
 > the property and the command that checks it; cite tests by names `make check` verifies; a
 > mutation pass scoring 100% first try is a result about your mutations, so write the second pass
 > against the code you did not think about; and when you cannot measure which branch reality
@@ -35,6 +38,9 @@
 > And: **never run a mutation sweep and a reviewer at the same time** — a reviewer reading
 > mutated code can miss a real defect as easily as invent one; plus `caddy validate` passing does
 > not mean `caddy reload` will succeed.
+> And: **a pipeline's exit status is the LAST command's** — `make check | tail && git commit`
+> committed on a red tree; check `$?`, never the output. Plus: before debugging a failure, check
+> whether it fails at HEAD.
 >
 > **CHUNK 17's ACTIVE POLL MUST NOT BE BUILT AS WRITTEN** — the case is at the top of
 > `docs/phase2-roadmap/chunk-17-reconciliation-poller.md`. Its `CONFIRMED_NOT_SENT` re-queue

@@ -14422,3 +14422,42 @@ in the log.
 **Two live temporary things I am now tracking as operator**, both in the banner: the Zernio
 subscription pointed at a URL serving 502, which becomes real the moment chunk 22 connects an
 account, and the Caddy block with its backup path.
+
+## 2026-09-20 20:10 CEST — chunk 21 handed over mid-chunk, precisely
+
+**Chunk 21 is started and unfinished, and link 12 was unusually exact about what that means** —
+its words: "partially done is the state that costs a successor most". Nothing stubbed, nothing
+half-written, no placeholder files. `internal/zernio/` has client, sign and webhooksettings; the
+adapter, tokens and errors files are simply not begun. Link 13 (`api-59`) has that list. I
+verified more than usual here: `citations`, `go build` and `go vet` all exit 0, and the three
+files it said do not exist really do not.
+
+**Its mistake is one I have been making in my own shell all day.** It ran `make check | tail`
+guarded by `&&`, so `&&` saw *tail* succeed and a commit went in on a **red tree** — and what was
+red was the `citations` check I added this morning, correctly catching two tests it had named in
+shipped source before writing them. The mechanism worked perfectly and nobody looked at it.
+**A green you piped is a green you did not read.** In the mandate (`1d734cc`), and it is the
+fourth rule today that exists because a check was non-discriminating rather than because code was
+wrong.
+
+**Its second mistake is better discipline than most fixes.** A worker test was failing; it spent
+a real detour, then stashed its work, checked out HEAD, ran the same packages, and it failed
+there too. Pre-existing and for a good reason: `internal/queue`'s lease query deliberately has no
+tenant predicate, because leasing is cross-tenant by design, so a concurrent package's jobs queue
+ahead of the test's own; `make check` uses `-p 1` and never sees it. **"My change broke this" is
+a hypothesis, not an observation.** Also in the mandate.
+
+**The departure it took is right and worth recording.** Chunk 21's spec called for an extra
+Zernio API call on every send to resolve two ids, explicitly to avoid a migration. Neither is
+needed — `outbound_message.caused_by_event_id` exists, `inbound_event.body` is jsonb, and one
+LEFT JOIN reaches both. It is also strictly *more* correct: a listing lookup can return the wrong
+thread, a stored id cannot. The spec was paying an API call per send to avoid a migration it did
+not need, and buying a worse answer. Tracing Meta's equivalent path rather than assuming it also
+showed one of the two ids was never needed — Meta posts a reply to the comment's own edge.
+
+**And it left a trap written down**, which is what a handing-over link should do: a query reads
+`body->'message'->>'ConversationExternalID'` with a capital C, because those ingest structs carry
+no json tags so `encoding/json` writes the Go field names verbatim. Adding tags later would keep
+every Go test green and silently stop the query matching rows already written — symptom: a Zernio
+thread send with no conversation to go to, rather than an error. Its test marshals through the
+same struct production writes, so it cannot drift.
