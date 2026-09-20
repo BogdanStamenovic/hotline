@@ -19,9 +19,16 @@
 >    rows about to be destroyed and auto-replies for the rest of it. Link 7 found it and
 >    correctly did NOT fix it in passing — shipped, client-visible surface. In the build log's
 >    open list.
-> 2. `cmd/worker` has no Instagram credentials, so an Instagram row's daily check answers
->    "app not configured" rather than guessing. Asserted in a test, not assumed. Closing it is
->    configuration and belongs to **chunk 27**.
+> 2. ~~`cmd/worker` has no Instagram credentials...~~ **WRONG, measured false at 12:20.** The
+>    gap is WIRING, not credentials: `NewInstagramLoginClient` takes only host and transport
+>    options, and every post-connect call authenticates with the account's own token. Link 7
+>    wrote the credentials reason into a code comment as fact and **I copied it into link 8's
+>    seed verbatim** — the same decay that carried the `KINREPLY_ENCRYPTION_KEYS` claim through
+>    four links, except I propagated this one. Link 8 measured it, I re-measured it, and it is
+>    closing it in chunk 12 — including chunk 11's `WebhookSubscriptionChecker`, which I
+>    approved: that one is an internal daily job nobody outside can observe, unlike (1), which
+>    is a client-visible endpoint. **The test for "may I touch another chunk's surface" is who
+>    can observe the change, not which chunk shipped it.**
 >
 > **THREE THINGS WITH HIM, none blocking the build:**
 > 1. **The Instagram app SECRET.** I did the rest of the dashboard pass myself at 10:50:
