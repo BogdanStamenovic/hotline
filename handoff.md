@@ -9,12 +9,22 @@
 > operator messages him. Do not undo that.
 >
 > **What is running:** link **13** is `api-59`, tmux `kr2build-13`, Opus, in
-> `~/data/kinreply/api`, **finishing chunk 21** (the Zernio adapter). **Chunks 1-16 and 18-20
-> done and pushed. CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted. CHUNK 21
-> is STARTED AND UNFINISHED — nothing stubbed, nothing half-written:** `internal/zernio/` has
-> client/sign/webhooksettings and NOT adapter/tokens/errors, which are not begun. Also left: add
-> the Zernio arm to `TestBothAdaptersShareOneCanSend`. Links 1-12 retired. `citations`, `go
-> build` and `go vet` all exit 0; `make gate` green. Latest migration **00022**.
+> `~/data/kinreply/api`, on **chunk 22 (Zernio provisioning)**. **Chunks 1-16 and 18-21 done and
+> pushed; CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.** Links 1-12
+> retired. `citations`, `go vet`, `go build` all exit 0; `make gate` green. Migration **00022**.
+>
+> **CHUNK 22 MAY BREAK THE WALL, and I have told link 13 to establish it EARLY and explicitly.**
+> Chunks 8 and 14-19 all end in "needs a connected account", root cause the Meta login config
+> granting a fraction of `graph.LoginScopes` — with Bogdan since this morning. But chunk 20 put a
+> real Zernio webhook over the public internet and got a 200. **If an account can be connected
+> through Zernio without that Meta config, the Zernio half is live-testable end to end today.**
+> The answer due at the next boundary is: which criteria the Zernio path satisfies, and which
+> still genuinely need Meta. It does not retire the Meta ask — chunk 18's identity question can
+> only ever be answered on Meta's route.
+>
+> **CROSS-CHUNK FACT from chunk 21:** Zernio's private-reply response carries **no recipient
+> id**, so chunk 18's identity measurement CANNOT fire through Zernio. Meta's route still
+> answers it. Do not let a later chunk expect it there.
 >
 > **TWO LIVE, TEMPORARY THINGS FROM CHUNK 20 — track these, they are outside the repos:**
 > 1. A **Zernio webhook subscription** (`6ab01c60a9cd421b6b97d49e`) is registered against

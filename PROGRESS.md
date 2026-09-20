@@ -14461,3 +14461,46 @@ no json tags so `encoding/json` writes the Go field names verbatim. Adding tags 
 every Go test green and silently stop the query matching rows already written — symptom: a Zernio
 thread send with no conversation to go to, rather than an error. Its test marshals through the
 same struct production writes, so it cannot drift.
+
+## 2026-09-20 21:00 CEST — chunk 21, six wrong vendor facts, and a wall that may be about to move
+
+**Chunk 21 done and pushed** (api `b54c474`, docs `c7fe83b`): the Zernio adapter. Green on a
+rebuilt database, zero skips, gate green, no migration, exit codes read bare. Verified: the
+three files that were "not begun" now exist, the cross-provider agreement test is where it said,
+and `citations`, `vet` and `build` all exit 0.
+
+**Six vendor facts the spec had wrong, each re-checked by a fact-checker with line numbers.**
+Three would have failed silently. The spec built its whole retry-safety argument on Zernio's
+idempotency key making an ambiguous failure safe to retry — Zernio says in two places that it
+does not; the key is released on any non-2xx, so it covers a lost response on a send that
+*succeeded* and nothing else. Classified transient anyway, with the reasoning stated as a
+decision rather than a measurement: a duplicate reply is visible and bounded by the attempt cap,
+a dropped one is invisible to everyone. Two error conditions share a status, and reading status
+before code would have retried a **disconnected** account to the cap and never raised the
+reconnect alert — chunk 19's Meta defect in a new vendor's clothes, caught before shipping. And
+one code has two spellings across surfaces against a byte-for-byte comparison.
+
+**One of the six reaches beyond the chunk and is now in the banner:** Zernio's private-reply
+response carries no recipient id, so **chunk 18's identity measurement cannot fire through
+Zernio**. Meta's route still answers it.
+
+**The defect it found by tracing rather than testing is the best kind**, because no test would
+have been written for it: it grepped the three places that queue a thread send and found one
+with no causing event — the human reply typed into the inbox — so every human reply into a
+Zernio thread would have failed with an opaque code, every time. Proved by removing the fix and
+watching the test go red with exactly that code.
+
+**Twenty-two for twenty-two on reviewers**, spawned only after the sweep finished and the tree
+was verified clean — the rule I added this morning, applied without being reminded. Its
+fact-checker caught it claiming a Zernio key carries no expiry when Zernio documents an optional
+one: fourth link running to read an absence as a vendor statement, and the **first where the
+process caught it before it shipped**.
+
+**The strategic observation I put to both link 13 and Bogdan:** chunk 22 is Zernio provisioning,
+and it may break the wall. Chunks 8 and 14-19 all end in "needs a connected account", whose root
+cause is a Meta config with Bogdan all day — but chunk 20 already proved a real Zernio webhook
+over the public internet answering 200. If an account can be connected through Zernio without
+that Meta config, the Zernio half is live-testable end to end today. I told link 13 to establish
+that early and explicitly rather than discover it at the end, and to report which criteria each
+path can satisfy. It does not retire the Meta ask: the Meta path is half the product and chunk
+18's question can only ever be answered there.
