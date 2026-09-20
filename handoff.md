@@ -29,6 +29,23 @@
 > dashboard is mine to do** because he could not find those settings; and **he has the second
 > Instagram account and wants a PHONE CALL** telling him when to do what.
 >
+> ### HIS TOOL SHELF IS NOW ON PATH — you no longer need `export PATH=...` on every call
+> Agent Bash calls source a **shell snapshot from session start**, not the profile, and
+> `~/.zshrc` (which adds `~/.local/bin`) is read only by INTERACTIVE zsh. So every agent shell
+> started with neither `~/.local/bin` nor `~/.claude/bin`, and his entire shelf — `ownbox`,
+> `track`, `wake`, `profiler`, `mailsend`, `hotline`, `hotline-say`, `use-computer` — answered
+> "command not found". **That reads as a missing tool and is a missing directory.** I told him
+> `ownbox` was not installed when it was sitting in `~/.local/bin`.
+> Fixed 2026-09-21: 33 symlinks into `/usr/local/bin` (already on the default PATH), plus a
+> `~/.zshenv` for future sessions. **A tool he installs later lands in `~/.local/bin` and needs
+> one more symlink to be visible here.**
+>
+> **`use-computer` is installed AND registered with ownbox** (`ownbox list` shows it at
+> `87d476d`; `ownbox update use-computer` maintains it). `use-computer doctor` exits 0. Its
+> **MCP tools only load in a NEW session** — in this one, drive it from Bash: `use-computer
+> screenshot` prints a PNG path to Read, then `click --at X,Y` / `--ref`, `type`, `key`, `find`,
+> `ocr`. **It moves his REAL pointer** — say so before taking control, and stop the session after.
+>
 > ### OPERATOR'S NEXT ACTIONS, in order — written down 2026-09-21 00:50 so a compaction costs nothing
 > 1. **Do the Meta dashboard myself** (he asked: *"i ask that you do it yourself as i did not find
 >    those settings"*). **If Chrome is not running, START IT** — `desktop status`, `desktop on`,
