@@ -8,23 +8,28 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **5** is `api-f0`, tmux `kr2build-5`, Opus, in `~/data/kinreply/api`,
-> on **chunk 8 of 33** (Facebook Login for Business — the first real Meta credential stored).
-> **Chunks 1-7 are done and pushed**; Track A (1-5) complete. Links 1-4 retired. Tree at
-> `make check` 1739 tests / 0 skips, `make gate` green.
+> **What is running:** link **6** is `api-32`, tmux `kr2build-6`, Opus, in `~/data/kinreply/api`,
+> on **chunk 9 of 33** (standalone Instagram Login). **Chunks 1-8 done and pushed**; Track A
+> (1-5) complete. Links 1-5 retired. Tree at `make check` 1779 tests / 0 skips, `make gate`
+> green. Migrations: chunk 8 took 00017.
 >
-> **THREE THINGS WITH HIM, none blocking the build:**
-> 1. **Test email.** Chunk 3's criterion 1 needs a real email observed arriving. Verified: the
->    `RESEND_API_KEY` in `~/.kinreply/phase2.env` is byte-identical (SHA-256) to the one his
->    production `dds` service sends on, so test sends eat dds's budget (~100/day) and
->    exhausting it kills dds's mail silently. **Seven** chunks built on that sender, zero sends.
-> 2. **A Meta dashboard step, and it is MINE to do when his browser is reachable.** Chunk 8
->    needs `https://kinreply.uxonews.com/v1/channels/meta/callback` registered under the
->    KinReply app's **Facebook Login for Business → Valid OAuth Redirect URIs**. I tried at
->    08:45 via Claude in Chrome: **no browser connected**. Retry when he is up, or he does it.
+> **FOUR THINGS WITH HIM, none blocking the build:**
+> 1. **Meta login config permissions.** Config `1977237352952055` exists but grants only 4 of
+>    the 8 in `graph.LoginScopes` — every Instagram capability missing. He is adding
+>    `pages_read_engagement`, `pages_manage_engagement`, `instagram_basic`,
+>    `instagram_manage_messages`, `instagram_manage_comments`. **Unprefixed family, not
+>    `instagram_business_*`.** When the id is confirmed it becomes
+>    `KINREPLY_META_LOGIN_CONFIG_ID` — already read from the environment, no code change.
+>    **The id was transcribed from a screenshot and never verified in the dashboard.**
+> 2. **Test email.** Eight chunks built on that Resend key with zero sends. Verified: it is
+>    byte-identical to his production `dds` sending key.
 > 3. **Canary sweep as a new chunk — I recommend YES**, scoped to `class=credential` columns.
->    Chunk 7 supplied the strong case: a state token must appear in exactly two places and
->    nowhere else, so the flat rule holds with no expected-locations list to rot.
+> 4. **Milos.** Chunk 8 added three operations, all additive. "May regenerate, must if you
+>    want the connect screens." Contacting him is outward and needs his yes.
+>
+> **MY BROWSER ACCESS WAS DENIED** by the permission classifier at 09:36 when he asked me to
+> edit the Meta config. Everything not needing Chrome was done instead. If he re-authorises,
+> the job is: Facebook Login for Business → Configurations → `kinreply` → Edit → add the five.
 >
 > **Relay any answer to the live link with `--warrant`.**
 >

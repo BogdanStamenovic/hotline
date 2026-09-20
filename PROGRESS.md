@@ -13645,3 +13645,42 @@ env edit rather than a code change — flagged to both of them as probably-right
 Also confirmed and worth keeping: the token type he chose, "User access token", is correct —
 chunk 8's spec wants a long-lived *user* token sealed with chunk 2's key file, not a System
 User token.
+
+## 2026-09-20 09:38–09:45 CEST — chunk 8; a throwaway observation was the chunk's biggest find
+
+Link 5 finished chunk 8 and asked to be replaced after two large chunks, 66 mutations and
+four reviewer cycles. Agreed. Verified: api `6abf32c`, kinreply-db `1a2d5f0`, docs `4bc9c3f`,
+clean and pushed, `00017_pending_channel_connection.sql` on disk, and I checked the fix
+itself rather than the claim — `graph.LoginURLForBusiness` exists, `httpapi` calls it, and
+`cmd/api` gates on `KINREPLY_META_LOGIN_CONFIG_ID` with a startup warning.
+
+**The `is_business_login=0` I mentioned in passing turned out to be the largest thing in the
+chunk.** I noticed it as a byproduct of a probe that was otherwise worthless — the
+unauthenticated dialog check that could not discriminate. Link 5 followed it and found
+`internal/graph.LoginURL` was building the **plain** Facebook Login dialog, `scope=` and no
+config id, for a chunk named after Facebook Login for Business. Meta's own docs: *"config_id
+has replaced scope (which should not be used)."*
+
+**Why it had never failed is the part worth keeping.** The plain dialog does return Pages
+with Page tokens — for a person holding a role on the app, which is everyone who can test it
+before App Review. So every test passes, every dev-mode connect works, and it fails for the
+first real customer. A failure invisible to the entire test population by construction.
+Worth noting the chain of custody: a discarded probe produced a stray parameter, I passed it
+on as a low-confidence aside rather than dropping it, and the agent with the context to use
+it did. Neither half would have found this alone.
+
+**Its per-permission rationale is better than my list and I relayed it as such** — what
+breaks without each of the five missing scopes, so he can do it in one pass instead of
+guessing. I corrected two details against his own screenshot rather than relaying blindly:
+his config already exists so it is Edit not Create, and the "assets" step link 5 described is
+not selectable because he chose a user access token — which the screenshot said in as many
+words, and which is the correct choice for this spec anyway.
+
+Live criteria recorded **unmet** rather than stubbed, on link 3's precedent. Two test lines
+had to change against a spec saying none should, and it flagged that rather than claiming
+five for five. When a reviewer was right about a defect but wrong about its mechanism it
+recorded both, so a successor does not hunt a bug that is not there.
+
+The pattern it named — **"no test sends the hostile input" is this build's most reliable
+blind spot** — is now in link 6's seed, after the same open-redirect shape appeared in both
+chunks 7 and 8.
