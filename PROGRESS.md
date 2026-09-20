@@ -13081,3 +13081,50 @@ to build in. Offered both to him as options rather than taking them.
 
 Space now gets checked at every chunk boundary, which is a natural checkpoint I already
 have rather than a timer that can drift out of step with the build.
+
+## 2026-09-20 02:52–03:00 CEST — jev-bench and cvoice's venv onto the NTFS, via an ext4 image
+
+His instruction (verified `1551033117752565852`): move both to NTFS for now, and fix cvoice
+so it works from inside the installation.
+
+**A raw copy to NTFS would have silently broken cvoice.** Its venv contains five POSIX
+symlinks, `bin/python -> python3 -> /usr/bin/python3` among them, and ntfs3 cannot store
+a symlink — so the venv would have landed as a tree of plain files with a broken
+interpreter. Combined with the reserved-name problem from the earlier sweep, raw NTFS is
+simply not a filesystem a venv can live on.
+
+**So: an ext4 image on the NTFS, loop-mounted.** That is not my invention — `/mnt/iosbuild`
+already does exactly this for the 32 GB iOS toolchain, with the reasoning written into
+`/etc/fstab`. I copied its option set rather than inventing one.
+
+**cvoiced is load-bearing and that set the method.** It feeds `hotline-ios`; if it breaks,
+his phone rings and cannot talk. So: baseline first (`/status` answering, pid 884), copy
+live while the daemon ran, byte-verify, then a seconds-long stop/swap/start. Source kept as
+`.venv.old` until the new one was proven, deleted only after.
+
+Verified by counting, both moves: jev-bench 27,290 files + 4 symlinks and 7,314,949,817
+bytes, matching exactly; cvoice 36,447 files + 5 symlinks and 7,910,043,195 bytes, matching
+exactly, symlinks still symlinks on the other side.
+
+**`/status` answering is not proof of a working TTS**, so the acceptance test was a real
+synthesis: HTTP 200, 241 KB, model on `cuda:0`, decoded to a 180,524-byte RIFF WAVE of
+3.76 s, and cvoice's own scorer ran three takes at best WER 9.1. GPU path included.
+
+**The drop-in I wrote first was decorative, and only unmounting proved it.** I added
+`RequiresMountsFor=/mnt/offload` to `cvoiced.service`. `systemctl show` reported it
+correctly and it does **nothing**: cvoiced is a *user* unit, `mnt-offload.mount` lives in
+the *system* manager, and a user manager cannot pull a system unit. With the mount down,
+cvoiced restart-looped at `203/EXEC` — it would have hit the start limit and died. Replaced
+with a bounded `ExecStartPre` that brings the mount up via sudo and then asserts, failing
+fast rather than waiting — a previous 90 s `ExecStartPre` on hotline-ios once burned the
+whole start timeout and got the job killed. **Proved it by starting cvoiced from a
+mount-down state**: the mount came up and the daemon started.
+
+**Result: root 88% → 73%, 8.9 GB → 20 GB free.** Both reclaims measured, and one surprised
+me: deleting jev-bench freed almost nothing, because it carried its own `.venv` hardlinked
+into the uv cache — the bytes live in `~/.cache/uv/archive-v0` and only 0.23 GiB of links
+were orphaned by its removal. cvoice's venv is a plain stdlib venv with zero hardlinks, so
+its 7.46 GiB was real and is where the whole win came from.
+
+Closing state: `hotline-ios` reports `ring_ready: true` with an **empty** degradations list
+— the field that actually tells the truth about whether a call can carry audio.
