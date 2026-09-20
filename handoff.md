@@ -8,8 +8,20 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link 1 is `api-8d`, tmux `kr2build-1`, Opus, in `~/data/kinreply/api`,
-> registered as a subagent of `hotline-80`. 33 chunks in `~/data/kinreply/docs/phase2-roadmap/`.
+> **What is running:** link **2** is `api-46`, tmux `kr2build-2`, Opus, in `~/data/kinreply/api`,
+> on **chunk 2 of 33**. Link 1 (`api-8d`) finished chunk 1 and was retired. Specs are in
+> `~/data/kinreply/docs/phase2-roadmap/`.
+>
+> **Spawning the next link — the recipe, with two things that bit:** write the seed to a file
+> with a QUOTED heredoc and spawn with the `$(cat ...)` *inside* single quotes so your shell
+> does not expand it:
+> `tmux new-session -d -s kr2build-N -x 220 -y 50 "cd ~/data/kinreply/api && exec claude --model opus --permission-mode bypassPermissions \"\$(cat SEEDFILE)\""`
+> In the seed, `hotline --declare` takes its task as the **immediately following** argument —
+> `--declare 'task text' --no-channel --parent hotline-80`. Put `--no-channel` between them and
+> the declare fails; link 2 hit this and fixed it itself, which is not something to rely on.
+> Then **capture the pane** to confirm it is working, and **confirm the previous link actually
+> exited** — link 1 reported "exiting now", the registry said `[done]`, and its process was
+> still sitting at an idle prompt. I killed pid and session by hand.
 > The mandate is `AUTONOMOUS-BUILD-PHASE2.md`, the moving state is `BUILD-LOG-PHASE2.md` — read
 > both; they are strict and they are good.
 >

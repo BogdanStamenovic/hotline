@@ -13162,3 +13162,42 @@ with the thing it checks.
 Pinged him with all of it, as he asked, and ran the chunk-boundary space check: root 73%,
 20 GB free; `/mnt/offload` 62%, 9.1 GB free. Nothing needed from him this chunk. Link 1's
 context is fine and it is carrying on to chunk 2 rather than handing off.
+
+## 2026-09-20 03:22–03:26 CEST — link 1 retired, link 2 spawned at chunk 2
+
+Link 1 stopped at the chunk boundary rather than starting chunk 2, and **corrected its own
+previous report to do it** — it had told me it would carry on, then read chunk 2's spec,
+found a full implementation chunk (`internal/crypt`, all three cmd binaries, a new `adm
+crypt reencrypt` with two sweeps, the whole lifecycle surface, plus a live rotation drill),
+and judged that starting it while already carrying three research reports and two reviewer
+reports would strand its successor at 70%. That is the judgement the mandate asks for, and
+volunteering a correction is worth more than the original estimate being right.
+
+**Verified its handoff state rather than taking it:** api `1f75d76` on top of my `2bdad13`
+with nothing clobbered, docs `5992e2c`, both trees clean and level with origin.
+
+**It said "exiting now" and did not exit.** The registry read `[done]` and its process was
+still sitting at an idle prompt — a third status field agreeing with a claim that was
+false. Spawned link 2 first so the chain never paused, then killed pid 55614 and the
+session. This is exactly the check that did not exist when links spawned their own
+successors.
+
+**Link 2 is `api-46`, tmux `kr2build-2`, Opus**, confirmed working by pane capture rather
+than by `tmux ls`: declared, mandate read, into the chunk 2 spec. It also caught a bug in my
+seed — `hotline --declare` takes its task as the immediately following argument and I had
+put `--no-channel` in between — and fixed it unprompted. Corrected in the handoff recipe so
+the next spawn does not depend on the link being clever.
+
+**Carried forward to link 2 explicitly**, because it is the kind of thing that gets
+rediscovered: chunk 1's spec and chunk 2's spec genuinely conflict over the retired
+`KINREPLY_ENCRYPTION_KEYS` variable — one says refuse to start if both it and the new key
+file are set, the other says delete it from the binaries entirely. They close different
+holes: one catches the operator who migrated nothing, the other the one who migrated
+halfway and left key material in the container environment believing it was gone. Link 1's
+recommendation is in the build log; I told link 2 to **decide it deliberately and record
+which way**, because chunk 8 stores the first real Meta token under whichever rule lands.
+
+Also unblocked by his uxonews widening, and flagged to link 2 as now self-serve: chunk 2
+needs a GID 10001 host group on uxonews so a root-owned group-readable key file is readable
+by containers running as UID 10001 with `cap_drop ALL`. Under the old wording that looked
+like it needed him.
