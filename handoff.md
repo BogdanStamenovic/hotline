@@ -8,27 +8,32 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **9** is `api-10`, tmux `kr2build-9`, Opus, in `~/data/kinreply/api`,
-> on **chunk 14 of 33** (webhook HMAC and unicode). **Chunks 1-13 done and pushed.** Links 1-8
-> retired. Tree at `make check` 1988 tests / 0 skips, `make gate` green (33s, down from 46s).
-> Latest migration on disk is **00020**; the next is 00021. Link 9 had road left at the
-> chunk-13 boundary and asked to continue; I said yes, as with link 7 at chunk 10.
+> **What is running:** link **10** is `api-71`, tmux `kr2build-10`, Opus, in
+> `~/data/kinreply/api`, on **chunk 15 of 33** (Facebook comment ingest). **Chunks 1-14 done and
+> pushed.** Links 1-9 retired. Tree at `make check` 2030 tests / 0 skips, `make gate` green at
+> 33s. Latest migration on disk is **00020**; the next is 00021.
 >
-> **THE ASK THAT IS NOW BLOCKING THREE CHUNKS' CRITERIA** is with him as of 13:10: make
-> kinreply its own **Resend API key**, because `KINREPLY_RESEND_API_KEY` is byte-identical to
-> his production `dds` sending key — then one test send to his own address. Chunks 3, 13 and
-> (partly) 4 all carry "an email is observed arriving" as unmet. **Do not send test mail until
-> he answers.** A separate key removes the blast radius on the credential, NOT on the shared
-> ~100/day free-tier quota; I told him that rather than overselling it.
+> **THE ASK BLOCKING THREE CHUNKS' CRITERIA** is with him since 13:10: give kinreply its own
+> **Resend API key** (`KINREPLY_RESEND_API_KEY` is byte-identical to his production `dds`
+> sending key), then one test send to his own address. **Do not send test mail until he
+> answers.** The key split removes the blast radius on the credential, NOT on the shared
+> ~100/day quota — I told him that rather than overselling it.
 >
-> **TWO THINGS ANY SEED MUST CARRY FORWARD:**
-> 1. The connect endpoints from chunks 8 and 9 never check whether the workspace is scheduled
->    for deletion. Shipped, client-visible; in the build log's open list. **The test for whether
->    a link may touch another chunk's surface is WHO CAN OBSERVE THE CHANGE**, not which chunk
->    shipped it.
-> 2. `cmd/worker` warns rather than refuses when one Meta host override is set and the other is
->    not, so a staging deploy setting only `KINREPLY_GRAPH_BASE_URL` points Instagram token
->    refreshes at **real Meta**. Lands at **chunk 27**.
+> **CHUNK 14's OPEN QUESTION, which every later webhook chunk inherits:** whether Meta signs
+> the RAW body or an ESCAPED-UNICODE one is unsettled and unsettleable here, because Meta
+> delivers no webhooks at all while the app is unpublished. The verifier accepts either, raw
+> first, and records which matched. **The answer will arrive in production logs: grep for
+> `signature variant observed`.** If it is wrong and we had guessed, every Arabic/Cyrillic/emoji
+> message 403s until Meta disables the whole route — named target markets. Publishing is his
+> decision; I told him it is gated behind that, and that nothing is blocked today because the
+> code is correct either way. **Do not ask him to publish.**
+>
+> **TWO MORE ANY SEED MUST CARRY:** the connect endpoints from chunks 8 and 9 never check
+> whether a workspace is scheduled for deletion (shipped, client-visible — **the test for
+> touching another chunk's surface is WHO CAN OBSERVE THE CHANGE**); and `cmd/worker` warns
+> rather than refuses when one Meta host override is set and the other is not, so a staging
+> deploy setting only `KINREPLY_GRAPH_BASE_URL` points Instagram refreshes at real Meta
+> (**chunk 27**).
 >
 > **THREE THINGS WITH HIM, none blocking the build:**
 > 1. **The Instagram app SECRET.** I did the rest of the dashboard pass myself at 10:50:

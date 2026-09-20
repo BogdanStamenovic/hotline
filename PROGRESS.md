@@ -14048,3 +14048,51 @@ radius stays shared. Fix the cause, not the fourth instance of the symptom.
 from 46s to 33s by noticing two tests were waiting out a twenty-second long poll — the real
 enqueue path issues a NOTIFY and a test writing the row directly did not. That reads as
 flakiness and is not, and the fix pays every remaining link.
+
+## 2026-09-20 14:15 CEST — chunk 14, an experiment that cannot be run, and the right answer to that
+
+**Chunk 14 done and pushed** (api `e5746d7`, docs `d927c1c`): webhook signature verification.
+2030 tests, 0 skips, gate green, no migration, no OpenAPI change. Link 10 is on chunk 15.
+
+**The chunk exists to settle a question empirically and the experiment cannot be run.** Does
+Meta sign the raw body or an escaped-unicode version? Phase 1 assumed raw and wrote that
+assumption into a package comment as though it were fact. Meta's Messenger page says, with a
+worked example, that it escapes; the Graph API and Instagram Platform pages say nothing either
+way, and silence is not a statement that the bytes are raw. Link 9 fetched all three pages live
+rather than trusting the spec's quote. Both live criteria need a real non-ASCII delivery, and
+Meta delivers no webhooks at all while the app is unpublished.
+
+**What it costs if Phase 1 guessed wrong is the part that makes this a product risk, not a
+curiosity.** Every Arabic, Cyrillic or emoji message from a seller's customer fails
+verification, 403s, is redelivered, and eventually gets the entire route disabled — all
+delivery, not just the non-ASCII kind. Arabic and Cyrillic are named target markets. It works
+perfectly in testing and dies the first time a real customer writes in their own alphabet.
+
+**So it did not guess.** `VerifySignature` accepts either encoding, tries raw first, returns
+which matched, and `internal/webhook` logs it once per route per encoding — correct under both
+hypotheses, with the second MAC never computed for an all-ASCII body. The first real non-ASCII
+delivery becomes the measurement, taken by production traffic instead of by a person with a
+test account. I verified the shape myself: raw first, escaped only when it differs,
+`hmac.Equal` for the comparison, and a constant-time test that is honest about what it cannot
+prove.
+
+**It built the forgery rather than arguing about it.** Accepting two encodings widens what
+verifies, so it wrote the replay attack, and contained it with two *tests* rather than two
+arguments: the two bodies decode to the same JSON, and `dedupKey` comes from the parsed message
+id rather than the body bytes. It checked the second instead of assuming it — the load-bearing
+half. The reviewer then found a case it had missed and was right that it is inert because the
+forgery is not valid JSON; but "it dies at the parser" is reasoning, and a verifier that
+accepts what the parser rejects is only safe while the parser really does reject it. Now a test.
+
+**Three things it caught in itself and reported unasked.** Four first-pass mutation survivors,
+all blind tests rather than broken code — including one where nothing asserted that the variant
+is *recorded*, so deleting that call left every test green while the experiment the whole chunk
+exists for silently stopped happening. A fact-checker caught it stating an inference as a
+measurement, which is the lesson it had written into the previous chunk's log hours earlier. And
+a counting error in its own commit message, in the chunk whose lesson is that counting ages
+badly — the third chunk running with a wrong counting comment.
+
+**Told Bogdan about publishing without asking him to publish.** Two things now sit behind that
+gate and neither blocks anything today, because the code is correct either way. That is
+information he should have before the question comes up on its own terms, not a decision I
+need from him now.
