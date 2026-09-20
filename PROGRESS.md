@@ -13562,3 +13562,46 @@ from plain Facebook Login**, with its own dialog and a config id, and it is the 
 targets. If he registered the URI under the plain product, chunk 8 fails in a way that looks
 exactly like a missing URI. Told him to check which section, and asked link 5 to confirm it is
 building against the Business dialog rather than the plain one I probed.
+
+## 2026-09-20 09:28–09:35 CEST — verified Meta in his browser, and found the adjacent thing missing
+
+At his instruction (`1551132770657370186`, *"Berify it using claude in chrome"*) I drove his
+Chrome and checked the registration rather than taking either his word or my own useless
+probe.
+
+**The redirect URI is correctly registered, and this time the check could actually fail.**
+`https://kinreply.uxonews.com/v1/channels/meta/callback` is present in Valid OAuth Redirect
+URIs, read character by character, under `/business-login/settings/` — **Facebook Login for
+Business, not plain Facebook Login**, which was the specific risk I had flagged. Meta's own
+Redirect URI Validator returns "This is a valid redirect URI for this application". **Then I
+ran the negative control**: the same URI with one character appended returns "This is an
+invalid redirect URI". The validator discriminates, so the pass means something — the check
+my unauthenticated dialog probe an hour earlier could not perform.
+
+Also read off the page, because they constrain chunk 8: Client OAuth login on, Web OAuth
+login on, Enforce HTTPS on, force-reauthentication off, embedded-browser OAuth off, and
+**Strict Mode for redirect URIs ON** — exact match only, so nothing may be appended to that
+URI.
+
+**The find: the app has NO configuration.** Facebook Login for Business does not launch from
+a redirect URI alone; it needs a configuration — the business assets and permissions the app
+requests — and its dialog takes that configuration's id as a parameter. The Configurations
+page is empty, just a "Create configuration" button. **Chunk 8 would have built, passed its
+unit tests, and failed at the live flow for a reason that looks nothing like a missing
+redirect URI.** I only found it because I went to verify one thing and looked at the thing
+next to it; the memory note about verifying the adjacent claim rather than the handed one
+paid for itself.
+
+**Did not create it, and said why.** Choosing which business assets and permissions the app
+requests is a product decision about what KinReply asks sellers to grant, on his Meta
+account — not a mechanical step. Gave him two routes: he creates it and hands me the id, or
+he names the permissions and I drive his browser with him watching.
+
+Told link 5 to build chunk 8 in full, to read the configuration id **from the environment
+rather than a constant** so the real value can arrive without another code change, to report
+the live criteria unmet with this as the stated reason rather than stubbing the dialog, and
+to put a concrete recommendation for the needed permissions in its report — it is better
+placed than either of us to know, and that is what lets him create the configuration in one
+pass instead of guessing.
+
+Left his browser as I found it: closed the tab I opened, changed no setting.
