@@ -8,28 +8,34 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **6** is `api-32`, tmux `kr2build-6`, Opus, in `~/data/kinreply/api`,
-> on **chunk 9 of 33** (standalone Instagram Login). **Chunks 1-8 done and pushed**; Track A
-> (1-5) complete. Links 1-5 retired. Tree at `make check` 1779 tests / 0 skips, `make gate`
-> green. Migrations: chunk 8 took 00017.
+> **What is running:** link **7** is `api-bd`, tmux `kr2build-7`, Opus, in `~/data/kinreply/api`,
+> on **chunk 10 of 33** (disconnect and reconnect over /v1). **Chunks 1-9 done and pushed.**
+> Links 1-6 retired and marked done in the registry. Tree at `make check` 1850 tests / 0 skips,
+> `make gate` green. Latest migration on disk is **00018**; chunk 25 is 00019, chunk 26 is 00020.
 >
-> **FOUR THINGS WITH HIM, none blocking the build:**
-> 1. **Meta login config permissions.** Config `1977237352952055` exists but grants only 4 of
->    the 8 in `graph.LoginScopes` — every Instagram capability missing. He is adding
->    `pages_read_engagement`, `pages_manage_engagement`, `instagram_basic`,
->    `instagram_manage_messages`, `instagram_manage_comments`. **Unprefixed family, not
->    `instagram_business_*`.** When the id is confirmed it becomes
->    `KINREPLY_META_LOGIN_CONFIG_ID` — already read from the environment, no code change.
->    **The id was transcribed from a screenshot and never verified in the dashboard.**
-> 2. **Test email.** Eight chunks built on that Resend key with zero sends. Verified: it is
->    byte-identical to his production `dds` sending key.
-> 3. **Canary sweep as a new chunk — I recommend YES**, scoped to `class=credential` columns.
-> 4. **Milos.** Chunk 8 added three operations, all additive. "May regenerate, must if you
->    want the connect screens." Contacting him is outward and needs his yes.
+> **THREE THINGS WITH HIM, none blocking the build:**
+> 1. **The Instagram app SECRET.** I did the rest of the dashboard pass myself at 10:50:
+>    Instagram app id `28775685708721718` read out, the three `instagram_business_*` permissions
+>    added and confirmed after a reload, and the Instagram business login redirect URL saved as
+>    `https://kinreply.uxonews.com/v1/channels/meta/callback` — byte-compared against the
+>    Facebook side's box, not retyped. The secret is behind "Show", which demands his Facebook
+>    password, and I do not type passwords. `~/.kinreply/phase2.env` carries the id and an empty
+>    secret **both commented out on purpose**: half-set is refused at startup.
+> 2. **Two Facebook-side permissions I could not add.** `pages_read_engagement` and
+>    `pages_manage_engagement` on the Manage Pages use case: four attempts, two methods, no
+>    error, still "Add" after a reload. And the Messenger use case's permissions URL was refused
+>    by my own permission classifier, so I stopped rather than route around it. Those are 2 of
+>    the 4 still missing from the 8 scopes the connect flow asks for.
+> 3. **Test email** (nine chunks on that Resend key, zero sends), **the canary sweep** — I
+>    recommend YES, scoped to `class=credential` columns — and **Milos**: chunks 8 and 9 added
+>    four operations, all additive, so an unregenerated client keeps working.
 >
-> **MY BROWSER ACCESS WAS DENIED** by the permission classifier at 09:36 when he asked me to
-> edit the Meta config. Everything not needing Chrome was done instead. If he re-authorises,
-> the job is: Facebook Login for Business → Configurations → `kinreply` → Edit → add the five.
+> **CORRECTED, do not repeat it:** `KINREPLY_ENCRYPTION_KEYS` in `phase2.env` is EMPTY and has
+> been since 09:42. Links 4, 5 and 6 each reported it as an open blocker after it was fixed,
+> because a trailing `#` comment on that line made a grep read a value where a shell reads none.
+> The comment now sits on its own line. That file also cannot start `cmd/api` for a duller
+> reason — no `KINREPLY_DSN`, no `KINREPLY_PUBLIC_ORIGIN`, no `KINREPLY_MAGIC_LINK_BASE`. It is
+> a secrets store, not a runtime config.
 >
 > **Relay any answer to the live link with `--warrant`.**
 >

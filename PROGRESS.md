@@ -13775,3 +13775,79 @@ breath as the kill**, never reusing an earlier check, and to treat a dirty tree 
 pane as not-finished whatever was reported (`162e51c`); and a standing memory note so it
 outlives this session. Told Bogdan plainly rather than leaving it in a log he would have to
 go looking for.
+
+## 2026-09-20 11:00 CEST — chunk 9 lands, link 7 takes over, and I do the Meta pass myself
+
+**Chunk 9 is done and pushed** (api `3beb024`, kinreply-db `10e28fa`, docs `dfe09f9`):
+standalone Instagram Login, for a seller whose professional account has no Facebook Page.
+1850 tests, 0 skips, `make gate` green, migration 00018. Link 6 committed and pushed
+*before* reporting, which is the rule I rewrote two hours earlier after it cost 281 lines.
+
+**Link 6 asked to be replaced at the boundary rather than start chunk 10 on a heavy
+context**, and it was right: it had done two chunks' work in one session. I wrote link 7's
+seed, spawned `kr2build-7`, watched it get past the folder-trust prompt and run its first
+commands, and only then re-checked all four trees and killed link 6 **in the same breath**.
+Its pane held an unsent line reading "wait for the operator to spawn link 7" — it really had
+stopped. Registry tidied: links 3, 4 and 5 were still marked `working` while dead.
+
+**My liveness probe was the same bug I keep warning the links about.** `pgrep -af <session-id>`
+reported every agent dead, including me and the link I had just spawned — the session id is
+not in the command line. I only noticed because my own row was in the output as an accidental
+control. `hotline --list` is the discriminating check.
+
+### The Meta dashboard, done rather than described
+
+Browser access worked again, so I did the pass link 6 had specified instead of relaying it.
+
+- **Instagram app id `28775685708721718`**, a genuinely different credential from the Facebook
+  app id.
+- **The three `instagram_business_*` permissions are Ready for testing.** Confirmed by reading
+  the permissions table after a full reload, not by the green tick the page drew.
+- **Instagram business login redirect URL saved**,
+  `https://kinreply.uxonews.com/v1/channels/meta/callback`. I opened the Facebook side's
+  "Valid OAuth Redirect URIs" box first and compared character by character rather than
+  retyping from memory — the two must be byte identical and that side is under Strict Mode.
+- **`KINREPLY_META_REDIRECT_URI` was never in `phase2.env` at all.** Added, with the reason
+  written next to it.
+
+**Meta's own convenience button committed this build's signature bug.** "Add all required
+permissions", on a panel listing three `instagram_business_*` names, did not add
+`instagram_business_manage_comments` — it added `instagram_manage_comments`, the unprefixed
+one, and then reported "All required permissions added". Verified across a reload before and
+after. I added the right one by hand; the first attempt answered "Something went wrong" and
+the second appeared to do nothing, and only a reload showed it had worked. **On that page the
+rendered state after an action is not evidence; only a reload is.** I cannot prove the
+mechanism and have not claimed one.
+
+**Two questions link 6 flagged as unresolved in Meta's docs are now answered by Meta's own
+UI.** The deauthorize and data-deletion URLs are wanted *before app review*, not for the flow
+to function — and the Facebook side runs today with both boxes empty. So we do not need to
+build those endpoints yet, which was the alternative.
+
+**What I could not do, and did not route around:** `pages_read_engagement` and
+`pages_manage_engagement` will not add to the Manage Pages use case — four attempts, two
+methods, no error, still "Add" after a reload — and the Messenger use case's permissions URL
+was refused by my own permission classifier. Both went to Bogdan as things for him to click.
+
+### A claim four links carried, and the check that protected it
+
+Every link since link 3 reported `phase2.env` as holding a non-empty `KINREPLY_ENCRYPTION_KEYS`
+that makes all three binaries refuse to start. **Link 3 was right when it wrote it** — the
+backup from 05:57 holds 46 characters of real key material. I emptied it at 09:42, and links
+4, 5 and 6 each repeated the claim afterwards without re-measuring.
+
+**Why none of them caught it is worth more than the fact.** The fixed line read
+`KINREPLY_ENCRYPTION_KEYS=  # RETIRED by…`, so a shell source gives `len=0` and a grep for
+`^KINREPLY_ENCRYPTION_KEYS=.\+` matches. The cheap check *confirmed* the stale claim instead
+of catching it — a check that answers the same for a set and an unset variable, which is the
+defect this build keeps finding in its own tests, wearing a different hat. Comment moved onto
+its own line; build log corrected in both places (`bd26536`).
+
+**And it was wrong twice over.** Trying to reproduce the startup refusal, the binary died on
+`$KINREPLY_DSN`, then `$KINREPLY_PUBLIC_ORIGIN`, then `$KINREPLY_MAGIC_LINK_BASE`. Sourcing
+that file could never have started `cmd/api` for reasons that have nothing to do with
+encryption keys. It is a secrets store and was never a runtime config.
+
+**One of my own:** I ran `hotline-say` twice and double-posted the chunk-9 report, because it
+prints nothing on success and I read the silence as a failure. Told him in one line rather
+than leaving him to wonder.
