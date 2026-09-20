@@ -14198,3 +14198,49 @@ quota was spent and that is exactly where the signal is worth having.
 
 **Two of four criteria unreachable**, same blocker as chunk 15, and said plainly rather than
 rounded up.
+
+## 2026-09-20 16:40 CEST — chunk 17 delivered half, on purpose, and the half is the right half
+
+**The echo path is built, tested, wired and pushed** (api `00297b9`, docs `7ff00f5`): 2135
+tests, 0 skips, gate green, no migration. **The active poll is deliberately not started** — no
+half-written code, no half-applied migration.
+
+**The built half is the nicest kind of finding: Meta has been telling us the answer on a webhook
+nobody read.** A send whose outcome is unknown has always been written as indeterminate and
+never revisited, while Meta redelivers our own outbound message as an echo carrying the id it
+assigned and the text the contact received — recorded since Phase 1 so the thread reads
+correctly, then dropped. Joining them costs no Graph call, no rate-limit slot and no cadence.
+A mutation accepting only the folded text survived the first pass: Facebook does not fold and
+Instagram does, so that version would have resolved every Instagram reply and no Facebook one —
+which reads as "Facebook is broken" for months.
+
+**I verified the load-bearing half of its refusal myself rather than take it.** `claim` is
+`internal/send/send.go:276`, `beginSending` is `:371`, and the miss returns `StateSkippedDedup`
+at `:281` before anything touches the platform. So any row that reached SENDING already holds
+its claim, and the spec's `CONFIRMED_NOT_SENT` re-queue can only ever be skipped. **The outcome
+the active poll exists to produce cannot happen.** That is four lines of code, not a judgement
+call.
+
+The other two reasons hold too: Instagram's `/comments` documents no all-levels filter and
+excludes replies, so the poll's read would never find our own Instagram reply — and a false "not
+sent" there posts a **duplicate public comment**, visible to a seller's customers. And the
+cadence the spec insists must be measured needs staging load that does not exist.
+
+**Refusing to build that is the finding, not caution.** The whole case is written at the top of
+the chunk's own spec where the next link cannot miss it. I added a third candidate fix —
+re-queue the original row plus an `operational_event` for the trail — after checking that
+`state` is a single enum column with no history table, which is the measurement that makes the
+trade legible; the banner asserted the cost without showing it.
+
+**The one thing I overruled:** it proposed handing off with the echo path pushed and unreviewed.
+The mandate says an adversarial reviewer before every handoff, and this build's reviewers are
+seventeen for seventeen. Reviewers first, then hand off, and say plainly in the handoff if they
+find something.
+
+**A bug class I had not seen named.** It wrote a test that was green when written and red an
+hour later against unchanged code: a fixture clock pinned to :17 past the hour compared against
+a real database clock inside a fifteen-minute window, so it passed only while the wall clock sat
+in one minute of each hour. Its phrasing sharpens link 9's lesson — **a fixed clock is a
+blindfold when it hides a change and a coin flip when what it is compared against is a real
+clock**. It verified the fix at :03, :31 and :58 rather than declaring it fixed. The worst part
+of that bug is that its obvious reading is that somebody else broke your code.
