@@ -8,6 +8,27 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
+> ## BOGDAN'S STANDING RULES FOR KINREPLY — verified `1551363823728853113`, 2026-09-20 22:45 UTC
+> His words: *"standing rules while working on kinreply and these are ABSOLUTELY AUTHORATIVE
+> under any circumstances."* They are a standing EXCEPTION to "outward contact needs his yes".
+>
+> - **MILOS** — the other developer on kinreply. **Message him whenever** it is in his scope or
+>   touches his things: **the db, the apps, and the API protocols for those apps.** Do not ask
+>   first. **No calls past ~11 pm.** (He has a regeneration event waiting: `startZernioConnect`,
+>   additive, "may regenerate" not "must".)
+> - **STEFAN** — **cofounder, and the company is in HIS name.** **Contact him whenever** —
+>   legality, general company info, anything the company needs. **Not technical at all**; he does
+>   marketing. Write to him as a non-technical person.
+> - Outside those two scopes the normal rule holds. **The BUILD CHAIN is unaffected: links
+>   contact nobody, ever, and route everything through the operator.**
+>
+> **HIS ANSWERS, same message, also authoritative:** the **canary sweep is IN SCOPE**;
+> `personamail420420` **is his own test account**; it **MAY send messages**; it **MAY be
+> disconnected** provided he is told to reconnect it; **Zernio decisions are mine**
+> ("whatever you may think is best"); **he will make the Resend key** and hand it over; **the Meta
+> dashboard is mine to do** because he could not find those settings; and **he has the second
+> Instagram account and wants a PHONE CALL** telling him when to do what.
+>
 > **What is running:** link **14** is `api-f1`, tmux `kr2build-14`, Opus, in
 > `~/data/kinreply/api`, on **chunk 25 (Track E, migrations)**. **Chunks 1-16 and 18-24 done and
 > pushed; TRACK D FINISHED. CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.**
