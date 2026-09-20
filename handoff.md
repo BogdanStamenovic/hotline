@@ -8,27 +8,22 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **8** is `api-c2`, tmux `kr2build-8`, Opus, in `~/data/kinreply/api`,
-> on **chunk 12 of 33** (token refresh). **Chunks 1-11 done and pushed.** Links 1-7 retired and
-> marked done. Tree at `make check` 1907 tests / 0 skips, `make gate` green. Latest migration on
-> disk is still **00018** (chunks 10 and 11 added none); chunk 25 is 00019, chunk 26 is 00020.
+> **What is running:** link **9** is `api-10`, tmux `kr2build-9`, Opus, in `~/data/kinreply/api`,
+> on **chunk 13 of 33** (alerting, which reads chunk 12's outcome). **Chunks 1-12 done and
+> pushed.** Links 1-8 retired and marked done. Tree at `make check` 1932 tests / 0 skips,
+> `make gate` green. Latest migration on disk is **00019**; the next is 00020.
 >
 > **TWO THINGS ANY SEED MUST CARRY FORWARD:**
 > 1. The connect endpoints from chunks 8 and 9 never check whether the workspace is scheduled
 >    for deletion, so a connect inside the seven-day grace period seals a live Meta token into
->    rows about to be destroyed and auto-replies for the rest of it. Link 7 found it and
->    correctly did NOT fix it in passing — shipped, client-visible surface. In the build log's
->    open list.
-> 2. ~~`cmd/worker` has no Instagram credentials...~~ **WRONG, measured false at 12:20.** The
->    gap is WIRING, not credentials: `NewInstagramLoginClient` takes only host and transport
->    options, and every post-connect call authenticates with the account's own token. Link 7
->    wrote the credentials reason into a code comment as fact and **I copied it into link 8's
->    seed verbatim** — the same decay that carried the `KINREPLY_ENCRYPTION_KEYS` claim through
->    four links, except I propagated this one. Link 8 measured it, I re-measured it, and it is
->    closing it in chunk 12 — including chunk 11's `WebhookSubscriptionChecker`, which I
->    approved: that one is an internal daily job nobody outside can observe, unlike (1), which
->    is a client-visible endpoint. **The test for "may I touch another chunk's surface" is who
->    can observe the change, not which chunk shipped it.**
+>    rows about to be destroyed. Shipped, client-visible; in the build log's open list. **The
+>    test for whether a link may touch another chunk's surface is WHO CAN OBSERVE THE CHANGE**,
+>    not which chunk shipped it — chunk 12 correctly took an internal daily job's wiring under
+>    that rule, with my approval and the reason written down.
+> 2. `cmd/worker` warns rather than refuses when one Meta host override is set and the other is
+>    not. So a staging deploy following the old convention of setting only
+>    `KINREPLY_GRAPH_BASE_URL` points Instagram token refreshes at **real Meta**. Lands at the
+>    first staging deploy, **chunk 27**.
 >
 > **THREE THINGS WITH HIM, none blocking the build:**
 > 1. **The Instagram app SECRET.** I did the rest of the dashboard pass myself at 10:50:

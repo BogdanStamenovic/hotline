@@ -13949,3 +13949,55 @@ wrong reading would have broken no test. A comment is not a test.
 **Handover:** link 7 asked to be replaced after two chunks, correctly. Link 8 (`api-c2`,
 `kr2build-8`) was up and reading before I re-checked the trees and killed link 7 in the same
 breath; its pane held an unsent "wait for the operator to reap you". Registry updated.
+
+## 2026-09-20 12:50 CEST — chunk 12, a premise of mine that was false, and a bug found by reading
+
+**Chunk 12 done and pushed** (api `371d803`, docs `4b74ed5`, kinreply-db `18e128f`): token
+refresh. 1932 tests, 0 skips, gate green, migration 00019. Instagram Login tokens live sixty
+days and nothing renewed them; they now renew daily. It is the first and only refresh in the
+build, because nothing can renew a Facebook Page token.
+
+**I put a false premise in link 8's seed and it caught it.** I had written that `cmd/worker`
+cannot check Instagram rows for want of app credentials and that fixing it belonged to chunk
+27. The client is constructed with no credentials at all and every post-connect call
+authenticates with the account's own token — the gap was one line of wiring. **The sentence
+came from link 7's own code comment, stated as fact, and I copied it into the seed without
+measuring it.** A peer's conclusion usually gets checked; a peer's stated *reason* rides along,
+and a seed turns it into inherited fact for every successor. Written to memory, because I have
+now been on both ends of that failure in one day.
+
+It mattered for what it hid: left alone, every Instagram token dies permanently at sixty days —
+the exact failure chunk 12 exists to prevent — for a reason that was not true.
+
+**I approved chunk 12 touching chunk 11's wiring, and gave the chain the rule rather than the
+ruling: the test is who can OBSERVE the change.** An internal daily job nobody outside can see:
+take it. A live HTTP endpoint a client can watch flip: leave it, report it, make it its own
+chunk. That keeps the connect-into-a-deleting-workspace finding correctly open.
+
+**The chunk's own best finding is the third comment-shaped defect in three chunks.**
+`NewTokenChecker`'s comment asserted a safety property the code did not have — it claimed a nil
+Instagram client announces itself as `APP_NOT_CONFIGURED`. It does not. With a nil client and a
+good Facebook app the refresh was silently skipped and the job reported HEALTHY while the
+account counted down to permanent death. The reviewer proved it with link 8's own test, named
+`ReportsNotConfigured` and asserting `TokenHealthy` — a name its own body disproved, next to a
+comment that agreed with the name. A comment is not a test and a test name is not a test.
+
+**A near miss it created and caught in the same chunk.** The moment `cmd/worker` got a real
+Instagram client, the gate harness was one row away from refreshing tokens against production
+Meta from a test run: it set the Facebook host override for the worker and had never needed the
+Instagram one. Fixed, plus a startup warning when one override is set and the other is not —
+deliberately a warning, since `cmd/api` treats them independently and a refusal only one binary
+enforces is its own trap. The live consequence belongs to chunk 27 and is in the banner.
+
+**I found a bug by reading the file.** The comment I told link 8 to write carried the shell's
+own quote escaping into the Go source — `chunk 11'"'"'s` for `chunk 11's`, twice. It compiles,
+`gofmt` accepts it, 1932 tests pass, a reviewer and a fact-checker both missed it. Repaired
+(`f77feaf`) with the reason in the commit message. **And my first search for it returned zero
+matches because my own grep pattern was wrong** — the third time today a cheap check has
+agreed with whatever I already believed. I only caught it because I had seen the string myself
+first.
+
+**Handover:** link 8 asked to be replaced after one chunk and was right. Its input box held an
+unsent "start chunk 13" when I killed it — which is precisely why the rule is now to re-check
+the trees in the same breath as the kill. They were clean at that moment and I checked them
+then, not two minutes earlier.
