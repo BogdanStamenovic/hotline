@@ -13201,3 +13201,46 @@ Also unblocked by his uxonews widening, and flagged to link 2 as now self-serve:
 needs a GID 10001 host group on uxonews so a root-owned group-readable key file is readable
 by containers running as UID 10001 with `cap_drop ALL`. Under the old wording that looked
 like it needed him.
+
+## 2026-09-20 05:15–05:22 CEST — chunk 2 landed; verified the production-box half myself
+
+Link 2 (`api-46`) finished chunk 2, the encryption key file, and carried on into chunk 3
+without needing a handoff.
+
+**This chunk touched uxonews, so the carve-outs were mine to check, not its to assert.**
+Both `uxonews.service` and `dds.service` are active — and the stronger fact is that their
+`ActiveEnterTimestamp` is still **2026-09-11 06:55 UTC**, so neither has restarted at all.
+"Active now" would have been a weaker claim compatible with a bounce; the timestamp rules
+that out. `dds.uxonews.com` resolves to 208.113.209.196 and serves HTTP 200, so the DNS
+carve-out holds. (`dig +short` returned nothing here while `getent` and `curl` both worked
+— a resolver quirk on this box, not a DNS fault; worth not mistaking for one.) What it
+created matches its claim exactly: group `kinreply-app` GID 10001 and
+`/etc/kinreply/encryption-keys` `root:kinreply-app` mode 0440. All seven commits across
+api, lifecycle and docs exist, all three trees clean and level with origin.
+
+**Verified its wedged-reviewer story rather than accepting the reassurance.** It reported
+that its second reviewer ran an hour, ignored a wrap-up request, had wandered into running
+a key rotation of its own, and was killed. Counted the Claude processes on this box: exactly
+four, and all four accounted for — llmserver-work, jev-research-opus, this operator, and
+link 2. Nothing stranded. It also rebuilt the shared test database the reviewer had been
+driving and re-ran both suites before trusting anything, which is the right instinct.
+
+**The finding worth remembering from this chunk** is one the reviewer caught: a key file
+line missing its `1:` prefix printed **the key itself** into the process's fatal-error log,
+which both `cmd/api` and `cmd/worker` log on the way out. That is invariant 7's exact bug
+class inside the very commit whose purpose is keeping key material out of logs — and a
+comment the author had written asserting it could not happen was standing in front of it.
+The mandate's line that "a comment justifying why a check is skipped deserves the same
+scrutiny as the check" earned itself here.
+
+**And one neither spec noticed, which would have destroyed data:** export archives are
+sealed with the same keyring but record their key version in a file header rather than a
+column, so no SQL sweep finds them. Chunk 2's own acceptance test — run it twice, see zero,
+then delete the old key — would have been false permission to delete a key a subject's
+pending export still needed. It now counts and reports them instead of re-sealing, because
+rewriting the only copy of somebody's personal data to save seven days of waiting is the
+wrong trade. That is the right call and I said so.
+
+Pinged him with all of it. Flagged for him, not blocking: `kinreply.uxonews.com` is not a
+verified sending subdomain in Resend, so chunk 3 sends from the already-DKIM-verified
+`@uxonews.com`. Space at the boundary: root 75% / 18 GB free, `/mnt/offload` 62% / 9.1 GB.
