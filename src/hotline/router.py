@@ -336,7 +336,33 @@ def mid_turn(session: LiveSession, window: float = MID_TURN_WINDOW) -> bool:
 
 
 def describe(session: LiveSession) -> str:
-    return f"{session.name} (pid {session.pid}, {session.cwd})"
+    """One line per live session, named by the identity you can ADDRESS it by.
+
+    `session.name` is derived from the session id and is not always the name
+    that works. An adopted agent keeps the identity it took over -- `hotline-80`
+    -- while its session keeps minting `hotline-70`, and `--agents`, the channel
+    and `--to` all use the former. Printing the derived name alone sent two
+    kinreply build agents hunting for an operator they were already talking to,
+    and one hedged its addressing because of it.
+
+    So: the agent identity when there is one, and the derived name alongside it
+    only when they differ -- hiding the difference would trade one confusion for
+    another the first time someone greps a pane for the name they saw here.
+    """
+    name = session.name
+    try:
+        from .agents import Registry
+
+        agent = Registry().agents.get(session.session_id)
+        if agent is not None and agent.name != session.name:
+            name = f"{agent.name} (session {session.name})"
+        elif agent is not None:
+            name = agent.name
+    except Exception:
+        # A listing must never fail because the registry is unreadable; the
+        # derived name is wrong-ish, not useless.
+        pass
+    return f"{name} (pid {session.pid}, {session.cwd})"
 
 
 class Router:
