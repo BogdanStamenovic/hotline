@@ -29,6 +29,30 @@
 > dashboard is mine to do** because he could not find those settings; and **he has the second
 > Instagram account and wants a PHONE CALL** telling him when to do what.
 >
+> ### OPERATOR'S NEXT ACTIONS, in order — written down 2026-09-21 00:50 so a compaction costs nothing
+> 1. **Do the Meta dashboard myself** (he asked: *"i ask that you do it yourself as i did not find
+>    those settings"*). Chrome was closed at 16:55; needs it running. Outstanding there:
+>    `pages_read_engagement` and `pages_manage_engagement` on the **Manage Pages** use case (four
+>    attempts failed silently on 09-20), and whatever is missing on the **Messenger** use case —
+>    whose permissions URL my own permission classifier refused. The Instagram app id, the three
+>    `instagram_business_*` scopes and the business-login redirect are already done and verified.
+> 2. **Tell the chain what is unblocked:** canary sweep IS IN SCOPE (needs a chunk); sends from
+>    `personamail420420` are AUTHORISED; disconnecting it is authorised **provided he is told to
+>    reconnect**. Chunk 21's five deferred live criteria and chunk 23's disconnect criterion both
+>    become reachable.
+> 3. **Get `cmd/api` running on archserver behind the existing Caddy block** so webhooks actually
+>    land — today `/webhooks/zernio` answers 502 because nothing is behind it. Repoint the Zernio
+>    subscription `6ab01c60a9cd421b6b97d49e` with `PUT /v1/webhooks/settings`; **never create a
+>    second**.
+> 4. **THEN ring him** — he said *"just call me to say when to do what and i will do it"* for the
+>    second Instagram account. One short call where he posts, comments and it works. **Do not ring
+>    to say "stand by"**, and mind the hour: his no-calls-past-11pm was written about Milos, but
+>    the same courtesy applies.
+> 5. **Resend key** is coming from him; when it arrives, put it in `~/.kinreply/phase2.env` as
+>    `KINREPLY_RESEND_API_KEY` (replacing the dds-shared one) and chunks 3, 4 and 13's mail
+>    criteria become reachable.
+> 6. **Milos** can be told about `startZernioConnect` whenever — pre-authorised, his scope.
+>
 > **What is running:** link **14** is `api-f1`, tmux `kr2build-14`, Opus, in
 > `~/data/kinreply/api`, on **chunk 25 (Track E, migrations)**. **Chunks 1-16 and 18-24 done and
 > pushed; TRACK D FINISHED. CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.**
