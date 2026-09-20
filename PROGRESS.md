@@ -13017,3 +13017,67 @@ agent that needed it worked elsewhere, which is this chain's exact shape.
 
 Reported to him in one consolidated message and confirmed both parts landed by re-reading
 the channel. Now waiting on link 1's chunk-1 report.
+
+## 2026-09-20 02:46–03:05 CEST — scope widened, and a disk sweep that measured instead of guessing
+
+His follow-up (verified `1551031687440244809`, 02:46): the links may do as they please on
+uxonews so long as they leave `uxonews.service` and `dds.uxonews` alone; Meta dashboard
+work comes to me and I drive his browser on `arch` through Claude in Chrome, no App
+Review; and check space periodically, clearing caches and moving bulk to the Windows
+partition.
+
+**Both scope changes went into the mandate, not just into link 1's head** (`0d27be5`).
+The old text read as a blanket "do not threaten uxonews", which a careful link would have
+taken as *stay off that box entirely* — it was silently costing the build a whole host.
+Meta work had no path at all before; now it has one. I told the spec to name the
+dashboard page, the field and the value, because whoever clicks it cannot infer intent
+from a goal. Relayed to link 1 with `--warrant` so it could check who asked rather than
+who relayed; it had already read the old wording into context.
+
+**The disk sweep is the part worth reading, because three plausible wins measured to
+nothing.**
+
+- Root was **88%, 8.9 GB free** — thin for a 33-chunk Go build with Postgres.
+- **`pacman -Sc` freed zero.** All 582 cached packages are currently-installed versions,
+  so `-Sc` correctly kept every one. Only `-Scc` would free the 2.2 GB, and that is the
+  one option with a real downside: it ends offline reinstall as well as rollback, and
+  CLAUDE.md already flags package rollback here as thin. Left it.
+- **The 7.3 GB uv cache reclaims ~0 bytes.** 30,743 of its files are hardlinked into live
+  venvs; only 1,004 files are cache-only and they total under 0.05 GiB. `du` on a cache
+  counts bytes it does not own — a status field in the most literal sense.
+- **A hypothesis of mine measured false and I am recording it as such.** I expected
+  cvoice's 7.5 GB `.venv` to be the other end of those hardlinks. It is not: it has
+  **zero** files with a link count above one, and all 7.37 GiB is unique to it. So the two
+  are separate costs, not one cost double-counted, and the uv cache's hardlinks point at
+  some other venv I did not chase.
+
+**What actually freed space, and the trap it exposed.** Moving `~/uxonews-cap` (2.7 GB of
+Sep-6 browser captures) to `/mnt/windows` **failed mid-move**:
+
+```
+mv: cannot create regular file '.../uxonews-cap/con.mjs': Invalid argument
+```
+
+`/mnt/windows` is **NTFS mounted with `windows_names`**, so it rejects DOS reserved names
+— `CON`, `PRN`, `AUX`, `NUL`, `COM1`… A file called `con.mjs` cannot exist there. **This
+makes `/mnt/windows` unsafe as a general offload target for Linux trees**, which matters
+because this project's convention is to put bulk there.
+
+I checked for data loss before doing anything else, and there was none: `mv` had copied
+but unlinked nothing — 25,496 source files still present, `con.mjs` included. Removed the
+partial copy, then archived the tree instead, which sidesteps reserved names entirely
+because a tarball is one file. **Verified the archive before deleting the source**, not
+after: 25,496 regular files + 181 symlinks = 25,677 entries, matching the tarball's 25,677
+exactly, `zstd -t` clean, `con.mjs` present inside.
+
+Result: **88% → 84%, 12 GB free.** Archive at
+`/mnt/windows/archserver-offload/uxonews-cap.tar.zst`, 1.9 GB.
+
+**Where I stopped, and why.** The remaining large items are not mine to delete:
+`~/data/jev-bench` (6.9 GB) is `jev-research-opus`'s output and that agent reports to him,
+and `~/data/cvoice/.venv` (7.4 GB) backs his live Serbian TTS. Deleting another agent's
+artifacts because they are big is the "frozen files" mistake inverted, and 12 GB is enough
+to build in. Offered both to him as options rather than taking them.
+
+Space now gets checked at every chunk boundary, which is a natural checkpoint I already
+have rather than a timer that can drift out of step with the build.
