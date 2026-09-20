@@ -12907,3 +12907,25 @@ what for — rather than as a biography: what he builds, what he owns, what only
 2. The CLAUDE.md line (recommended against).
 3. tesseract — in the agent's channel.
 4. `hotline-say` does not retry 5xx (hit a real 503 tonight).
+
+## 2026-09-20 00:30 CEST — respawning at his request (operator hotline-13 → new)
+
+Verified `1551026970886807555` (00:27:26Z): "I need you full fresh context for the next task so
+could you kill yourself and start again?" At 43.6% context (435,796/1,000,000). **Nothing is
+broken** — he wants headroom for a task he has not described yet, and the handoff banner says so
+explicitly so the replacement does not go hunting for a failure that is not there.
+
+Checked before going, rather than assuming a respawn is free:
+- Both agents live in their OWN tmux sessions (`hl-llmserver`, `hl-jev2`), so killing the
+  `hotline` session does not touch them. `llmserver-work`'s real work is detached on the Mac
+  (PPID 1) and is not even exposed to this box's state.
+- Nothing armed to power off, RTC alarm clear, GRUB untouched, GPU idle.
+- Both repos committed and pushed: hotline `153010e`, hotline-registry `b02e301`.
+
+Respawning detached via `systemd-run --user` rather than calling `hotline-run respawn` directly:
+`respawn` runs `tmux kill-session -t hotline`, which kills the pane the command is running in, so
+`start` would never execute and the replacement would wait up to 5 minutes for the watchdog. A
+transient unit is outside this tmux session and survives it.
+
+Banner written at the TOP of handoff.md — the top is what gets read, whatever the spawn prompt
+says about the bottom.

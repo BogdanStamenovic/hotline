@@ -1,5 +1,25 @@
 # HOTLINE — worker handoff
 
+> ## RESPAWN 2026-09-20 00:30 CEST — he asked for a fresh operator; nothing is broken
+>
+> **You were not started by a timer. He asked for this**, verified `1551026970886807555` (00:27:26Z): *"I need you full fresh context for the next task so could you kill yourself and start again?"* My predecessor was at 43.6% context after a long session, so **nothing is wrong** — do not go hunting for a failure, and do not resume the build. **He has a NEXT TASK for you and has not said what it is yet. Say hello in #agent-hotline-80 and ask what it is.** That is the whole job right now.
+>
+> **Two agents are alive and MUST NOT be disturbed.** They report to HIM, not to you — do not become their mouthpiece:
+> - `llmserver-work` (Opus, `hl-llmserver`, #agent-llmserver-work) — Wan 2.2 14B 4-bit + extended chat app on llmserver per `~/handoff.md`. Its real work runs **detached on the Mac** (`build_model.sh`, PPID 1), so it survives a reboot of this box; only its session context would be lost. Past a 57 GB download, converting.
+> - `jev-research-opus` (Opus, `hl-jev2`, #agent-jev-research-opus) — finished. 548-line report at `~/data/jev-research-opus.md`. Headline: a Q4 Qwen3:8b doing plain logit readout beat every purpose-built trained head (83.9% / 43 ms), because those only hold up in their training domain.
+>
+> **Open, all HIS — do not action these yourself, they are questions he has not answered:**
+> 1. Whether my wording of his registry entry is what he wants (I rewrote it at his request).
+> 2. The backtick rule in global CLAUDE.md — **I recommended AGAINST** it; the two places that actually intercept the mistake are already done. His document, his call.
+> 3. `tesseract` — a system package, asked by `jev-research-opus` in ITS channel. Not yours to re-ask.
+> 4. `hotline-say` does not retry 5xx (hit a real 503 tonight). Small, unasked.
+>
+> **State:** nothing armed to power off, RTC clear, GRUB untouched, GPU idle (13 MiB). Repos clean and pushed — hotline `153010e`, hotline-registry `b02e301`. `desktop on` is deliberate (he said keep it), so gdm is active with two autologin-era sessions; **do not run `desktop off`** — he chose this, and CLAUDE.md requires his yes anyway. A real monitor is coming, which retires the whole no-display problem.
+>
+> **What this session actually did, in case it matters:** fixed the wedge that lost two of his messages (`src/hotline/wedge.py` — a live session is not a responsive one); moved the quiet-wake tag off ssh onto HTTP; brought `hotline-watchdog`, `hotline-run`, `hotline-say` and `pigion/wake-archserver-quiet` into git; pinned spawns to `--model opus` per his new rule that standalone agents are Opus and Sonnet is only a subagent; built `#registry-admin` in the Claude contacts server as a live mirror of the contact registry.
+>
+> **The thing most worth inheriting:** four separate failures tonight were one shape — *a check that shares a failure mode with the thing it checks cannot detect it.* My test suite posted its own fixtures into his private channel and I only learned because HE read it; the suite had been making real HTTP calls on every run and an 8-second runtime was the evidence I never questioned. **Re-read the artifact after the last thing that could change it.** `hotline --list` saying "busy", a green suite, a clean `bash -n`, an `ls` timestamp rounded to the minute — all status fields.
+
 > ## SHUTDOWN 2026-09-19 ~14:50 CEST — off at his instruction ("lets poweroff") after PHASE 1 SHIPPED
 >
 > **kinreply Phase 1 is COMPLETE and certified.** Gate green on a cold DB (`make check` 1446 tests / 0 skips / race-clean, `make gate` green driving the real binaries). All 8 repos pushed and clean — nothing local-only. **Full record: `~/data/kinreply/api/PHASE1-COMPLETE.md`** (the whole-build synthesis) + `api/BUILD-LOG.md` (per-chunk). Heads: api `d22d482`, kinreply-db `phase1-sql-schema` 13 migrations, docs `phase1-api-spec`, lifecycle, kinreply-app (Milos's client regenerated, PR#2 merged), hotline-registry (data-d9's build, shipped public).
