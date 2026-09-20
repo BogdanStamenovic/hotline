@@ -29,6 +29,21 @@
 > dashboard is mine to do** because he could not find those settings; and **he has the second
 > Instagram account and wants a PHONE CALL** telling him when to do what.
 >
+> ### HE IS COMPETING — THE HTML PAGE IS THE QUEUE OF RECORD, NOT DISCORD
+> Told to me 2026-09-21: he is **in FGC, about two weeks out from the global competition**, so he
+> was inactive through 09-20 and expects to be again. **Silence is training, not disengagement —
+> do not stall waiting for him.** His instruction: *"its important to track everything i must do
+> inside a html file and that file be updated regularly."*
+>
+> **https://claude.ai/artifact/AUfdE5PDtUCDJc11crpB4S** — "Your Half of Kinreply", source in the
+> session scratchpad. **Republish to that same URL; never make a second.** Grouped by where he
+> would actually do each thing, with what breaks without each and a recommendation on every
+> question.
+>
+> **Update it at EVERY chunk boundary, in the same breath as the Discord ping** — not "at the
+> end". Discord is the notification; the page is the state. Keep the counters at the top honest,
+> and BATCH questions onto it rather than sending them one at a time: he reads once and acts once.
+>
 > ### HIS TOOL SHELF IS NOW ON PATH — you no longer need `export PATH=...` on every call
 > Agent Bash calls source a **shell snapshot from session start**, not the profile, and
 > `~/.zshrc` (which adds `~/.local/bin`) is read only by INTERACTIVE zsh. So every agent shell
