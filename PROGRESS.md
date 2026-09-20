@@ -13277,3 +13277,53 @@ manufactured by the document itself.
 
 Link 3 is `api-6b`, confirmed working by pane capture. Handoff banner updated with the
 spawn recipe and all three traps that have bitten so far.
+
+## 2026-09-20 05:55–06:00 CEST — chunk 3 done; fixed a landmine in his secrets file
+
+Link 3 finished chunk 3 and asked me whether to carry on or hold for the email answer.
+**Told it to carry on** — criterion 1 is the only thing waiting on Bogdan, chunk 4 needs
+nothing from him, and holding a light-context link idle to wait for a sleeping человек is
+the definition of stalling on a non-blocker. Verified its state first: api `71b3b25`, docs
+`4256a2b`, lifecycle `8c4cbb3`, all clean and pushed.
+
+**Item B: it flagged a landmine and deliberately would not touch it, and it was right to
+hand that up rather than guess.** Its stated reason was that it could not see what else of
+his reads `KINREPLY_ENCRYPTION_KEYS`. I could, so I looked — `~/data`, `~/.claude/bin`,
+`~/.config/systemd`: nothing outside the kinreply repos references it. The blast radius was
+nil and that was determinable rather than guessable.
+
+**And the problem was worse than reported.** `KINREPLY_ENCRYPTION_KEYS` held a live 46-char
+value, which chunk 2 made all three binaries refuse to start on — but
+`KINREPLY_ENCRYPTION_KEY_FILE` was **absent entirely**, so the file half of that migration
+had never been done locally at all. Backed up `phase2.env`, moved the key into
+`~/.kinreply/encryption-keys` at mode 600, one version per line per `LoadKeyringFile`'s
+documented format, and pointed the new variable at it. Left the retired variable **present
+but empty** with a comment: their own `keyfile.go` says `RefuseRetiredEnv` fires on a
+non-empty value and that an empty leftover is explicitly safe, so this leaves a breadcrumb
+that the variable was retired rather than making it look like it never existed.
+
+**Verified by running the binary, and my first attempt at that was a bad test.** `adm help`
+returns before the crypt check, so it printed usage happily under the broken env and proved
+nothing — a passing check that could not have failed. Redid it with `adm crypt reencrypt
+--dry-run`, which reaches the check: under the backed-up env it dies with the exact refusal
+message, under the corrected env it gets past crypt and fails on "no database: pass --dsn",
+the expected next error. Both directions demonstrated.
+
+**The best thing in the chunk is an attack it invented and killed.** Working out how to send
+mail from a queue, it found a fifth option nobody had written down: a job re-minting a fresh
+sign-in code from the stored row. That bypasses the rate limiter, so anyone able to cause
+delivery failures could have unlimited sign-in codes minted for an address by a background
+job. Recorded as dead with the reason so it cannot be revived as a clever idea later.
+
+It **overrode link 2's recommendation** on the fork, and I back it: `auth_code` stores only a
+sha256 of the magic link by design, so sending it from another process would require making
+a live bearer credential durable — exactly what the annotation prevents, and a trade
+`internal/privacy` had already refused for the export link.
+
+It also reports **two of five criteria unmet and says so plainly** rather than reporting five
+for five — one being Bogdan's email question, the other a deliberate refusal to build a job
+kind nothing uses to tick a box. Affirmed that to it, because that is the behaviour that
+keeps the gate meaningful.
+
+Told it to resolve the `KINREPLY_ALERT_TO` naming disagreement and the 00014 migration
+collision **inside** chunk 4 rather than leaving either behind for chunk 25 to rediscover.
