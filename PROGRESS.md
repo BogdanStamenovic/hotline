@@ -13902,3 +13902,50 @@ left. Context moderate, nothing in flight, so it is carrying on into chunk 11. I
 thing it would otherwise have found at the end: Meta's own dashboard says an app must be
 published for webhooks to be delivered at all, so chunk 11 can prove "subscribed" and cannot
 prove "receiving". Going Live is Bogdan's call and I have not asked for it yet.
+
+## 2026-09-20 12:00 CEST — chunk 11, a link that overrode its spec, and link 8
+
+**Chunk 11 done and pushed** (api `4b54fa5`, docs `f14e35d`): webhook subscription management.
+1907 tests, 0 skips, gate green, no migration. I verified the OpenAPI diff myself — two
+operations added, none removed or renamed — because that is the claim that reaches Milos.
+
+**The gap it closed was named in our own code and never acted on.** `SubscribeAndVerify`'s
+comment already admitted that the connect-time read-back proves the subscription was correct
+*then* and nothing re-checked it later. Now an endpoint asks Meta what an account is actually
+subscribed to and writes nothing, and a daily job re-subscribes speculatively — free and
+idempotent — alerting only on a lapse that **survives the repair**, which is the App Dashboard
+case no API can fix and which therefore genuinely needs a person.
+
+**First link to override a spec rather than implement it and file an objection.** The spec said
+to skip standalone Instagram Login rows; that was honest when written, with chunk 9's mechanism
+still an open question and nothing built, and stopped being true once chunk 9 built something
+that attempts the read-back and reports which world it found itself in. It kept "not
+subscribed" and "could not verify" as different answers, because collapsing them would mail
+Bogdan daily, per Instagram account, forever, about something nobody can fix. It said why in
+the log — which is the condition that makes an override acceptable rather than a liberty.
+
+**The fact I measured in his dashboard this morning is now load-bearing in the build.** An app
+must be Live for Meta to deliver webhooks at all. Written into the chunk-11 spec header, with
+chunk 32's criteria split accordingly: "the subscription is verified" is provable today,
+"a delivery arrives" is not. Nobody has asked him to go Live and nobody should yet.
+
+**A NULL `auth_kind` was dispatched to the wrong host and only a mutation noticed** — every
+test in the package sets that column, so flipping the dispatch passed all of them. NULL is what
+`adm channel add` leaves behind, and backwards it sends a Page token to a host that refuses
+that family, so every operator-provisioned account reports failure forever. Link 8's seed makes
+that a named hazard, since chunk 12 dispatches on the same field.
+
+**Two surviving mutations, two opposite correct fixes, both written down.** Chunk 10's was real
+defence in depth that no test running as the app role can distinguish from RLS — kept, with the
+measurement beside it. Chunk 11's was redundant code with no outcome of its own — deleted. That
+distinction is the kind of thing a chain accumulates or loses, so it is in the seed.
+
+**The best reviewer finding in eleven chunks is this build's signature defect found inside a
+comment written to prevent it.** A comment documents a deliberate asymmetry and says out loud
+that "the next reader will otherwise think it is a bug" — and nothing enforced it. Neither
+Instagram test reached that ending, so the branch was never executed and a reader acting on the
+wrong reading would have broken no test. A comment is not a test.
+
+**Handover:** link 7 asked to be replaced after two chunks, correctly. Link 8 (`api-c2`,
+`kr2build-8`) was up and reading before I re-checked the trees and killed link 7 in the same
+breath; its pane held an unsent "wait for the operator to reap you". Registry updated.

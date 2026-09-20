@@ -8,18 +8,20 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **7** is `api-bd`, tmux `kr2build-7`, Opus, in `~/data/kinreply/api`,
-> on **chunk 11 of 33** (webhook subscription management). **Chunks 1-10 done and pushed.**
-> Links 1-6 retired and marked done. Tree at `make check` 1879 tests / 0 skips, `make gate`
-> green. Latest migration on disk is **00018**; chunk 25 is 00019, chunk 26 is 00020. Link 7
-> asked at the chunk-10 boundary whether to hand over; its context was moderate and the
-> boundary clean, so **I told it to carry on** rather than spend a fresh context on one chunk.
+> **What is running:** link **8** is `api-c2`, tmux `kr2build-8`, Opus, in `~/data/kinreply/api`,
+> on **chunk 12 of 33** (token refresh). **Chunks 1-11 done and pushed.** Links 1-7 retired and
+> marked done. Tree at `make check` 1907 tests / 0 skips, `make gate` green. Latest migration on
+> disk is still **00018** (chunks 10 and 11 added none); chunk 25 is 00019, chunk 26 is 00020.
 >
-> **WHEN YOU SEED LINK 8, carry this forward:** the connect endpoints from chunks 8 and 9 do
-> not check whether the workspace is scheduled for deletion, so a connect inside the seven-day
-> grace period seals a live Meta token into rows about to be destroyed and auto-replies for the
-> rest of it. Link 7 found it, correctly did NOT fix it in passing (shipped surface,
-> client-visible), and recorded it in `BUILD-LOG-PHASE2.md` — it is in the open list there.
+> **TWO THINGS ANY SEED MUST CARRY FORWARD:**
+> 1. The connect endpoints from chunks 8 and 9 never check whether the workspace is scheduled
+>    for deletion, so a connect inside the seven-day grace period seals a live Meta token into
+>    rows about to be destroyed and auto-replies for the rest of it. Link 7 found it and
+>    correctly did NOT fix it in passing — shipped, client-visible surface. In the build log's
+>    open list.
+> 2. `cmd/worker` has no Instagram credentials, so an Instagram row's daily check answers
+>    "app not configured" rather than guessing. Asserted in a test, not assumed. Closing it is
+>    configuration and belongs to **chunk 27**.
 >
 > **THREE THINGS WITH HIM, none blocking the build:**
 > 1. **The Instagram app SECRET.** I did the rest of the dashboard pass myself at 10:50:
