@@ -40,9 +40,15 @@
 > 1. `hotline --declare` takes its task as the **immediately following** argument —
 >    `--declare 'task' --no-channel --parent hotline-80`. Anything between them fails.
 > 2. **Capture the pane** to confirm it is working; `tmux ls` lists a wedged trust prompt happily.
-> 3. **A link cannot exit itself** — sending its report is the last act of its turn. Links 1 and
->    2 both said "exiting now" and both were still at an idle prompt. **You reap them**: spawn
->    the successor FIRST so the chain never pauses, then kill the old pid and its session.
+> 3. **REAP CAREFULLY — this cost 281 lines on 09-20.** A link keeps working after it reports.
+>    Link 5 sent its handoff, then wrote a whole feature with tests four minutes later; my
+>    `git status` check had been taken *before* the spawn and was accurate when taken and stale
+>    when used, so I killed it mid-edit. Link 6 recovered the diff only because it looked.
+>    **The order is: spawn the successor, then re-check `git status --short` AND capture the
+>    old pane in the same breath as the kill — never reuse an earlier check.** If the tree is
+>    dirty or the pane is mid-turn, wait; it is not finished no matter what its report said.
+>    Links 1 and 2 also both said "exiting now" while sitting at an idle prompt, so neither a
+>    report nor a claim of exiting is evidence of anything.
 >
 > **Ping him at the end of every chunk.** That is his explicit instruction. The link reports to
 > you with the chunk summary; you turn it into one message to `#agent-hotline-80`. One message
