@@ -13684,3 +13684,45 @@ recorded both, so a successor does not hunt a bug that is not there.
 The pattern it named — **"no test sends the hostile input" is this build's most reliable
 blind spot** — is now in link 6's seed, after the same open-redirect shape appeared in both
 chunks 7 and 8.
+
+## 2026-09-20 09:42–09:46 CEST — the config id landed, and a claim that contradicts the plan
+
+He supplied the Login for Business configuration id, `3009212886077369`, and said only three
+permissions exist to choose from. Wrote it into `~/.kinreply/phase2.env` where link 5 built
+`cmd/api` to read it, after backing the file up; it sources cleanly at 16 digits. Checked in
+`bash`, not `zsh`, because zsh's lack of bash-style indirection already reported a correctly
+set variable as empty once today.
+
+**The id is not the one he first showed me** — the screenshot said `1977237352952055`. So
+there are likely two configurations on the app now, with different permission sets, and that
+is exactly the ambiguity that gets resolved wrongly by a successor. Asked which to keep and
+offered to delete the stale one.
+
+**His "only these permissions exist" contradicts the roadmap's core premise, and I said so
+rather than just accepting it.** The roadmap states plainly that an app in Development mode
+has Standard Access, which works on every account holding a role on the app, and that Phase 2
+therefore needs no company and no App Review. His own config screenshot agreed: *"Permissions
+in standard access will only be requested from people with roles on this app."* So the five
+missing scopes should not be gated behind App Review.
+
+**Hypothesis, labelled as one:** they are gated behind the app's *use cases* instead — a
+Login for Business configuration can only offer permissions the use cases have added, and
+each use case has its own customise screen. The app has three (Messenger, Instagram messaging
+& content, Manage everything on your Page), and `instagram_basic` and
+`instagram_manage_comments` should come from the Instagram one. I have not verified this,
+because **my browser access is still denied**, and I said that rather than presenting the
+guess as a diagnosis.
+
+**Asked for browser access back as a single request that removes several.** With it I would
+settle the use-case question, confirm which configuration is live, and clear the stale one —
+rather than relaying hypotheses at him over Discord one at a time.
+
+**Flagged the version of this that would actually matter:** if those permissions genuinely
+cannot be granted in Development mode, it is not a dashboard annoyance but a scope finding —
+the roadmap's "no App Review needed for Phase 2" premise would be wrong, and chunks 10 onward
+would be building against permissions no test account can hold. Better surfaced now than at
+chunk 31. Nothing is blocked today; chunk 8's live criteria are already unmet and link 6 is
+building chunk 9 regardless.
+
+Note for whoever inherits this: `ls -t` failed again because `ls` is `eza` here, which is the
+standing trap. Used `/usr/bin/ls` to confirm both `phase2.env` backups exist.
