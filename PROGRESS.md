@@ -14642,3 +14642,54 @@ week. Told it to close that and to add a forward pointer at the build log's orig
 so would disconnect it — nobody will run it without his word. And the API contract gained
 `startZernioConnect`, so Milos has a regeneration event waiting; additive, "may regenerate" not
 "must", and telling him is outward and therefore Bogdan's.
+
+## 2026-09-20 23:45 CEST — chunk 23, a disconnect written on an invented meaning, and a control
+
+**Chunk 23 done and pushed** (api `e2253b7`, docs `937ee3e`): account health on the Zernio path.
+Green, gate green, no migration. Link 14 is carrying on to chunk 24.
+
+**The finding would have taken real sellers off the air on a guess.** The spec said to disconnect
+an account on a field in the vendor's health response, and quoted a sentence as "Zernio's own
+word, not this integration's inference", under a heading saying *verified*. **That sentence
+documents a different field** — different spelling, different endpoint — while the field the code
+reads is documented by the vendor, in full, as "No description". Its fact-checker caught it.
+The resolution: the undocumented field is a **screen**, the documented one is what a disconnect
+is written on, they must agree, and when the confirming read cannot find the account nothing is
+written and an operator is told — absence is not evidence. It says plainly this is corroboration
+and **not** a probe, because both values come from the same vendor about its own record and the
+one live probe is documented WhatsApp-only.
+
+**That is the sixth quote-carried-from-a-sibling-context incident**, and the second in two chunks
+— I committed one myself yesterday with the CSRF sentence.
+
+**The other finding is a sequence a real customer produces.** Zernio redelivers a failed delivery
+for up to 51 hours, and the upsert revives the same row on reconnect. So: the account dies, our
+delivery fails, the seller notices and reconnects, and the redelivery lands naming an id that is
+live again — taking down the account they just fixed, with nothing to say why. Closed with the
+envelope timestamp the vendor sets at composition and preserves across retries. The strict
+version was wrong and the test caught it on the first run: RFC 3339 has second resolution, so an
+event composed at 12:00:00.9 serialises as 12:00:00 and reads as older than itself.
+
+**It did not touch the live account**, though chunk 23's own criteria ask for a real DELETE
+against it, and said so rather than quietly doing it and calling the chunk done.
+
+**I answered a repeat failure with a mechanism instead of another rule.** It committed on a red
+tree — reported first, unasked — and that is the second link in three chunks, both by putting the
+check and the commit in one shell invocation. The mandate has carried "read the exit code, never
+the output" since chunk 21 paid for it, and it did not hold. There is now a `pre-commit` hook
+refusing a commit that cannot build, fails `vet`, or cites a nonexistent test: fast and partial
+on purpose, because a hook that takes minutes gets bypassed and then protects nothing. Honest
+about its limits — it would *not* have caught this one (an arch test was red) and *would* have
+caught chunk 21's. **I ran its negative case** rather than assume: a deliberately broken file was
+refused, and nothing landed. Ten rules went into that mandate today; the ones that hold are the
+ones something checks.
+
+**A habit vindicated:** chunk 20 wrote an architectural rule three chunks ago forbidding exactly
+the shortcut chunk 23 would be tempted by — naming this chunk in advance — and it caught it in
+the act. The fix moved the test to `cmd/api`, where it starts the real `serve()` over a socket
+and proves the registration a deployment gets rather than one a test did to itself.
+
+**Bogdan replied at 23:14, his first message all day**, asking for a page listing everything he
+has to do himself. Built and sent as an artifact, organised by where he would actually do each
+thing, with what breaks without each and my recommendation on every question:
+https://claude.ai/artifact/AUfdE5PDtUCDJc11crpB4S

@@ -9,9 +9,20 @@
 > operator messages him. Do not undo that.
 >
 > **What is running:** link **14** is `api-f1`, tmux `kr2build-14`, Opus, in
-> `~/data/kinreply/api`, on **chunk 23** (account health on the Zernio path). **Chunks 1-16 and
-> 18-22 done and pushed. CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.**
-> Links 1-13 retired. `citations`/`vet` exit 0, `make gate` green. Migration **00022**.
+> `~/data/kinreply/api`, on **chunk 24** (rate limits). **Chunks 1-16 and 18-23 done and pushed.
+> CHUNK 17's echo half done, its ACTIVE POLL deliberately unstarted.** Links 1-13 retired.
+> `citations`/`vet` exit 0, `make gate` green. Migration **00022**.
+>
+> **THERE IS NOW A `pre-commit` HOOK in the api repo** (`.git/hooks/pre-commit`, `bb37bc1` in the
+> mandate). It refuses a commit that cannot build, fails `vet`, or cites a test that does not
+> exist — fast and PARTIAL on purpose, no test suite, because a slow hook gets bypassed. **Two
+> links in three chunks committed on a red tree**, both by putting the check and the commit in one
+> shell command; the rule did not hold, so this is a control instead. Negative case run: a
+> deliberately broken file was refused. `--no-verify` for a knowing WIP commit.
+>
+> **BOGDAN REPLIED AT 23:14 CEST**, first message all day, asking for a page of everything he must
+> do himself. Built and sent: **https://claude.ai/artifact/AUfdE5PDtUCDJc11crpB4S** — keep it
+> current at that same URL as items close.
 >
 > **MILOS HAS A REGENERATION EVENT WAITING** — chunk 22 added `startZernioConnect` to
 > `openapi/kinreply.yaml`, generated clients committed alongside. Additive: nothing removed or
