@@ -12968,3 +12968,52 @@ Surfaced as his decision instead.
 One consolidated message to `#agent-hotline-80`: I am up, what is the task, here are the
 two unsent lines, plus the three items still his. Re-read the channel afterwards to
 confirm it actually landed rather than trusting `hotline-say`'s silent exit. Now waiting.
+
+## 2026-09-20 02:37–02:45 CEST — retasked as overseer of the kinreply Phase 2 build
+
+His instruction arrived relayed, verified rather than relayed on trust
+(`1551029453956587571`, 02:37 CEST): spawn an agent to build Phase 2 in
+`~/data/kinreply/api`, an ultra-long chained autonomous build that spawns its own
+successor per chunk and its own reviewers within a chunk, full access including
+system-wide installs, ping him at the end of each chunk. **I am the overseer.**
+
+Read the two docs he named. The mandate (`AUTONOMOUS-BUILD-PHASE2.md`, 177 lines) is
+mature and strict — chaining, invariants, scope limits, the adversarial-reviewer rule,
+the silent-skip trap where `go test` prints `ok` for a package that ran nothing. The one
+thing absent was his new instruction, the per-chunk ping. **I put it in the mandate file
+rather than only the seed prompt, because the mandate is all a successor inherits** —
+link 2 would otherwise never have learned the duty existed.
+
+**I got the shape wrong first and he corrected it inside three minutes.** My first
+version gave the chain its own agent identity and Discord channel so it could ping him
+directly. His words: *"YOU are the overseer. You contact me. You oversee the whole build,
+manage changing agents."* He is right and the mistake is embarrassing in context — a
+build with its own channel is a **second voice**, and keeping him to one voice is the
+literal first line of my job description. Rewritten and re-committed (`1df1b76` then
+`2d2b663`) before a single link ran, so nothing inherited the wrong design.
+
+**The rewrite also fixed something real rather than just obeying.** The chain no longer
+self-chains: a link finishes, logs, reports, exits, and **the operator spawns its
+replacement**. Phase 1's self-spawn worked, but nobody verified the successor actually
+came up — and an agent wedged on the folder-trust prompt is invisible to `tmux ls`, which
+lists the session happily either way. Now a human-facing checkpoint (his per-chunk ping)
+sits at exactly the moment the handoff happens, so the oversight costs nothing extra.
+
+**The cost of that, stated to him rather than hidden:** the chain now depends on me being
+alive. If I die mid-chain it stalls instead of self-healing. The watchdog restarts me
+within five minutes and the handoff banner now leads with how to find and restart a
+stalled chain, but it is a genuine trade and he should not discover it later.
+
+**Link 1 spawned and verified working, not merely listed:** `api-8d`, tmux `kr2build-1`,
+Opus, bypass permissions, declared as my subagent with `--no-channel` so the roster sees
+it and Discord does not. Captured the pane rather than trusting `tmux ls` — no trust
+prompt, mandate read, establishing the Phase 1 `make check` baseline before touching a
+line. Chunk 1 is spec-only and writes no code.
+
+Seed prompt written to a file and passed as `"$(cat ...)"`, and the backtick rule is in
+both the seed and the mandate with instructions to propagate it to every spawned reviewer
+— that rule bit on 09-19 precisely because it lived in one project's notes while the
+agent that needed it worked elsewhere, which is this chain's exact shape.
+
+Reported to him in one consolidated message and confirmed both parts landed by re-reading
+the channel. Now waiting on link 1's chunk-1 report.

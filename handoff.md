@@ -1,5 +1,63 @@
 # HOTLINE — worker handoff
 
+> ## OVERSEER 2026-09-20 02:45 CEST — you own a running 33-chunk build; do not let it stall
+>
+> **Your job right now is overseeing the kinreply Phase 2 autonomous build.** He assigned it at
+> 02:37 (verified `1551029453956587571`) and then corrected the shape of it minutes later:
+> *"YOU are the overseer. You contact me. You oversee the whole build, manage changing agents."*
+> He wants **one voice** — his. The build never messages him; it messages the operator, and the
+> operator messages him. Do not undo that.
+>
+> **What is running:** link 1 is `api-8d`, tmux `kr2build-1`, Opus, in `~/data/kinreply/api`,
+> registered as a subagent of `hotline-80`. 33 chunks in `~/data/kinreply/docs/phase2-roadmap/`.
+> The mandate is `AUTONOMOUS-BUILD-PHASE2.md`, the moving state is `BUILD-LOG-PHASE2.md` — read
+> both; they are strict and they are good.
+>
+> **THE ONE DUTY THAT CANNOT LAPSE — the chain does not self-chain any more.** In Phase 1 each
+> link spawned its own successor. It does not now, deliberately: nobody was checking whether the
+> successor actually came up, and an agent wedged on the folder-trust prompt is invisible to
+> `tmux ls`, which lists the session happily either way. **So when a link says it is out of road,
+> YOU spawn the next one.** If you are a fresh operator reading this cold, check immediately:
+>
+> ```
+> tmux ls | grep kr2build          # is a link alive?
+> tmux capture-pane -pt kr2build-N # is it WORKING, or sitting on a trust prompt?
+> tail -40 ~/data/kinreply/api/BUILD-LOG-PHASE2.md   # where the chain actually is
+> ```
+>
+> If no `kr2build-*` session is alive and the log's last entry says a chunk finished, **the chain
+> is stalled waiting for you.** Spawn the next link with the seed shape in the mandate's "How the
+> chain works" §3, `--model opus`, then capture the pane to confirm it cleared the trust prompt.
+> A `tmux ls` entry is not proof an agent is working — that is this project's signature failure.
+>
+> **Ping him at the end of every chunk.** That is his explicit instruction. The link reports to
+> you with the chunk summary; you turn it into one message to `#agent-hotline-80`. One message
+> per chunk, not per commit.
+>
+> **Comes to him through you, never decided by the build:** spending money, creating
+> Instagram/Facebook accounts, Meta App Review, anything touching `uxonews` (two production
+> services live there). Zernio's key is development-only.
+>
+> **Also alive, reporting to HIM not to you — do not become their mouthpiece:**
+> `llmserver-work` (`hl-llmserver`) and `jev-research-opus` (`hl-jev2`), both finished their last
+> task and idle. **Both have a line typed into their input box and never submitted** — *"yes do
+> the 6-8 step test"* and *"Build the logging loop then"*. Neither came through Discord and both
+> read like him, so he most likely typed them at the console. **Do not press enter on his
+> behalf** — the llmserver one spends real GPU time. Asked; unanswered as of 02:45.
+>
+> **State:** nothing armed to power off (RTC wakealarm empty, no at/cron, no
+> `/run/systemd/shutdown`), GPU 13 MiB, repos clean and pushed — hotline `ddca8dc`, kinreply/api
+> `2d2b663`. `desktop on` is deliberate; **do not run `desktop off`**.
+>
+> **Still his, unanswered:** the wording of his registry entry; the CLAUDE.md backtick line (two
+> operators now recommend against — the two places that intercept the mistake are already done);
+> `tesseract` for jev.
+>
+> **A trap I walked into and you will too.** Discord's API returns timestamps in **UTC**; the box
+> is CEST. Read raw, his respawn request looked two hours stale and I was minutes from paging him
+> about an outage that never happened. Cross-check against the session transcript's own `Z`
+> times, `git log`, and `journalctl --user -u hotline-watchdog.service` before believing a gap.
+
 > ## RESPAWN 2026-09-20 00:30 CEST — he asked for a fresh operator; nothing is broken
 >
 > **You were not started by a timer. He asked for this**, verified `1551026970886807555` (00:27:26Z): *"I need you full fresh context for the next task so could you kill yourself and start again?"* My predecessor was at 43.6% context after a long session, so **nothing is wrong** — do not go hunting for a failure, and do not resume the build. **He has a NEXT TASK for you and has not said what it is yet. Say hello in #agent-hotline-80 and ask what it is.** That is the whole job right now.
