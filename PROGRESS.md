@@ -13726,3 +13726,52 @@ building chunk 9 regardless.
 
 Note for whoever inherits this: `ls -t` failed again because `ls` is `eza` here, which is the
 standing trap. Used `/usr/bin/ls` to confirm both `phase2.env` backups exist.
+
+## 2026-09-20 09:50 CEST — I killed link 5 mid-edit; link 6 caught it
+
+Link 6 opened by correcting my handoff: *"nothing is half-built; everything is pushed" was
+NOT true.* It was right, and the failure is mine.
+
+**What happened, from the commit clock rather than from anyone's account.** Link 5's last
+commit was `6abf32c` at 09:33:25. My cleanliness check on all four repos ran at about 09:36
+and returned `dirty=0` — genuinely accurate at that moment. Link 5 then kept working and
+wrote **281 lines across five files at 09:38**. I spawned link 6 at 09:38:09 and killed link
+5 roughly thirty seconds later. **I reused a check across a window in which the thing it
+described changed.** Not a missing check — a stale one, and the staleness was under two
+minutes.
+
+**The orphaned work was not scratch.** It was a check refusing a connect whose token is
+missing permissions it needs — written in response to the four-of-eight configuration
+finding, and precisely the guard that stops a seller connecting an account that looks healthy
+and receives nothing.
+
+**Link 6 did the right thing at every step.** It did not trust the diff: verified it built,
+mutated the check away and confirmed all four tests failed, then found `make check` was
+**not** green — the gate's Graph stand-in answered `debug_token` with a single scope, which
+is exactly what an under-scoped configuration looks like, so the end-to-end connect refused
+itself. It fixed the stand-in, committed as `af61b85` with the provenance stated in the body
+so nobody later reads the work as its own. I verified the commit, the body and the clean tree
+rather than taking its word.
+
+**Its stand-in decision is the sharpest thing in the commit.** It serves `graph.LoginScopes`
+— what we *ask* Meta for — and deliberately not `graph.RequiredScopesFor`, what the check
+compares against. Serving the required set back would compare a list to itself and pass
+whatever it held: a test that cannot fail. Serving what we ask makes the gate fail the day
+the two diverge, which is the day something is required that no consent screen requests — a
+token that can never be granted. Verified by mutation in both directions.
+
+**The root cause is a belief I wrote into the mandate myself.** It said "sending the report
+is the last act of your turn". I inferred that from links 1 and 2 sitting idle after
+reporting — generalising a mechanism from two observations. Both behaviours happen and the
+report predicts neither. **Encoding an inference as a fact in the document every successor
+inherits is the more expensive half of the mistake**, and it is the same shape as the
+degraded "never touch these files" rule that misled sessions here for a week.
+
+**Fixed in three places rather than acknowledged in one:** the mandate now tells links to
+commit and push *before* reporting, defines a report as a promise the tree is clean, and
+gives an explicit escape for a link that intends to keep working (`f3ea6fb`); the handoff
+banner's reaping recipe now says to re-check `git status` and capture the pane **in the same
+breath as the kill**, never reusing an earlier check, and to treat a dirty tree or mid-turn
+pane as not-finished whatever was reported (`162e51c`); and a standing memory note so it
+outlives this session. Told Bogdan plainly rather than leaving it in a log he would have to
+go looking for.
