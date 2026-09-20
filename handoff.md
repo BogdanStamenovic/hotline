@@ -26,17 +26,35 @@
 > id**, so chunk 18's identity measurement CANNOT fire through Zernio. Meta's route still
 > answers it. Do not let a later chunk expect it there.
 >
-> **TWO LIVE, TEMPORARY THINGS FROM CHUNK 20 — track these, they are outside the repos:**
-> 1. A **Zernio webhook subscription** (`6ab01c60a9cd421b6b97d49e`) is registered against
->    `https://kinreply.uxonews.com/webhooks/zernio`, which currently serves **502**. Harmless
->    while no account is connected; it becomes real the moment **chunk 22** connects one.
->    Repoint it with `PUT /v1/webhooks/settings` — never create a second.
-> 2. A temporary `kinreply.uxonews.com` block in **uxonews's Caddyfile**, proxying ONLY
->    `/webhooks/zernio` to archserver over the tailnet; `/v1` deliberately not exposed. Backup:
->    `Caddyfile.bak.chunk20-20260920-174715`. **I verified the carve-outs held the discriminating
->    way:** `uxonews.service` and `dds.service` both still show `ActiveEnterTimestamp`
->    2026-09-11 06:55:00 UTC (unchanged since this morning — never restarted), and caddy shows
->    2026-08-24, so it was reloaded, not restarted. uxonews.com 307→/login→200, dds 200.
+> **AN INSTAGRAM ACCOUNT IS ALREADY CONNECTED THROUGH ZERNIO, AND IT WAS CONNECTED BEFORE THIS
+> CHAIN STARTED.** `personamail420420` / MarkicJavicanski, accountId `6aaf18dd8d284ffb211dec90`,
+> connected 2026-09-19 23:21 UTC. **I verified every claim myself against Zernio's API with the
+> dev key:** status `healthy`, token valid to 2026-11-18 (59 days), `missingRequired: []`,
+> `canPost: true`, and — the part that matters — **`instagram_business_manage_comments` and
+> `instagram_business_manage_messages` are both granted**. Those are exactly the two capabilities
+> the Meta config shortfall denies us. **The Meta wall does not block the Zernio path.**
+>
+> **CHUNK 20's "no account is connected" PREMISE WAS FALSE WHEN WRITTEN** — the account predated
+> it by ~18 hours — and it propagated into four documents including an earlier version of this
+> banner. It was harmless anyway, measured not assumed: `GET /v1/webhooks/logs` returns exactly
+> two rows in its whole history, chunk 20's own two `webhook.test` deliveries, both 200. **No
+> real event has ever fired at that subscription**, because the account has `mediaCount 0` and
+> `followersCount 0` — there is nothing to comment on.
+>
+> **The Zernio subscription `6ab01c60a9cd421b6b97d49e`** still points at
+> `https://kinreply.uxonews.com/webhooks/zernio` (502 until `cmd/api` runs behind it). Repoint
+> with `PUT /v1/webhooks/settings`; **never create a second**. The temporary
+> `kinreply.uxonews.com` Caddy block proxies ONLY that path; backup
+> `Caddyfile.bak.chunk20-20260920-174715`. Carve-outs verified by service start timestamps.
+> Zernio free tier is 2 connected accounts; we are at 1, so a second costs nothing and a third
+> returns 402.
+>
+> **FOUR THINGS WITH BOGDAN AS OF 21:15** — none blocking chunk 22, all four standing between
+> this build and its first real end-to-end delivery in 22 chunks: (1) post ANYTHING from that
+> account, it has zero posts so no comment can exist; (2) a second Instagram account to comment
+> FROM, since the parser drops self-comments by design; (3) **his explicit YES to send** — a real
+> DM and a real public comment leaving a real account is outward and nobody here decides it;
+> (4) confirm `personamail420420` is his test persona before provisioning is wired to its id.
 >
 > **THE MANDATE HAS GAINED TEN RULES TODAY** (`cdc618e`, `6578611`, `d43ae55`, `933bc1e`, `1d734cc`): never write a count, write
 > the property and the command that checks it; cite tests by names `make check` verifies; a
