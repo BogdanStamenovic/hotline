@@ -9,10 +9,18 @@
 > operator messages him. Do not undo that.
 >
 > **What is running:** link **10** is `api-71`, tmux `kr2build-10`, Opus, in
-> `~/data/kinreply/api`, on **chunk 16 of 33** (rate-limit scope fix). **Chunks 1-15 done and
-> pushed.** Links 1-9 retired. Tree at `make check` 2086 tests / 0 skips, `make gate` green.
-> Latest migration on disk is **00021**; the next is 00022. Link 10 had road left at the
-> chunk-15 boundary and is carrying on.
+> `~/data/kinreply/api`, on **chunk 17 of 33** (reconciliation poller for indeterminate sends).
+> **Chunks 1-16 done and pushed.** Links 1-9 retired. Tree at `make check` 2116 tests / 0 skips,
+> `make gate` green. Latest migration on disk is **00021**; the next is 00022. Link 10 has done
+> chunks 15 and 16 and is carrying on; I told it to stop at chunk 17's boundary if it starts
+> re-reading what it has already read.
+>
+> **`make check` GAINED A STEP (chunk 16):** `citations` fails the build when a comment in
+> shipped source or a migration names a `Test` that does not exist. Chunk 15 shipped five stale
+> ones at once. I ran it myself: "test citations: ok".
+>
+> **THE MANDATE GAINED A RULE (`cdc618e`), after six consecutive chunks shipped a wrong count:**
+> never write a count, write the property and the command that checks it.
 >
 > **NOTE THE BRANCHES — they are not all `main`:** api and lifecycle track `origin/main`,
 > kinreply-db tracks `origin/phase1-sql-schema`, docs tracks `origin/phase1-api-spec`. Checking

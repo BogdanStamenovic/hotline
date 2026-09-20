@@ -14149,3 +14149,52 @@ test's *duration* instead of its *name* — the uninformative verdict link 6's n
 prevent, reproduced by code written to follow that note. And a fixed clock blindfolded an
 `ORDER BY` one chunk after link 9 wrote that lesson down. Both are in chunk 16's guidance,
 since that chunk is timestamps and ordering end to end.
+
+## 2026-09-20 15:55 CEST — chunk 16, and turning a six-chunk pattern into a rule
+
+**Chunk 16 done and pushed** (api `50b887f`, docs `7814bb6`): rate-limit dual counting and the
+business-use-case early warning. 2116 tests, 0 skips, gate green, no migration.
+
+**Two real bugs, neither found by a test going red.** Our rate-limit account counter was keyed
+on *our* ULID while the Page counter beside it was already keyed on *Meta's* id — and Meta
+counts per professional account by its own id. After a workspace erasure and a fresh connect we
+would start an empty bucket while Meta's counter had not moved, and send straight past the cap.
+Found by asking which id Meta counts on.
+
+The second is a warning we were being handed for free and discarding: Meta returns a usage
+header on **every** response, and we read it only inside the error path — so every successful
+send threw away Meta's own notice that usage was climbing, and the first signal would have been
+the 429. Read on every path now, worst-per-metric, threshold 80, debounced per account. Meta's
+own docs say the business-use-case limit wins where both apply, which is why its header beats
+our counting as a leading indicator.
+
+**The change broke three test helpers without breaking a test.** They matched on hand-written
+copies of the old key, so afterwards they matched nothing and reported success — and in one
+package nothing ever asserted a *positive* count, so three "no quota was spent" assertions would
+have passed vacuously forever. **A helper that reports success when it matches nothing is a test
+that cannot fail, wearing a helper's clothes.** Same shape as chunk 14's "nothing tested that
+the measurement is still being taken", and I flagged it into chunk 17, which is a poller made
+almost entirely of helpers whose default answer is "found none, all good".
+
+**I made a process change rather than noting a pattern.** Six consecutive chunks shipped a wrong
+count in a comment, three in chunk 16 alone. Two of the earlier ones mattered — "the three
+columns it does not clear" (four) and "three other writes take this guard" (four, and the missed
+one irreversibly erases a third party's data). The standing mandate every future link inherits
+now says: **never write a count; write the property and the command that checks it** (`cdc618e`).
+A count is a fact about the tree at the moment of typing; the tree changes and nothing fails. A
+property cannot be wrong by omission. Link 10's own formulation, promoted from a report into the
+document.
+
+Alongside it, chunk 16 added `citations` to `make check` — the build now fails when a comment in
+shipped source or a migration names a test that does not exist. Chunk 15 shipped five at once,
+and the sentence they carried argued for a database index on the strength of a demonstration
+that had been deleted. I ran it myself rather than take the claim: `test citations: ok`.
+
+**Seventeen for seventeen on reviewers**, and this round's best was again the signature defect
+found by someone hunting it: a comment claiming the failure path never loses the usage header,
+covering one of the three ways a call can fail. The missed one includes a 2xx whose body will
+not decode — where the code's own comment says the message "may well have gone out", so the
+quota was spent and that is exactly where the signal is worth having.
+
+**Two of four criteria unreachable**, same blocker as chunk 15, and said plainly rather than
+rounded up.
