@@ -13327,3 +13327,53 @@ keeps the gate meaningful.
 
 Told it to resolve the `KINREPLY_ALERT_TO` naming disagreement and the 00014 migration
 collision **inside** chunk 4 rather than leaving either behind for chunk 25 to rediscover.
+
+## 2026-09-20 06:25–06:35 CEST — chunk 4 done; and I under-verified my own fix
+
+Link 3 finished chunk 4 (alert delivery from `operational_event`) and asked whether to
+carry on. Told it yes. Verified first: api `48f757c`, docs `aea9b3b`, lifecycle `76a0ca1`,
+kinreply-db `5468c8f`, all four clean and level with origin, `00014_alert_digest_state.sql`
+in place, chunks 25 and 26 renumbered.
+
+**The correction that matters is to my own work from an hour earlier.** Link 3
+independently re-checked my secrets-file fix, initially concluded I was wrong about the
+inline comment, proved itself wrong by running the binary, and credited my method. **Its
+credit was misplaced and I said so.** We both verified with `adm` — and `cmd/adm` calls
+`crypt.RefuseRetiredEnv` and **never calls `crypt.LoadKeyringFile`**; only `cmd/api` and
+`cmd/worker` do. So what we had both proven was that the refusal was cleared, not that the
+replacement works. A check that could not have failed in the way that mattered, which is
+this project's signature failure committed by me while narrating it at others.
+
+Went back and verified the artifact directly: one version line, correct `<version>:<base64>`
+shape, decodes to **32 bytes so a valid AES-256 key**, mode 600 inside the `<=0640` the
+loader demands, and — the property that actually matters — the key material is
+**byte-identical to the original by sha256**, so nothing Phase 1 sealed has become
+undecryptable. Deliberately did **not** run `cmd/worker` against the shared test database to
+get an end-to-end proof: that database belongs to link 3 right now, and link 2 lost an hour
+to a reviewer driving it. Offered link 3 that proof to take on its own schedule instead.
+
+Also worth recording: the zsh trap bit again. My first comparison harness used bash-style
+`${$v}` indirection, which zsh does not do, and reported `KEY_FILE len=0` for a variable
+that is set correctly. I nearly filed my own fix as broken on the strength of it. Re-ran in
+`bash` and it was fine. See the existing note that zsh does not word-split.
+
+**Link 3's watermark find is the best of the build so far.** `ops.Record` mints its ULID in
+Go and then inserts, so id order and commit order can disagree; a poll landing between two
+such commits advances the watermark past the higher id and **loses the lower row forever** —
+exactly the failure the chunk exists to remove. It demonstrated the loss with a failing test
+*before* fixing it, bounded the fix rather than claiming a proof, quantified the residual
+(an INSERT would have to take over a minute — four to five orders of magnitude of headroom),
+and wrote down what the answer is *not* if that bound is ever exceeded. It also proved a new
+index load-bearing by dropping it and watching a test fail, rather than by watching EXPLAIN
+change, after measuring that the spec's "confirmed against the actual partial index" claim
+was false — EXPLAIN chose a sequential scan.
+
+And the warning to carry forward: its first two-replica concurrency test **passed with the
+row lock removed**, because the goroutines did not actually overlap in the microseconds that
+mattered. A concurrency test that cannot fail is worse than none.
+
+Flagged to link 3 for chunk 5: it is the first mail composed from tenant data, so the
+classification question `internal/alert` dodged by never reading `payload` is live. Told it
+to decide deliberately and record it, and that if it thinks the data-map gate's blind spot —
+now surfaced four separate times — deserves a check that can actually catch it, to say so
+and I will take it to Bogdan as a scope question rather than absorb it into a chunk.
