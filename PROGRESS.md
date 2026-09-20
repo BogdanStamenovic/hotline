@@ -14504,3 +14504,48 @@ that Meta config, the Zernio half is live-testable end to end today. I told link
 that early and explicitly rather than discover it at the end, and to report which criteria each
 path can satisfy. It does not retire the Meta ask: the Meta path is half the product and chunk
 18's question can only ever be answered there.
+
+## 2026-09-20 21:25 CEST — the wall was already down, and nobody had looked
+
+Link 13, asked to establish the Zernio-versus-Meta question deliberately rather than discover it
+at the end, **went and looked instead of reasoning** — and found an Instagram account already
+connected through Zernio, `personamail420420` / MarkicJavicanski, connected **2026-09-19 23:21
+UTC, the day before this build chain started**.
+
+**I verified every claim against Zernio's API myself with the dev key**, because this is the most
+consequential finding of the build: status `healthy`, token valid to 2026-11-18 (59 days),
+`needsRefresh false`, `missingRequired []`, `canPost true`, `issues []` — and in
+`permissions.optional`, **`instagram_business_manage_comments` and
+`instagram_business_manage_messages` both granted**. Those are exactly the two capabilities the
+Meta login-config shortfall denies us, the thing that has deferred chunks 8 and 14-19. **The Meta
+wall does not block the Zernio path**, and Zernio's free tier is two accounts against our one.
+
+**The premise correction is the more valuable half.** Chunk 20's log states that no account is
+connected and that the webhook subscription "becomes a problem the moment chunk 22 connects one".
+The account predated chunk 20 by about eighteen hours. That false premise propagated into four
+documents **including my own handoff banner** — the document every future link inherits.
+Corrected there (`85ee8d5`). **That is the second time today a peer's stated premise travelled
+through me into a successor's inheritance**; the first cost link 8 a false "chunk 27 owns this".
+Both were caught by measurement rather than by re-reading.
+
+It was harmless anyway, and measured rather than assumed: `GET /v1/webhooks/logs` returns exactly
+two rows in its entire history — chunk 20's own two `webhook.test` deliveries, both 200. I
+confirmed that myself. No real event has ever fired, because the account has `mediaCount 0` and
+`followersCount 0`. **There is nothing to comment on.** The remaining obstacle is human, not
+technical.
+
+**Four asks now with Bogdan**, none blocking chunk 22: post anything from that account; a second
+Instagram account to comment from (our parser drops self-comments by design); **his explicit yes
+to send**, since a real DM and a real public comment leaving a real account is outward and
+neither the agent nor I decide it — I recommended yes, scoped to those two accounts, because the
+alternative is shipping a send path that has never sent; and confirmation that the account is his
+test persona before provisioning is wired to its id.
+
+**Boundaries set with link 13 while he is silent:** nothing outward, no second account connected,
+and provisioning parameterised rather than wired to that id as a hard fact.
+
+**What this does not change:** the Meta path is half the product and still blocked on the same two
+permissions. Our OAuth, token refresh, token health, the dual rate-limit counting and chunk 18's
+identity question all live there — and chunk 18 especially, since Zernio's private-reply response
+carries no recipient id. The Facebook permissions ask stands; it just no longer holds up
+everything.
