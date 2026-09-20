@@ -13851,3 +13851,54 @@ encryption keys. It is a secrets store and was never a runtime config.
 **One of my own:** I ran `hotline-say` twice and double-posted the chunk-9 report, because it
 prints nothing on success and I read the silence as a failure. Told him in one line rather
 than leaving him to wonder.
+
+## 2026-09-20 11:40 CEST — chunk 10, and the first link that asked rather than assumed
+
+**Chunk 10 done and pushed** (api `d6360cc`, `65172b0`, `7232fd6`; docs `90bb893`): disconnect
+and reconnect over /v1, with `cmd/adm` never invoked. 1879 tests, 0 skips, gate green. I
+checked all four trees, every commit it named, and that `kinreply-db` and `lifecycle` really
+were untouched, rather than taking its word.
+
+**The design call is the interesting part: there is deliberately no reconnect endpoint.**
+Reconnecting a disconnected account and re-authorising a live one whose token quietly died are
+the same action, and the row is revived in place so it keeps its id — and therefore every
+contact, conversation, automation and send claim. An endpoint named "reconnect" could only
+duplicate the login-url call or imply a token refresh that is impossible for a Page token
+rather than merely unbuilt. Three of the contract spec's four chunk-10 rows were stale and are
+corrected. That preservation property is exactly what handler tests cannot see fail: everything
+cascades from `channel_account_id`, so a disconnect written as a DELETE returns a cheerful 200
+and empties the inbox.
+
+**I verified the OpenAPI claim myself because it is the one that leaves the building.** Exactly
+one operation added (`disconnectChannelAccount`), none removed or renamed, `authKind` added as
+a response field, and the document's only `additionalProperties: false` belongs to
+`LogoutRequest` — referenced at a request body, which is the one place the keyword is harmless.
+So "you may regenerate when you want a disconnect button" is right and "you must" would have
+been wrong. Told Bogdan in those words.
+
+**A second false-green mutation in two links, and both were caught only by link 6's harness
+fix.** The mutated SQL was invalid, so every test failed for the wrong reason and the harness
+scored it CAUGHT; re-run as valid SQL it *survives*, because RLS is the real control and the
+query predicate is defence in depth. It kept the survivor with the measurement written next to
+it rather than inventing a test to make it green. Printing *which* test failed is now
+load-bearing and I told link 7 to say so to its successor.
+
+**The best reviewer finding in ten chunks is not a runtime bug.** A comment counted the other
+writes taking the deletion-pending guard and said "three". There are four — and the comment
+exists to justify why disconnect does *not* take that guard, so an auditor using it as an
+inventory misses one. The one it misses is `ForgetContact`, which irreversibly erases a third
+party's data. Named now instead of counted.
+
+**Found and deliberately not fixed:** the connect endpoints from chunks 8 and 9 never check
+whether the workspace is scheduled for deletion, so a connect inside the seven-day grace period
+seals a live Meta token into rows about to be destroyed and auto-replies to real customers for
+the rest of it. Link 7 reported it instead of editing a shipped, client-visible surface in
+passing — the right call. Recorded in the build log's open list and in the handoff banner, so
+whoever seeds link 8 carries it.
+
+**Link 7 asked whether to hand over instead of deciding for itself**, which is the behaviour
+the mandate now asks for and the first time a link has used it at a clean boundary with road
+left. Context moderate, nothing in flight, so it is carrying on into chunk 11. I gave it one
+thing it would otherwise have found at the end: Meta's own dashboard says an app must be
+published for webhooks to be delivered at all, so chunk 11 can prove "subscribed" and cannot
+prove "receiving". Going Live is Bogdan's call and I have not asked for it yet.
