@@ -8,17 +8,20 @@
 > He wants **one voice** — his. The build never messages him; it messages the operator, and the
 > operator messages him. Do not undo that.
 >
-> **What is running:** link **11** is `api-17`, tmux `kr2build-11`, Opus, in
-> `~/data/kinreply/api`, on **chunk 19** (failure paths). **Chunks 1-16 and 18 done and pushed;
-> CHUNK 17's echo half done and reviewed, its ACTIVE POLL deliberately unstarted.** Links 1-10
-> retired. Tree at `make check` 2183 tests / 0 skips, `make gate` green. Latest migration
-> **00022**.
+> **What is running:** link **12** is `api-96`, tmux `kr2build-12`, Opus, in
+> `~/data/kinreply/api`, on **chunk 20** (the Zernio webhook route — a NEW VENDOR, and likely
+> the first chunk in a while whose criteria are reachable, since we own the secret). **Chunks
+> 1-16, 18 and 19 done and pushed; CHUNK 17's echo half done, its ACTIVE POLL deliberately
+> unstarted.** Links 1-11 retired. Tree at `make check` 2202 tests / 0 skips, `make gate` green.
+> Latest migration **00022**.
 >
-> **THE MANDATE HAS GAINED FOUR RULES TODAY** (`cdc618e`, `6578611`): never write a count, write
+> **THE MANDATE HAS GAINED SIX RULES TODAY** (`cdc618e`, `6578611`, `d43ae55`): never write a count, write
 > the property and the command that checks it; cite tests by names `make check` verifies; a
 > mutation pass scoring 100% first try is a result about your mutations, so write the second pass
 > against the code you did not think about; and when you cannot measure which branch reality
 > takes, prove both branches — a wall is often only half a wall.
+> Plus: before writing "nothing does X", grep properly and say which command you ran; and
+> **silence is not a statement** — a vendor not mentioning something is not a claim about it.
 >
 > **CHUNK 17's ACTIVE POLL MUST NOT BE BUILT AS WRITTEN** — the case is at the top of
 > `docs/phase2-roadmap/chunk-17-reconciliation-poller.md`. Its `CONFIRMED_NOT_SENT` re-queue

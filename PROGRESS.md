@@ -14334,3 +14334,49 @@ across a job retry — accepted rather than guarded, because the guard would be 
 scan on the hot path to deduplicate a warning nothing branches on, and pinned with a test named for
 the limitation so nobody reads a row count as an incident count. A known limitation with a test
 under it beats a fix nobody asked for.
+
+## 2026-09-20 18:30 CEST — chunk 19, where three of five assumptions were wrong
+
+**Chunk 19 done and pushed** (api `8cb0f78`, docs `b770ca0`): the failure paths. 2202 tests, 0
+skips, gate green, no migration. Link 12 is on chunk 20; link 11 retired after two chunks.
+
+**It opened its own report with "none of the six criteria is met."** Every one needs a real
+connected Meta account. What was reachable was the assumptions underneath the five failure
+scenarios, and **three were wrong**.
+
+**The one that matters to a seller: Meta's code 102 matched nothing.** It fell through to the
+unrecognised-code default, which is TRANSIENT — so an expired credential was being *retried*,
+ended FAILED/TRANSIENT, and read as "Meta had a bad moment" while the alert telling the seller to
+reconnect never fired. Meta's error page gives 102 the same sentence it gives 190, which we do
+handle. Bounded by the daily token check, and it said so rather than overstating it.
+
+Two more of the same shape: Meta documents its permission errors as the **range** 200-299 and only
+200 was listed; and a permission failure raised nothing at all, landing in an unnamed default. The
+new alert names **both** causes — a seller's revocation and a permission the app never had —
+because Meta gives those codes identical descriptions and they have opposite remedies. Its
+phrasing: *a message that picked one would be a guess printed as a diagnosis.* And the daily check
+now compares the scope list it has been reading from Meta since chunk 13 and never looked at.
+
+**Three mistakes reported unasked, and the first is the most interesting.** It wrote in three
+places that "Meta's page is explicit that only revoking ALL authorisation invalidates a token".
+Meta says nothing whatever about the single-permission case. It read an asymmetry as a statement —
+in the chunk whose entire method is checking assumptions — and its own fact-checker caught it. It
+also recorded work as not-built on the strength of a **bad grep** (three callers, not one; the
+thing it said needed a new column needed nothing), and wrote "no part of this system reports it"
+about a failure the system does report — what was missing was the cause and the remedy.
+
+**Two more rules into the mandate (`d43ae55`), because I told him I had:** before writing "nothing
+does X", grep properly and say which command you ran; and **silence is not a statement** — a
+vendor not mentioning something is not a claim about it. Six rules went into that document today.
+
+**The new mutation rule earned its place the day it was written.** Chunk 19's second pass — aimed
+at code nobody had tested — found a test whose own comment claims it catches a forgotten error
+category, while it compared two hand-written lists to *each other*, so adding a category and
+forgetting both passed. It reads the source now, verified by adding a throwaway category and
+watching it fail. The same pass found a debounce with no test at all.
+
+**Twenty for twenty on reviewers**, and this one *computed* what the agent had only argued: it had
+said an alert needed no debounce because the digest groups them — true about the mail, but the
+reviewer worked out the database rows, and a public comment reply is deliberately exempt from our
+rate limiting, so nothing capped those at all into a table kept ninety days. Debounced, and the
+identical defect in the function next door, unbounded since Phase 1, fixed with it.
