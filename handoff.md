@@ -4520,3 +4520,51 @@ from here. The confirmation also carried the top task now at the top of this fil
 4. The `CLAUDE.md` snapshot line (since the 28th).
 
 Going down.
+
+## Meta dashboard: the one-pass target (written 2026-09-21, while he cleared a security checkup)
+
+**Blocked at the time of writing.** App `1064625406364662`'s dashboard redirects to
+`developers.facebook.com/r/user/error/` — "Account confirmation needed, unusual activity
+on this developer account", logged in as **Test Testovic**. This is NOT only a UI lockout:
+the **app access token** (no user session in it) returns `"API access blocked."`
+OAuthException **code 200** on both the app object and `/subscriptions`. Recheck with:
+
+    curl -sS -G "https://graph.facebook.com/v21.0/$APP_ID" --data-urlencode "access_token=$APP_ID|$APP_SECRET"
+
+When that stops saying "API access blocked", access is back. It touches nothing of his.
+
+**Zernio is unaffected and was verified in the same breath** — account
+`6aaf18dd8d284ffb211dec90` / `personamail420420`: `isActive: true`,
+`platformStatus: "active"`, `needsReconnection: false`, and all five permissions still
+granted, `instagram_business_manage_comments` and `instagram_business_manage_messages`
+included. It runs on ZERNIO'S Meta app, which is why our block does not reach it.
+
+**The fix target is the CONFIGURATION, not the use cases.** Facebook Login for Business
+takes its permissions from `config_id` (`KINREPLY_META_LOGIN_CONFIG_ID=3009212886077369`),
+and `scope=` is ignored on that path — see the comment at `internal/graph/oauth.go:158`.
+The use cases only govern what is *offerable* to the configuration. So: open the
+configuration, make its permission set equal `graph.LoginScopes`
+(`internal/graph/oauth.go:61`), and only drop to the use-case screens for a permission the
+configuration will not offer.
+
+The eight, with the use case that gates each:
+
+| Permission | Use case | State on 09-20 |
+|---|---|---|
+| `pages_show_list` | Manage Pages | present |
+| `pages_read_engagement` | Manage Pages | **MISSING — four silent failures** |
+| `pages_manage_engagement` | Manage Pages | **MISSING — four silent failures** |
+| `pages_manage_metadata` | Manage Pages | present |
+| `pages_messaging` | Messenger | unknown, screen never opened |
+| `instagram_basic` | Instagram | present |
+| `instagram_manage_messages` | Messenger/Instagram | unknown |
+| `instagram_manage_comments` | Instagram | present |
+
+Do NOT submit App Review and do NOT publish the app — both are standing constraints.
+
+**If the checkpoint demands government ID, this account does not come back**, because the
+account is the persona "Test Testovic". The fallback is not to recreate the app in a
+hurry: the only Instagram account working end to end already runs through Zernio, and
+Zernio already grants the two permissions this whole Meta path kept failing to obtain.
+Recreating under a real account (his, or Stefan's — the company is in Stefan's name, and
+Stefan is pre-authorised to contact) is a decision for him, not a default.
