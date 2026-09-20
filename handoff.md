@@ -9,21 +9,26 @@
 > operator messages him. Do not undo that.
 >
 > **What is running:** link **9** is `api-10`, tmux `kr2build-9`, Opus, in `~/data/kinreply/api`,
-> on **chunk 13 of 33** (alerting, which reads chunk 12's outcome). **Chunks 1-12 done and
-> pushed.** Links 1-8 retired and marked done. Tree at `make check` 1932 tests / 0 skips,
-> `make gate` green. Latest migration on disk is **00019**; the next is 00020.
+> on **chunk 14 of 33** (webhook HMAC and unicode). **Chunks 1-13 done and pushed.** Links 1-8
+> retired. Tree at `make check` 1988 tests / 0 skips, `make gate` green (33s, down from 46s).
+> Latest migration on disk is **00020**; the next is 00021. Link 9 had road left at the
+> chunk-13 boundary and asked to continue; I said yes, as with link 7 at chunk 10.
+>
+> **THE ASK THAT IS NOW BLOCKING THREE CHUNKS' CRITERIA** is with him as of 13:10: make
+> kinreply its own **Resend API key**, because `KINREPLY_RESEND_API_KEY` is byte-identical to
+> his production `dds` sending key — then one test send to his own address. Chunks 3, 13 and
+> (partly) 4 all carry "an email is observed arriving" as unmet. **Do not send test mail until
+> he answers.** A separate key removes the blast radius on the credential, NOT on the shared
+> ~100/day free-tier quota; I told him that rather than overselling it.
 >
 > **TWO THINGS ANY SEED MUST CARRY FORWARD:**
 > 1. The connect endpoints from chunks 8 and 9 never check whether the workspace is scheduled
->    for deletion, so a connect inside the seven-day grace period seals a live Meta token into
->    rows about to be destroyed. Shipped, client-visible; in the build log's open list. **The
->    test for whether a link may touch another chunk's surface is WHO CAN OBSERVE THE CHANGE**,
->    not which chunk shipped it — chunk 12 correctly took an internal daily job's wiring under
->    that rule, with my approval and the reason written down.
+>    for deletion. Shipped, client-visible; in the build log's open list. **The test for whether
+>    a link may touch another chunk's surface is WHO CAN OBSERVE THE CHANGE**, not which chunk
+>    shipped it.
 > 2. `cmd/worker` warns rather than refuses when one Meta host override is set and the other is
->    not. So a staging deploy following the old convention of setting only
->    `KINREPLY_GRAPH_BASE_URL` points Instagram token refreshes at **real Meta**. Lands at the
->    first staging deploy, **chunk 27**.
+>    not, so a staging deploy setting only `KINREPLY_GRAPH_BASE_URL` points Instagram token
+>    refreshes at **real Meta**. Lands at **chunk 27**.
 >
 > **THREE THINGS WITH HIM, none blocking the build:**
 > 1. **The Instagram app SECRET.** I did the rest of the dashboard pass myself at 10:50:

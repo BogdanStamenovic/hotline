@@ -14001,3 +14001,50 @@ first.
 unsent "start chunk 13" when I killed it — which is precisely why the rule is now to re-check
 the trees in the same breath as the kill. They were clean at that moment and I checked them
 then, not two minutes earlier.
+
+## 2026-09-20 13:10 CEST — chunk 13, a phishing primitive with our name on it, and escalating the mail key
+
+**Chunk 13 done and pushed** (api `daf2dc6`, kinreply-db `e2baba5`, docs `941ef0b`):
+seller-facing token-health alerting. 1988 tests, 0 skips, gate green, migration 00020. The
+OpenAPI diff between `f77feaf` and `daf2dc6` is empty, so "Milos needs no message" is confirmed
+rather than assumed.
+
+**The best finding of the build so far, and it is a real security bug.** A seller's own
+Instagram handle could write its own paragraph into the email we send them. The mail is plain
+text whose structure is carried entirely by newlines; `channel_account.username` has no
+constraint and is written from Meta and from `adm`. A handle with a line break produces a
+phishing paragraph sent **by us, over our domain, past our own SPF and DKIM**.
+
+The reviewer did not find a broken guard — it found that **nothing sent the hostile input**,
+which is the blind spot this build named for itself eight chunks ago and keeps walking into.
+And the first fix was wrong in a useful way: stripping the newline left a domain-shaped token
+that mail clients autolink, so the "safe" output was still clickable and the handle identified
+nobody. The handle is now shown only when it is already a handle. Both directions
+mutation-checked.
+
+**I checked the reasoning under its biggest spec departure rather than taking it**, having been
+burned this morning by copying a peer's stated reason into a seed. The spec said to register
+three strings against chunk 4's alerting seam and not build a parallel path. `internal/alert`
+says in its own words that it never reads `operational_event.payload` — "not 'reads it
+carefully'" — is watermark-based, and deliberately does not look up its own destination. It
+cannot be a per-account, recipient-resolving, debounced alerter without becoming a different
+thing. The departure stands, and it stands because it was argued in the log.
+
+**Two of its own tests could not fail, and the mutation harness found both rather than a
+reviewer.** One drove two refresh failures at a fixed clock, so a mutation restamping the
+column daily wrote the same value twice and the assertion was blind. The other was a constant
+whose doc claimed "a test pins both ends" of its range when nothing did. A fixed clock is a
+blindfold for any assertion about *when* something was written.
+
+**Escalated the mail question properly instead of mentioning it a fourth time.** Chunk 13's
+criterion 1 is chunk 3's criterion in a different hat, and it now blocks a third chunk. Rather
+than ask again for one test send, I asked him to give kinreply **its own Resend key** —
+`KINREPLY_RESEND_API_KEY` is byte-identical to his production `dds` sending key, so every test
+send forever touches the credential his live mail depends on. I was explicit about what the
+split does *not* fix: the ~100/day free-tier allowance is per account, so the quota blast
+radius stays shared. Fix the cause, not the fourth instance of the symptom.
+
+**Link 9 had road left and asked to continue**; it is on chunk 14. It also took the gate suite
+from 46s to 33s by noticing two tests were waiting out a twenty-second long poll — the real
+enqueue path issues a NOTIFY and a test writing the row directly did not. That reads as
+flakiness and is not, and the fix pays every remaining link.
