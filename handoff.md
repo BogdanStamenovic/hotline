@@ -27,12 +27,22 @@
 > every seed, it is the highest-value line in them.
 >
 > **Still open, all HIS, none blocking:**
-> 1. **The Message Requests folder is unchecked.** Decides whether the follow-gate bug is real
->    or Instagram UX. Every DM to Stefan was accepted WITH a real message id, which means
->    delivered — non-follower private replies land in requests, not the inbox. 30 seconds.
-> 2. **Fail open or closed on unknown follow status.** The gate is built and armed; it cannot
->    see an answer for a first-time commenter (Meta gates the profile read on consent only a DM
->    grants). Watched failing open live. One policy bit, not a feature.
+> 1. ~~The Message Requests folder is unchecked.~~ **ANSWERED BY HIM 2026-09-21 16:50 UTC,
+>    provenance verified. NOT A BUG.** His words: Stefan's account "was not setup to be able to
+>    recieve message requests from random people but when he set it up that way he received the
+>    request". The DMs were delivered the whole time. Instagram UX plus a recipient-side privacy
+>    setting, nothing wrong in our code.
+>    **The lesson is sharper than the answer: a message id means ACCEPTED, not SEEN.** Same
+>    message id, invisible to the human until he changed a setting we cannot read. Outbound
+>    success counts therefore OVERSTATE reach to non-followers, by an amount nobody can measure
+>    from our side. Do not quote delivery numbers for non-followers as if they were reach.
+> 2. ~~Fail open or closed on unknown follow status.~~ **NOT ACTUALLY OPEN — already decided in
+>    code, and (1) now supports it.** `internal/reply/compose.go:43` gates on
+>    `followsUs != nil && !*followsUs`, so a KNOWN non-follower gets the follow prompt and an
+>    UNKNOWN one (every first-time commenter) gets the payload. The comment above it spells out
+>    the reasoning and ends "Do not 'fix' the NULL case to fail closed." Failing open is now
+>    empirically backed: the non-follower DM really does arrive. Leave it. Only reopen if he
+>    wants to override the design.
 > 3. ~~`hotline-iosd` is inactive~~ — **FALSE, corrected 2026-09-21 16:50 UTC.** No unit
 >    by that name exists, and `systemctl --user is-active` on a nonexistent unit answers
 >    "inactive". The real unit is **`hotline-ios`**, enabled, up since boot; `/health`

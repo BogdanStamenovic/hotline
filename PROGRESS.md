@@ -14831,3 +14831,31 @@ Proposed the fix to him; it is build work, so I did not make it.
 old roster entry said 446. Counted: 603. data-53 was right.
 
 No build resumed. No agent spawned. Waiting on him.
+
+### 16:50-16:56 UTC — he answered the Message Requests question; both open items now closed
+
+Provenance verified (`1551636652298997841`, posted 16:50:05 UTC). His words: Stefan's
+account "was not setup to be able to recieve message requests from random people but
+when he set it up that way he received the request".
+
+**Item 1 closed: the follow-gate finding is NOT a bug.** Instagram UX plus a
+recipient-side privacy setting. Our DMs were arriving all along.
+
+**And it falsifies an inference of mine from this morning.** I wrote that the DMs came
+back with real message ids "which means delivered". Too strong. A message id means
+ACCEPTED, not SEEN — the same message id sat invisible behind a setting on his side
+that we cannot read or detect. Outbound success counts overstate reach to non-followers
+by an unmeasurable amount. Recorded in the banner in those words. Same signature
+failure as always: a field read as a signal without testing what it indicates, mine
+this time.
+
+**Item 2 closed without needing him: it was never open.** Read the live code instead of
+re-asking. `internal/reply/compose.go:43` gates on `followsUs != nil && !*followsUs` —
+known non-follower gets the follow prompt (fails closed, matching seller intent),
+unknown (every first-time commenter) gets the payload (fails open). The comment above
+it already argues the case and ends "Do not 'fix' the NULL case to fail closed."
+
+Recommended leaving it, with the argument: failing closed on unknown makes the gate a
+near no-op, since a first-time commenter is exactly the unreadable case. His Stefan
+result is the empirical backing the design never had — the non-follower DM does arrive.
+Caveat stated: it arrives; whether they open their requests folder is not ours to know.
