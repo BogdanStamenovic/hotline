@@ -1,3 +1,51 @@
+> ## SHUTDOWN 2026-09-21 ~15:45 UTC — off at his instruction, PHASE 2 CRITERION 7 PASSED
+>
+> **Nothing is broken. Phase 2's last open criterion closed today.** The whole self-serve path
+> ran live with no `adm` at any point: signup → magic link → WEB cookie session → connect URL
+> minted in HIS browser → Instagram authorisation → sealed credential → automation over the API
+> → comment answered by a public reply and a DM in **4.08s**. Deployed `api 670deae`.
+> Full record: `api/BUILD-LOG-PHASE2.md`, last two entries.
+>
+> **Four bugs fixed today, in the order they were hiding behind each other.** The connect flow
+> had never been built on ANY deployment (both `KINREPLY_CONNECT_RETURN_*` arrived as empty
+> strings; `main.go` needs both non-empty or it skips the store and both starters). Fixing that
+> exposed a latent second one — compose never gave the api service the Meta app id/secret, so
+> the API crash-looped. Then the first real connect died on Zernio's `profileId` being an
+> OBJECT where our client said string. Then Bogdan spotted that every refused connect strands a
+> vendor account billing forever.
+>
+> **Two live bugs in the EXISTING account-deletion path**, found by link 20 while building
+> workspace deletion and fixed in the same change: `destroyWorkspace` told Zernio nothing, and
+> it deleted its own pending cleanup job.
+>
+> **THE OPERATOR LESSON, and it cost three corrections in one day.** Links caught **three false
+> claims in my own briefs**: a truncated `grep | head -15` reported as a complete search; a
+> bullet list that contradicted my own safe-rule sentence and would have turned a cross-tenant
+> READ check into a cross-tenant WRITE; and "thirteen forced-RLS tables" when `pg_class` says
+> fifteen. **A seed is a claim dated when written, exactly like a handoff.** Every one was
+> caught because the link verified the brief instead of executing it — put that instruction in
+> every seed, it is the highest-value line in them.
+>
+> **Still open, all HIS, none blocking:**
+> 1. **The Message Requests folder is unchecked.** Decides whether the follow-gate bug is real
+>    or Instagram UX. Every DM to Stefan was accepted WITH a real message id, which means
+>    delivered — non-follower private replies land in requests, not the inbox. 30 seconds.
+> 2. **Fail open or closed on unknown follow status.** The gate is built and armed; it cannot
+>    see an answer for a first-time commenter (Meta gates the profile read on consent only a DM
+>    grants). Watched failing open live. One policy bit, not a feature.
+> 3. `hotline-iosd` is **inactive** — `hotline-call` cannot ring him. Pre-existing.
+> 4. Milos still needs to regenerate his client ONCE; openapi is now past 46 operations.
+> 5. `personamail420420` is connected to **Criterion 7 live**, not his original `KinReply`.
+>
+> **State to trust:** postgres `StartedAt 2026-09-20T23:48:31.592517971Z` — unchanged through
+> four deploys today; deploy.sh never recreates it, by design. Two workspaces left: `KinReply`
+> (kept deliberately — 14 outbound rows that are the ONLY evidence behind today's findings) and
+> `Criterion 7 live` (the live account). `cvoiced` reaped: it held **4.77 GB of host RAM** idle
+> for 1d14h, and `/unload` frees VRAM but NOT host RAM — only a restart does (4.77 GB → 58 MB).
+> Its idle timer is on the todo in cvoice's README, deliberately not built.
+>
+> Login renewed: refresh token good to **2026-10-20**. WoL armed (`Wake-on: g`).
+
 # HOTLINE — worker handoff
 
 > ## OVERSEER 2026-09-20 02:45 CEST — you own a running 33-chunk build; do not let it stall
