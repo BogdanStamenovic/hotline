@@ -4883,3 +4883,53 @@ replay); LIVE DELIVERY unproven; REPLY configured but never fired.
 explicitly **not to mark it passed** — a gate marked passed on unrun criteria is worth less
 than no gate. Also told it to re-derive which criteria are now reachable, since the
 automations changed the answer underneath its earlier guess.
+
+## 2026-09-21 03:50 — chunk 32, the gate is NOT passed, and link 17 is on the last chunk
+
+**Link 16 audited all eleven gate criteria and marked exactly ONE passed** (criterion 11,
+with the commands that re-derive its numbers). Newly executed: 6 and 10. Cannot pass:
+1, 2, 3, 4, 5's Meta half, 9, and 7. **Nothing was marked passed that was not run**, which
+is the habit thirty-two chunks were spent building.
+
+**THE FINDING THAT MATTERS MOST TO BOGDAN, AND IT IS NOT ABOUT META.** Criterion 7 — a
+customer signs up, connects and sees a reply without an operator running `adm` — is
+**unachievable by construction**. There is no create operation for automations. Verified by
+the operator independently, not relayed:
+
+    grep -n "operationId:" openapi/kinreply.yaml | grep -i automation
+    → listAutomations, getAutomation, patchAutomation.  No create.
+
+A customer can list, read and PATCH an automation they somehow already have. The only thing
+that can bring one into existence is `adm automation create`, an operator tool. **The
+self-serve story has a hole in its middle.** It joins `getChannelAccountHealth` and
+`tokenHealth` on the list needing ONE coordinated client regeneration. **Assigned to
+nobody.**
+
+Worth keeping: it was invisible to every other criterion because every other leg works, and
+it was found by *trying to write the test*, not by reading the roadmap.
+
+**Criterion 5's spec phrasing would have produced a wrong test** — it asks for an arch test
+that no package outside the adapter branches on `channel.Provider`, and several do
+deliberately, so that a Zernio credential is never presented to Meta. A test written to that
+wording fails against a correct tree.
+
+**Three ways a mutation sweep lied**, all now in the log: a mutation against the gate is
+silently cached (the gate runs the worker as a subprocess, so `internal/send` is not a
+compile-time dependency of the test package — use `-count=1`); a script that fails to APPLY
+reports the unmutated result as a survival; and `awaitLog` returns the first match in the
+process's whole lifetime, so a restarted worker's startup sweep satisfied a wait belonging
+to a test three hundred lines away.
+
+**Link 16 stopped for the strongest reason yet.** Not budget (~560k of 15M). Its last two
+reviewers found causes in code it had just read carefully, and the chunk-32 reviewer's
+headline was that its **written reasoning** was wrong in two places while the code was
+right — a right decision with wrong reasoning beside it, which is how the next reader
+inherits a wrong model. Its own words: chunk 33 is the cross-link view, and it is exactly
+the chunk that should not be written by the link with the most invested in its own account.
+
+**LINK 17 IS RUNNING** in tmux `kr2build-17`, declared as **`api-76`** (no name collision
+this time), reading the log. Its seed tells it: it is the fresh reader, verify rather than
+transcribe, do not mark anything passed that was not run, and distinguish the three states —
+ingest proven, live delivery unproven, reply configured-but-unfired. It also carries the
+operator's own false claim as a worked example, so the synthesis cannot quietly reproduce
+it.
