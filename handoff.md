@@ -33,7 +33,12 @@
 > 2. **Fail open or closed on unknown follow status.** The gate is built and armed; it cannot
 >    see an answer for a first-time commenter (Meta gates the profile read on consent only a DM
 >    grants). Watched failing open live. One policy bit, not a feature.
-> 3. `hotline-iosd` is **inactive** — `hotline-call` cannot ring him. Pre-existing.
+> 3. ~~`hotline-iosd` is inactive~~ — **FALSE, corrected 2026-09-21 16:50 UTC.** No unit
+>    by that name exists, and `systemctl --user is-active` on a nonexistent unit answers
+>    "inactive". The real unit is **`hotline-ios`**, enabled, up since boot; `/health`
+>    reports `degradations: []` and `sip+confirmed`. **`hotline-call` can ring him.**
+>    Line 4392 of this file already said the unit is not called `hotline-iosd` — the
+>    banner was written without reading it.
 > 4. Milos still needs to regenerate his client ONCE; openapi is now past 46 operations.
 > 5. `personamail420420` is connected to **Criterion 7 live**, not his original `KinReply`.
 >

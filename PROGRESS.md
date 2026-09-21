@@ -14784,3 +14784,50 @@ chunks earlier. Its diagnosis: *"I made confident conclusions from the source I 
 because I felt like I already knew the shape of this. That gets worse with accumulated context,
 not better."* The question is not how much budget is left; it is **whether you are still capable
 of being surprised by a source you have already read.**
+
+## 2026-09-21 16:44-16:50 UTC — operator boot, and an answer that was never delivered
+
+Watchdog restarted hotline-80 at 18:44:05 CEST because the box booted at 18:41 with
+zero live sessions. A timer, not a task. Adopted hotline-80, read handoff.md top and
+bottom, read #agent-hotline-80 and the main channel in full.
+
+**Nothing was stranded by the power-off.** His last word in my channel was 08:50 UTC,
+in main 08:02 UTC — both long before the 15:39 shutdown. No queued messages lost.
+
+**Boot cause:** not an RTC alarm (`/sys/class/rtc/rtc0/wakealarm` empty; the backstop
+armed at 18:41:53 and the wake agent cleared it 3s later as "leftover" — the known
+documented bug, not new). WoL from his laptop, followed by an ssh login from
+100.103.46.118 at 18:44:56. He is at the keyboard.
+
+**THE FINDING: data-53 answered him and the answer never left the tmux pane.**
+He spawned data-53 at 08:02 ("Find the jev research then report back thst you loaded
+it in"). Transcript `-home-bodas-data/6d76aa04-…jsonl`: it found both files, read them
+end to end, and produced a complete correct answer at **08:02:42** — 33 seconds. Its
+Discord channel has **0 messages** (checked the count, not the render). The session
+idled until the 17:39 shutdown killed it. He waited 8.5 hours for an answer that
+existed the whole time.
+
+**Cause — and my first theory was wrong, which is why I tested it.** I suspected the
+delivery daemon: the stop hook only writes a spool file, so posting is hotlined's job,
+and a `new agent` task arrives as a seed prompt rather than a relayed message, so
+nothing is waiting to be answered. Plausible, and false. data-34, data-d9 and
+jev-research were spawned identically and all posted fine — because each called
+hotline-say itself. The real cause is the spawn seed: it arrives as
+`"Another Claude session sent a message… report back"` and **never tells the agent it
+has a channel or how to post in it**. Delivery is left to whether the agent guesses.
+Proposed the fix to him; it is build work, so I did not make it.
+
+**Two corrections to my own shutdown banner:**
+1. *"hotline-iosd is inactive, hotline-call cannot ring you"* — **false**. No unit by
+   that name exists; `systemctl --user is-active` on a nonexistent unit returns
+   "inactive", which I read as a dead service. The real unit is `hotline-ios`, enabled,
+   up since 18:41:57. Probed `/health`: `degradations: []`, `sip+confirmed`. Calling
+   him works. (Oddity noted, not chased: `active_calls: 8` on a daemon up 353s.)
+2. Roster shows six agents `[working]` that do not exist. Not cleaned up — `--done`
+   deletes the channel, and three of those channels hold real research output. Asked
+   him first.
+
+**Verified rather than relayed:** data-53 said jev-research-opus.md is 603 lines, the
+old roster entry said 446. Counted: 603. data-53 was right.
+
+No build resumed. No agent spawned. Waiting on him.
