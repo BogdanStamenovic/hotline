@@ -4990,3 +4990,61 @@ on a public host with signup open, **so that exposure is live now**.
 that needs the second account and a call. Plus three things to glance at: the alert
 destination I moved off Stefan, signup being open, and whether Zernio's cleartext signing
 secret is worth rotating.
+
+## 2026-09-21 07:00 — THE LIVE TEST FAILED, AND THE FAILURE IS THE MOST VALUABLE THING THIS BUILD HAS PRODUCED
+
+Bogdan sent a real DM from his personal account (`b0g13a`) to `personamail420420`. **Nothing
+arrived.** Diagnosed to root cause without guessing:
+
+1. Our side: no webhook, `inbound_event` still 1. Not our deployment.
+2. Zernio's delivery log: still 3 rows, `lastFiredAt` still `00:12:50.460Z`. **Zernio never
+   fired**, so it was never our webhook's turn.
+3. Zernio's own inbox for that conversation: `totalMessages 1, lastMessageAt 2026-09-21
+   00:12:49` — last night's. **Zernio never received it.** So the break was upstream of
+   Zernio entirely.
+4. Bogdan then found it in the Instagram app: the account had gone **private**, and
+   commenting returned "sorry, the Instagram account no longer…".
+
+**ROOT CAUSE, named by Zernio itself** at `GET /v1/accounts/{id}/health`:
+
+    status: error   token valid: false
+    issues:          ["Access token was invalidated by Meta"]
+    recommendations: ["Reconnect your instagram account to restore access"]
+
+**MAKING THE ACCOUNT PUBLIC AGAIN WILL NOT FIX IT.** The token is dead and the account must
+be RECONNECTED through Zernio. An Instagram professional/business account also cannot be
+private, so it needs to go back to Professional + public first. He has been told; he
+pre-authorised reconnection last night on condition of being told.
+
+### THE FINDING THAT OUTLIVES THIS INCIDENT
+
+**Zernio's two endpoints disagree with each other about the same account, at the same
+moment:**
+
+| `/v1/accounts` (the list) | `/v1/accounts/{id}/health` |
+|---|---|
+| `isActive: true` | `status: "error"` |
+| `platformStatus: "active"` | `tokenStatus.valid: false` |
+| `needsReconnection: FALSE` | `"Reconnect your instagram account"` |
+| `inboxAuthErrorAt: null` | `"Access token was invalidated by Meta"` |
+| 5 permissions granted | (no permission is missing — the token is just dead) |
+
+**Our code reads the list.** So as built, kinreply would show a seller "connected and
+healthy" while their account is dead and nothing is arriving — silently, with no alert and
+no sign in the product. Note especially that `needsReconnection: false` is not merely stale,
+it is **the exact opposite of the vendor's own recommendation**, and that every permission
+still reads `granted`, so a permission check would also pass.
+
+**This is precisely what `getChannelAccountHealth` exists to prevent, and it is the
+operation that has been OPEN AND ASSIGNED TO NOBODY for days.** It is no longer a
+theoretical gap: it happened to the only live account we have, and we caught it because
+Bogdan happened to open Instagram — not because the system told us. Nothing in the product
+would ever have said a word.
+
+**It also vindicates a rule this chain wrote in the abstract:** a status field is not the
+thing it describes. Here the status field and the thing were served by the same vendor, four
+fields apart, and only one of them was true.
+
+**Priority implication:** `getChannelAccountHealth` and `tokenHealth` were queued behind a
+"one coordinated client regeneration" preference. That preference was right when they were
+speculative. They are not speculative any more.
