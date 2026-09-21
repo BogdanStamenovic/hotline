@@ -4791,3 +4791,50 @@ concludes the handshake is configured when it is not.
 **Link 16's process finding, worth keeping:** a mutation that fails to COMPILE exits
 non-zero exactly like a kill, so an unread red scores as a success. *An unread red is worth
 no more than an unread green.*
+
+## 2026-09-21 03:20 — a claim of mine was wrong, and a reviewer caught it
+
+**I wrote in link 16's seed: "A real inbound DM was ingested end to end."** That is FALSE
+and link 16 disproved it from three independent numbers: Zernio's `lastFiredAt` is
+`00:12:50.460Z`; our one `inbound_event` has `received_at 00:20:50.717Z`, eight minutes
+later; and its `external_id` is `synthetic_085668e1407a45`, a prefix nothing in the Go code
+generates.
+
+**What actually happened:** Bogdan's DM was delivered by Zernio and DROPPED
+(`unknownAccounts=1`). I provisioned the account, read the dropped payload back out of
+Zernio's own webhook log, changed four fields to fresh values (envelope id, message id,
+`platformMessageId`, the two timestamps), left the account/sender/conversation blocks as
+Zernio had sent them, **signed it myself and POSTed it myself.** Real Zernio-shaped data, my
+signature, my POST.
+
+**The honest claim is: the INGEST path is proven end to end — route, signature, parser,
+persistence, contact creation, job enqueue. LIVE DELIVERY IS NOT PROVEN.** Those are
+different claims and I collapsed them.
+
+**The mechanism of the error is the thing to carry.** When I reported it to Bogdan at the
+time I said it accurately — "proved the path with a signed replay". When I wrote the SEED I
+compressed it to "a real inbound DM was ingested end to end", and the qualifier carrying the
+entire meaning was lost in the compression. **The seed is the artefact that outlives the
+conversation**, so the lossy copy became the authoritative one. This is precisely the
+failure mode this build keeps finding in specs — a true sentence losing its scope on the way
+into the document the next reader trusts — committed by me, in the document I wrote to warn
+the next link about it.
+
+**The fix link 16 designed is better than the claim I made.** The runbook's live-delivery
+step now requires TWO witnesses: a new `inbound_event` with a later `received_at`, AND
+Zernio's own `lastFiredAt` advancing past `00:12:50.460Z`. From our side alone a replayed
+payload and a delivered one are indistinguishable — which is exactly how the claim got made.
+
+**ZERNIO RETURNS THE WEBHOOK SIGNING SECRET IN CLEARTEXT** from
+`GET /v1/webhooks/settings` to any holder of the API key. Both link 16 and I hit it tonight
+while checking the registration and the secret came back in terminal output both times.
+**Never pipe that endpoint's raw response into a file, a commit or a report.** Not rotated:
+rotation must happen in Zernio and in the deployment env simultaneously or every delivery
+starts failing signature, and a live test is queued for the morning. On his page as his
+decision.
+
+**Mis-cited claim, second chunk running:** chunk 31's spec attributes a Page-task claim to
+the roadmap README, which does not contain the word MESSAGING at all; it lives in
+`docs/specs-tochange/09-platforms.md`. A citation is checkable, so check it — a claim can be
+true while its source is wrong, and a wrong source is how a true claim becomes unfalsifiable
+later.
