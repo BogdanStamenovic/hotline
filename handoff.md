@@ -5048,3 +5048,192 @@ fields apart, and only one of them was true.
 **Priority implication:** `getChannelAccountHealth` and `tokenHealth` were queued behind a
 "one coordinated client regeneration" preference. That preference was right when they were
 speculative. They are not speculative any more.
+
+# ============================================================
+# 2026-09-21 ~10:00 UTC — HANDOFF WRITTEN FOR COMPACTION
+# Read this section first. Everything above it is history.
+# ============================================================
+
+## Who you are
+
+`hotline-80`, the OPERATOR. tmux session `hotline`. You run agents, you do not
+build. Verify, do not relay. Keep Bogdan to ONE VOICE. He is competing (FGC,
+global comp ~2 weeks from 09-21) and is often unavailable — but he has been at
+the keyboard all morning and is engaged.
+
+**He is on his PHONE much of the time.** Reach him with `hotline-say` (posts to
+his channel, **prints nothing on success — never re-run it**). He cannot see the
+tmux terminal when away from the desk.
+
+## THE ONE THING IN FLIGHT — an end-to-end criterion 7 run, stopped mid-way
+
+Criterion 7: *a customer can sign up, connect an account and see a reply sent,
+**without an operator running `adm` at any point***.
+
+**Done this run, no `adm` used:**
+
+    POST /v1/auth/signup   bogdan.stamenovic+kr2@gmail.com   → 202, email delivered
+    code read from Resend's API (NOT his inbox)              → 43 chars
+    POST /v1/auth/exchange with platform IOS                 → real device session
+        (platform IOS on purpose: a WEB exchange returns EMPTY accessToken in the
+        body and puts it in an httpOnly cookie — that is DELIBERATE, see
+        authroutes.go writeTokenPair. I nearly reported it as a bug.)
+    session token saved at:
+        /tmp/claude-1000/-home-bodas-data-hotline/e5e712bc-…/scratchpad/c7.tok
+        (short-lived — reissue rather than reuse)
+    new workspace exists, REPLY tier, TRIALING, 0 accounts, 0 automations
+
+**BLOCKED HERE:**
+
+    POST /v1/channels/zernio/connect-url  → HTTP 500
+    err: "httpapi: the provider connect flow is not configured"
+
+**ROOT CAUSE, found and not yet fixed.** `cmd/api/main.go:357` reads
+`KINREPLY_CONNECT_RETURN_WEBAPP` and `KINREPLY_CONNECT_RETURN_MOBILE`. The switch
+builds `connectStore` and BOTH connect starters only when **both are non-empty**.
+Chunk 27 configured twelve env vars on the deployment and not these two. So the
+whole connect flow is unbuilt on the live host.
+
+**NEXT ACTION:** confirm both are absent on the deployment
+(`docker inspect kinreply-api-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep CONNECT_RETURN`),
+decide sensible values (there is no webapp deployed; the mobile one is a deep
+link), set them in `/home/ubuntu/kinreply/lifecycle/.env`, recreate **api only**,
+and re-run. **Back the .env up first and do NOT restart postgres.**
+
+**Then the remaining plan Bogdan approved:**
+1. With the new workspace, request the connect URL.
+2. He clicks and authorises. **OAuth clicking is his, never yours.**
+3. Expect `USERNAME_CONFLICT` at completion, because `personamail420420` is still
+   live in the old workspace. That guard is chunk 24's and has never been
+   exercised — if it does NOT refuse, that is a bigger finding than the run.
+4. Disconnect from the old workspace via the API's `disconnectChannelAccount`,
+   not `adm`. He pre-authorised the disconnect twice.
+5. He authorises again → account lands in the new workspace **with a real
+   credential**, which also closes the `NO_CREDENTIAL` finding rather than
+   working around it.
+6. Create an automation over the API, he comments, reply arrives.
+
+## Live system state
+
+**kinreply is LIVE on uxonews**: postgres + api + api-worker in Docker,
+`restart: unless-stopped`, survives reboot. `https://kinreply.uxonews.com/readyz`
+→ 200. api at **659c3c2**. Migration 00025.
+
+- **postgres `StartedAt` is `2026-09-20T23:48:31.592517971Z`** and has been byte
+  identical through five deploy cycles. **Never restart it.** That invariant is
+  what `deploy.sh` exists to protect.
+- `uxonews.service` and `dds.service`: `ActiveEnterTimestamp=Fri 2026-09-11
+  06:55:00 UTC`. Never restarted. **Do not touch them, or dds DNS.**
+- Other tenants baseline: `uxonews.com` 307 / 6 bytes, `dds.uxonews.com` 200 /
+  92517 bytes. Check status AND body size before and after any Caddy reload.
+- Deploy: `/home/ubuntu/kinreply/lifecycle/scripts/deploy.sh`, exit 0 in ~45s.
+  `rollback.sh` exists and was exercised. Deploy pulls with SSH deploy keys and
+  **works with the agent unset** (proven).
+
+**Workspace / account ids (the ORIGINAL workspace):**
+
+    user       usr_01M30NAJENEH9HPYBZF5DEXA31   bogdan.stamenovic@gmail.com
+    workspace  ws_01M30NAPYPDRZ5NM1NXN6NS54S    "KinReply"
+    channel    ca_01M30NAXBR0RAWDK2NB3GXM6NN    INSTAGRAM / ZERNIO
+                                                external_id 6aaf18dd8d284ffb211dec90
+    automations: au_…FPDVCXWY* and au_…07VBPFDW* are PAUSED (any-word, they would
+                 win every collision — the engine takes the OLDEST match and stops)
+                 au_01M31EBPYNQPDCQ1MSTTS27PJX  "Full loop test"   keyword kinreply  ACTIVE
+                 au_01M31HM0ZXNGX8M5VJJY7HPRE4  "Made over the API" keyword apitest  ACTIVE
+
+**READING LIVE ROWS NEEDS THE RLS GUC** — `kr_app` is not BYPASSRLS, so a plain
+`select count(*)` returns 0 over rows that exist:
+
+    set local app.workspace_id = 'ws_01M30NAPYPDRZ5NM1NXN6NS54S';
+
+## What is PROVEN live (all verified by me, not relayed)
+
+Zernio delivery · webhook HMAC · ingest · **contact identity across DM and
+comment (one contact, many events)** · automation matching · **keyword matching
+AND its negative case** (a non-keyword comment produced zero outbound rows) ·
+public comment replies · opening messages · **continuation payload** · **delayed
+follow-up (61s against a 1-minute delay)** · link degradation to text (Instagram
+deliberately lacks `RichPrivateReply` — correct, do not "fix") · **one-reply-per-
+comment dedup, which held when Zernio double-delivered the same comment with two
+event ids** · `POST /v1/automations` → 200 · an API-created automation actually
+firing (`automation=au_01M31HM…` on the outbound row) · `getChannelAccountHealth`
+live (`source: PROVIDER_HEALTH_ENDPOINT`, `silentlyBroken: false`) · the alert
+digest emailing a real alert · latency 1.6–3s.
+
+## What is NOT proven — do not round any of these up
+
+- **Criterion 7.** The connect leg has never run. That is the blocked step above.
+- `silentlyBroken: true` has never been seen in the field. Proven by tests only.
+- The **follow gate** (deliver only to followers).
+- Everything on the **Meta path** — permanently blocked, see below.
+- The `deleteAccount` / full-erasure path.
+
+## Bogdan's decisions — settled, stop asking
+
+- **The Meta app is a THROWAWAY.** Never to be published. A real one gets
+  registered when the domain arrives and the company is registered. Do not invest
+  in its dashboard. Meta delivers no webhooks to an unpublished app (verified for
+  the `instagram` object, **extrapolated** for `page` — say which).
+- `personamail420420` is his own test account; it may send; it may be
+  disconnected **provided he is told to reconnect**.
+- The canary sweep is in scope. Zernio decisions are the operator's.
+- Milos and Stefan may be contacted **whenever**, within their own areas.
+- **He declined `kinreply.uxonews.com` as a Resend domain** — migrating to
+  kinreply.rs. `MAIL_FROM` is `kinreply@uxonews.com`, the APEX, which IS verified.
+  Do not reopen.
+- Deploy keys: he authorised enabling them **org-wide** on `kinreply`.
+
+## URGENT-ISH: his Claude login
+
+    access token   expires 2026-09-21 15:14 UTC  (auto-rotates, ignore)
+    refresh token  expires 2026-09-22 04:53 UTC  ← THE REAL DEADLINE
+
+After that every agent on the box stops. He must run `/login` in a **fresh**
+terminal on archserver (not in a working session). It works headless — URL plus
+a pasted code. He said he was going to do it. **Check whether he did.**
+
+## Open, assigned to nobody
+
+- `createAutomation` **is now built** (link 18, api 659c3c2) — as are
+  `getChannelAccountHealth` and `tokenHealth`. **openapi went 44 → 46
+  operations. Milos must regenerate ONCE, from 659c3c2.** His client
+  (`kinreply-app` at `68be2a1`) is still on the Phase 1 contract. He has not been
+  told yet — that is pre-authorised and outstanding.
+- `WebhookFieldsFor` sends `comments` to a Page id, which Meta's own reference
+  says is not a valid value. **Deliberately not fixed** — the two mistakes are
+  asymmetric: a rejected POST fails loudly, but if `comments` IS accepted and
+  somebody deletes it on a doc page's say-so, every Instagram comment stops
+  arriving silently. Needs a real POST and read-back.
+- `adm channel connect` leaves an account that ingests perfectly and can never
+  send (`NO_CREDENTIAL`). Now visible via `tokenHealth`, but nothing surfaces it
+  at connect time.
+- Signup is OPEN on a publicly reachable host with a working mailer.
+- Zernio returns the webhook **signing secret in cleartext** from
+  `GET /v1/webhooks/settings`. Never pipe that response into a file or a report.
+  Not rotated — rotation must be simultaneous in Zernio and the deployment env.
+- `phase1-sql-schema` is unmerged, 20 commits / 25 migrations ahead of main.
+- Per-IP magic-link limit: `MagicLinkPerEmailPerHour = 5`,
+  `MagicLinkPerIPPerHour = 20`. It bit me this morning; it is real and live.
+
+## Chain state
+
+**The Phase 2 chain is COMPLETE — 33/33, seventeen links.** Deliverable
+`api/PHASE2-COMPLETE.md`. The gate is **NOT passed**: 3 of 11 criteria executed
+and passed, nothing ticked that was not run. Link 18 (post-chain) built the three
+missing operations and was reaped. **No build agent is running.** Do not spawn
+one without a reason; the remaining work is operator work.
+
+## Operator discipline that paid off today — keep doing these
+
+- **Verify, do not relay.** Every agent claim I checked this morning held, but I
+  found three of my own errors by checking.
+- **Re-check `git status` in the same breath as the kill**, never from an earlier
+  check.
+- **Run the negative case.** The single most valuable result today was a comment
+  that produced *nothing*.
+- **A fixture that cannot exercise the thing is not a test.** I built two this
+  morning that could not.
+- **Compression drops the qualifier** — I wrote a false claim into a seed by
+  shortening a true sentence. The seed is the document the next reader trusts.
+- Never compose shell messages as inline double-quoted strings; quoted heredoc
+  plus `"$(cat file)"`, and `git commit -F file`.
