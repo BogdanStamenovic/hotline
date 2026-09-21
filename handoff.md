@@ -4838,3 +4838,48 @@ the roadmap README, which does not contain the word MESSAGING at all; it lives i
 `docs/specs-tochange/09-platforms.md`. A citation is checkable, so check it — a claim can be
 true while its source is wrong, and a wrong source is how a true claim becomes unfalsifiable
 later.
+
+## 2026-09-21 03:35 — chunk 31, and the missing piece was an automation
+
+Link 16 delivered `docs/runbooks/phase2-live-loop.md` (api `15f54ae`, docs `523d607`, all
+four clean). **It refused to mark chunk 31's done-when satisfied** — every criterion runs
+against the real Meta app — and listed them item by item instead. That is the right call and
+it is the habit this chain has spent thirty-one chunks building.
+
+**The sentence that mattered: "there are currently zero automations, which is why the one
+event produced a job that succeeded having done nothing."** Nothing was configured to
+answer. I created two, both active, on `ws_01M30NAPYPDRZ5NM1NXN6NS54S` /
+`ca_01M30NAXBR0RAWDK2NB3GXM6NN`:
+
+    au_01M30VH81F0RZ4AF6SP7JYQ1YK  "Live loop test - DM"       trigger DM
+    au_01M30VH84DDH70GNCM07VBPFDW  "Live loop test - comment"  trigger COMMENT
+
+Both any-post, any-word. Dry-run first. `--any-post` is required even on the DM trigger —
+link 16's flag, and it was load-bearing.
+
+**I DID NOT FIRE EITHER, DELIBERATELY.** The only contact in that database is `b0g13a`,
+Bogdan's own Instagram, so a replay would push a notification to his phone at 3am after he
+told me to hold and not ring him. **An Instagram push is a ring.** The reply path is
+therefore *built and configured and unfired* — record it that way, not as an oversight.
+
+**THREE STATES, NOT TWO, and the gate must say which is which:** INGEST proven (by my
+replay); LIVE DELIVERY unproven; REPLY configured but never fired.
+
+**Two findings from link 16 worth keeping permanently:**
+
+- *"A suite cannot notice a path it does not know about."* It wired a warning into a proper
+  subset of the paths needing it **twice in one chunk**. Its own sibling test caught the
+  first. The second it could not — both its tests lived in the package that was already
+  correct, and the third path was in `cmd/adm`. **More tests in that package would have
+  found nothing.** That is the argument for fresh-context review, stated better than the
+  mandate states it.
+- *"A command in a runbook is not documentation, it is code, and reading it twice is not
+  running it."* Three runbook commands did not run, and running them found a fourth. It had
+  already fixed two wrong column names by reading the schema and still shipped three more
+  plus a jsonb cast error. **Generalises past runbooks: anything we hand him to paste into
+  a terminal is untested code until we have run it.**
+
+**Chunk 32 is THE PHASE 2 GATE.** I told link 16 to continue, same shape as 31, and
+explicitly **not to mark it passed** — a gate marked passed on unrun criteria is worth less
+than no gate. Also told it to re-derive which criteria are now reachable, since the
+automations changed the answer underneath its earlier guess.
