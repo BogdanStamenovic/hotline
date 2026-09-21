@@ -4697,3 +4697,42 @@ rule applied where its assumption does not hold"* — committed inside a report 
 catching that exact shape.
 
 **Still open and still Bogdan's:** the deploy key, one more DM, the comment test.
+
+## 2026-09-21 02:55 — link 15 reaped, link 16 spawned at chunk 30
+
+**Link 15 ran chunks 26, 27, 28, 29** and stopped on the surprise axis rather than budget
+(~650k of 15M left), which is the criterion the seed asks for. Verified before killing it,
+in the same breath as the kill rather than from an earlier check: all four repos clean,
+nothing unpushed, at api 697aece / lifecycle 25be11d / docs 9d69b4e / kinreply-db bb2a61a.
+Live deployment readyz 200, three containers healthy, postgres StartedAt still
+`2026-09-20T23:48:31.592517971Z`, and `uxonews.service` and `dds.service` both still at
+`ActiveEnterTimestamp=Fri 2026-09-11 06:55:00 UTC` — never restarted, matching the baseline
+from before any of this work.
+
+**Chunk 29's finding is worth carrying:** the spec catalogued nine schedules and concluded
+`AlertAfter` zero for all of them on the premise that no schedule calls a third party.
+There are TWELVE, and `send_alert_digest` sends through Resend while holding the watermark
+row. That is now `AlertAfter 1`. A reviewer then beat link 15 on the consequence it had
+stopped short of: `compose.subjectLine` only appends "(N errors)" when errors exceed zero,
+so a persistently half-broken mail path reads as routine **in the subject line an operator
+triages from**. Recorded as a residual, not silently accepted.
+
+**LINK 16 IS RUNNING** in tmux `kr2build-16`, declared, no trust prompt, reading the
+mandate. Its seed carries the scope decision that is the operator's to make:
+
+**Bogdan declared the Meta app a THROWAWAY tonight** — a real one gets registered when the
+domain arrives and the company is registered. So chunk 30's roadmap half, which is Meta App
+Dashboard work, is largely moot and link 16 is told not to invest in it. Meta-path CODE
+correctness still matters for the real app later; only the clicking is moot. It is told to
+run the mandated grep before concluding chunk 30 is thin, because every roadmap spec opened
+in the last four chunks was stale about its own chunk — four for four — and to move to
+chunk 31's runbook rather than invent work. **Chunk 31 is high value and unblocked**, and
+worth more than usual while he is competing.
+
+**A ROSTER TRAP: the new link declared as `api-19`, the SAME NAME link 15 held.** Two rows
+existed, both `[working]`. `hotline --list` resolves to the live pid, but `--to api-19`
+looks up by name and would be ambiguous. I retired link 15's record by session id
+(`bb74bab1-b361-4505-8a53-3dea48fc5301`) in
+`~/.local/state/hotline/agents.json`, backed up first — there is no CLI flag to finish
+another agent, `--done` only marks the caller. **Check the pid printed by `hotline --to`
+before trusting that a message reached the live link.**
