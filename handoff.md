@@ -4616,3 +4616,51 @@ anyway: the app is unpublished and Meta's own dashboard says "To receive webhook
 must be in published state", and `GET /{app-id}/subscriptions` is `{"data": []}`.
 Publishing is Bogdan's decision and he has not made it. Do not design around the Meta
 webhook path landing soon.
+
+## 2026-09-21 02:25 — KinReply IS LIVE, and the first real event was ingested
+
+**Link 15's chunk 27 stood up a live deployment on uxonews** — postgres, api and api-worker
+in Docker, `restart: unless-stopped`, surviving a reboot. `https://kinreply.uxonews.com/readyz`
+answers 200 with a browser-trusted certificate. uxonews.com, www and dds were proven
+untouched on status AND body size before and after every Caddy reload.
+
+**THE `/webhooks/zernio` 502 IN THE OLDER NOTE ABOVE IS OBSOLETE.** It serves. GET is 404
+(only POST is registered), POST unsigned is 403 "forbidden", POST signed is 200 "ok".
+
+**Bogdan's real DM arrived at 00:12:50Z and was correctly dropped.**
+
+    webhook received platform=INSTAGRAM provider=ZERNIO event=message.received
+    parsed=1 stored=0 jobs=0 skipped=1 failed=0 unknownAccounts=1
+
+Signature verified, body parsed, then skipped: no workspace or channel_account existed for
+Zernio account `6aaf18dd8d284ffb211dec90`. **Zernio logged status 200 and will NOT
+redeliver** — a dropped event is a lost one. He must send another.
+
+**I provisioned it, and proved the path.**
+
+    user       usr_01M30NAJENEH9HPYBZF5DEXA31   bogdan.stamenovic@gmail.com
+    workspace  ws_01M30NAPYPDRZ5NM1NXN6NS54S    "KinReply"
+    channel    ca_01M30NAXBR0RAWDK2NB3GXM6NN    INSTAGRAM / ZERNIO
+                                                external_id 6aaf18dd8d284ffb211dec90
+
+Then replayed the captured payload with fresh ids, signed with the deployment's own secret
+(compared by sha256 first, never printed):
+
+    parsed=1 stored=1 jobs=1 skipped=0 unknownAccounts=0
+    inbound_event 1 | contact 1 (b0g13a, "Bogdan") | outbound_message 0
+
+**READING THOSE TABLES NEEDS THE RLS GUC.** A plain `select count(*)` returns 0 even when
+rows exist, because `kr_app` is not BYPASSRLS and nothing sets `app.workspace_id`. I nearly
+reported a working ingest as broken on that. Always:
+
+    set local app.workspace_id = 'ws_01M30NAPYPDRZ5NM1NXN6NS54S';
+
+**The Zernio account id to key on is `account.id` / `account.accountId`** — both present and
+identical in the real payload. There is an `ACCOUNT_ID_FALLBACK` note for when only
+`account.id` exists.
+
+**OPEN FOR BOGDAN, on his page:** one more DM; a read-only GitHub deploy key per repo for the
+uxonews host (blocks chunk 28 — the host has no GitHub credential and agent forwarding dies
+with the session); and the comment test, which still needs the second account and a call.
+He is asleep; he said explicitly not to ring him about the comment and to hold until
+tomorrow.
