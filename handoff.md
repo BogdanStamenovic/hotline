@@ -4573,3 +4573,46 @@ a missing setting:
 
 So the permission shortfall is closed, and the direct Meta path is still not deliverable
 end to end. The live path remains Zernio, which needs none of this.
+
+## Unblocked 2026-09-21 02:00-02:15 — put ALL of this in the next link's seed
+
+**The account has a post now.** Bogdan posted it 2026-09-20 23:50 UTC.
+`GET zernio.com/api/v1/accounts/6aaf18dd8d284ffb211dec90/posts` returns it: id
+`18627443872035305`, message "A kinreply starting place", permalink
+`instagram.com/p/DdhzlGCjKwM`, `commentCount: 0`. The "nothing to comment on" obstacle is
+gone.
+
+**BUT Zernio's cached account counters are stale and will lie to you.** The same account
+object still reports `mediaCount: 0`, `externalPostCount: 0`, and
+`analyticsLastSyncedAt: 2026-09-19T23:21` — from BEFORE the post. Anything that gates
+"does this account have media" on those fields concludes the account is empty while a post
+plainly exists. **Use the posts endpoint, not the counters.** This is the same shape as
+the rule about status fields, met in the wild.
+
+**Mail is proven end to end, for the first time.** Bogdan supplied a dedicated Resend key
+(verified byte-unequal to the dds production key before the swap) and it is in
+`phase2.env`. A real message went out through kinreply's own `internal/mail` Resend client
+— not a curl — to bogdan.stamenovic@gmail.com, and Resend reports `last_event: delivered`.
+He confirmed receipt independently. **Chunks 3, 4 and 13's "an email is observed arriving"
+can now actually be driven.** Sending more test mail on that key is fine; it no longer
+touches the dds quota's credential.
+
+**The Instagram app credentials are live.** `KINREPLY_INSTAGRAM_APP_ID` and
+`KINREPLY_INSTAGRAM_APP_SECRET` are both uncommented and set. The secret is a SEPARATE
+32-hex credential from the Meta app secret, found on the Instagram product page, not
+App settings > Basic.
+
+**Standing answers from Bogdan, all now settled — stop asking these:** canary sweep IS in
+scope; `personamail420420` is his own test account; it MAY send messages; it may be
+disconnected provided he is told to reconnect it; Zernio decisions are the operator's;
+Milos and Stefan may be contacted whenever within their own areas.
+
+**Still open and still nobody's:** `getChannelAccountHealth`, and `tokenHealth` on
+`listChannelAccounts`.
+
+**The direct Meta path is permission-complete and still undeliverable.** The login
+configuration now carries all eight of `graph.LoginScopes`. It cannot receive webhooks
+anyway: the app is unpublished and Meta's own dashboard says "To receive webhooks, your app
+must be in published state", and `GET /{app-id}/subscriptions` is `{"data": []}`.
+Publishing is Bogdan's decision and he has not made it. Do not design around the Meta
+webhook path landing soon.
