@@ -4736,3 +4736,58 @@ looks up by name and would be ambiguous. I retired link 15's record by session i
 `~/.local/state/hotline/agents.json`, backed up first — there is no CLI flag to finish
 another agent, `--done` only marks the caller. **Check the pid printed by `hotline --to`
 before trusting that a message reached the live link.**
+
+## 2026-09-21 03:05 — chunk 30, and a claim of mine corrected
+
+Link 16 finished chunk 30 (api at `b0f51a8`, all four repos clean and pushed, `make check`
+green 0 skips, `make gate` green). **The mandated grep came back NEGATIVE for the first
+time** — four-for-five now, not four-for-four. What found the real work was reading the
+spec and then checking its premise.
+
+**The chunk's headline is the same defect shape again.** The spec said to add
+`messaging_postbacks` to `InstagramWebhookFields`. The field was right and the list was
+wrong: that list is unioned with `PageWebhookFields`, which has carried the field since
+Phase 1, so the edit was a no-op dressed as a fix. The list genuinely missing it was
+`InstagramWebhookFieldsForLogin`, which is unioned with nothing — so on the standalone
+Instagram Login flow a postback had no way in, while the ingest already parsed postbacks
+and the reply engine already treated one as the contact's touch. **Consumer built, event
+never subscribed to.** That list did not exist when the spec was written.
+
+**I CORRECTED A CLAIM OF MINE ON HIS PAGE.** I had written that Meta delivers no webhooks
+at all to an unpublished app, citing the dashboard. A fact-check splits it: **verified** for
+the `instagram` object (the Instagram Platform webhooks page says so verbatim and
+unqualified), **extrapolated** for the `page` object (no equivalent statement exists; that
+page only discusses Standard vs Advanced Access, which is an audience question, not a
+published-status one). Almost certainly the same rule, not the same evidence. The page now
+says which is which.
+
+**Independent corroboration of my own earlier probe:** the app has no webhook subscriptions
+at the app level on either object, and link 16 used a discriminating probe — the same call
+with a deliberately wrong secret returns Meta error 190 — so an empty list cannot be
+confused with a broken call.
+
+**NEW OPEN ITEM, ASSIGNED TO NOBODY, on his page.** Meta's `subscribed_apps` reference says
+`subscribed_fields` cannot configure Instagram webhooks at all and its valid values do not
+include `comments` — and `WebhookFieldsFor` sends `comments` to a Page id on every
+Instagram-via-Facebook-Login connect. **Deliberately not fixed**, and the reasoning is the
+good part: the two mistakes are not symmetric. A rejected POST fails loudly on the first
+real connect; but if `comments` IS accepted and somebody deletes it on the strength of a
+doc page, every Instagram comment stops arriving with nothing reporting the absence.
+Settling it needs a real POST and a read-back, which a throwaway app cannot provide.
+
+**I answered link 16's scope question: write chunk 31's runbook ZERNIO-FIRST**, with
+Meta-path steps recorded as "do these when the real app exists" rather than as steps he
+will attempt and fail. His attention is the scarcest thing here and the Meta half is
+permanently blocked on this app. I told it to put three things in the runbook that cost
+real time last night: provision before sending a test event; Zernio does not redeliver, so
+a failed step means send another; and reading live rows needs the RLS GUC.
+
+**`KINREPLY_META_WEBHOOK_VERIFY_TOKEN` (singular) was dead** — verified by grep across the
+repo, and the deployment carries only the two per-platform names. Renamed in `phase2.env`
+to `KINREPLY_META_INSTAGRAM_VERIFY_TOKEN` and `KINREPLY_META_FACEBOOK_VERIFY_TOKEN` with
+the same value, backed up first. A dead variable that looks live is how a future session
+concludes the handshake is configured when it is not.
+
+**Link 16's process finding, worth keeping:** a mutation that fails to COMPILE exits
+non-zero exactly like a kill, so an unread red scores as a success. *An unread red is worth
+no more than an unread green.*
