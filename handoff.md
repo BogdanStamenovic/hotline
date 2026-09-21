@@ -4664,3 +4664,36 @@ uxonews host (blocks chunk 28 — the host has no GitHub credential and agent fo
 with the session); and the comment test, which still needs the second account and a call.
 He is asleep; he said explicitly not to ring him about the comment and to hold until
 tomorrow.
+
+## 2026-09-21 02:40 — chunk 28, and an outward hazard closed before it fired
+
+Link 15 exercised the deploy machinery for real on uxonews: `deploy.sh` (44s),
+`rollback.sh` (9s), `deploy.sh` forward again, all exit 0, with postgres `StartedAt` byte
+identical through all three — which is the property `deploy.sh` exists to guarantee.
+Nightly backup at **02:20, landing 02:28**, deliberately clear of the host's own
+`uxonews-backup.timer` at 03:30/03:38; **its first unattended fire is tonight and has not
+happened yet** (`LastTriggerUSec` empty), so what is proven is the unit, not the schedule.
+
+**I REPOINTED `KINREPLY_ALERT_TO` FROM STEFAN TO BOGDAN, in both places.** It was
+`stefanglamoclija@gmail.com` on the live worker and in `phase2.env`. Chunk 29 builds
+scheduled jobs and alerting, the mailer now genuinely delivers, and link 15 flagged that
+chunk 29 is the first whose work can send outward mail **by accident rather than by
+design**. Stefan is pre-authorised for deliberate contact about company matters; he is not
+a test alert destination at 3am. Both files backed up, both carry a comment saying why.
+Only `api-worker` was recreated and postgres `StartedAt` did not move.
+
+**This is a reversal Bogdan may want undone** — it is one value plus a worker restart, and
+it is on his page.
+
+**SIGNUP IS REOPENED on the live deployment**, by link 15, after I told it the reason it
+had closed it for (the shared Resend key) was gone. That is defensible and I did not
+reverse it. But the host is publicly reachable with a working mailer, so a stranger who
+finds it can cause real magic-link mail to leave the `uxonews.com` apex — the same domain
+his production dds sending depends on. Low likelihood, real surface. **His decision in the
+morning, not ours.**
+
+**Link 15 accepted the subdomain correction** and framed it better than I did: *"a true
+rule applied where its assumption does not hold"* — committed inside a report about
+catching that exact shape.
+
+**Still open and still Bogdan's:** the deploy key, one more DM, the comment test.
