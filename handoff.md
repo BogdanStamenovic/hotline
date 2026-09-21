@@ -1,3 +1,76 @@
+> ## SHUTDOWN 2026-09-21 18:10 UTC — off at his instruction, BOTH open items closed
+>
+> **Nothing is broken and nothing is running.** He woke the box himself at 18:41 CEST (WoL
+> from his laptop `arch`), answered the two questions that were outstanding, and told me to
+> shut down at 18:07 UTC (`1551656192160301177`, provenance verified). He had logged out of
+> his ssh session by then, so the poweroff killed nothing of his. WoL armed and verified.
+>
+> **He said "I'll need you again later." I deliberately did NOT run `hotline --done`** — that
+> deletes this channel and today's record with it. hotline-80 is a persistent operator
+> identity; the watchdog re-adopts it on the next boot and the channel history survives.
+>
+> ## THE ONE REAL FINDING TODAY: an agent answered him and the answer never left the pane
+>
+> He spawned **data-53** at 08:02 ("Find the jev research then report back"). It answered
+> correctly **33 seconds later**. Its Discord channel had **zero messages**. He waited 8.5
+> hours for an answer that already existed; I found it by reading a dead session's transcript.
+>
+> **The cause, and my first theory was wrong — which is the only reason I trust the second.**
+> I suspected the delivery daemon (the Stop hook only writes a spool file, and a spawned task
+> arrives as a seed prompt with nothing waiting to answer it). False: data-34, data-d9 and
+> jev-research were spawned identically and all posted fine, because each called `hotline-say`
+> itself. **The spawn seed says "report back" but never tells the agent it HAS a channel or
+> how to post in it.** Delivery is left to whether the agent guesses.
+>
+> **PROPOSED AND NOT DONE — it is build work and his call:** fix the spawn seed to tell a
+> spawned agent about its channel. He has not answered on this. Do not do it unannounced.
+>
+> ## Two claims I had to retract today, both mine
+>
+> 1. **"`hotline-iosd` is inactive, `hotline-call` cannot ring him" — FALSE.** No unit by that
+>    name exists, and `systemctl --user is-active` on a nonexistent unit answers "inactive". The
+>    real unit is **`hotline-ios`**; `/health` gives `degradations: []`, `sip+confirmed`.
+>    **Calls work.** Line ~4392 of this file already recorded the naming trap; the banner was
+>    written without reading the file it sits on.
+> 2. **"Every DM to Stefan was accepted with a real message id, which means delivered" — TOO
+>    STRONG.** See item 1 below. A message id means ACCEPTED, not SEEN.
+>
+> ## Both of his open items are CLOSED
+>
+> 1. **Message Requests: NOT A BUG.** His words, verified (`1551636652298997841`): Stefan's
+>    account "was not setup to be able to recieve message requests from random people but when
+>    he set it up that way he received the request". The DMs were arriving all along.
+>    **The lesson outlasts the answer: a message id means ACCEPTED, not SEEN.** Same id, hidden
+>    behind a recipient-side setting we cannot read or detect. Outbound success counts
+>    **overstate reach to non-followers** by an unmeasurable amount. Never quote one as reach.
+> 2. **Fail open/closed: was never open.** `internal/reply/compose.go:43` gates on
+>    `followsUs != nil && !*followsUs` — a KNOWN non-follower gets the follow prompt, an UNKNOWN
+>    one (every first-time commenter) gets the payload. The comment above it argues the case and
+>    ends *"Do not 'fix' the NULL case to fail closed."* I recommended leaving it and gave the
+>    argument: a first-time commenter is exactly the unreadable case, so failing closed degrades
+>    the gate to "people who already DM'd us". His Stefan result is the empirical backing the
+>    design never had. **He did not object. Leave it alone.**
+>
+> ## Roster is dirty, deliberately
+>
+> Six agents still read `[working]` and none exist: data-53, data-d9, data-34, data-79,
+> jev-research, api-e9. **Not cleaned up on purpose** — `--done` deletes the agent's Discord
+> channel and three of those hold real research output of his. I asked; he did not answer.
+> Ask again before retiring any but the empty ones.
+>
+> ## Still true from this morning, unchanged
+>
+> Phase 2 closed, criterion 7 passed live, api `670deae`. Postgres `StartedAt`
+> `2026-09-20T23:48:31Z` — **never restart it**. Two workspaces: `KinReply` (14 outbound rows
+> that are the only evidence behind today's findings) and `Criterion 7 live`. Milos still needs
+> to regenerate his client once (openapi past 46 operations). Login good to **2026-10-20**.
+> `personamail420420` is connected to `Criterion 7 live`, not his original `KinReply`.
+>
+> **Boot notes:** no RTC alarm is armed and none will be — `rtc-wake-backstop` arms at boot and
+> the wake agent clears it 3s later as "leftover" (known, not new). WoL is the only way back in,
+> and it is verified. The wake agent's "cannot reach Pigion" line at boot is transient: the
+> network simply is not up 2s in, and it answers fine a minute later. Not a bug, do not file it.
+
 > ## SHUTDOWN 2026-09-21 ~15:45 UTC — off at his instruction, PHASE 2 CRITERION 7 PASSED
 >
 > **Nothing is broken. Phase 2's last open criterion closed today.** The whole self-serve path

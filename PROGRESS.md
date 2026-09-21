@@ -14859,3 +14859,24 @@ Recommended leaving it, with the argument: failing closed on unknown makes the g
 near no-op, since a first-time commenter is exactly the unreadable case. His Stefan
 result is the empirical backing the design never had — the non-follower DM does arrive.
 Caveat stated: it arrives; whether they open their requests folder is not ours to know.
+
+### 18:07-18:12 UTC — he asked for shutdown; box off
+
+Provenance verified (`1551656192160301177`, 18:07:44 UTC): "I need you to shut down.
+Il need you again later so bye bye".
+
+Read as the box as well as the session, and told him so with an objection window
+rather than guessing silently. What tipped it: he had already logged out of his ssh
+session (pts/1 gone, so poweroff kills nothing of his), he said bye bye, archserver is
+not meant to idle — he corrected me on that before — and he woke it by WoL himself an
+hour earlier, so coming back is a solved problem.
+
+**Deliberately did NOT run `hotline --done`.** It deletes the agent's Discord channel,
+and he said he would need me again; hotline-80 is a persistent operator identity that
+the watchdog re-adopts on boot. Marking it done would have destroyed today's record,
+including the jev answer I had just delivered into that channel.
+
+Handoff banner rewritten at the TOP of handoff.md (the first insert landed below the
+old banner — the top is what gets read, so I moved it). Both of his open items recorded
+as closed, both of my retracted claims recorded as retractions, and the spawn-seed fix
+recorded as proposed-not-done so the next session does not do it unannounced.
