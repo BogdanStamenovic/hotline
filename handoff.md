@@ -4933,3 +4933,60 @@ transcribe, do not mark anything passed that was not run, and distinguish the th
 ingest proven, live delivery unproven, reply configured-but-unfired. It also carries the
 operator's own false claim as a worked example, so the synthesis cannot quietly reproduce
 it.
+
+# ============================================================
+# 2026-09-21 04:05 — THE PHASE 2 CHAIN IS COMPLETE. 33/33.
+# ============================================================
+
+**Seventeen links, thirty-three chunks, and the last one closed at 04:00.** Deliverable is
+`api/PHASE2-COMPLETE.md` at `72125a7`. **No chunk 34. Nothing in flight. No build session
+running** — `hotline --list` shows only the operator and two unrelated idle agents, and
+`tmux ls` has no `kr2build-*`.
+
+**THE GATE IS NOT PASSED AND THE DOCUMENT SAYS SO.** 3 of 11 executed and passed (6, 10,
+11), 1 partial (8 — the covered case is EXPIRING, not revoked, confirmed by the gate's own
+test name), 7 unpassed: five blocked on a live Meta account, one on chunk 17's unbuilt
+poller, and **one that cannot pass at all**.
+
+**VERIFIED BY THE OPERATOR, NOT RELAYED:**
+
+- All seven repos clean, nothing unpushed: api `72125a7`, docs `523d607`, kinreply-db
+  `bb2a61a`, lifecycle `25be11d`, llm-subsys `b845f09`, webapp `9d7a83e`, kinreply-app
+  `68be2a1`.
+- **The stale commit in chunk 10's log entry is genuinely the same work.** `f25e7cd` and
+  `65172b0` both give patch-id `ec336fdee78b8bc4`. The hash is stale; nothing was lost.
+- The three states, on the live database with the RLS GUC set:
+  `inbound_event 1 | automation 2 | outbound_message 0 | contact 1`.
+- `uxonews.service` and `dds.service` still at `ActiveEnterTimestamp 2026-09-11 06:55:00
+  UTC`. Never restarted, all night, across four deploy cycles. readyz 200.
+
+**CRITERION 7 CANNOT PASS, AND IT IS THE FINDING OF THE PHASE.** There is no create
+operation for an automation anywhere in the public contract and no POST handler in
+`internal/httpapi`. `cmd/adm/automation.go:17` still carries the **Phase 1** comment "the
+only way an automation is written" — it was true then, and **nobody noticed it stayed true
+through thirty-two chunks of building self-serve onboarding.** A customer can sign up,
+connect an account, and then cannot make the thing that replies.
+
+**LINK 17 REPORTED THREE ERRORS OF ITS OWN**, including running `go test` bare so the
+database tests skipped silently — 120 SKIPs, `internal/store` at 0.002s, *exactly the tell
+the mandate documents*, walked into by someone who had read that warning an hour earlier.
+And its adversarial reviewer caught it transcribing a **Sonnet subagent's summary** without
+opening the source — the compression failure again, in the paragraph arguing that reviewers
+are this build's highest-yield control. *A subagent's summary is a citation, and a citation
+is checkable.*
+
+**STILL OPEN, ALL ASSIGNED TO NOBODY:** `createAutomation`, `getChannelAccountHealth`,
+`tokenHealth` — all three change `openapi/kinreply.yaml`, so **ONE coordinated regeneration
+after they land**. Milos's client is at `68be2a1`, generated for the Phase 1 contract; Phase
+2 added ten /v1 operations (34 → 44) and his client knows about none of them.
+`phase1-sql-schema` is still unmerged, 20 commits and 25 migrations ahead of main.
+
+**PREMISES THAT MOVED:** uxonews now runs Docker 29.8.1 against the 29.8.0 the Track-O
+decision was taken on — recorded with the delta named rather than restated as still-true.
+And Track-O's per-IP sign-in limit is still unfixed, except that Phase 2 put it behind Caddy
+on a public host with signup open, **so that exposure is live now**.
+
+**FOR BOGDAN, UNCHANGED:** one more DM, a read-only GitHub deploy key, and the comment test
+that needs the second account and a call. Plus three things to glance at: the alert
+destination I moved off Stefan, signup being open, and whether Zernio's cleartext signing
+secret is worth rotating.
