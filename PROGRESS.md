@@ -15262,3 +15262,9 @@ backup is the only rollback that exists.
 - Z.ai: he is creating the key now. A background loop watches arch:~/keys for a new file.
 - graphify --update from the CLI ran detection only; graph.json was NOT rewritten (still 8040 nodes, 00:51). A Sonnet subagent (reporting to me) is running the skill's incremental flow in the background. Link 4's seed says the graph is stale for chunk 5-6 code until I say otherwise.
 - Link 4 spawned by hand: tmux kr3build-04, Opus, bypassPermissions, HOTLINE_SPAWNED=1, cwd api. It declared itself api-6c. Pane captured 25s in: no wedge, build log already read. Its run is chunk 7, then report and stop.
+
+## 01:50 — graph updated; my seed claim about it was wrong
+
+- The Sonnet subagent ran the incremental update: 8040 to 8121 nodes, 32581 to 32696 links, graph.json rewritten 01:35. I verified the counts myself; 448 nodes under mail/, and the source tree is untouched.
+- WRONG CLAIM, MINE: link 4's seed said the 49 changed files were chunk 5-6 mail relay code. 48 of them are zero-node JSON fixtures that graphify's CLI heal check re-queues on every --update, forever. Only 5 code files really changed. I read a count as a description; see check-what-a-grep-matched. Corrected with api-6c by message.
+- Also worth knowing: the skill's update.md runbook skips the CLI's heal check (#2543). The subagent replicated it by hand. 107 of 318 communities got heuristic labels, not curated ones.
