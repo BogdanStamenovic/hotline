@@ -56,7 +56,7 @@ import shutil
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from . import tmuxen
@@ -322,18 +322,11 @@ def survey(
         agent = by_session_id.get(live.session_id) if live else None
         pending = dangling_tool_use(live.session_id) if live else None
         blocked = Blocked(pane=pane, prompt=prompt, agent=agent, session=live, pending=pending)
+        # `since` is not known until the ledger of first sightings is consulted,
+        # and the key needed to consult it does not depend on `since`.
         first = seen.setdefault(blocked.key, now)
         live_keys.add(blocked.key)
-        found.append(
-            Blocked(
-                pane=pane,
-                prompt=prompt,
-                agent=agent,
-                session=live,
-                pending=pending,
-                since=first,
-            )
-        )
+        found.append(replace(blocked, since=first))
 
     # Forget prompts that are gone, so the same prompt appearing again later is
     # a new incident rather than one inheriting an hours-old `since`.

@@ -195,20 +195,24 @@ def detect(pane: str, *, context_lines: int = CONTEXT_LINES) -> Prompt:
     # 2. Find the selection cursor above it.
     body = lines[:-1]
     cursor_at = None
+    glyph = None
     for index in range(len(body) - 1, max(-1, len(body) - 1 - _CURSOR_WINDOW), -1):
-        if _CURSOR.match(body[index].lstrip()):
+        glyph = _CURSOR.match(body[index].lstrip())
+        if glyph:
             cursor_at = index
             break
-    if cursor_at is None:
+    if cursor_at is None or glyph is None:
         return Prompt(False, reason="dialog footer with no selection cursor above it")
 
     # 3. Options are the cursor line's siblings: the lines indented to the same
     #    column its text starts at. Collected upward as well as downward,
     #    because the cursor sits wherever it was last moved to -- landing on the
     #    last option used to yield a one-option dialog and no match at all.
+    # The match is carried down from the search rather than recomputed. It was
+    # an `assert glyph is not None` here, which `python -O` strips -- and the
+    # next line would then raise inside the sweep loop instead of returning a
+    # verdict. A detector is not a place to rely on assertions staying compiled.
     cursor_line = body[cursor_at]
-    glyph = _CURSOR.match(cursor_line.lstrip())
-    assert glyph is not None  # guaranteed by the search above
     content_col = (len(cursor_line) - len(cursor_line.lstrip())) + len(glyph.group(0))
 
     def _sibling(raw: str) -> bool:
