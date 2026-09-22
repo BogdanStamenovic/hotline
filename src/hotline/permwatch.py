@@ -280,7 +280,7 @@ def notify(blocked: Blocked, *, registry: Registry | None = None, dry_run: bool 
     target = operator(registry)
     reason = "no sys-admin agent is registered"
 
-    if target is not None and blocked.agent is not None and blocked.agent.session_id == target.session_id:
+    if target is not None and _is_the_operators_own_pane(blocked, target):
         # The operator is the one that is stuck. Telling it about itself would
         # put the news in the inbox of the session that cannot read its inbox --
         # which is the original failure with an extra step.
@@ -299,6 +299,28 @@ def notify(blocked: Blocked, *, registry: Registry | None = None, dry_run: bool 
         return f"Bogdan's channel -- {reason}"
     log.error("escalation failed entirely: %s", detail)
     return "NOWHERE -- both the operator and the Discord fallback failed"
+
+
+def _is_the_operators_own_pane(blocked: Blocked, target: Agent) -> bool:
+    """Is the stuck pane the operator's own?
+
+    The obvious test is `blocked.agent.session_id == target.session_id`, and it
+    was the only test until a review pointed out that it cannot fire for the
+    case this module calls the most important one. An agent stuck at the
+    folder-trust prompt has no descriptor and no registry record, so
+    `blocked.agent` is None -- and if that pane happens to be the operator's,
+    the guard silently did not apply.
+
+    So the tmux session is compared as well, resolved from the operator's own
+    descriptor. That works when the registry knows the operator and the pane
+    does not, which is exactly the asymmetry the folder-trust case creates.
+    """
+    if blocked.agent is not None and blocked.agent.session_id == target.session_id:
+        return True
+    for session in discover(include_self=True, include_programmatic=True):
+        if session.session_id == target.session_id:
+            return session.tmux_session == blocked.pane.session
+    return False
 
 
 def _self_name() -> str:
@@ -368,7 +390,16 @@ def survey(
     for pane in visible:
         if not pane.is_claude or pane.session in skip:
             continue
-        prompt = detect(tmuxen.capture(pane.target, lines=60))
+        try:
+            prompt = detect(tmuxen.capture(pane.target, lines=60))
+        except Exception:
+            # Per-pane, deliberately. This used to be unguarded, and one pane
+            # that could not be captured took down the entire pass -- every
+            # other agent's real, detected block discarded with it. `panes()`
+            # already had this fix at the whole-tmux level; a persistently sick
+            # pane would otherwise hide every session listed after it, forever.
+            log.exception("could not examine %s; skipping that pane", pane.target)
+            continue
         if not prompt:
             continue
         live = sessions.get(pane.session)
@@ -389,8 +420,18 @@ def survey(
 
 
 def still_blocked(blocked: Blocked) -> bool:
-    """Re-read the pane right now. Answered prompts must not escalate."""
-    fresh = detect(tmuxen.capture(blocked.pane.target, lines=60))
+    """Re-read the pane right now. Answered prompts must not escalate.
+
+    A pane that cannot be read is reported as no longer blocked, so the
+    escalation is held. That is the safe direction: a held notification is
+    retried on the next pass, while one sent about a prompt that may have been
+    answered is the noise that teaches people to ignore the channel.
+    """
+    try:
+        fresh = detect(tmuxen.capture(blocked.pane.target, lines=60))
+    except Exception:
+        log.exception("could not re-read %s; holding the escalation", blocked.pane.target)
+        return False
     return bool(fresh) and fresh.fingerprint == blocked.prompt.fingerprint
 
 
@@ -445,7 +486,21 @@ class Ledger:
         record["count"] = record.get("count", 0) + 1
         record["at"] = now
         record["where"] = where
+        # Kept so a restart does not reset how long something has been stuck.
+        # `seen` lives in the loop's memory and starts empty, so a reminder
+        # after a restart used to say "blocked: 0 min" about an agent that had
+        # been stuck for hours -- understating the one number the reader uses
+        # to decide how urgent it is.
+        record.setdefault("first", blocked.since or now)
         return int(record["count"])
+
+    def first_seen(self) -> dict[str, float]:
+        """First-sighting times to seed a fresh loop with."""
+        return {
+            key: float(rec["first"])
+            for key, rec in self.sent.items()
+            if isinstance(rec.get("first"), (int, float))
+        }
 
     def forget_absent(self, live: set[str]) -> None:
         for key in [k for k in self.sent if k not in live]:
@@ -510,7 +565,9 @@ def run(
     skip: set[str] | None = None,
 ) -> int:
     ledger = Ledger()
-    seen: dict[str, float] = {}
+    # Seeded from the ledger rather than empty, so a restart does not forget how
+    # long a prompt has been standing.
+    seen: dict[str, float] = ledger.first_seen()
     log.info(
         "permwatcher up: every %.0fs, grace %.0fs, reminders %s",
         interval,

@@ -206,7 +206,15 @@ def capture(target: str, lines: int = 60) -> str:
     thinking hard look identical from the outside, but the pane usually says which
     it is -- a spinner and a tool name, or a permission prompt nobody answered.
     """
-    result = _tmux("capture-pane", "-p", "-t", target, "-S", f"-{lines}", check=False)
+    try:
+        result = _tmux("capture-pane", "-p", "-t", target, "-S", f"-{lines}", check=False)
+    except (OSError, subprocess.SubprocessError) as exc:
+        # `check=False` does not cover a missing binary or a pane that takes
+        # longer than the timeout to render, and both still raise. A caller
+        # polling every pane on the box must not lose the whole pass because
+        # one of them is sick.
+        log.warning("could not capture %s: %s", target, exc)
+        return ""
     if result.returncode != 0:
         return ""
     return "\n".join(line.rstrip() for line in result.stdout.splitlines()).strip()

@@ -403,3 +403,78 @@ def test_a_held_inbound_setting_is_surfaced(tmp_path, monkeypatch) -> None:
 
     settings.write_text("not json at all")
     assert "cannot tell" in permwatch.inbound_warning()
+
+
+def test_one_sick_pane_does_not_blind_the_whole_pass(monkeypatch) -> None:
+    """A capture that raises used to discard every other pane's real block.
+
+    tmux returns panes in a stable order, so a persistently sick pane would
+    hide every session listed after it for as long as it existed -- the exact
+    failure `run()`'s catch-all comment says is worse than the one being
+    reported.
+    """
+    import subprocess as sp
+
+    good = tmuxen.Pane("healthy", "healthy:0.0", 2, "claude")
+    bad = tmuxen.Pane("sick", "sick:0.0", 1, "claude")
+    blocked_text = (PANES / "blocked" / "bash-permission.txt").read_text()
+
+    def capture(target, lines=60):
+        if target == "sick:0.0":
+            raise sp.TimeoutExpired("tmux capture-pane", 15)
+        return blocked_text
+
+    monkeypatch.setattr(tmuxen, "panes", lambda: [bad, good])
+    monkeypatch.setattr(tmuxen, "capture", capture)
+    monkeypatch.setattr(permwatch, "discover", lambda **kw: [])
+    found = permwatch.survey()
+    assert [b.pane.session for b in found] == ["healthy"]
+
+
+def test_an_unreadable_pane_holds_the_escalation(monkeypatch) -> None:
+    """Held is the safe direction: retried next pass, versus crying wolf."""
+    import subprocess as sp
+
+    def boom(target, lines=60):
+        raise sp.TimeoutExpired("tmux capture-pane", 15)
+
+    monkeypatch.setattr(tmuxen, "capture", boom)
+    assert permwatch.still_blocked(_blocked()) is False
+
+
+def test_the_operators_own_untracked_pane_is_recognised(monkeypatch) -> None:
+    """The folder-trust case has no agent record, so session_id cannot match.
+
+    If that pane is the operator's, the guard has to notice via tmux instead.
+    """
+    from hotline.agents import Agent
+
+    op = Agent(session_id="sid-op", name="hotline-80", task="operator", authority="sys-admin")
+    blocked = _blocked(name="op-pane", fixture="folder-trust.txt", since=time.time() - 300)
+    assert blocked.agent is None, "the folder-trust case has no registry record"
+
+    class FakeSession:
+        session_id = "sid-op"
+        tmux_session = "op-pane"
+
+    monkeypatch.setattr(permwatch, "operator", lambda registry=None: op)
+    monkeypatch.setattr(permwatch, "discover", lambda **kw: [FakeSession()])
+    routed: list[list[str]] = []
+    monkeypatch.setattr(
+        permwatch, "_run", lambda argv, text, **kw: (routed.append(argv), (True, ""))[1]
+    )
+    where = permwatch.notify(blocked)
+    assert "the operator is the blocked agent" in where
+    assert not any("--to" in argv for argv in routed)
+
+
+def test_elapsed_time_survives_a_restart(tmp_path, monkeypatch) -> None:
+    """A reminder after a restart must not say "blocked: 0 min" about hours."""
+    blocked = _blocked(since=time.time() - 7200)
+    monkeypatch.setattr(permwatch, "survey", lambda **kw: [blocked])
+    ledger = Ledger(path=tmp_path / "l.json")
+    permwatch.sweep(ledger, {}, grace=45, dry_run=True)
+    restarted = Ledger(path=tmp_path / "l.json")
+    seeded = restarted.first_seen()
+    assert blocked.key in seeded
+    assert time.time() - seeded[blocked.key] > 7000

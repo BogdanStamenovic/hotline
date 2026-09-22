@@ -53,6 +53,21 @@ Wording, numbering and footer all differ. What they share is a shape: a
 selection cursor on one of several sibling option lines, closed by a footer of
 short `key to verb` hints.
 
+**Two load-bearing assumptions, written down because they are invisible.**
+Probed on 2026-09-22 by feeding the detector deliberately malformed panes:
+
+  * options are recognised by being indented to the column the cursor's text
+    starts at. A dialog rendered with no indent at all is NOT matched -- all
+    three real shapes indent, but nothing here would notice if that changed;
+  * the pane must arrive without ANSI escapes. `tmuxen.capture` uses
+    `capture-pane -p` without `-e`, which is what makes that true. Adding `-e`
+    anywhere would break every match silently, since an escape sequence in
+    front of the footer stops it looking like a footer.
+
+Both failures are silent in the same direction: they produce "nothing is
+blocked", which is indistinguishable from a healthy machine. There is no alarm
+for "I have stopped recognising prompts", and that is the honest gap.
+
 **The dialog must be the bottom-most thing in the pane.** This is the rule that
 does most of the work, and it is what separates a session that is *stopped* from
 one that is merely being nagged. A blocking permission prompt is the last thing
@@ -69,9 +84,17 @@ import hashlib
 import re
 from dataclasses import dataclass
 
-# U+276F is what the CLI actually draws; ">" is what people transcribe it as in
-# notes and bug reports, and costs nothing to accept.
-_CURSOR = re.compile(r"^(?:❯|›|>)[ \s]")
+# U+276F, and only U+276F: what the CLI actually draws.
+#
+# ">" and "›" used to be accepted too, on the reasoning that people
+# transcribe the glyph that way in notes and it "costs nothing". It costs a
+# false-positive class. An adversarial review quoted this file's own incident
+# writeup -- which renders the prompt with "> 1. Yes" -- into a pane and the
+# detector matched it, and the process gate cannot help because an agent
+# displaying this file IS a claude pane. The only text ever fed to this
+# function is `capture-pane` output, so tolerance for how humans retype the
+# glyph buys nothing real and admits every faithful quotation of a prompt.
+_CURSOR = re.compile(r"^❯[ \s]")
 
 # A footer segment is a key hint: "Esc to cancel", "Tab to amend", "↑/↓ to
 # select". Prose does not look like this, which is the point -- the alternative
@@ -83,10 +106,13 @@ _HINT = re.compile(r"^\S{1,12}(?:/\S{1,12})?\s+to\s+\w[\w\s]{0,20}$")
 # hint line from standing in for a real footer.
 _ESCAPE_HINT = re.compile(r"\besc\b\s+to\s+cancel\b", re.IGNORECASE)
 
-# How far above the footer a cursor line may sit. Generous enough for a long
-# option list, tight enough that an unrelated "❯" further up the scrollback
-# cannot be adopted as this dialog's cursor.
-_CURSOR_WINDOW = 24
+# How far above the footer a cursor line may sit, which is also a hard ceiling
+# on how many options a dialog may have below the cursor. Real prompts offer
+# two to four, so 40 is generous; it is not unlimited, because an unrelated
+# "❯" further up the scrollback must not be adopted as this dialog's cursor.
+# Raised from 24 after a review pointed out it was a silent cap rather than the
+# scrollback guard it was documented as.
+_CURSOR_WINDOW = 40
 
 # Lines of pane kept above the question, so the escalation shows what command
 # triggered the prompt without anybody having to go and look.
@@ -215,14 +241,35 @@ def detect(pane: str, *, context_lines: int = CONTEXT_LINES) -> Prompt:
     cursor_line = body[cursor_at]
     content_col = (len(cursor_line) - len(cursor_line.lstrip())) + len(glyph.group(0))
 
+    def _indent(raw: str) -> int:
+        return len(raw) - len(raw.lstrip())
+
     def _sibling(raw: str) -> bool:
-        return bool(raw.strip()) and (len(raw) - len(raw.lstrip())) == content_col
+        return bool(raw.strip()) and _indent(raw) == content_col
+
+    def _continuation(raw: str) -> bool:
+        """A wrapped option's second line, indented past where options start.
+
+        Without this a long label ends the option list at the wrap: the CLI
+        hard-wraps at the terminal width, and "Yes, and don't ask again for
+        edits to this file this / session" is a real option that wraps in a
+        narrow pane. The collection loop then saw one option and refused to
+        call it a decision -- a false negative caused by terminal width.
+        """
+        return bool(raw.strip()) and _indent(raw) > content_col
 
     above: list[str] = []
+    wrapped: list[str] = []
     for raw in reversed(body[:cursor_at]):
+        if _continuation(raw):
+            # Read bottom-up, so a continuation is seen before the option it
+            # belongs to; hold it until that option arrives.
+            wrapped.insert(0, raw.strip())
+            continue
         if not _sibling(raw):
             break
-        above.append(raw.strip())
+        above.append(" ".join([raw.strip(), *wrapped]))
+        wrapped.clear()
     above.reverse()
 
     selected = _CURSOR.sub("", cursor_line.lstrip(), count=1).strip()
@@ -232,6 +279,14 @@ def detect(pane: str, *, context_lines: int = CONTEXT_LINES) -> Prompt:
         if not raw.strip():
             # A blank line inside the block: the trust dialog puts one before
             # its footer. Keep looking rather than closing the list early.
+            continue
+        if _continuation(raw):
+            # Belongs to whatever option was last seen -- the cursor's own line
+            # when nothing has been collected yet.
+            if below:
+                below[-1] = f"{below[-1]} {raw.strip()}"
+            else:
+                selected = f"{selected} {raw.strip()}"
             continue
         if not _sibling(raw):
             break

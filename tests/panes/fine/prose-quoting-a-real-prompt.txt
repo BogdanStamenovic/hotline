@@ -1,0 +1,13 @@
+● Explaining the incident that motivated permwatcher:
+
+  On 2026-09-22 a build agent hit Claude Code's dangerous-operation guard
+  mid-build and the pane showed this:
+
+      Dangerous rm operation on possibly-empty variable path: "$SP/$1/.git"
+      Do you want to proceed?
+      > 1. Yes
+        2. No
+
+      Esc to cancel · Tab to amend
+
+  It sat there until a human happened to ask how the build was going.

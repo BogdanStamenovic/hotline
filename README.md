@@ -227,6 +227,12 @@ bottom-most element, would go unmatched -- silently, because a detector that
 matches nothing looks exactly like a machine with nothing wrong. There is no
 alarm for "I have stopped recognising prompts".
 
+Two further assumptions are load-bearing and were found by probing rather than
+by reading: options must be indented to the cursor's text column (a dialog with
+no indent is missed), and the capture must contain no ANSI escapes -- true only
+because `capture-pane` is called without `-e`. Both fail in the same silent
+direction.
+
 **It announces itself as `kind="service"`.** Escalations previously fell
 through to `kind="human"` with the label "a shell on this machine", which
 stamped every routine notification with an UNVERIFIED-claim warning. A safety
@@ -271,6 +277,16 @@ no approval. One lost notification and a hop, not a loop.
 
 **Reminders stop after 4.** A prompt nobody has answered in five hours stops
 being mentioned.
+
+**The ledger has no lock.** Two `run()` instances at once -- the unit plus a
+manually started debug copy -- can each see the same prompt as due before
+either has saved, escalating twice and clobbering each other's state. systemd
+prevents a second copy of the unit; nothing prevents a person starting one by
+hand. `--status` and `--dry-run` are read-only and safe to run alongside.
+
+**A dialog only matches while its cursor is within 40 lines of the footer**,
+which is a ceiling on option count as well as a scrollback guard. Real prompts
+offer two to four.
 
 ## Limitations
 
