@@ -220,8 +220,10 @@ pipes, with no tty -- is invisible to this, and so is one on another machine.
 `wedge.py` covers a different blindness (a session that stops consuming its
 message queue) and neither subsumes the other.
 
-**It only knows the prompt shapes that have been seen.** Three are in the
-fixture corpus, captured from real agents. A future CLI that drops the cursor
+**It only knows the prompt shapes that have been seen.** Five are in the
+fixture corpus, captured from real agents across two CLI releases (2.1.269 and
+2.1.280) -- deliberately more than one, since a release changing the dialog
+shape is the failure there is no alarm for. A future CLI that drops the cursor
 glyph, or the `Esc to cancel` footer, or draws a dialog that is not the
 bottom-most element, would go unmatched -- silently, because a detector that
 matches nothing looks exactly like a machine with nothing wrong. There is no

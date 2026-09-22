@@ -175,3 +175,19 @@ def test_a_long_option_list_is_still_matched() -> None:
     verdict = detect(pane)
     assert verdict, verdict.reason
     assert len(verdict.options) == 30
+
+
+def test_the_corpus_spans_a_cli_version_bump() -> None:
+    """The silent failure this module cannot alarm on is a CLI shape change.
+
+    The LIMITATIONS section admits there is no alarm for "I have stopped
+    recognising prompts". The only defence is a corpus that covers more than
+    one release, so a version bump that breaks the shape shows up here rather
+    than as a quiet machine. Captured on 2.1.269 and again on 2.1.280.
+    """
+    versions = set()
+    for path in BLOCKED:
+        for line in path.read_text().splitlines():
+            if "Claude Code v" in line:
+                versions.add(line.split("Claude Code v")[1].strip())
+    assert len(versions) >= 2, f"corpus only covers {versions or 'one unlabelled version'}"
