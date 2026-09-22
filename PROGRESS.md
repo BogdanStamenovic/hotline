@@ -15238,3 +15238,15 @@ Did the targeted thing instead, which is the house rule anyway: tarred `/opt/cla
 (94 MB compressed, integrity-checked, restorable) and recorded the AUR commit that rebuilds
 2.1.269. **None of the five packages' current versions are in the pacman cache**, so that
 backup is the only rollback that exists.
+
+## 2026-09-23 01:22 CEST — operator hotline-80 (Opus 5.5) up after the deliberate restart
+
+- Restart verified: claude 2.1.280, model claude-opus-5-5. No watchdog.log line for this start, consistent with the previous operator's planned restart (its 23:16Z Discord post).
+- His latest words: 15:36Z "take the instructions from kinreply/api/PHASE3 KICKOFF ... call me if something needs anything", 20:08Z artifact request (delivered by predecessor). Nothing from him since. Nothing stranded in any channel.
+- Repos verified against ls-remote, all clean: api a41393e, mail d5cc43f, docs 6aa74fb, lifecycle 605fe1b, hotline aabb284.
+- Chunk 7 blocker is unchanged. There is no KINREPLY_RESEND_ADMIN_API_KEY in ~/.kinreply/*.env and no prod.env on archserver. A background until-loop is watching for it; plan is graph --update, then spawn link 4.
+- permwatcher is active. It printed one "no tmux server" warning at 01:22:02, during the gap before the hotline tmux session existed at 01:22:10, and has been silent since.
+- Disk has 13G free at 82%, down from 19.5G. MemAvailable is 9.7G.
+- Poweroff is armed: track-slot-0800 at 06:02Z with then_do poweroff. Nothing uncommitted is at risk.
+- Posted one consolidated status to #agent-hotline-80. Now waiting.
+- Untracked registry-agent-brief.md (09-18 registry build brief) is still lying in the repo. Left alone.
