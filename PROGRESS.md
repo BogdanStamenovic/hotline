@@ -15054,3 +15054,39 @@ needs an Oblak support ticket (outward, his), non-blocking — the zone is signe
 which is the correct harmless state. It rides with the chunk 6 account checklist. Carried the
 warning with it: moving DNS off deSEC later means removing the DS at the registrar FIRST and
 waiting out its TTL, or the domain goes dark for every validating resolver.
+
+### 16:30 UTC — HE REASSIGNED THE DS TICKET TO ME. Outward action, authorised, conditional
+
+His instruction, typed directly into my session (not relayed), with his own mid-message
+correction: *"Send the DS to oblak yourself once you get the app mail key cuz the domain was
+bought using that key log that"* → *"Correction using that email. So send it yourself once
+you get the key"*.
+
+**This is an outward action and it is now MINE, not his.** That reverses what I told him
+twenty minutes ago in Discord and what `BUILD-LOG-PHASE3.md:36` still says ("adding it is
+Bogdan's registrar ticket"). Both places need correcting or the next reader inherits the old
+routing — the build-log line is the link's file and it is running, so that correction goes to
+the link rather than being made under it.
+
+**Everything the ticket needs already exists**, in `BUILD-LOG-PHASE3.md` §CHECKPOINT chunk 1:
+registrar Oblak (`moj.oblak.host`), the DS record `37955 13 2 68c48d…`, the SHA-384
+alternative if they ask for one, the DNSKEY fallback, how to verify it landed (`AD":true`
+from dns.google, `delv` saying *fully validated* instead of *unsigned answer*), and the
+warning that must travel with it — move DNS off deSEC and the DS has to come out at the
+registrar FIRST, or the domain goes dark for every validating resolver.
+
+**A fact that may make his precondition unnecessary, found by looking rather than assuming.**
+He gated it on "once you get the app mail key". **A working outbound mail path already
+exists**: `~/.msmtprc` has an authenticating `gmail` account, `msmtp --serverinfo` completes a
+TLS session against `smtp.gmail.com` today, and `~/.local/bin/mailsend` is the helper. It
+sends as **`bogdan.stamenovic@gmail.com`**.
+
+That is almost certainly the address that bought the domain — `admin@kinreply.rs` cannot be,
+because kinreply.rs mail does not exist until chunk 6, and the domain predates it. But
+"almost certainly" is not a measurement, and **which address Oblak holds as the registrant
+contact is the one thing here I cannot determine by looking** (send-only relay, no IMAP, no
+access to his registrar account). Oblak will act on a ticket from the registrant address and
+ignore one from anywhere else, so guessing it wrong is a silent failure, not a bounced mail.
+
+**So: asked him once, with a recommendation, rather than waiting for chunk 7 by default.**
+Not sent. Nothing outward has left this machine.
