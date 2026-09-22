@@ -15306,3 +15306,10 @@ backup is the only rollback that exists.
 - His words: "for the first to be honest i dont know. but the models costs 3 centes per 1m input and 13 cents per 1m under 32k context so it works for me". So the key stays, and README 2.6 "Frankfurt workspace" is amended by him. Z.ai/backup: he answers tomorrow.
 - Passed to api-6c for chunk 8: record the decision with his quote; update README 2.6 and any Frankfurt/eu-central-1 assertion; have the privacy note say "international endpoint, likely Singapore" (dashscope-intl = Singapore is from my knowledge, not verified). Delivered with no mid-turn warning, so the link was idle.
 - Checkpoint page updated: question 1 settled, only the backup provider is open.
+
+## ~00:05Z — prod encryption key handed to him (chunk 4 checkpoint, his half pending)
+
+- He asked me to scp the prod key to his laptop. Streamed `ssh uxonews sudo sed ... /etc/kinreply/prod/encryption-keys | ssh arch` into `~/keys/kinreply-prod-encryption-key.txt` under umask 077, mode 600. It never touched archserver disk and was never printed.
+- Verified ON THE LAPTOP with the spec's own method: fingerprint 33a038085cd4, matching the build log. Shape `1 44` (version 1, 32 bytes).
+- This is a deviation from the spec (clipboard route, no file), at his request. His half: store it in the password manager, check the note against the fingerprint, delete the file, then say "prod key stored, fingerprint matches". Chunk 10 must not open signup until that sentence is in the build log.
+- uxonews ssh warned about a non-post-quantum key exchange. Informational.
