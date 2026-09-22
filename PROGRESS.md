@@ -15250,3 +15250,15 @@ backup is the only rollback that exists.
 - Poweroff is armed: track-slot-0800 at 06:02Z with then_do poweroff. Nothing uncommitted is at risk.
 - Posted one consolidated status to #agent-hotline-80. Now waiting.
 - Untracked registry-agent-brief.md (09-18 registry build brief) is still lying in the repo. Left alone.
+
+## 2026-09-23 ~01:45 CEST — checkpoint keys pulled, link 4 (api-6c) spawned for chunk 7
+
+- He said all keys are on the laptop at arch:~/keys. There are three files: resend.txt, zernio and qwencloud.txt. None of them is KEY=VALUE.
+- Built ~/.kinreply/prod.env on archserver, mode 600: RESEND_ADMIN, ZERNIO, MODELSTUDIO key and BASE_URL. No values were printed.
+- Resend admin key verified. GET /domains returned 200, data []. Control: the shared key lists kinreply.rs, dds.uxonews.com and uxonews.com. So this key belongs to the new account, with no domain added.
+- Model Studio key: 200 on dashscope-intl with 172 models, qwen3.7-flash and qwen3.7-text-embedding among them; 401 on dashscope and dashscope-us. NOT confirmed as Frankfurt or as restricted to qwen3.7-flash. Asked him. This is chunk 8's concern.
+- Zernio key is not probed. Chunk 8 verifies it.
+- He says TikTok Business needs business verification he doesn't have. That is item 5, chunk 20's; recorded, nothing blocked now.
+- Z.ai: he is creating the key now. A background loop watches arch:~/keys for a new file.
+- graphify --update from the CLI ran detection only; graph.json was NOT rewritten (still 8040 nodes, 00:51). A Sonnet subagent (reporting to me) is running the skill's incremental flow in the background. Link 4's seed says the graph is stale for chunk 5-6 code until I say otherwise.
+- Link 4 spawned by hand: tmux kr3build-04, Opus, bypassPermissions, HOTLINE_SPAWNED=1, cwd api. It declared itself api-6c. Pane captured 25s in: no wedge, build log already read. Its run is chunk 7, then report and stop.
