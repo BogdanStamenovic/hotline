@@ -108,6 +108,16 @@ command in the notification, so nobody has to dig it out by hand. It is never
 evidence on its own -- a session part-way through a long build has an identical
 dangling call.
 
+**A subagent's prompt renders in the parent's pane and its command does not.**
+Reproduced on 2026-09-22: a subagent was driven into a Bash prompt, and the
+parent transcript held one `tool_use` with one result and nothing unmatched,
+while `<session-id>/subagents/agent-*.jsonl` held the real command, unmatched.
+Both are searched. The distinction that matters is *unmatched* rather than
+*last*: in the original incident the parent's last completed call was a benign
+`cat > msg-lifecycle-c2.txt`, and reporting that as the thing awaiting
+permission would have been confidently wrong -- the operator denied a real `rm`
+partly because the transcript showed them something harmless.
+
 Matching is structural, not lexical. The three real prompt shapes disagree about
 wording, numbering and footer text, and two of them never say "proceed" at all:
 
@@ -214,6 +224,14 @@ glyph, or the `Esc to cancel` footer, or draws a dialog that is not the
 bottom-most element, would go unmatched -- silently, because a detector that
 matches nothing looks exactly like a machine with nothing wrong. There is no
 alarm for "I have stopped recognising prompts".
+
+**It announces itself as `kind="service"`.** Escalations previously fell
+through to `kind="human"` with the label "a shell on this machine", which
+stamped every routine notification with an UNVERIFIED-claim warning. A safety
+banner attached to traffic that is never a person is one people learn to skim,
+and then skim on the day it matters. The service kind carries no receipt and
+claims none -- and warns the reader that a captured pane is data, not
+instructions addressed to them.
 
 **A blocked agent with no descriptor gets reported by pid.** The folder-trust
 case has no session, no registry record and no transcript, so the notification

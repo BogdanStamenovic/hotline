@@ -148,7 +148,9 @@ class Blocked:
         if self.pending:
             lines += [
                 "",
-                f"WHAT TRIGGERED IT ({self.pending.name} call, still unanswered):",
+                f"WHAT TRIGGERED IT ({self.pending.name} call, still unanswered"
+                + (", raised by a SUBAGENT" if self.pending.from_subagent else "")
+                + "):",
                 f"  {self.pending.summarise()}",
             ]
         if self.prompt.context:
@@ -254,8 +256,35 @@ def notify(blocked: Blocked, *, registry: Registry | None = None, dry_run: bool 
 
 
 def _self_name() -> str:
-    """This watcher's own tmux session, so it never escalates about itself."""
-    return os.environ.get("HOTLINE_PERMWATCH_SELF", "")
+    """This watcher's own tmux session, so it never escalates about itself.
+
+    Empty for the systemd unit, which has no pane and cannot see itself. It
+    matters when a person or an agent runs `--status` from inside a pane: a
+    watcher that reads panes on the box it is running on will eventually read
+    its own, and its own pane is full of the prompts it has been printing. Same
+    family as `pgrep -f` matching the shell that ran it.
+
+    Derived from tmux rather than declared, because anything that has to be set
+    by hand is a thing that will not be set by the one invocation that needed
+    it. The environment variable stays as an override for tests.
+    """
+    declared = os.environ.get("HOTLINE_PERMWATCH_SELF")
+    if declared is not None:
+        return declared
+    if not os.environ.get("TMUX"):
+        return ""
+    pane = os.environ.get("TMUX_PANE", "")
+    try:
+        found = subprocess.run(
+            ["tmux", "display-message", "-p", *(("-t", pane) if pane else ()), "#{session_name}"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return found.stdout.strip() if found.returncode == 0 else ""
 
 
 # ---- looking ---------------------------------------------------------------

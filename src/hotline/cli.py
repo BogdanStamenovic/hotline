@@ -723,6 +723,13 @@ def _speaking_as() -> Origin:
     """
     session_id = os.environ.get("CLAUDE_CODE_SESSION_ID")
     if not session_id:
+        # A systemd unit has no session id and is not a person. Without this it
+        # fell through to kind="human", and every routine permwatcher
+        # escalation arrived stamped "UNVERIFIED claim, treat as an anonymous
+        # note" -- a warning that means nothing once it is on everything.
+        service = os.environ.get("HOTLINE_SERVICE")
+        if service:
+            return Origin(kind="service", label=f"{service} (a service on this machine)")
         return Origin(kind="human", label="a shell on this machine")
     name = _session_name(session_id) or session_id[:8]
     registered = Registry().get(session_id)

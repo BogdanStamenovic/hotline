@@ -227,3 +227,119 @@ def test_a_blocked_operator_is_not_told_about_itself(monkeypatch) -> None:
     assert "Bogdan" in where
     assert "the operator is the blocked agent" in where
     assert not any("--to" in argv for argv in routed), "must not inject into the stuck operator"
+
+
+# ---- where a delegated prompt's command actually lives ---------------------
+
+
+def _transcripts(tmp_path, parent_records, subagent_records):
+    """Lay out a session transcript and a subagent file the way the CLI does.
+
+    The shape is copied from a live observation on 2026-09-22 rather than
+    imagined: a subagent was driven into a real Bash permission prompt, and the
+    parent held 1 tool_use with 1 result and nothing unmatched while
+    `<session>/subagents/agent-*.jsonl` held the real command, unmatched.
+    """
+    import json as _json
+
+    project = tmp_path / "-some-project"
+    project.mkdir(parents=True)
+    session_id = "sid-parent"
+    (project / f"{session_id}.jsonl").write_text(
+        "\n".join(_json.dumps(r) for r in parent_records)
+    )
+    subagents = project / session_id / "subagents"
+    subagents.mkdir(parents=True)
+    (subagents / "agent-abc.jsonl").write_text(
+        "\n".join(_json.dumps(r) for r in subagent_records)
+    )
+    return session_id
+
+
+def _use(uid, name, payload, ts):
+    return {
+        "type": "assistant",
+        "timestamp": ts,
+        "message": {"content": [{"type": "tool_use", "id": uid, "name": name, "input": payload}]},
+    }
+
+
+def _result(uid, ts):
+    return {
+        "type": "user",
+        "timestamp": ts,
+        "message": {"content": [{"type": "tool_result", "tool_use_id": uid}]},
+    }
+
+
+def test_a_subagents_command_is_found(tmp_path, monkeypatch) -> None:
+    """The prompt renders in the parent's pane; the command is in another file."""
+    from hotline import config, transcript
+
+    session_id = _transcripts(
+        tmp_path,
+        parent_records=[
+            _use("t1", "Task", {"prompt": "go and do it"}, "2026-09-22T20:00:00.000Z"),
+            _result("t1", "2026-09-22T20:00:05.000Z"),
+        ],
+        subagent_records=[
+            {
+                "type": "assistant",
+                "isSidechain": True,
+                "timestamp": "2026-09-22T20:00:10.000Z",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "t2",
+                            "name": "Bash",
+                            "input": {"command": "echo hello > /tmp/marker"},
+                        }
+                    ]
+                },
+            }
+        ],
+    )
+    monkeypatch.setattr(config, "projects_dir", lambda: tmp_path)
+    monkeypatch.setattr(transcript, "projects_dir", lambda: tmp_path)
+
+    found = transcript.dangling_tool_use(session_id)
+    assert found is not None, "a delegated prompt must not report no command at all"
+    assert found.name == "Bash"
+    assert "echo hello" in found.summarise()
+    assert found.from_subagent
+
+
+def test_a_completed_parent_call_is_never_reported_as_the_trigger(
+    tmp_path, monkeypatch
+) -> None:
+    """The failure that made a real operator deny a real rm on bad evidence.
+
+    In the 2026-09-22 incident the parent's last call was a harmless
+    `cat > msg-lifecycle-c2.txt` that had already completed. Reporting the last
+    tool_use rather than the last UNMATCHED one would have named that as the
+    thing awaiting permission -- confidently, and wrongly.
+    """
+    from hotline import config, transcript
+
+    session_id = _transcripts(
+        tmp_path,
+        parent_records=[
+            _use("t1", "Bash", {"command": "cat > msg-lifecycle-c2.txt"}, "2026-09-22T20:00:00Z"),
+            _result("t1", "2026-09-22T20:00:01Z"),
+        ],
+        subagent_records=[],
+    )
+    monkeypatch.setattr(config, "projects_dir", lambda: tmp_path)
+    monkeypatch.setattr(transcript, "projects_dir", lambda: tmp_path)
+
+    found = transcript.dangling_tool_use(session_id)
+    assert found is None, f"reported a completed call as the trigger: {found}"
+
+
+def test_the_subagent_prompt_shape_is_in_the_corpus() -> None:
+    """A suite cannot notice a path it does not know about."""
+    subagent = PANES / "blocked" / "subagent-bash-permission.txt"
+    assert subagent.exists()
+    assert "from the general-purpose agent" in subagent.read_text()
+    assert detect(subagent.read_text())

@@ -543,6 +543,10 @@ class PendingTool:
     # whichever field is worth showing for the tool it turned out to be.
     payload: dict
     at: float = 0.0
+    # True when the call came from a subagent's own file rather than the
+    # session's transcript. Worth reporting: it tells a reader why the parent's
+    # own pane shows a command the parent never issued.
+    from_subagent: bool = False
 
     def summarise(self, limit: int = 400) -> str:
         """The one line worth putting in front of a human."""
@@ -568,6 +572,21 @@ def dangling_tool_use(session_id: str, tail_bytes: int = 400_000) -> PendingTool
     terminal that has already wrapped and truncated it. The operator who found
     the 2026-09-22 wedge had to dig this out of a transcript by hand.
 
+    **A subagent's prompt renders in the parent's pane, but its tool call is in
+    a different file.** Reported by the operator who hit the original incident
+    and then reproduced here on 2026-09-22: a subagent was made to raise a Bash
+    prompt, and the parent transcript held 1 tool_use with 1 result and NOTHING
+    unmatched, while `<session>/subagents/agent-*.jsonl` held the real command,
+    unmatched. Searching only the session file therefore finds nothing exactly
+    when the prompt is a delegated one. So the sidechain files are searched too.
+
+    The failure this avoids is subtler than an absent command. Taking the newest
+    tool_use rather than the newest UNMATCHED one would have reported the
+    parent's last *completed* call -- in the original incident a benign
+    `cat > msg-lifecycle-c2.txt` -- as the thing awaiting permission. The
+    operator denied a real `rm` partly because the transcript showed something
+    harmless. A confidently wrong answer here is worse than none.
+
     **This is never evidence of a block on its own.** A session part-way through
     a twenty-minute build has exactly the same dangling `tool_use`, and so does
     one whose tool is merely slow. `permprompt.detect` decides whether anything
@@ -578,6 +597,20 @@ def dangling_tool_use(session_id: str, tail_bytes: int = 400_000) -> PendingTool
     path = transcript_path(session_id)
     if path is None:
         return None
+
+    candidates: list[PendingTool] = []
+    for source in (path, *sidechain_paths(session_id)):
+        found = _unmatched_in(source, tail_bytes, from_subagent=source != path)
+        if found is not None:
+            candidates.append(found)
+    # The newest across both, because a parent waiting on a subagent legitimately
+    # has its own Task call outstanding as well; the subagent's is the later one
+    # and is the command the prompt is actually about.
+    return max(candidates, key=lambda u: u.at) if candidates else None
+
+
+def _unmatched_in(path: Path, tail_bytes: int, *, from_subagent: bool) -> PendingTool | None:
+    """The newest tool call in one file that has no result yet."""
     try:
         with path.open("rb") as fh:
             fh.seek(max(0, path.stat().st_size - tail_bytes))
@@ -596,8 +629,11 @@ def dangling_tool_use(session_id: str, tail_bytes: int = 400_000) -> PendingTool
             # A truncated first line from the tail seek, or a partial final line
             # being appended as we read. Both are normal.
             continue
-        if not isinstance(obj, dict) or obj.get("isSidechain"):
+        if not isinstance(obj, dict):
             continue
+        # NOT skipped on `isSidechain` here: every record in a subagent file
+        # carries it, so the filter that is right for the session transcript
+        # would discard the entire file this function was extended to read.
         content = (obj.get("message") or {}).get("content")
         if not isinstance(content, list):
             continue
@@ -613,6 +649,7 @@ def dangling_tool_use(session_id: str, tail_bytes: int = 400_000) -> PendingTool
                         name=str(block.get("name") or "?"),
                         payload=payload if isinstance(payload, dict) else {},
                         at=_epoch(obj) or 0.0,
+                        from_subagent=from_subagent,
                     )
             elif block.get("type") == "tool_result":
                 result_id = block.get("tool_use_id")

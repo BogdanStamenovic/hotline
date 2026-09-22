@@ -24,6 +24,11 @@ RestartSec=10
 #
 # tmux is reached by name, and a user unit's PATH does not include the places
 # this box keeps its tools. hotline-say lives in ~/.claude/bin.
+# Stops the escalations announcing themselves as kind="human". See
+# provenance.Origin: a service that claims to be a person puts an
+# UNVERIFIED-claim banner on every routine notification, and a banner on
+# everything is a banner nobody reads.
+Environment=HOTLINE_SERVICE=permwatcher
 Environment=PATH=/home/bodas/.claude/bin:/home/bodas/.local/bin:/usr/local/bin:/usr/bin:/bin
 # Unlike hotlined this never spawns a tmux session, so it cannot become the
 # accidental parent of the tmux server -- `list-panes` and `capture-pane`
