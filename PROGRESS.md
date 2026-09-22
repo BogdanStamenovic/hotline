@@ -15287,3 +15287,11 @@ backup is the only rollback that exists.
 - He is asleep: Discord only, no rings unless the live domain move breaks something.
 
 - 00:05Z: checkpoint page (artifact N1YitzkUFfWZJfGE5VhoET) republished as v3. Header now reads chunk 7 running. The stale "admin@ does not exist" alert is replaced by the two open questions (Qwen region, Z.ai backup). Chunk 6 shows 3 of 5 in; chunk 32 marked WILL STOP with no backup key; chunk 20 notes TikTok blocked. Poweroff memory note corrected to DISABLED. Accidentally killed my own shell with pkill -f (the known trap); the watcher I meant to stop is gone and nothing else was hit.
+
+## ~00:12Z — first real generation on his Model Studio key (he asked to see it)
+
+- `qwen3.7-flash` on `dashscope-intl` works: HTTP 200. With default thinking: 11.6 s, 676 reasoning tokens out of 766 completion tokens, and max_tokens 200 was NOT a cap on reasoning. The Serbian was good.
+- With `enable_thinking: false`: 2.6 s, 72 tokens. The Serbian was noticeably worse ("što te imaš kao kupca"). This is n=1 per arm, a hint and not a measurement.
+- `qwen3.7-flash-2026-07-15` (the pinned snapshot) returned 403 Model.AccessDenied. So the key IS model-restricted, and it allows the alias but not the snapshot, which is exactly the chunk 32 stop condition. He needs to add the snapshot to the key's allowed models. Told him in the terminal.
+- Cost: 3 calls, about 1k tokens.
+- For chunks 31/32: thinking is on by default and blows both latency and max_tokens; the thinking-off quality trade needs a real eval, not this.
