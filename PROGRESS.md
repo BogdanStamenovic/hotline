@@ -15010,3 +15010,47 @@ real only between links and while parked at a checkpoint** — which is exactly 
 chain is waiting on Bogdan. Link 1 told to commit and push often, not just at handoff.
 
 First checkpoint is the end of chunk 6: the five accounts on `admin@kinreply.rs`.
+
+### 16:05–16:25 UTC — chunk 1 done, verified not relayed; and the signup flag is a trap
+
+Link 1 (`api-1b`) reported chunk 1 complete. **Verified rather than relayed**, because the
+mandate's own highest-value line says to:
+
+- All three commits checked with `git ls-remote` against the actual remotes, not the local
+  tracking refs (a local clone is a status field): lifecycle `59a6332`, docs `8e5773a`,
+  api `e9fadfc`. All clean.
+- The live zone checked through **Google DoH**, not through the tool that wrote it. Three A
+  records at `208.113.209.196`, CAA with letsencrypt.org/sectigo.com plus `issuewild ";"`,
+  `_dmarc` TXT `v=DMARC1; p=none`. **MX absent — and paired with a control**: CAA and TXT on
+  the same name return data, so NOERROR-with-empty-answer discriminates instead of just
+  meaning "the resolver said nothing".
+- `bind 9.20.27` installed 17:56 by the link, which named it as the mandate requires. It
+  pulled **three dependencies** as well (`dnssec-anchors`, `libmaxminddb`, `liburcu`), so
+  "the only system change" is four packages. Told him the precise number.
+
+**Settled the contradiction the link flagged, and it is sharper than it looked.** It found
+`lifecycle/README.md` claiming signups are CLOSED on the live host while the build log seed
+says OPEN. Read the arbiter — the live `.env` line 248 and `docker inspect` on the running
+container — both `KINREPLY_SIGNUPS_ENABLED=` (empty). README is wrong, seed is right.
+
+But the mechanism is the finding: `cmd/api/main.go:213` is
+`envOr("KINREPLY_SIGNUPS_ENABLED", "true") != "false"`, and `envOr` (line 824) trims and
+returns the **default** when the value is empty. So empty does not mean off, it means fall
+through to open. **The only value that closes signups is the exact lowercase literal
+`false`** — unset, empty, `0`, `no`, `off`, `FALSE` and `False` all leave them open, with a
+config file that reads closed and nothing failing. **Chunk 4 must keep prod signups closed**,
+so this goes to it as a question rather than a bug it hits: assert the closed state by
+probing the running API's behaviour, never by reading the variable back.
+
+Routed the fix to the link rather than doing it myself — it is in `lifecycle` right now, and
+editing a file under a running agent is how two writers collide.
+
+**Corrected my own seed in the link's favour:** I had labelled "a running link blocks the
+06:02 poweroff" UNVERIFIED; it is verified, so I said so rather than leaving the caution
+standing next to the correction.
+
+**Batched for Bogdan rather than interrupting twice:** the DS record at the `.rs` parent
+needs an Oblak support ticket (outward, his), non-blocking — the zone is signed but insecure,
+which is the correct harmless state. It rides with the chunk 6 account checklist. Carried the
+warning with it: moving DNS off deSEC later means removing the DS at the registrar FIRST and
+waiting out its TTL, or the domain goes dark for every validating resolver.
