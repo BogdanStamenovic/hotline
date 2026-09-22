@@ -15285,3 +15285,5 @@ backup is the only rollback that exists.
 - GO sent to api-6c for t0 at >= 00:40Z. Z.ai placeholder delegated to the link, since it now owns prod.env, with instructions to mark it absent, not fake it. Z.ai = README §3.5 backup generation (chunks 8, 32, 40, 42).
 - Qwen evidence: the README says Frankfurt has no text-embedding model, yet the key lists qwen3.7-text-embedding and answers only on dashscope-intl, so it is probably not Frankfurt. Put to him on Discord with the Z.ai long-term question. The chmod note on his laptop keys went in the same message.
 - He is asleep: Discord only, no rings unless the live domain move breaks something.
+
+- 00:05Z: checkpoint page (artifact N1YitzkUFfWZJfGE5VhoET) republished as v3. Header now reads chunk 7 running. The stale "admin@ does not exist" alert is replaced by the two open questions (Qwen region, Z.ai backup). Chunk 6 shows 3 of 5 in; chunk 32 marked WILL STOP with no backup key; chunk 20 notes TikTok blocked. Poweroff memory note corrected to DISABLED. Accidentally killed my own shell with pkill -f (the known trap); the watcher I meant to stop is gone and nothing else was hit.
