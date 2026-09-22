@@ -15128,3 +15128,53 @@ without diacritics per his standing rule for outward text. msmtp log:
 accepted it, not that Oblak saw it. The answer is a reply or a DS at `.rs` — nothing short.
 Verify with `dns.google` reporting `"AD":true` for `api.kinreply.rs`, and `delv` saying
 *fully validated* instead of today's *unsigned answer*.
+
+### 19:10–19:35 CEST — chunk 2 verified, link 1 reaped, link 2 on the cutover
+
+**Bogdan asked me to check link 1's context rather than take its word for it.** Measured from
+its transcript (last assistant turn's `input + cache_read + cache_creation`):
+
+| | tokens |
+|---|---|
+| in use | **456,000** (45.6% of the 1M window) |
+| chunk 1 cost | 252,000 |
+| chunk 2 cost so far | 205,000, with reviews/commit/report still to land |
+| orientation cost for any link | ~150,000 (it was at 158k seven minutes in, before building) |
+
+So it would close chunk 2 near 500–520k and finish chunk 3 around 710–730k. **The arithmetic
+alone did not decide it — what chunk 3 IS did.** It migrates live data row for row, deletes
+the `kinreply.uxonews.com` A record at DreamHost, removes a Caddy block on the box serving
+`uxonews.com` and `dds`, and repoints the dev Zernio webhook. Parts are irreversible. Being
+short of context mid-cutover is the worst version of that risk, and a fresh link starts at
+~150k with two thirds free. **Replaced at a clean boundary rather than mid-chunk.**
+
+**Verified chunk 2 in the same breath as the kill**, never from an earlier check — the rule
+exists because a Phase 2 link wrote 281 lines *after* reporting nothing in flight.
+`ls-remote` against the real remotes: lifecycle `95c07da`, api `8688670`, docs `8e5773a`, all
+clean; build log at 687 lines carrying the section written for chunk 3; pane idle; no
+subagents. Then `hotline --done` in its own session (the only way to retire a record — it
+marks the caller and nothing can do it for another), channel empty so nothing was lost, then
+`tmux kill-session` and confirmed the pid was gone.
+
+**My deny cost something and it was worth knowing.** Link 1 re-ran the whole Caddy mutation
+pass itself rather than trusting the subagent's numbers, with the scoring rule made explicit.
+**Its first mutation exited non-zero and would have scored as a kill — the only thing that
+failed was shellcheck; no behavioural test noticed at all.** Four genuine kills after
+rescoring. It also found that `render`'s self-assertion is untested because it never fires on
+a passing path, and recorded it as a known gap instead of papering over it.
+
+**Four chunks, one defect shape, and it is now a question rather than a bug.** Every real
+finding has been *a guard that is present, documented, and comparing something other than what
+its name claims* — never a missing check. Link 1's sharpest adds the second half: a path check
+that resolved against the **current directory**, so a genuine cross-stack backup collision was
+refused from the repo root and **accepted from anywhere else** — invisible to a suite that
+always runs from the repo root. Put in link 2's seed as a question to ask of every guard chunk
+3 touches.
+
+**Link 2 spawned:** `api-8f`, tmux `kr3build-02`, Opus, channel `#agent-api-8f`. Pane captured
+25s in — no trust wedge, reading the build log. Watch re-armed on its pid.
+
+**One of my own claims to link 1 was wrong and Bogdan caught it.** I read `finish chunk 2 and
+report` in its input box as a queued instruction from a second voice and built a theory about
+`tmuxen.py` stranding text. It is Claude Code's **suggested input** — ghost text. Corrected to
+the link within a minute so the false claim never stood alone.
