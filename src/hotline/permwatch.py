@@ -82,8 +82,14 @@ GRACE = 45.0
 # five minutes of that is the thing being fixed. A pass costs one `list-panes`
 # plus one `capture-pane` per claude pane -- microseconds of work against panes
 # that are by definition doing nothing -- so the cheap end of the range is
-# affordable. Measured on 2026-09-22 over 7 claude panes: 18 ms median per pass
-# (min 17, max 19, n=7), so a 12s interval spends 0.15% of one core.
+# affordable. Measured three times on 2026-09-22 with 7 claude panes, by two
+# different agents: medians of 18, 14 and 23 ms per pass. The spread is the
+# honest figure -- it moves with machine load and with how many panes are
+# blocked, since only a blocked one costs a transcript read. Call it tens of
+# milliseconds, under 0.2% of one core at a 12-second interval. The first
+# version of this comment quoted "18 ms median, min 17, max 19" from a single
+# run of seven, which a re-measurement did not reproduce; precision a method
+# does not support is not evidence, it is decoration.
 INTERVAL = 12.0
 
 # Silence between repeats of the same unanswered prompt. See the module
@@ -186,6 +192,42 @@ def operator(registry: Registry | None = None) -> Agent | None:
         return None
     # Newest declaration wins, which is the one that adopted the identity last.
     return max(working, key=lambda a: a.declared_at)
+
+
+def inbound_warning() -> str:
+    """Empty, or why escalations may never reach the operator's transcript.
+
+    `hotline --to --no-wait` exits 0 once the message is handed over, and
+    handed over is not read. The specific way that can fail silently: Claude
+    Code HOLDS an incoming peer message pending UI approval when the sender
+    does not attest a permission mode and the target bypasses prompts, so the
+    escalation sits in the operator's interface and never lands in its
+    transcript. `crossSessionInbound: "accept"` in ~/.claude/settings.json
+    turns that off, and it is set on this box -- which is exactly why it is
+    worth checking rather than assuming. A setting is a status field.
+
+    Checked once at startup and logged, rather than per escalation: this is a
+    fact about the machine's configuration, and a warning on every notification
+    is a warning nobody reads.
+
+    Note the failure is self-limiting rather than silent-forever, by accident
+    of a rule written for another reason. A held message renders as a prompt in
+    the operator's own pane, permwatcher sees the operator is now blocked, and
+    `notify` already refuses to tell a blocked operator about anything --
+    routing to Bogdan's channel instead, which needs no approval. So the worst
+    case is one lost notification and a hop, not a loop.
+    """
+    settings = Path.home() / ".claude" / "settings.json"
+    try:
+        value = json.loads(settings.read_text()).get("crossSessionInbound")
+    except (OSError, ValueError):
+        return f"could not read {settings}; cannot tell whether escalations will be held"
+    if value == "accept":
+        return ""
+    return (
+        f'crossSessionInbound is {value!r}, not "accept": Claude Code may hold '
+        "escalations pending UI approval instead of delivering them"
+    )
 
 
 def _hotline_bin() -> str:
@@ -475,6 +517,9 @@ def run(
         grace,
         f"every {remind_after / 60:.0f} min" if remind_after else "off",
     )
+    warning = inbound_warning()
+    if warning:
+        log.warning("escalations may not arrive: %s", warning)
     while True:
         try:
             sweep(
@@ -553,7 +598,11 @@ def main(argv: list[str] | None = None) -> int:
             print("nothing blocked")
             return 0
         op = operator()
-        print(f"operator: {op.name if op else '(none registered)'}\n")
+        print(f"operator: {op.name if op else '(none registered)'}")
+        warning = inbound_warning()
+        if warning:
+            print(f"WARNING: {warning}")
+        print()
         for blocked in found:
             print(blocked.report())
             print("-" * 72)

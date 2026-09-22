@@ -379,3 +379,27 @@ def test_a_pass_that_could_not_look_does_not_clear_the_ledger(tmp_path, monkeypa
 
 def test_the_loop_survives_an_unreachable_tmux() -> None:
     assert permwatch.run(once=True, dry_run=True) == 0
+
+
+def test_a_held_inbound_setting_is_surfaced(tmp_path, monkeypatch) -> None:
+    """`--no-wait` exits 0 on handover, and handover is not delivery.
+
+    Claude Code holds a peer message pending UI approval unless
+    crossSessionInbound is "accept". The escalation then never reaches the
+    operator's transcript while permwatcher logs a successful send.
+    """
+    monkeypatch.setattr(permwatch.Path, "home", staticmethod(lambda: tmp_path))
+    (tmp_path / ".claude").mkdir()
+    settings = tmp_path / ".claude" / "settings.json"
+
+    settings.write_text('{"crossSessionInbound": "accept"}')
+    assert permwatch.inbound_warning() == ""
+
+    settings.write_text('{"crossSessionInbound": "ask"}')
+    assert "may hold escalations" in permwatch.inbound_warning()
+
+    settings.write_text("{}")
+    assert "None" in permwatch.inbound_warning()
+
+    settings.write_text("not json at all")
+    assert "cannot tell" in permwatch.inbound_warning()

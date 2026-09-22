@@ -186,9 +186,11 @@ journalctl --user -u hotline-permwatcher -f
 | `--status` | | print what is blocked, exit |
 | `--skip` | | a tmux session to ignore |
 
-A pass costs one `list-panes` plus one `capture-pane` per claude pane: measured
-18 ms median over 7 panes (min 17, max 19, n=7), so a 12-second interval spends
-about 0.15% of one core. The five-minute watchdog timer was the obvious
+A pass costs one `list-panes` plus one `capture-pane` per claude pane, plus a
+transcript read for each pane that is actually blocked. Measured three times on
+2026-09-22 with 7 claude panes, by two different agents: medians of 18, 14 and
+23 ms. That spread is the honest number -- it moves with machine load -- so:
+tens of milliseconds, under 0.2% of one core at a 12-second interval. The five-minute watchdog timer was the obvious
 precedent and is the wrong cadence here -- it is right for "did the worker die"
 and too slow for an agent burning wall-clock somebody is waiting on.
 
@@ -255,6 +257,17 @@ message is in the target's inbox. A message in the inbox of a session that has
 stopped reading its inbox is not a delivery, and permwatcher cannot tell the
 difference -- which is exactly the failure `wedge.py` exists to name. The
 reminder is the mitigation, not a fix.
+
+There is a sharper version of that: unless `crossSessionInbound` is `"accept"`
+in `~/.claude/settings.json`, Claude Code *holds* a peer message pending UI
+approval and it never reaches the target's transcript at all, while the send
+still exits 0. permwatcher checks the setting at startup and warns rather than
+discovering this per escalation; `--status` prints the warning too. It is
+`"accept"` on this box, which is why it is checked rather than assumed. The
+failure is at least self-limiting: a held message renders as a prompt in the
+operator's own pane, permwatcher then sees the operator as blocked, and it
+already refuses to notify a blocked operator -- routing to Discord, which needs
+no approval. One lost notification and a hop, not a loop.
 
 **Reminders stop after 4.** A prompt nobody has answered in five hours stops
 being mentioned.
