@@ -69,6 +69,34 @@
 > - **Milos was told** about the hostname move and the three dev Meta app changes, by DM at
 >   2026-09-22 23:0x. A message id is acceptance, not reading.
 >
+> ## THE RESTART ITSELF — what happened and what to check first
+>
+> **You are the operator that came up after a deliberate restart onto Opus 5.5.** Verify it
+> took: `claude --version` should be **2.1.280** and `--model opus` resolves to
+> **`claude-opus-5-5`**. If it says 2.1.269 you are the old binary and the restart failed.
+>
+> **The system upgrade is COMPLETE but it went wrong in the middle and the record matters.**
+> 132 repo packages (not the "zero" the previous operator reported — it measured with a
+> throwaway pacman db and suppressed the sync's output, so an empty database reported nothing
+> to do). The harness then killed the upgrade **mid-transaction** for "low memory" — the
+> fourth false instance that night, `MemAvailable` 8.90 GiB at the time — leaving a **stale
+> `/var/lib/pacman/db.lck`** and 16 of 132 applied. Lock cleared, upgrade re-run **detached in
+> tmux** out of reach of the harness guard, completed clean: `pacman -Qu` zero, no broken deps.
+>
+> **Two things are deliberately left undone, both flagged to him, neither urgent:**
+> - `python-hermes-agent` **fails to build** — a bundled patch no longer applies to
+>   `tools/daemon_pool.py`. That abort killed the whole AUR batch, which is why `claude-code`
+>   needed installing separately. `claude-desktop`, `google-chrome`, `openai-codex-bin` remain
+>   at old versions. None matter.
+> - **`cuda`'s package database entry is damaged** (`desc` and `files` missing, so `pacman -Dk`
+>   errors and `yay` complains every run). **Pre-existing, evidenced**: pacman installed
+>   `cuda 13.3.1-1` on 24 Aug, the entry claims `13.4.2-1`, remaining files dated 18 Sep 21:08.
+>   Fix is a multi-GB reinstall onto a disk at 77%. **His call, not yours.**
+>
+> **If a background task is killed for "low memory", do not believe it.** Read `MemAvailable`
+> and the swap row and check the OOM killer actually ran. It has been wrong four times out of
+> four. And never run a package transaction as a harness background task — use tmux.
+
 > ## BOOT NOTES
 >
 > `wake`'s `track-slot-0800` fires **06:02 UTC daily with `then_do: poweroff`**. A running
