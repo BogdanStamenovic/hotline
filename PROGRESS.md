@@ -15278,7 +15278,7 @@ backup is the only rollback that exists.
 - api-6c corrections to chunk 6's log: the new key is named "KinReply", not "chain-admin" (cosmetic); the relay runs a "dev" tag from 0984d3b, not 21f61dc.
 - Wake-up set for 00:25Z to confirm the hold was acknowledged.
 
-## ~23:58Z — his decisions before sleep; poweroff disabled; GO sent
+## ~23:45Z (approx; clock not read) — his decisions before sleep; poweroff disabled; GO sent
 
 - His words (terminal, ~23:55Z): Z.ai is unusable, "keep the backup as a placeholder for now". The Qwen key is updated in ~/keys (already swapped; verified it matches). He won't use admin@kinreply.rs any more. He is going to sleep. "disable the auto shutdown at 8002", and send the rest on Discord.
 - POWEROFF DISABLED: backed up wake.db, then WakeDB.rearm() on track-slot-0800 with then_do=''. rev went 138 to 139, and `wake sync` reported pushed 1, pulled 1. It re-read as then_do empty, pushed_rev == rev. The track job still fires at 06:02Z. Permanent until he says otherwise. I used rearm, not raw SQL, so rev is bumped and the server can't sync the poweroff back.
@@ -15286,12 +15286,17 @@ backup is the only rollback that exists.
 - Qwen evidence: the README says Frankfurt has no text-embedding model, yet the key lists qwen3.7-text-embedding and answers only on dashscope-intl, so it is probably not Frankfurt. Put to him on Discord with the Z.ai long-term question. The chmod note on his laptop keys went in the same message.
 - He is asleep: Discord only, no rings unless the live domain move breaks something.
 
-- 00:05Z: checkpoint page (artifact N1YitzkUFfWZJfGE5VhoET) republished as v3. Header now reads chunk 7 running. The stale "admin@ does not exist" alert is replaced by the two open questions (Qwen region, Z.ai backup). Chunk 6 shows 3 of 5 in; chunk 32 marked WILL STOP with no backup key; chunk 20 notes TikTok blocked. Poweroff memory note corrected to DISABLED. Accidentally killed my own shell with pkill -f (the known trap); the watcher I meant to stop is gone and nothing else was hit.
+- ~23:47Z (approx): checkpoint page (artifact N1YitzkUFfWZJfGE5VhoET) republished as v3. Header now reads chunk 7 running. The stale "admin@ does not exist" alert is replaced by the two open questions (Qwen region, Z.ai backup). Chunk 6 shows 3 of 5 in; chunk 32 marked WILL STOP with no backup key; chunk 20 notes TikTok blocked. Poweroff memory note corrected to DISABLED. Accidentally killed my own shell with pkill -f (the known trap); the watcher I meant to stop is gone and nothing else was hit.
 
-## ~00:12Z — first real generation on his Model Studio key (he asked to see it)
+## ~23:48Z (approx) — first real generation on his Model Studio key (he asked to see it)
 
 - `qwen3.7-flash` on `dashscope-intl` works: HTTP 200. With default thinking: 11.6 s, 676 reasoning tokens out of 766 completion tokens, and max_tokens 200 was NOT a cap on reasoning. The Serbian was good.
 - With `enable_thinking: false`: 2.6 s, 72 tokens. The Serbian was noticeably worse ("što te imaš kao kupca"). This is n=1 per arm, a hint and not a measurement.
 - `qwen3.7-flash-2026-07-15` (the pinned snapshot) returned 403 Model.AccessDenied. So the key IS model-restricted, and it allows the alias but not the snapshot, which is exactly the chunk 32 stop condition. He needs to add the snapshot to the key's allowed models. Told him in the terminal.
 - Cost: 3 calls, about 1k tokens.
 - For chunks 31/32: thinking is on by default and blows both latency and max_tokens; the thinking-off quality trade needs a real eval, not this.
+
+## 23:51Z — snapshot model now allowed; my timestamps corrected
+
+- He added qwen3.7-flash-2026-07-15 to the key. The first retry right after still returned 403. At 23:49:34Z and 23:51:35Z it returned 200 "Zdravo". Propagation took about 1 minute. The chunk 32 condition "key allows the pinned snapshot" is now MET.
+- CORRECTION: three headings above had times I estimated rather than read ("~23:58Z", "00:05Z", "~00:12Z"); `date -u` put them 10-20 min early. They are relabelled approx. The checkpoint page's "Updated 02:05" is really about 01:47 CEST.
