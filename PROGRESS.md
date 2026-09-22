@@ -15277,3 +15277,11 @@ backup is the only rollback that exists.
 - NEAR-MISS: prod.env already carried api-6c's 4 MAIL_RELAY_* lines. My swap was a read-modify-write racing its appends. Nothing was lost, but I will no longer write that file without messaging the link first.
 - api-6c corrections to chunk 6's log: the new key is named "KinReply", not "chain-admin" (cosmetic); the relay runs a "dev" tag from 0984d3b, not 21f61dc.
 - Wake-up set for 00:25Z to confirm the hold was acknowledged.
+
+## ~23:58Z — his decisions before sleep; poweroff disabled; GO sent
+
+- His words (terminal, ~23:55Z): Z.ai is unusable, "keep the backup as a placeholder for now". The Qwen key is updated in ~/keys (already swapped; verified it matches). He won't use admin@kinreply.rs any more. He is going to sleep. "disable the auto shutdown at 8002", and send the rest on Discord.
+- POWEROFF DISABLED: backed up wake.db, then WakeDB.rearm() on track-slot-0800 with then_do=''. rev went 138 to 139, and `wake sync` reported pushed 1, pulled 1. It re-read as then_do empty, pushed_rev == rev. The track job still fires at 06:02Z. Permanent until he says otherwise. I used rearm, not raw SQL, so rev is bumped and the server can't sync the poweroff back.
+- GO sent to api-6c for t0 at >= 00:40Z. Z.ai placeholder delegated to the link, since it now owns prod.env, with instructions to mark it absent, not fake it. Z.ai = README §3.5 backup generation (chunks 8, 32, 40, 42).
+- Qwen evidence: the README says Frankfurt has no text-embedding model, yet the key lists qwen3.7-text-embedding and answers only on dashscope-intl, so it is probably not Frankfurt. Put to him on Discord with the Z.ai long-term question. The chmod note on his laptop keys went in the same message.
+- He is asleep: Discord only, no rings unless the live domain move breaks something.
