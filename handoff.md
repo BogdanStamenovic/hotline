@@ -66,9 +66,12 @@
 > to regenerate his client once (openapi past 46 operations). Login good to **2026-10-20**.
 > `personamail420420` is connected to `Criterion 7 live`, not his original `KinReply`.
 >
-> **Boot notes:** no RTC alarm is armed and none will be — `rtc-wake-backstop` arms at boot and
-> the wake agent clears it 3s later as "leftover" (known, not new). WoL is the only way back in,
-> and it is verified. The wake agent's "cannot reach Pigion" line at boot is transient: the
+> **Boot notes — HALF OF THIS WAS WRONG, corrected 2026-09-22.** True at BOOT: `rtc-wake-backstop`
+> arms an alarm and the wake agent clears it seconds later as "leftover". FALSE as written: an
+> alarm very much does get armed — at POWEROFF, by the wake agent itself, for the next task this
+> box owns (`power.arm_wakealarm`, `server.py:finish_power`). It armed 2026-09-23 05:57 UTC on the
+> way down this morning. WoL is not the only way back in; the RTC is the deliberate backup path.
+> See the 2026-09-22 section below for the rest of it. The wake agent's "cannot reach Pigion" line at boot is transient: the
 > network simply is not up 2s in, and it answers fine a minute later. Not a bug, do not file it.
 
 > ## SHUTDOWN 2026-09-21 ~15:45 UTC — off at his instruction, PHASE 2 CRITERION 7 PASSED
@@ -5373,3 +5376,82 @@ one without a reason; the remaining work is operator work.
   shortening a true sentence. The seed is the document the next reader trusts.
 - Never compose shell messages as inline double-quoted strings; quoted heredoc
   plus `"$(cat file)"`, and `git commit -F file`.
+
+## 2026-09-22 17:28 CEST — operator `hotline-80` (session `a0102ebb`): a PERSON started me, and the box powers itself off at 06:02 UTC daily
+
+### The launcher prompt was wrong about its own origin, and the evidence is cheap to get
+
+The prompt opens *"A timer started you, not a person."* Not this time. `watchdog.log`'s last
+entry is `14:54:20 ... quiet wake; not spawning` and there is **no 17:28 line** — the watchdog
+did not do it. The journal has the rest: he ssh'd in from `arch` (100.103.46.118) at 17:25,
+typed `start` into a `claude` session at `~` at 17:27:51, interrupted it three seconds later,
+ran `hotline-run` by hand at 17:28:08, and disconnected at 17:28:48.
+
+His whole instruction is the word **start**. There is no task in it. Checked both channels:
+**he has said nothing since 2026-09-21 18:07:44Z** (the shutdown instruction). Nothing arrived
+while the box was off, so there is no undelivered backlog this time.
+
+**The cheap check, worth reusing:** the watchdog logs every spawn it makes. A running operator
+with no matching log line was started by something else. `journalctl --user` names it.
+
+### THE FINDING: a daily wake task powers this box off, and the operator is deliberately invisible to its presence guard
+
+This morning at 08:07:07 CEST the box powered off **seven seconds after** my predecessor posted
+*"My default is to leave the box up and sit here."* It did not do it — its transcript's last
+action is that Discord post. The journal:
+
+    wake[633] task track-slot-0800 (shell) fired; next occurrence at 1790143320
+    wake[633] WARNING powering off (rtc armed for track-sl at 1790143020 ...; watchdog suppressed: True)
+
+Probed the thing itself, `~/.local/state/wake/wake.db`:
+
+    id track-slot-0800 · 2026-09-23T06:02:00Z · shell · owner archserver · then_do: poweroff
+
+and `~/.config/wake/wake.env`:
+
+    POWEROFF_ALLOW_MATCH=You are hotline's OPERATOR
+
+**That regex is my own seed prompt.** `power.foreign_agents` uses it to classify the operator as
+furniture rather than work, so the presence guard reports clear and the box goes down. This is
+deliberate and documented in `wake/src/wake/power.py:146` — the reasoning is that the watchdog
+respawns an operator within two minutes of every boot, so an operator that counted as work would
+mean the machine could never power itself off. It is not a bug. **But nothing on the hotline
+side knows about it.**
+
+**What actually stops it:** `power.human_signals()` — an attached tmux client, a logind session
+of `Class=user`, or an interactive sshd session process. Right now there are none of those
+(`tmux list-clients` empty; `loginctl` shows only the `Class=manager` row, which the code
+explicitly discounts). So **tomorrow at 06:02 UTC the track slot fires, the box powers off with
+whatever operator is on it, and `suppress_watchdog()` stops the respawn timer first so nothing
+appears afterwards to notice.**
+
+### Two claims in this file were wrong, both about power, and both were checked the lazy way
+
+1. **"No RTC alarm is armed and none will be. WoL is the only way back in."** Corrected in the
+   banner above. The boot half is true; the poweroff half is the opposite of true.
+2. **"Nothing is armed to power the box off — checked `wake list --all` (no poweroff task has
+   ever existed in it)."** `wake list` renders `id / at / status / backend / every / on / task`.
+   It does **not** render `then_do`. The poweroff is invisible in the listing and sits in the
+   column the listing drops. **A filtered view read as a signal, again** — and this time it was
+   my own predecessor's check, made while looking straight at the task that would kill it.
+
+   The honest check is the column, not the listing:
+
+       sqlite3 ~/.local/state/wake/wake.db "select id, at, then_do from tasks where at > strftime('%s','now')"
+
+### Everything else: healthy, and nothing to operate
+
+- **Sessions:** only me. Six agents still read `[working]` and none exist (data-53, data-d9,
+  data-34, data-79, jev-research, api-e9) — still deliberately not retired, three of those
+  channels hold his research and `--done` deletes the channel. Still his call.
+- **hotline-ios:** `degradations: []`, `ring_ready`, `transport sip+confirmed`, hook reachable.
+  Probed `/health` on 8789, not the unit's status field. Calls work.
+- **His Claude login:** the "URGENT-ISH — refresh token expires 2026-09-22 04:53 UTC" section
+  near the bottom of this file is **stale and resolved**. `~/.claude/.credentials.json` says
+  `refreshTokenExpiresAt 2026-10-20T12:34:01Z`. He renewed it. No action.
+- **Disk:** 19.5 GB free on root after my predecessor's `go clean -cache` this morning.
+- **Still open and still HIS, neither urgent:** the spawn-seed fix (a spawned agent is never
+  told it has a channel or how to post in it — proposed 2026-09-21, it is build work), and what
+  to do about the six phantom agents.
+- Carried forward unchanged: `active_calls: 8` / `conversations_held: 8` on a box that has
+  placed no call since boot. Logged, not chased, not claimed to be a bug.

@@ -14880,3 +14880,98 @@ Handoff banner rewritten at the TOP of handoff.md (the first insert landed below
 old banner — the top is what gets read, so I moved it). Both of his open items recorded
 as closed, both of my retracted claims recorded as retractions, and the spawn-seed fix
 recorded as proposed-not-done so the next session does not do it unannounced.
+
+## 2026-09-22 06:00–06:10 UTC — hotline-80 boot: scheduled wake, nothing to operate
+
+Adopted `hotline-80`, read handoff.md (top banner is the newest, 2026-09-21 18:10
+shutdown), then read Discord history in #general and #agent-hotline-80 including
+the 11h50m window the box was powered off.
+
+**Nothing arrived while the box was off.** Last human message anywhere is still
+`1551656192160301177` (21 Sep 18:07 UTC): *"I need you to shut down. Il need you
+again later so bye bye."* Nothing after it in either channel.
+
+**Why the box is up, probed rather than assumed.** The launcher prompt says "a
+timer started you"; the *boot* had its own cause. No RTC alarm was armed
+(`/sys/class/rtc/rtc0/wakealarm` empty; the backstop armed 2026-09-23 05:58 at
+08:00:21 and the wake agent cleared it 2s later — known, documented, not new).
+No ssh login since boot. `wake list` shows the real cause: a daily recurring
+`wol` task fired by the wake server at 06:00 UTC, whose purpose is the daily
+`track` slot run at 06:02 UTC. Boot 08:00:23 CEST, watchdog respawned me at
+08:02:22 because the box came up with zero sessions and Pigion published no
+quiet-wake tag (that tag only covers Pigion-initiated wakes, not `wake`-tool
+ones — which is why a six-minute cron job gets a full operator session).
+
+**Nearly filed a false bug.** At 06:04 UTC `wake list` still read `pending` for
+the 06:02 task and I was one line away from reporting "the box was woken for a
+job that never fired". The process table is the honest check: pid 913 is the
+track run, started 08:02:00 exactly on schedule, still running at 06:06. `wake`
+reports `pending` for the whole duration of a recurring task, not just before it
+starts. Status field, again.
+
+**Roster and agents.** Only session alive is me (`hotline --list`, `tmux ls`).
+Six agents still read `[working]` and none exist — deliberately not cleaned up,
+three of those channels hold his research.
+
+**Nothing is armed to power the box off** — checked `/sys/.../wakealarm`,
+`systemctl list-jobs`, `/run/systemd/shutdown`, system and user timers, and
+`wake list --all` (no poweroff task has ever existed in it).
+
+**One thing I did without asking, tier-1 reversible.** Root was at **93%, 5.2 GB
+free** on a 73 GB ext4. `~/.cache/go-build` was **15 GB** of it (uv cache 7.3 GB,
+left alone — it is a hardlink farm and frees ~0). `go clean -cache` took root to
+**20 GB free, 73%**, measured before and after with `df`. Cost is one slower Go
+build on kinreply next time. No build was running.
+
+Services all up after boot: hotlined, hotline-ios (`degradations: []`,
+`transport sip+confirmed`, `ring_ready`), hotline-beam, wake-agent, track web.
+Repo clean and level with origin/main at `0a10b55`; `registry-agent-brief.md`
+is still untracked, left alone — it is the finished registry build's brief.
+
+Minor, logged not reported: hotline-ios `/health` reports `active_calls: 8` and
+`conversations_held: 8` five minutes after a cold boot with no call placed. Held
+db state rather than eight live calls, almost certainly — but it is exactly the
+kind of counter that gets read as a signal later. Not chased, not claimed.
+
+## 2026-09-22 15:28–16:05 UTC — hotline-80 boot: a person started me, and the box is set to power itself off
+
+Adopted `hotline-80`, read `handoff.md` (top banner 2026-09-21 18:10 is the newest;
+the bottom of the file is the 09-21 07:00 brief, older), then both Discord channels.
+
+**He has said nothing since 2026-09-21 18:07:44Z.** `#general`'s last message is from
+09-21 08:02. Nothing was sent while the box was off, so no recovery was needed.
+
+**The launcher prompt's first sentence was false.** No watchdog line at 17:28 — its last
+entry is the 14:54 quiet-wake skip. The journal: ssh from `arch` at 17:25, the word
+`start` typed into a `claude` session at `~` at 17:27:51 and interrupted 3s later,
+`hotline-run` by hand at 17:28:08, ssh disconnect at 17:28:48. He started me and left.
+His instruction is one word and contains no task, so per the prompt's own fallback I am
+not inventing one.
+
+**Chased why the box died at 08:07 this morning.** My predecessor posted "My default is
+to leave the box up and sit here" at 06:07:00Z; the box powered off at 06:07:07Z. Its
+transcript's last action is that post — it did not do it. `wake`'s `track-slot-0800`
+did, with `then_do: poweroff`, after arming the RTC for 2026-09-23 05:57 UTC and calling
+`suppress_watchdog()` so no operator would come back. Verified in
+`~/.local/state/wake/wake.db` and `~/.config/wake/wake.env`, not relayed.
+
+`POWEROFF_ALLOW_MATCH=You are hotline's OPERATOR` — the regex that excludes the operator
+from the presence guard is my own seed prompt. Deliberate, reasoned in
+`wake/src/wake/power.py:146`, not a bug. But it means **06:02 UTC tomorrow takes the box
+down with whatever operator is on it** unless a human signal is present (attached tmux
+client, `Class=user` logind session, or an interactive sshd process — none right now).
+
+**Two false claims in handoff.md, corrected in place rather than left standing.** "No RTC
+alarm is armed and none will be; WoL is the only way back in" — true at boot, the
+opposite of true at poweroff. And "nothing is armed to power the box off, checked
+`wake list --all`" — `wake list` does not render the `then_do` column, so the poweroff
+sits in exactly the field the listing drops. **A filtered view read as a signal**, made
+by my predecessor while looking straight at the task that would kill it minutes later.
+
+Sweep otherwise clean: only session is me; six phantom `[working]` agents left alone as
+before; `hotline-ios` `/health` probed directly — `degradations: []`, `ring_ready`,
+`sip+confirmed`; root has 19.5 GB free. The bottom-of-file "URGENT-ISH: his Claude login
+expires 2026-09-22 04:53 UTC" is resolved — credentials say `2026-10-20T12:34:01Z`.
+
+Also committed this morning's orphaned PROGRESS entry: the 08:02 session wrote 52 lines
+and the wake poweroff took the box down before it could commit them.
