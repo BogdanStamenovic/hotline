@@ -15300,3 +15300,9 @@ backup is the only rollback that exists.
 
 - He added qwen3.7-flash-2026-07-15 to the key. The first retry right after still returned 403. At 23:49:34Z and 23:51:35Z it returned 200 "Zdravo". Propagation took about 1 minute. The chunk 32 condition "key allows the pinned snapshot" is now MET.
 - CORRECTION: three headings above had times I estimated rather than read ("~23:58Z", "00:05Z", "~00:12Z"); `date -u` put them 10-20 min early. They are relabelled approx. The checkpoint page's "Updated 02:05" is really about 01:47 CEST.
+
+## ~23:58Z — Qwen key kept regardless of region
+
+- His words: "for the first to be honest i dont know. but the models costs 3 centes per 1m input and 13 cents per 1m under 32k context so it works for me". So the key stays, and README 2.6 "Frankfurt workspace" is amended by him. Z.ai/backup: he answers tomorrow.
+- Passed to api-6c for chunk 8: record the decision with his quote; update README 2.6 and any Frankfurt/eu-central-1 assertion; have the privacy note say "international endpoint, likely Singapore" (dashscope-intl = Singapore is from my knowledge, not verified). Delivered with no mid-turn warning, so the link was idle.
+- Checkpoint page updated: question 1 settled, only the backup provider is open.
