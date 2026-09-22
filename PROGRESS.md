@@ -15090,3 +15090,41 @@ ignore one from anywhere else, so guessing it wrong is a silent failure, not a b
 
 **So: asked him once, with a recommendation, rather than waiting for chunk 7 by default.**
 Not sent. Nothing outward has left this machine.
+
+### 18:55–19:01 CEST — the Oblak DS ticket is SENT, from the registrant address
+
+He said the app password was on `~` on his laptop. Fetched from tailnet host **`arch`**
+(memory note: the host called `laptop` is a different Windows box, and pushing there sends
+it to the wrong machine): `~/gmail-app.txt`, written 18:58, 20 bytes.
+
+**Normalised rather than used as-is.** Google displays an app password as four space-separated
+groups with a trailing newline; stored that way it is a credential Gmail **accepts at setup
+and then fails with at send time**, no bounce and no record anywhere — the exact trap chunk
+7's spec documents for the "Send mail as" paste. Stripped to 16 lowercase characters, written
+to `~/.kinreply/gmail-app-password` mode 600, confirmed the last byte is not a newline. Value
+never printed. *(His laptop copy is mode 644 — world-readable on that box. Told him; his file,
+not mine to delete.)*
+
+**Added an `msmtp` account rather than touching the existing one.** `.msmtprc` backed up
+first. New `kinreply` account (`smtp.gmail.com` 587, TLS, user and from `kinreply@gmail.com`,
+`passwordeval` reading the 600 file so the secret stays out of the config). `account default`
+still `gmail`, so nothing that sends today changed behaviour.
+
+**Verified the credential with a positive AND a negative case, sending nothing.** `msmtp
+--serverinfo` does not authenticate — it is a green that proves nothing, so it was not the
+test. Used `smtplib` to AUTH and QUIT without DATA: real password → **AUTH OK**; a wrong
+16-character password → **AUTH REFUSED (535)**. The negative is what makes the positive mean
+something.
+
+**Recomputed the DS before sending outward.** Pulled the live DNSKEY from `ns1.desec.io` and
+ran `dnssec-dsfromkey` rather than transcribing link 1's values; both digests matched exactly.
+A wrong DS is how a domain goes dark, so it is not a value to copy.
+
+**Sent** to `info@oblak.host`, the only address published on `oblak.host`. Serbian, ASCII
+without diacritics per his standing rule for outward text. msmtp log:
+`user=kinreply@gmail.com from=kinreply@gmail.com recipients=info@oblak.host smtpstatus=250`.
+
+**Stated precisely, because this is the failure I have logged before:** a 250 means Gmail
+accepted it, not that Oblak saw it. The answer is a reply or a DS at `.rs` — nothing short.
+Verify with `dns.google` reporting `"AD":true` for `api.kinreply.rs`, and `delv` saying
+*fully validated* instead of today's *unsigned answer*.

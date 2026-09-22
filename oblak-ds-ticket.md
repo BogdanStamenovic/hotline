@@ -1,9 +1,24 @@
 # Oblak support ticket — DS record for kinreply.rs
 
-**Status: DRAFTED, NOT SENT.** Blocked on one credential (below). Owner: the hotline
-operator, reassigned from Bogdan on 2026-09-22.
+**Status: SENT 2026-09-22 19:00:27 CEST.** Owner: the hotline operator, reassigned from
+Bogdan on 2026-09-22.
 
-## The blocker, precisely
+    Sep 22 19:00:27 host=smtp.gmail.com tls=on auth=on user=kinreply@gmail.com
+      from=kinreply@gmail.com recipients=info@oblak.host mailsize=1182
+      smtpstatus=250 smtpmsg='250 2.0.0 OK ...' exitcode=EX_OK
+
+**What that proves and what it does not.** It proves Gmail accepted the message from the
+registrant address — which was the whole requirement. It does **not** prove Oblak received
+it, read it, or will act on it. A 250 is acceptance by the sending relay, the same distinction
+that cost a day on the Instagram DMs. The answer is a reply from Oblak or a DS appearing at
+`.rs`, nothing short of it.
+
+**Recipient:** `info@oblak.host`, the only address published on `oblak.host` (their panel at
+`moj.oblak.host` is the other support route). If no reply comes in a few days, the panel
+ticket is the fallback and it is authenticated, which for a registrant-verification request
+is arguably the stronger channel.
+
+## The blocker, precisely — RESOLVED 2026-09-22 18:59
 
 It must be sent **from `kinreply@gmail.com`** — Bogdan's instruction, because that is the
 address the domain was bought with and Oblak acts on the registrant contact. A ticket from
