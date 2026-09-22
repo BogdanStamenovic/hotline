@@ -149,21 +149,39 @@ class Pane:
         return self.command == "claude"
 
 
-def panes() -> list[Pane]:
+def panes() -> list[Pane] | None:
     """Every pane on the box, with its foreground command, in one call.
 
     One `list-panes -a` rather than a `has-session` per agent, for the reason
     `sessions()` gives: this is recomputed on every pass of a polling loop.
+
+    **None means "could not look", and an empty list means "looked, saw
+    nothing".** They are not the same answer and collapsing them is the mistake
+    this project keeps making: a watcher that cannot reach tmux otherwise
+    reports the same cheerful nothing as a box where every agent is healthy.
+    `sessions()` above deliberately returns a bare set because its callers are
+    asking "is this one pane there", where absent and unreachable lead to the
+    same refusal; a monitor's callers need the distinction.
     """
-    result = _tmux(
-        "list-panes",
-        "-a",
-        "-F",
-        "#{session_name}\t#{session_name}:#{window_index}.#{pane_index}\t#{pane_pid}\t#{pane_current_command}",
-        check=False,
-    )
+    try:
+        result = _tmux(
+            "list-panes",
+            "-a",
+            "-F",
+            "#{session_name}\t#{session_name}:#{window_index}.#{pane_index}\t#{pane_pid}\t#{pane_current_command}",
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        # No tmux binary at all, or it hung. `check=False` does not cover this:
+        # subprocess still raises when the executable is missing.
+        log.warning("cannot run tmux: %s", exc)
+        return None
     if result.returncode != 0:
-        return []
+        detail = result.stderr.strip() or f"exit {result.returncode}"
+        # "no server running" is the ordinary case on a box with no agents, and
+        # is still not the same as having looked at a running server.
+        log.warning("cannot list tmux panes: %s", detail)
+        return None
     found: list[Pane] = []
     for line in result.stdout.splitlines():
         parts = line.split("\t")

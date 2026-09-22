@@ -238,6 +238,14 @@ case has no session, no registry record and no transcript, so the notification
 names a pid and a tmux session and cannot say which agent it is or what it was
 working on.
 
+**It cannot see a box whose tmux it cannot reach**, and says so rather than
+reporting nothing. `--status` exits 1 with `cannot tell`, and the service logs
+a warning and concludes nothing from that pass -- in particular it does not
+forget prompts it merely failed to look at, which would re-announce every one
+of them on the next successful pass. The first version collapsed "no panes"
+and "no tmux" into the same empty list, which is this project's signature
+failure: an absence in a view that was never rendered, read as a signal.
+
 **The grace period is a real 45-second hole.** A prompt answered inside it is
 never reported, which is intended, but so is one that appears and is abandoned
 inside it.

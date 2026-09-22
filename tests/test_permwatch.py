@@ -11,6 +11,8 @@ import time
 import tokenize
 from pathlib import Path
 
+import pytest
+
 from hotline import permwatch, tmuxen
 from hotline.permprompt import detect
 from hotline.permwatch import Blocked, Ledger
@@ -343,3 +345,37 @@ def test_the_subagent_prompt_shape_is_in_the_corpus() -> None:
     assert subagent.exists()
     assert "from the general-purpose agent" in subagent.read_text()
     assert detect(subagent.read_text())
+
+
+def test_unreachable_tmux_is_not_reported_as_nothing_blocked(monkeypatch) -> None:
+    """An absence in a view that was never rendered is not a signal.
+
+    This project's signature failure, and this module would have committed it:
+    `panes()` returned an empty list both when tmux had no panes and when it
+    could not be reached, so a watcher with no tmux at all reported the same
+    cheerful nothing as a healthy box.
+    """
+    monkeypatch.setattr(tmuxen, "panes", lambda: None)
+    with pytest.raises(permwatch.TmuxUnreachable):
+        permwatch.survey()
+
+
+def test_a_pass_that_could_not_look_does_not_clear_the_ledger(tmp_path, monkeypatch) -> None:
+    """Forgetting on a blind pass would re-announce everything on the next one."""
+    blocked = _blocked(since=time.time() - 300)
+    ledger = Ledger(path=tmp_path / "l.json")
+    monkeypatch.setattr(permwatch, "survey", lambda **kw: [blocked])
+    permwatch.sweep(ledger, {}, grace=45, dry_run=True)
+    assert blocked.key in ledger.sent
+
+    def blind(**kw):
+        raise permwatch.TmuxUnreachable("no server")
+
+    monkeypatch.setattr(permwatch, "survey", blind)
+    with pytest.raises(permwatch.TmuxUnreachable):
+        permwatch.sweep(ledger, {}, grace=45, dry_run=True)
+    assert blocked.key in ledger.sent, "a blind pass must not forget what it could not see"
+
+
+def test_the_loop_survives_an_unreachable_tmux() -> None:
+    assert permwatch.run(once=True, dry_run=True) == 0

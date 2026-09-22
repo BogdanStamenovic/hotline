@@ -68,6 +68,10 @@ from .transcript import PendingTool, dangling_tool_use
 
 log = logging.getLogger(__name__)
 
+
+class TmuxUnreachable(RuntimeError):
+    """tmux could not be consulted, so this pass saw nothing and proves nothing."""
+
 # How long a prompt must stand before it is anybody's problem. A human at the
 # keyboard clears one in a couple of seconds; an agent never clears one at all.
 GRACE = 45.0
@@ -310,9 +314,16 @@ def survey(
     registry = Registry()
     by_session_id = {a.session_id: a for a in registry.agents.values()}
 
+    visible = tmuxen.panes()
+    if visible is None:
+        # Nothing was looked at, so nothing can be concluded -- and in
+        # particular no prompt may be forgotten on the strength of not having
+        # been seen this pass.
+        raise TmuxUnreachable("tmux could not be consulted")
+
     found: list[Blocked] = []
     live_keys: set[str] = set()
-    for pane in tmuxen.panes():
+    for pane in visible:
         if not pane.is_claude or pane.session in skip:
             continue
         prompt = detect(tmuxen.capture(pane.target, lines=60))
@@ -413,6 +424,10 @@ def sweep(
 ) -> list[tuple[Blocked, str]]:
     """One pass: look, decide, escalate what is due. Returns what was sent."""
     now = time.time()
+    # Deliberately NOT caught here: `run()` logs it and tries again next pass.
+    # Swallowing it would let `forget_absent` clear the ledger on a pass that
+    # saw nothing because it could not look, and the next successful pass would
+    # then re-announce every prompt on the box as though it were new.
     blocked_now = survey(seen=seen, now=now, skip=skip)
     ledger.forget_absent({b.key for b in blocked_now})
 
@@ -470,6 +485,11 @@ def run(
                 dry_run=dry_run,
                 skip=skip,
             )
+        except TmuxUnreachable as exc:
+            # Anticipated: the box may have no tmux server between agents. A
+            # warning rather than a traceback, because a stack trace every 12
+            # seconds is how a log stops being read.
+            log.warning("%s; nothing concluded from this pass", exc)
         except Exception:
             # A watcher that dies on one bad pane stops watching every other
             # pane, which is a worse failure than the one it is reporting.
@@ -522,7 +542,13 @@ def main(argv: list[str] | None = None) -> int:
     skip = set(args.skip) | ({_self_name()} if _self_name() else set())
 
     if args.status:
-        found = survey(skip=skip)
+        try:
+            found = survey(skip=skip)
+        except TmuxUnreachable as exc:
+            # Not "nothing blocked". This is the project's signature failure --
+            # an absence in a view that was never rendered, read as a signal.
+            print(f"cannot tell: {exc}", file=sys.stderr)
+            return 1
         if not found:
             print("nothing blocked")
             return 0
