@@ -15268,3 +15268,12 @@ backup is the only rollback that exists.
 - The Sonnet subagent ran the incremental update: 8040 to 8121 nodes, 32581 to 32696 links, graph.json rewritten 01:35. I verified the counts myself; 448 nodes under mail/, and the source tree is untouched.
 - WRONG CLAIM, MINE: link 4's seed said the 49 changed files were chunk 5-6 mail relay code. 48 of them are zero-node JSON fixtures that graphify's CLI heal check re-queues on every --update, forever. Only 5 code files really changed. I read a count as a description; see check-what-a-grep-matched. Corrected with api-6c by message.
 - Also worth knowing: the skill's update.md runbook skips the CLI's heal check (#2543). The subagent replicated it by hand. 107 of 318 communities got heuristic labels, not curated ones.
+
+## 23:40Z — api-6c asks for a quiet window on admin@; told to HOLD
+
+- api-6c wants no admin@ mail from t0, which is at 00:40Z at the earliest (its DKIM TTL was lowered at 23:37Z, and one old 3600s TTL has to pass first) until it sends "window closed". Mail to @kinreply.rs may bounce or be lost during the move; it will measure which. The shared account received 8 admin@ messages between 22:47 and 23:35Z, all of them his signups.
+- Told it to HOLD t0 until my GO, because he is mid Z.ai signup. GO rests on the Z.ai key landing plus his confirmation.
+- He replaced qwencloud.txt at 01:37 CEST with a new key that behaves identically (200 intl, 172 models; 401 elsewhere). Swapped it into prod.env with a backup first.
+- NEAR-MISS: prod.env already carried api-6c's 4 MAIL_RELAY_* lines. My swap was a read-modify-write racing its appends. Nothing was lost, but I will no longer write that file without messaging the link first.
+- api-6c corrections to chunk 6's log: the new key is named "KinReply", not "chain-admin" (cosmetic); the relay runs a "dev" tag from 0984d3b, not 21f61dc.
+- Wake-up set for 00:25Z to confirm the hold was acknowledged.
