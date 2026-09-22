@@ -14975,3 +14975,38 @@ expires 2026-09-22 04:53 UTC" is resolved — credentials say `2026-10-20T12:34:
 
 Also committed this morning's orphaned PROGRESS entry: the 08:02 session wrote 52 lines
 and the wake poweroff took the box down before it could commit them.
+
+### 15:36–15:55 UTC — he retasked me: start the Phase 3 chain
+
+Provenance verified (`1551980492709044336`, 15:36:23Z): "Nope what i need from you is
+to take the instructions from kinreply/api/PHASE3 KICKOFF and do it using that way.
+Call me if something needs anything thats it". So the answer to my "I propose nothing"
+is a mandate. Read `PHASE3-KICKOFF.txt`, `AUTONOMOUS-BUILD-PHASE3.md` (540 lines),
+`BUILD-LOG-PHASE3.md` and the roadmap README's §2.6 and §8 before spawning anything.
+
+Ran `~/data/kinreply/pull.sh` as the kickoff requires. Seven repos clean, branches
+correct, at their pushed heads. Only `c82e6ff` (the seed commit) landed on api after the
+specs' `670deae` snapshot, so spec staleness is minimal at the start of the chain.
+`kinreply-app` pulled 2451 lines of Milos's client work — plausibly the regeneration
+Phase 2 left open on him; reported to Bogdan as unverified rather than claimed.
+
+**Link 1 spawned by hand in tmux** (`kr3build-01`), Opus, `HOTLINE_SPAWNED=1`, cwd
+`~/data/kinreply/api` — not via bare `hotline` spawn, which still crashes on a long
+prompt at `fresh.py`'s 64 KB line limit, and not via `--declare`, which retasks the
+caller. It declared itself `api-1b` and got `#agent-api-1b`. **Pane captured 20s after
+spawn** — no folder-trust wedge; it was already reading the mandate.
+
+Its seed carries the mandate's own highest-value line — *verify this brief, do not
+execute it* — with the three Phase 2 examples of a link catching a false claim in an
+operator's seed, and the backtick/heredoc posting rule, which the mandate requires in
+every seed and which bit precisely because it lived in one project's notes.
+
+**Verified rather than asserted: a running link blocks the 06:02 UTC poweroff.** I put
+the claim in link 1's seed labelled UNVERIFIED, then ran wake's own `power.presence()`
+against the live process table with the link up: `clear: False`, `work in flight:
+unnamed pid 8403` (link 1). Only the operator is excluded by `POWEROFF_ALLOW_MATCH`;
+named and unnamed non-operator `claude` sessions both count as work. **The hazard is
+real only between links and while parked at a checkpoint** — which is exactly when the
+chain is waiting on Bogdan. Link 1 told to commit and push often, not just at handoff.
+
+First checkpoint is the end of chunk 6: the five accounts on `admin@kinreply.rs`.
