@@ -15178,3 +15178,63 @@ always runs from the repo root. Put in link 2's seed as a question to ask of eve
 report` in its input box as a queued instruction from a second voice and built a theory about
 `tmuxen.py` stranding text. It is Claude Code's **suggested input** — ghost text. Corrected to
 the link within a minute so the false claim never stood alone.
+
+### 22:00–23:00 UTC — chunk 6 checkpoint, the project graph, and the restart sequence
+
+**Chunk 6 landed: `admin@kinreply.rs` receives mail.** Verified independently before relaying
+any of it — MX on four resolvers with a control name that must have none, production Let's
+Encrypt certs on `inbound.kinreply.rs`, all four repos clean and pushed by `ls-remote`, and
+the neighbours byte-identical after four Caddy reloads (`uxonews.com` 307/6, `dds` 200/92517).
+
+**I sent the external-sender leg myself** from `bogdan.stamenovic@gmail.com` — a mailbox not
+on the shared Resend account — subject `KR-RELAY-PROBE-1790115781`. SPF/DKIM/DMARC pass,
+`self=false`, forwarded, `last_event: delivered`. **Link 3 then caught itself overclaiming
+from it**: my probe went to `admin@` alone, so `support@` has machine witnesses only from an
+address on the shared account. Its reviewer found the generalisation; it verified the finding
+before accepting it. Done-when 8 stays **PARTIAL**, and I am recorded as an external
+**sender**, never a human witness. The human leg is Bogdan opening the mailbox.
+
+**Two findings from that chunk worth more than the chunk.** *Deleting a cache's backing store
+does not clear the cache* — Caddy kept serving a staging cert through a reload AND through
+deleting it from disk; the fix was reloading with the site removed, then back. And **`pipefail`
+inverts our own rule**: "a pipeline's exit status is the last command's" fails under pipefail,
+which reported a guard that correctly refused (exit 1) as broken. A credential was also found
+at rest — a `curl -K` config on disk — swept and shredded with a positive control.
+
+**The project graph is built.** `graphify` installed via `uv tool install graphifyy` (the
+double-y IS the official name; I wrongly flagged it as a typo-squat and the README says so
+explicitly) and registered as a `/graphify` skill. **8040 nodes, 32,581 edges, 272
+communities** over 731 files. Caught mid-run that **27 `.sql` files were contributing nothing**
+for a missing parser — those are the `kinreply-db` migrations, the thing links read most.
+Installed `graphifyy[sql]` and re-ran: +128 nodes.
+
+**One extraction agent failed on the 64k output ceiling**, believing it had succeeded right up
+to the cutoff — its last words were "now I'll construct the full JSON". Only the missing file
+revealed it. Re-dispatched as three smaller agents with an explicit node budget. **A seed that
+says "be selective" fixes this; a bigger model would not have.**
+
+**Found and fixed a duplicate-ID split before it fragmented the graph.** Two agents produced
+`X` and `X_doc` for the same document — one had read it, one had stubbed it. Fixed with a
+*rule* rather than a hand-patch: a node with null `source_file` whose id is `X_doc`, where `X`
+exists with a real source file, is a stub — remap its edges and drop it. 2 stubs, 13 edges
+remapped, 0 dangling. **Zero shared ids across 532 nodes looked clean and was not the check** —
+counting would never have found it; reading the pairs did.
+
+**`docs/OPERATING-RULES.md` written and pushed (`6aa74fb`)** at his request: the standing
+kickoff. Leads with the operator's first twenty minutes as an ordered procedure, then the link
+lifecycle (regenerate the graph, measure context from the transcript, and why the arithmetic is
+not the decision), verify-don't-relay, standing contact authorisations, seed contents, the
+machine, checkpoints — and a section on what the document cannot do, including that its numbers
+are four data points from one evening.
+
+**Restart sequence, in the order he approved.** Measured the upgrade safely first (synced into
+a throwaway pacman db): **zero repo packages**, five AUR. No kernel, glibc, systemd, docker or
+postgres — **so no machine reboot is needed**, only a session restart, which keeps
+`hotline-ios` and the path that rings his phone alive.
+
+**Skipped timeshift deliberately and said so.** Root is 77% full with 17 GB free; an rsync
+snapshot of a 53 GB root is not viable and is disproportionate for five userland packages.
+Did the targeted thing instead, which is the house rule anyway: tarred `/opt/claude-code`
+(94 MB compressed, integrity-checked, restorable) and recorded the AUR commit that rebuilds
+2.1.269. **None of the five packages' current versions are in the pacman cache**, so that
+backup is the only rollback that exists.

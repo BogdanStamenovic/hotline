@@ -1,3 +1,81 @@
+> ## RESTART 2026-09-23 ~01:00 CEST — upgrading to Opus 5.5, chain PARKED at the chunk 6 checkpoint
+>
+> **Nothing is broken. The chain is parked on purpose and Bogdan is registering accounts.**
+> This banner exists because the operator session was deliberately restarted onto a new model,
+> not because anything failed.
+>
+> ## WHERE THE BUILD IS — read `docs/OPERATING-RULES.md` FIRST, it is the standing kickoff
+>
+> **Chunks 1–6 are DONE.** Link 3 (`api-f9`) stopped itself at chunk 6's CHECKPOINT with light
+> context. Repos at **mail `d5cc43f`, api `a41393e`, docs `6aa74fb`, lifecycle `605fe1b`**,
+> all clean, all pushed, verified with `ls-remote` rather than tracking refs.
+>
+> **`admin@kinreply.rs` RECEIVES MAIL.** MX is live on four resolvers. prod is up at
+> `api.kinreply.rs` (empty, signup CLOSED — proven by behaviour, `SIGNUP_DISABLED`/403),
+> staging at `staging-api.kinreply.rs` carrying the old data. Legacy postgres never restarted:
+> `StartedAt 2026-09-20T23:48:31.592517971Z`, RestartCount 0.
+>
+> **CHUNK 7 IS BLOCKED ON EXACTLY ONE THING:** Bogdan creating the new Resend account on
+> `admin@kinreply.rs` and handing over `KINREPLY_RESEND_ADMIN_API_KEY`. The moment that key
+> exists, spawn link 4 for chunk 7. The other four accounts do not block it.
+>
+> **He was told to do Alibaba FIRST** — three business days of passport review, the slowest
+> external dependency in the phase.
+>
+> ## WHAT ONLY THIS SESSION KNEW, so it is not lost
+>
+> - **Expect DOUBLED verification codes.** Until chunk 7 moves the domain, dds's webhook also
+>   receives every `kinreply.rs` message and forwards it to `uxonews@gmail.com` without the
+>   `[admin@]` prefix. Observed, not predicted. Not a relay bug. Do not "fix" it.
+> - **Done-when 8 is PARTIAL and must stay that way.** The external-sender leg was proven on
+>   `admin@` ONLY; `support@` has machine witnesses solely from an address on the shared
+>   account. No human has opened the mailbox. The operator is an external SENDER, never a
+>   human witness. Link 3 overclaimed this, its reviewer caught it, it is fixed — do not let
+>   it regress.
+> - **A graph of the whole project now exists**: `~/data/kinreply/graphify-out/`, 8040 nodes,
+>   32,581 edges, 272 communities. `graphify query "<question>"` from `~/data/kinreply`
+>   answers from it instead of reading files. **Regenerate with `graphify . --update` before
+>   spawning each link** — that is now rule 1 of the operating rules.
+> - **`docs/OPERATING-RULES.md` (new, `6aa74fb`) is the standing kickoff.** How to run the
+>   chain: when to replace a link and why the arithmetic is not the decision, how to verify a
+>   link's report, standing contact authorisations, what is armed to power the box off.
+>
+> ## THINGS I GOT WRONG TONIGHT, recorded so they are not repeated
+>
+> 1. **"A timer started you" was false** — a person did. `watchdog.log` has no line for it.
+> 2. **I read the TUI's suggested-input ghost text as a queued instruction** and built a theory
+>    about `tmuxen.py` on it. Bogdan corrected me. That box can suggest exactly the thing a
+>    careful agent just decided not to do.
+> 3. **I denied a mutation-harness `rm` before reading what `$SP` was**, contaminating one
+>    mutation result. Read the command, then answer.
+> 4. **I handed Bogdan a Milos note to pass on.** Milos carries a STANDING authorisation —
+>    deferring it back to him is failing to do the job. His words. I sent it myself after.
+> 5. **I told him to start the Alibaba signup before `admin@kinreply.rs` existed.** It could
+>    not receive mail; there was no MX at all. Corrected in the artifact.
+>
+> ## ENVIRONMENT CORRECTIONS MADE TONIGHT
+>
+> - **Docker IS installed** (29.8.0, compose 5.5.1), service stopped and disabled by design.
+>   CLAUDE.md said absent because `systemctl is-active` answers `inactive` for a unit that does
+>   not exist, identically to one that is stopped. Go 1.27.1 and Postgres 18.6 are present too.
+>   Fixed in CLAUDE.md with the reason attached.
+> - **`hotline-registry` documented in CLAUDE.md §7**, including that Milos and Stefan carry
+>   standing authorisations.
+> - **`hotline-permwatcher` is live** — escalates any agent blocked on a permission or
+>   folder-trust prompt. It never answers one; answering is the operator's.
+> - **The Oblak DS ticket was SENT** 2026-09-22 19:00 from `kinreply@gmail.com` (the registrant
+>   address) to `info@oblak.host`. Gmail accepted it; that is not Oblak acting on it. The
+>   witness is the DS appearing at `.rs`, or a reply. Record and draft: `oblak-ds-ticket.md`.
+> - **Milos was told** about the hostname move and the three dev Meta app changes, by DM at
+>   2026-09-22 23:0x. A message id is acceptance, not reading.
+>
+> ## BOOT NOTES
+>
+> `wake`'s `track-slot-0800` fires **06:02 UTC daily with `then_do: poweroff`**. A running
+> build link holds the box up; the operator does NOT (it is excluded by
+> `POWEROFF_ALLOW_MATCH`, which is its own seed prompt). So the danger window is exactly now —
+> parked at a checkpoint with no link running. **Commit anything you care about.**
+
 > ## SHUTDOWN 2026-09-21 18:10 UTC — off at his instruction, BOTH open items closed
 >
 > **Nothing is broken and nothing is running.** He woke the box himself at 18:41 CEST (WoL
