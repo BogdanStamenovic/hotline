@@ -28,6 +28,7 @@ import asyncio
 import logging
 import re
 import subprocess
+from dataclasses import dataclass
 from time import monotonic
 
 from .ccsocks import LiveSession, discover, refuse_if_self
@@ -123,6 +124,57 @@ def sessions() -> set[str]:
     if result.returncode != 0:
         return set()
     return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+
+
+@dataclass(frozen=True)
+class Pane:
+    """One tmux pane, and what is actually running in it."""
+
+    session: str
+    target: str
+    pid: int
+    command: str
+
+    @property
+    def is_claude(self) -> bool:
+        """Is the foreground process a Claude Code session?
+
+        This is the gate that makes pane-scraping safe to act on. A pane's text
+        can be forged trivially -- `cat` a captured permission prompt into a
+        shell and the last twenty lines are byte-identical to a real one, which
+        was demonstrated on 2026-09-22 rather than assumed. Nothing distinguishes
+        the two by text, and nothing ever will. What does distinguish them is
+        that only one of them has a `claude` in the foreground.
+        """
+        return self.command == "claude"
+
+
+def panes() -> list[Pane]:
+    """Every pane on the box, with its foreground command, in one call.
+
+    One `list-panes -a` rather than a `has-session` per agent, for the reason
+    `sessions()` gives: this is recomputed on every pass of a polling loop.
+    """
+    result = _tmux(
+        "list-panes",
+        "-a",
+        "-F",
+        "#{session_name}\t#{session_name}:#{window_index}.#{pane_index}\t#{pane_pid}\t#{pane_current_command}",
+        check=False,
+    )
+    if result.returncode != 0:
+        return []
+    found: list[Pane] = []
+    for line in result.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) != 4:
+            continue
+        session, target, pid, command = parts
+        try:
+            found.append(Pane(session, target, int(pid), command.strip()))
+        except ValueError:
+            continue
+    return found
 
 
 def kill(name: str) -> bool:

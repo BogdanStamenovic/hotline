@@ -1,0 +1,24 @@
+
+● Grace has ~18 minutes left. Let me verify the Done-when items I can already
+  settle, so the final report is accurate rather than assumed.
+
+● Verifying Done-when items 3,4,9,10
+  ⎿  $ ssh uxonews 'cd ~/kinreply/lifecycle
+     echo "=== DW3: health.sh --stack staging --public ==="
+     scripts/health.sh --stack staging --public > /tmp/h.txt 2>&1; echo
+     "exit=$?"; tail -4 /tmp/h.txt
+     echo
+     echo "=== DW4: compose ls, legacy exited-not-removed, legacy volumes
+     present ==="
+     docker compose ls -a
+     …
+
+✽ Photosynthesizing… (17m 59s · ↓ 61.4k tokens · thinking)
+  ⎿  Tip: Get pinged on your phone when long tasks finish · enable push
+     notifications in /config
+
+────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────
+
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents

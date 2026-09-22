@@ -1,0 +1,34 @@
+[Unit]
+Description=hotline permwatcher (escalate agents blocked on prompts they cannot answer)
+# No After=hotlined.service, deliberately. The two are independent: permwatcher
+# reads tmux panes and the agent registry file, neither of which the daemon
+# owns, and it must keep working precisely when the rest of hotline is unwell.
+# Its escalation falls back to hotline-say on its own.
+
+[Service]
+Type=simple
+WorkingDirectory=/home/bodas/data/hotline
+ExecStart=/home/bodas/data/hotline/.venv/bin/hotline-permwatcher
+Restart=always
+RestartSec=10
+# A user unit, and it must stay one. `systemctl --user`, never plain
+# `systemctl` -- the system manager reports this unit as inactive while it is
+# running, which is a status field this project has been bitten by before.
+# Linger is on (loginctl show-user bodas -p Linger => Linger=yes), so it starts
+# on a headless boot without anybody logging in.
+#
+# And nothing system-level belongs here: RequiresMountsFor, network-online
+# ordering and friends are silently inert in a user manager while `systemctl
+# show` prints them as though they were live. That trap is recorded in
+# hotlined.service above this one; do not "restore" any of it.
+#
+# tmux is reached by name, and a user unit's PATH does not include the places
+# this box keeps its tools. hotline-say lives in ~/.claude/bin.
+Environment=PATH=/home/bodas/.claude/bin:/home/bodas/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Unlike hotlined this never spawns a tmux session, so it cannot become the
+# accidental parent of the tmux server -- `list-panes` and `capture-pane`
+# against a dead server fail rather than starting one. KillMode is left at the
+# default on purpose; there is nothing here whose cgroup needs protecting.
+
+[Install]
+WantedBy=default.target

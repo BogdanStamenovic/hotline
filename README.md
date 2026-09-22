@@ -74,6 +74,165 @@ session's own transcript from the byte offset it recorded before injecting. No
 daemon is involved, so `hotline` works standalone and a missing daemon can never
 break one of your own sessions.
 
+## permwatcher
+
+`hotline-permwatcher` is a service that notices when an agent is stuck on an
+interactive prompt only a human can answer, and tells somebody.
+
+On 2026-09-22 a build agent hit Claude Code's dangerous-operation guard
+mid-build and sat on the prompt indefinitely. Nothing on the machine reported
+it: `hotline --list` said `waiting`, `tmux ls` showed a live session, the
+process was alive and idle. It was found because a human happened to ask how
+the build was going. The folder-trust prompt ("Is this a project you created or
+one you trust?") wedges spawned agents the same way, which is what made this
+worth generalising rather than patching.
+
+### How it works
+
+The pane is the only place the prompt exists, so the pane is what gets read.
+Measured on 2026-09-22 against three agents driven into real prompts:
+
+| signal | what it says about a blocked agent |
+|---|---|
+| `hotline --list` | `waiting` -- indistinguishable from healthy and idle |
+| `tmux ls` | a live session |
+| the process | alive, `Ssl+`, consuming nothing |
+| the transcript | the prompt's text is absent (0 hits while it was on screen) |
+| the transcript, at the folder-trust prompt | **does not exist**, and neither does a session descriptor, so `hotline --list` cannot see the agent at all |
+| the pane | the prompt, in full |
+
+What the transcript *does* carry is the blocked tool call: the file ends on an
+assistant record with a `tool_use` and no matching `tool_result`, and its input
+holds the triggering command verbatim. permwatcher reads that to name the
+command in the notification, so nobody has to dig it out by hand. It is never
+evidence on its own -- a session part-way through a long build has an identical
+dangling call.
+
+Matching is structural, not lexical. The three real prompt shapes disagree about
+wording, numbering and footer text, and two of them never say "proceed" at all:
+
+| prompt | question | options | footer |
+|---|---|---|---|
+| Bash permission | `Do you want to proceed?` | `1.` / `2.` / `3.` | `Esc to cancel · Tab to amend` |
+| folder trust | `Quick safety check: ...` | prose | `Enter to confirm · Esc to cancel` |
+| auto-mode offer | `Teach auto mode ...?` | `1.` / `2.` / `3.` | `Enter to confirm · Esc to cancel` |
+
+What they share is a shape: a selection cursor on one of several sibling option
+lines, closed by a footer of short `key to verb` hints, **as the bottom-most
+thing in the pane**. That last clause does most of the work. The auto-mode offer
+is drawn above a live input box, so the session is still reachable and nothing
+is stranded -- it is a nag, not a wedge, and it deliberately does not match.
+
+Three gates stand before anything is sent:
+
+1. the pane's foreground process must be `claude`. A shell that has `cat`-ed a
+   captured prompt produces byte-identical text, and this is the only thing that
+   separates them;
+2. the prompt must still be there after `--grace` (default 45s). Somebody at the
+   keyboard answers in seconds;
+3. the pane is re-read immediately before the message is composed, because the
+   prompt can be answered inside that window.
+
+One notification per distinct prompt, keyed on a fingerprint of the question and
+the option texts -- so a spinner animating above it, or somebody arrowing
+between the options, does not re-notify. A reminder repeats after `--remind-after`
+(default 60 min, up to 4 times, `0` disables). The reminder is deliberately on:
+the premise of this module is that the thing meant to notice a stuck agent can
+itself be stuck, and a single fire-and-forget message into a wedged operator's
+inbox reproduces the original failure exactly.
+
+Escalation goes to whichever agent currently holds `sys-admin`, resolved per
+pass from the registry rather than hardcoded. It falls back to Bogdan's Discord
+channel when there is no operator, when the operator cannot be reached, or when
+**the operator is itself the blocked agent**.
+
+### Install
+
+```
+systemctl --user daemon-reload
+systemctl --user enable --now hotline-permwatcher.service
+```
+
+`systemctl --user`, never plain `systemctl` -- the system manager reports this
+unit as `could not be found` while it is running. Linger is on, so it starts on
+a headless boot.
+
+### Usage
+
+```
+hotline-permwatcher --status             # what is blocked right now, then exit
+hotline-permwatcher --once --dry-run     # one pass, send nothing
+hotline-permwatcher --skip kr3build-02   # ignore a pane (repeatable)
+journalctl --user -u hotline-permwatcher -f
+```
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--interval` | 12s | seconds between passes |
+| `--grace` | 45s | how long a prompt must stand before escalating |
+| `--remind-after` | 3600s | silence between repeats; `0` disables |
+| `--once` | | one pass and exit |
+| `--dry-run` | | report, send nothing |
+| `--status` | | print what is blocked, exit |
+| `--skip` | | a tmux session to ignore |
+
+A pass costs one `list-panes` plus one `capture-pane` per claude pane: measured
+18 ms median over 7 panes (min 17, max 19, n=7), so a 12-second interval spends
+about 0.15% of one core. The five-minute watchdog timer was the obvious
+precedent and is the wrong cadence here -- it is right for "did the worker die"
+and too slow for an agent burning wall-clock somebody is waiting on.
+
+### What it will never do
+
+**It does not answer prompts.** Not `1`, not `2`, not Escape, not a
+configurable auto-approve, not a safe-list. A watcher that answers permission
+prompts has deleted the guard those prompts exist to be, and it would do it on
+the strength of a terminal scrape. It never writes to a pane at all: the only
+tmux verbs it imports are `panes` and `capture`, both read-only, and
+`tests/test_permwatch.py` fails if that changes -- verified by injecting a
+`send_command` call and confirming the tests go red.
+
+It does not ring anybody's phone. A build agent stuck at 3am is probably not
+worth waking somebody for, and which blocks are is not this module's call.
+
+### Limitations
+
+**A forged pane is indistinguishable from a real prompt.** Any process that
+prints a captured prompt produces byte-identical text. Nothing in the text can
+reject it; the `claude`-foreground gate is the entire defence, and a hostile
+process running *as* claude would defeat it. `tests/panes/forged/` asserts the
+match rather than hiding it.
+
+**It only sees panes.** An agent blocked in a headless session -- driven over
+pipes, with no tty -- is invisible to this, and so is one on another machine.
+`wedge.py` covers a different blindness (a session that stops consuming its
+message queue) and neither subsumes the other.
+
+**It only knows the prompt shapes that have been seen.** Three are in the
+fixture corpus, captured from real agents. A future CLI that drops the cursor
+glyph, or the `Esc to cancel` footer, or draws a dialog that is not the
+bottom-most element, would go unmatched -- silently, because a detector that
+matches nothing looks exactly like a machine with nothing wrong. There is no
+alarm for "I have stopped recognising prompts".
+
+**A blocked agent with no descriptor gets reported by pid.** The folder-trust
+case has no session, no registry record and no transcript, so the notification
+names a pid and a tmux session and cannot say which agent it is or what it was
+working on.
+
+**The grace period is a real 45-second hole.** A prompt answered inside it is
+never reported, which is intended, but so is one that appears and is abandoned
+inside it.
+
+**Escalation is fire-and-forget.** `hotline --to --no-wait` exits once the
+message is in the target's inbox. A message in the inbox of a session that has
+stopped reading its inbox is not a delivery, and permwatcher cannot tell the
+difference -- which is exactly the failure `wedge.py` exists to name. The
+reminder is the mitigation, not a fix.
+
+**Reminders stop after 4.** A prompt nobody has answered in five hours stops
+being mentioned.
+
 ## Limitations
 
 - **Attaching needs the target session to accept cross-session messages.** Claude

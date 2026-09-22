@@ -530,3 +530,96 @@ def events_since(
 
     result.events.sort(key=lambda event: event.at if event.at is not None else 0.0)
     return result
+
+
+@dataclass(frozen=True)
+class PendingTool:
+    """A tool call the session asked for and never got a result for."""
+
+    tool_use_id: str
+    name: str
+    # The tool's own input, e.g. {"command": "...", "description": "..."} for
+    # Bash. Kept whole rather than flattened to a string so a caller can render
+    # whichever field is worth showing for the tool it turned out to be.
+    payload: dict
+    at: float = 0.0
+
+    def summarise(self, limit: int = 400) -> str:
+        """The one line worth putting in front of a human."""
+        for key in ("command", "file_path", "pattern", "url", "prompt"):
+            value = self.payload.get(key)
+            if isinstance(value, str) and value.strip():
+                text = value.strip()
+                return text if len(text) <= limit else text[: limit - 1] + "…"
+        return json.dumps(self.payload)[:limit]
+
+
+def dangling_tool_use(session_id: str, tail_bytes: int = 400_000) -> PendingTool | None:
+    """The tool call a blocked session is waiting on permission for, if any.
+
+    A permission prompt is not written to the transcript -- verified on
+    2026-09-22 across three agents driven into real prompts, 0 hits for the
+    prompt's own text while it was on screen. The *tool call* is, though, which
+    the note that prompted this module had concluded otherwise: the file ends on
+    an assistant record holding a `tool_use` with no matching `tool_result`, and
+    its input carries the command verbatim.
+
+    That is worth reading because the alternative is scraping the command off a
+    terminal that has already wrapped and truncated it. The operator who found
+    the 2026-09-22 wedge had to dig this out of a transcript by hand.
+
+    **This is never evidence of a block on its own.** A session part-way through
+    a twenty-minute build has exactly the same dangling `tool_use`, and so does
+    one whose tool is merely slow. `permprompt.detect` decides whether anything
+    is blocked; this only says what it is blocked *on*. Returns None rather than
+    raising for every unreadable-transcript case, because a missing enrichment
+    must never cost the escalation itself.
+    """
+    path = transcript_path(session_id)
+    if path is None:
+        return None
+    try:
+        with path.open("rb") as fh:
+            fh.seek(max(0, path.stat().st_size - tail_bytes))
+            data = fh.read()
+    except OSError:
+        return None
+
+    uses: dict[str, PendingTool] = {}
+    answered: set[str] = set()
+    for raw in data.split(b"\n"):
+        if not raw.strip():
+            continue
+        try:
+            obj = json.loads(raw)
+        except ValueError:
+            # A truncated first line from the tail seek, or a partial final line
+            # being appended as we read. Both are normal.
+            continue
+        if not isinstance(obj, dict) or obj.get("isSidechain"):
+            continue
+        content = (obj.get("message") or {}).get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use":
+                use_id = block.get("id")
+                payload = block.get("input")
+                if isinstance(use_id, str):
+                    uses[use_id] = PendingTool(
+                        tool_use_id=use_id,
+                        name=str(block.get("name") or "?"),
+                        payload=payload if isinstance(payload, dict) else {},
+                        at=_epoch(obj) or 0.0,
+                    )
+            elif block.get("type") == "tool_result":
+                result_id = block.get("tool_use_id")
+                if isinstance(result_id, str):
+                    answered.add(result_id)
+
+    pending = [use for use_id, use in uses.items() if use_id not in answered]
+    # The newest, because a session blocked now is blocked on its latest call --
+    # an older dangling one is an artefact of the tail window starting mid-file.
+    return max(pending, key=lambda u: u.at) if pending else None

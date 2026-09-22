@@ -1,0 +1,23 @@
+  - It may not test against live agents — its own throwaway session with a fake
+    prompt.
+
+  I also told it to reproduce the blindness itself before trusting me. The
+  design fact everything rests on — that a pending permission prompt isn't
+  written to the transcript until it resolves — I established from exactly one
+  grep tonight. That's an observation, not a law, and it shouldn't take my word
+  for the thing the tool exists to fix.
+
+  I gave it the generalisation argument too: this is the second instance of one
+  class (the folder-trust wedge was the first), which is what makes genericity
+  earned rather than speculative — build for "an agent blocked on a prompt only
+  a human can answer", not for the rm string.
+
+  Two agents running, watches armed on both pids.
+
+✻ Worked for 2m 36s · done 9:46 PM · 2 shells still running
+
+────────────────────────────────────────────────────────────────────────────────
+❯ Keep me posted on the cutover
+────────────────────────────────────────────────────────────────────────────────
+
+  ⏵⏵ bypass permissions on · 2 shells · ← for agents

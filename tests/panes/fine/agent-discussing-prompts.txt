@@ -1,0 +1,24 @@
+
+  Ran 1 shell command
+
+● Now building the fixture corpus. First, capture real panes (read-only) —
+  including my own, which displays this brief full of prompt-like text and is
+  the ideal adversarial negative:
+
+● Building fixture corpus from real panes
+  ⎿  $ S=/tmp/claude-1000/-home-bodas-data-hotline/eb5b21a5-b012-4c30-99ca-1f36e
+     32366b1/scratchpad
+     mkdir -p $S/fixtures/pos $S/fixtures/neg
+     # POSITIVE: live blocked fixture C (Bash tool permission, the incident
+     shape)
+     tmux capture-pane -p -t pw-fixtureC -S -50 >
+     $S/fixtures/pos/bash-permission.txt
+     # POS…
+
+* Orbiting… (5m 25s · ↓ 18.1k tokens)
+
+────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────
+
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents
