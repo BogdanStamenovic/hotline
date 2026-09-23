@@ -15439,3 +15439,11 @@ backup is the only rollback that exists.
 - Link 7 retired: "done: api-45 / done exit=0" in its transcript; tmux killed; pid 2711563 gone.
 - Milos note sent as 3 DMs (ids ...8884583943, ...8889219366913, ...8893031989361), including the kinreply-db follow-up. The watcher on his DM channel is still running.
 - Chain PAUSED at chunk 13 (migration, needs Milos). No build agent running. Discord posted; page v12.
+
+## 11:40Z — chunk 7 CLOSED (Gmail send-as), guard decided, key file removed
+
+- He sent the test to bogdan.stamenovic@gmail.com (Discord 1552279275292463105, gated). Resend GET /emails: 11:20:48 "Kin Reply support" <support@kinreply.rs> to bogdan@ "Test", delivered; 11:21:13 his reply relayed back as "[support@] Re: Test", delivered; the 11:16:50 Gmail confirmation was relayed. Round trip proven. Qualifier: no human read the DKIM line (same signing path as chunk 9's read 1 PASS).
+- My first subject filter matched nothing (he used subject "Test"). I listed the raw rows before concluding anything.
+- ~/.kinreply/gmail-smtp-key removed; test ! -e passes.
+- Guard: "add the guard thats fully okay. If no ai knowlegde then no ai simple." Rule: knowledge EMPTY means dispatch treats AI as OFF (no generation, holding reply, flag or mail). Recorded by me in BUILD-LOG-PHASE3 (api 05899c0, pushed = remote, no attribution) with instructions for the next link: 03 §13, chunks 22/28, and an aiState value if one is needed (a contract change goes in the Milos changelog). The "EMPTY" definition is left to the chain.
+- Everything owed by him today is done. Chain paused on Milos only.
