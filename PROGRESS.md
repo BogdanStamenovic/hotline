@@ -15534,3 +15534,12 @@ backup is the only rollback that exists.
 - Heads = remote and clean: api 75a4519, docs 4516906, lifecycle 3ae958a, kinreply-db d804c5c. Disk 13G free / 83%.
 - tmux kr3build-10, Opus. Declared api-3f. Pane at 40s: reading the chunk 16 spec, no wedge.
 - Neighbour baseline before chunk 16 (15:36:54Z): uxonews.com 307 6B, dds.uxonews.com 200 92517B, kinreply.uxonews.com 000 (the old hostname, moved), api.kinreply.rs readyz 200, staging readyz 200. Saved to scratchpad neighbours-baseline.txt. The hourly check compares against it.
+
+## 16:18:37Z (read) — chunk 16 on staging (Caddy on both); link 10 continues into chunk 17
+
+- api-3f: FB via Zernio hosted mode (headless key omitted); a credential-param guard at the callback (ops event with state, log-only without). Caddy redaction on staging+prod: the spec's filter would still have leaked via the redirect resp_headers.Location, so request.uri, Location and Referer are now covered; hub.verify_token added to both lists; the legacy log held 17 creds, not 6, scrubbed IN PLACE (Caddy holds the fd). Mutations 20/20; Sonnet review found no defect.
+- VERIFIED against MY baseline: all 5 endpoints identical in status and bytes; Caddy NRestarts=0, active since 08-24 (reload only); staging e19e00a, prod 7ad2cc9; api a76225a, docs 9ee64e0, lifecycle 90d79e6 = remote. Context 554,393 (55.4%).
+- MINE: chmod 600 /var/log/caddy/kinreply.log (was the only 644 in the dir; stale since 09-20); caddy can still read it; NRestarts unchanged.
+- DECISION: continue link 10 into chunk 17 (ingest on all platforms, plus migrations). Tripwires: migrations via Milos PR + wait; IG ingest before/after on staging; api image staging-only; stop at ~800k; Svix-Signature redaction if small.
+- Prod api is now 2 chunks (15, 16) behind staging on Milos's TikTok hold. No answer on OTA since 15:25Z. Will nudge if the gap keeps growing.
+- Discord posted.
