@@ -15543,3 +15543,10 @@ backup is the only rollback that exists.
 - DECISION: continue link 10 into chunk 17 (ingest on all platforms, plus migrations). Tripwires: migrations via Milos PR + wait; IG ingest before/after on staging; api image staging-only; stop at ~800k; Svix-Signature redaction if small.
 - Prod api is now 2 chunks (15, 16) behind staging on Milos's TikTok hold. No answer on OTA since 15:25Z. Will nudge if the gap keeps growing.
 - Discord posted.
+
+## 16:22:18Z (read) — chunk 17 PR #2 open
+
+- api-3f: kinreply-db PR #2, 00027_outbound_sent_echo_idx.sql (one partial index). EXPLAIN as kr_app under RLS over 200k rows. Its first EXPLAIN ran on an EMPTY table (a seed INSERT failed on a wrong enum value); the row-count control caught it. goose up/down/up clean.
+- It widened scope correctly: chunk 23's warning that linking echoes would render our own messages as INBOUND contact turns (transcript, /v1 detail, AI bundle). Fixing it in chunk 17, where the hazard is introduced, after auditing every reader of inbound_event.conversation_id.
+- VERIFIED: PR #2 OPEN, one file, 0 attribution hits in body/commits.
+- DMed Milos about PR #2, plus a no-pressure OTA question (prod holds chunks 15+16) (1552354482430414848). The PR #2 watcher is armed; the Milos DM watcher is still armed.
