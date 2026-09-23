@@ -15425,7 +15425,7 @@ backup is the only rollback that exists.
 - Staging's full-access Resend key on dds's account: KEEP (his decision). Closed.
 - Gmail send-as: posted full 8 steps, with the key fetch first. gmail-smtp-key is present (600). After his test I verify delivery in Resend and delete the key file.
 
-## 11:25Z — chunk 12 DONE; staging-only deploy; Milos note drafted
+## ~11:18Z (approx; clock not read) — chunk 12 DONE; staging-only deploy; Milos note drafted
 
 - api-45: contract 1.1.0, 64 operations (16 new, answering 501 via unbuilt). Item 12 overrule built as the single value AiChannelEnabled=true; 03 and chunk 21/22/30/41 specs updated. It corrected me: the column default is chunk 21's, not 13's. VERIFIED: heads = remote and clean (api 1f65cb3, docs eb5742e); yaml 1.1.0 (it was 1.0.0 at 9b73aff); 64 operationIds; both stacks still on 999caf3, so nothing deployed. Context 687,399 (68.7%).
 - Empty-knowledge answer: no fabrication. A factual question becomes a HANDOFF with a holding reply, a flag and a seller escalation mail per thread (Resend quota). Guard proposal ("AI on + knowledge EMPTY = off") put to him as "add the guard / leave it"; silence = leave.
@@ -15433,17 +15433,22 @@ backup is the only rollback that exists.
 - Milos note split into 3 DMs (under 2000 chars each), plus a gentle kinreply-db follow-up. Sending after the staging proof.
 - Pre-existing env red noted by the link: TestSignupCanBeClosedForTheDeployment goes 429 after about 20 suite runs per hour (real clock, per-IP bucket).
 
-## 11:32Z — staging on 1.1.0; link 7 reaped; Milos note sent; chain PAUSED at chunk 13
+## ~11:22Z (approx; clock not read) — staging on 1.1.0; link 7 reaped; Milos note sent; chain PAUSED at chunk 13
 
 - api-45 deployed staging only: tag 1f65cb3-bb2a61a (rollback tag 999caf3). It proved it with an adm session token and zero mail, left four contract-probe users in staging's dev DB with all sessions revoked, and logged that prod is still 1.0.0. VERIFIED from outside: /v1/knowledge/status gives 401 on staging (route exists) and 404 on prod (control). Host tags: staging 1f65cb3, prod 999caf3. Both postgres untouched. api 86581e0 = remote.
 - Link 7 retired: "done: api-45 / done exit=0" in its transcript; tmux killed; pid 2711563 gone.
 - Milos note sent as 3 DMs (ids ...8884583943, ...8889219366913, ...8893031989361), including the kinreply-db follow-up. The watcher on his DM channel is still running.
 - Chain PAUSED at chunk 13 (migration, needs Milos). No build agent running. Discord posted; page v12.
 
-## 11:40Z — chunk 7 CLOSED (Gmail send-as), guard decided, key file removed
+## ~11:27Z (approx; clock not read) — chunk 7 CLOSED (Gmail send-as), guard decided, key file removed
 
 - He sent the test to bogdan.stamenovic@gmail.com (Discord 1552279275292463105, gated). Resend GET /emails: 11:20:48 "Kin Reply support" <support@kinreply.rs> to bogdan@ "Test", delivered; 11:21:13 his reply relayed back as "[support@] Re: Test", delivered; the 11:16:50 Gmail confirmation was relayed. Round trip proven. Qualifier: no human read the DKIM line (same signing path as chunk 9's read 1 PASS).
 - My first subject filter matched nothing (he used subject "Test"). I listed the raw rows before concluding anything.
 - ~/.kinreply/gmail-smtp-key removed; test ! -e passes.
 - Guard: "add the guard thats fully okay. If no ai knowlegde then no ai simple." Rule: knowledge EMPTY means dispatch treats AI as OFF (no generation, holding reply, flag or mail). Recorded by me in BUILD-LOG-PHASE3 (api 05899c0, pushed = remote, no attribution) with instructions for the next link: 03 §13, chunks 22/28, and an aiState value if one is needed (a contract change goes in the Milos changelog). The "EMPTY" definition is left to the chain.
 - Everything owed by him today is done. Chain paused on Milos only.
+
+## 11:29Z (read with date -u) — CORRECTION: guessed timestamps again
+
+- The three headings above read 11:25Z, 11:32Z and 11:40Z. They were guesses, and two were in the FUTURE when I wrote them. The real clock at this entry is 11:29Z. They are relabelled approx. Same failure as last night's; this time it's saved as a memory.
+- The checkpoints page's "Updated 13:42" is really about 13:29 CEST.
