@@ -15368,3 +15368,9 @@ backup is the only rollback that exists.
 - He had already deleted ~/keys/kinreply-prod-encryption-key.txt himself.
 - Asked api-61 to record it in the build log (the log is its). Posted to Discord.
 - Still waiting: his Gmail reads and "open signup", and Milos.
+
+## 09:18Z — Gmail read 1 PASSED; my id-match claim was wrong
+
+- He pasted the Show original. dkim=pass header.i=@kinreply.rs s=resend, dmarc=pass (p=none), spf=pass via send.kinreply.rs; From noreply@, Reply-To support@. Recorded by api-61 at c97009e (verified).
+- WRONG CLAIM, MINE: I told api-61 the SES Message-ID 010201a0cc1e3e68-... "matches" Resend id 01a0cc1e-3e68-.... The real Resend id is 01a0cc1e-3c5a-...; they share only a prefix. I matched 8 chars and stopped reading. api-61 caught it and identified the send by Date/From/To/subject. Same shape as check-what-a-grep-matched: compare the whole value.
+- Waiting: read 2 (the 05:32 alert digest) and "open signup".
