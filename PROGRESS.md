@@ -15625,3 +15625,6 @@ backup is the only rollback that exists.
 
 ### 21:31:23Z — PR 3 APPROVED by Milos (not merged)
 - Review: keeps the health-reading exclusion; he tested on a scratch PG16 (health-only, no-op, explicit value, forgetful writer, same-as-OLD, new column). Post-merge: the api DisconnectIfUnchangedTx doc. Merge is his step. Watcher bd4m9560e (merge or comment). Discord posted.
+
+### 21:32:34Z — PR 3 MERGED by Milos (21:31:32Z), kinreply-db main cb7de88
+- Not deployed; ships at chunk 18's end with the doc fix. Link 11 told; Discord posted.
