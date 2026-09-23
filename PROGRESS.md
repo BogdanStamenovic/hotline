@@ -15496,3 +15496,12 @@ backup is the only rollback that exists.
 - Spawned in tmux agentstats, Opus, cwd ~/data/agentstats (a new project, private repo). It REPORTS TO HIM (a task on his behalf); parent hotline-80. Declared agentstats-38. Pane at 35s: reading hotline agents.json, no wedge.
 - Seed constraints: aggregates only, never transcript free text; bind 127.0.0.1 + tailscale IP only; an incremental index at nice 10, RSS < 500 MB (the chain runs concurrently); WebGL for the full graph; "tokens saved" is an ESTIMATE with its method shown; a hand-computed cross-check of one session and one mission; screenshots; a Sonnet privacy+numbers review; a systemd --user unit; the backtick rule.
 - Told him on Discord.
+
+## 14:07Z (approx; read 14:00:52Z at chunk 14 verify) — chunk 14 done; link 8 reaped; agentstats DONE and independently verified
+
+- api-df chunk 14: channel.TikTok, ReplyBudget (Meta 24h uncounted / TikTok 48h x10, fail-closed counter), ValidPair reach table, Meta-only paths asking ValidPair(p, Meta). Not deployed. VERIFIED: api 7587873, docs 76a4740 = remote; tags unchanged. Context 615,548 (61.6%).
+- DECISION: retire link 8 before chunk 15 (Zernio same-platform replace is destructive, so it gets a full window). It wrote "what chunk 15 inherits" (api c8f068d = remote) and ran --done (confirmed in its transcript); tmux killed; pid 2768632 gone.
+- seed9 written: Milos's quotes (the 409 confirm belongs to the unbuilt /connect/start; no TikTok on prod), never exercise a replace on the PROD Zernio account, TikTok live test is chunk 20's (TikTok Business blocked), staging-only deploy with prod on my word. Graph update 6 running.
+- agentstats-38 DONE in 25 min: user unit active, bound 127.0.0.1 + 100.72.2.62 only (LAN refuses). It corrected the brief: records are per content block, so counting records doubles tokens. It verified the parser against a jq hand-sum of api-61's session and posted screenshots (desktop + 390px dark). Its limitation: transcript tokens are a FLOOR.
+- MY CHECK: the first leak probe fetched 0 bytes (the zsh no-word-split trap, which is in my own memory notes) and was worthless; I redid it with a read loop: 7 endpoints, 1,241,246 bytes, zero hits for 12 transcript-only patterns; positive control (mission text) found. /api/graph?key=kinreply serves 9205/34136 = graph.json. RSS 176 MB, nice 10.
+- Posted a short verification note to his channel (no duplication of its report).
