@@ -15343,3 +15343,11 @@ backup is the only rollback that exists.
 - Graph: Sonnet subagent, 8121 to 8319 nodes, 33 files re-extracted (chunk 7/8 scope). Verified the counts. It began ~01:57Z and may miss the last two commits; seed says so.
 - Spawned link 5: tmux kr3build-05, Opus, cwd api. Declared api-61. Pane at 30s: verifying the brief against the remotes, no wedge. Its run is chunk 9, stopping at the Gmail "Show original" checkpoint.
 - Discord: one consolidated message covering chunk 8, why a new link, 4 bugs, and his 4 open items. Page v8.
+
+## 03:40Z — chunk 9 CHECKPOINT; Milos DMed; link 5 continues into chunk 10 short of the signup flip
+
+- api-61 reported chunk 9 done except Bogdan's two Gmail reads. VERIFIED: heads = remotes and clean (api 205b9d4, lifecycle dc23ffa, docs 99b9843, mail dff30c1); prod/staging postgres StartedAt unchanged, restarts=0; .env.prod SIGNUPS_ENABLED=false (read from the file; I deliberately sent no signup probe, since a complete body would create an account if signup were open).
+- Finding: kinreply-db's phase1-sql-schema branch is gone; Milos merged it into main. Verified: only main on the remote; bb2a61a is its ancestor; the diff up to main is only "--" comment and blank lines in 00016 (checked line by line; the filter would have shown COMMENT ON statements too).
+- DMed Milos myself (standing authorisation, db is his area) at 03:39Z, id 1552162282069565491: is main THE branch, and may the chain commit chunk 13's migration to main directly? Said how I found him. Dry-run first.
+- Link 5 at 45.1%: continue into chunk 10 but STOP BEFORE the prod signup flip (public form on a live host). The flip waits for chunk 9's Gmail reads plus his word. No prod SIGNUPS=true even briefly.
+- Discord: exact Gmail checklist, what's live, the Milos handling, and the flip hold. Page v9.
