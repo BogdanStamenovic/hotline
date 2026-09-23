@@ -15533,3 +15533,4 @@ backup is the only rollback that exists.
 - Graph update 7: 9234 to 9390 nodes, 36 files; deleted backups 1-3. CAVEAT: BUILD-LOG (339 KB) was over the extractor's 256 KB read limit, so it is a stub node; README and 03 were truncated in extraction. Graph coverage of those three docs is PARTIAL. Added to seed10: never trust graph answers about them. Worth fixing in the graphify runbook later (chunked extraction of big docs). Not done now.
 - Heads = remote and clean: api 75a4519, docs 4516906, lifecycle 3ae958a, kinreply-db d804c5c. Disk 13G free / 83%.
 - tmux kr3build-10, Opus. Declared api-3f. Pane at 40s: reading the chunk 16 spec, no wedge.
+- Neighbour baseline before chunk 16 (15:36:54Z): uxonews.com 307 6B, dds.uxonews.com 200 92517B, kinreply.uxonews.com 000 (the old hostname, moved), api.kinreply.rs readyz 200, staging readyz 200. Saved to scratchpad neighbours-baseline.txt. The hourly check compares against it.
