@@ -15351,3 +15351,10 @@ backup is the only rollback that exists.
 - DMed Milos myself (standing authorisation, db is his area) at 03:39Z, id 1552162282069565491: is main THE branch, and may the chain commit chunk 13's migration to main directly? Said how I found him. Dry-run first.
 - Link 5 at 45.1%: continue into chunk 10 but STOP BEFORE the prod signup flip (public form on a live host). The flip waits for chunk 9's Gmail reads plus his word. No prod SIGNUPS=true even briefly.
 - Discord: exact Gmail checklist, what's live, the Milos handling, and the flip hold. Page v9.
+
+## 04:25Z — chunk 10 ready to flip; link 5 HELD
+
+- api-61 reports chunk 10 done except the prod signup flip. The client-IP fix is proven live by prediction on both stacks, including spoofed XFF ignored and the IPv6 /64 key. Networks are pinned, and Caddy's header_up lines were removed. VERIFIED: heads = remotes and clean (api 652a298, lifecycle ce19c14, also on the host; docs e89609b); SIGNUPS=false on the host; both readyz 200; postgres recreated once each (prod 04:08:06Z, staging 04:07:01Z), as planned for the network rebuild; staging backup SQL present.
+- Its slip: staging was taken down after its backup.sh exited 1 (it chained with ";"). The SQL half was written; the exports tar failed. Counts and volumes identical after. Prod's down was then gated on a verified dump.
+- HOLD: the flip needs Bogdan's two chunk 9 Gmail reads plus his word ("open signup"). Link 5 is at ~63% and idle until then; afterwards it retires, and a fresh link takes chunk 11.
+- Discord posted; page v10.
