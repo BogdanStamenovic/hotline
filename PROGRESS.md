@@ -15424,3 +15424,11 @@ backup is the only rollback that exists.
 - Relayed to api-45 mid chunk 12, queued behind its turn: keep it one named value, update 03 in 3 places with his quote, no kinreply-db. Also asked it to report what a Smart channel with AI on and NO knowledge does at dispatch (03's old reason for false, now a risk). Told it not to build a guard he didn't ask for.
 - Staging's full-access Resend key on dds's account: KEEP (his decision). Closed.
 - Gmail send-as: posted full 8 steps, with the key fetch first. gmail-smtp-key is present (600). After his test I verify delivery in Resend and delete the key file.
+
+## 11:25Z — chunk 12 DONE; staging-only deploy; Milos note drafted
+
+- api-45: contract 1.1.0, 64 operations (16 new, answering 501 via unbuilt). Item 12 overrule built as the single value AiChannelEnabled=true; 03 and chunk 21/22/30/41 specs updated. It corrected me: the column default is chunk 21's, not 13's. VERIFIED: heads = remote and clean (api 1f65cb3, docs eb5742e); yaml 1.1.0 (it was 1.0.0 at 9b73aff); 64 operationIds; both stacks still on 999caf3, so nothing deployed. Context 687,399 (68.7%).
+- Empty-knowledge answer: no fabrication. A factual question becomes a HANDOFF with a holding reply, a flag and a seller escalation mail per thread (Resend quota). Guard proposal ("AI on + knowledge EMPTY = off") put to him as "add the guard / leave it"; silence = leave.
+- DECISION (mine): deploy STAGING only, now, so Milos codes against 1.1.0. Prod rides the next deploying chunk; there's no reason to restart prod with live signups for a contract-only release. api-45 deploys staging, proves it, logs that prod is still 1.0.0, then retires.
+- Milos note split into 3 DMs (under 2000 chars each), plus a gentle kinreply-db follow-up. Sending after the staging proof.
+- Pre-existing env red noted by the link: TestSignupCanBeClosedForTheDeployment goes 429 after about 20 suite runs per hour (real clock, per-IP bucket).
