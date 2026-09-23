@@ -15614,3 +15614,7 @@ backup is the only rollback that exists.
 - Prod webhook 6ab33a... listing via adm (file, then deleted): message.sent present, active true; prod key hits 0, secret hits 0.
 - Link 11 measured about 1 s of api downtime. Done-when 6 is deferred to chunk 20 (it needs a live DM).
 - Milos DM 1552427125343256587 sent; Discord posted. Link 11 is now on the updated_at trigger PR (it flagged the health.go markDisconnected staleness side effect).
+
+### 21:29:00Z — kinreply-db PR #3 (updated_at trigger) opened by link 11
+- PR 3: branch channel-account-updated-at-trigger, 00028 plus a comment-only 00024 edit, +170/-5, no attribution. Deliberate departure: health-reading-only writes do not bump updated_at (protects markDisconnected's staleness guard; the api test fails by name under a plain trigger). make check green with and without it.
+- Milos DM 1552431585880711221 flags the departure. Discord posted.
