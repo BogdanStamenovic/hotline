@@ -15628,3 +15628,6 @@ backup is the only rollback that exists.
 
 ### 21:32:34Z — PR 3 MERGED by Milos (21:31:32Z), kinreply-db main cb7de88
 - Not deployed; ships at chunk 18's end with the doc fix. Link 11 told; Discord posted.
+
+### 21:33:41Z — Milos DM 21:32Z: no second trigger on conversation
+- He declines the literal version and confirms the scratch-DB checks. Leave conversation alone (all writers set updated_at) until something needs it. Passed to link 11 to record in the build log. Watcher re-armed (b10a1iauk).
