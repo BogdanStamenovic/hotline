@@ -15618,3 +15618,7 @@ backup is the only rollback that exists.
 ### 21:29:00Z — kinreply-db PR #3 (updated_at trigger) opened by link 11
 - PR 3: branch channel-account-updated-at-trigger, 00028 plus a comment-only 00024 edit, +170/-5, no attribution. Deliberate departure: health-reading-only writes do not bump updated_at (protects markDisconnected's staleness guard; the api test fails by name under a plain trigger). make check green with and without it.
 - Milos DM 1552431585880711221 flags the departure. Discord posted.
+
+### 21:30:11Z — link 11 continues into chunk 18 (TikTok send)
+- Link 11 stopped after PR 3 (api main def3cd1, verified by ls-remote). Measured 459,289 tokens. Chunk 18 is additive and bounded (fake Zernio only), so per OPERATING-RULES it continues; a stop at about 800k.
+- PR 3's post-merge steps (pull.sh, doc fix, staging then prod deploy, pg_trigger) go at chunk 18's end, together with chunk 18's own deploy. Discord posted.
