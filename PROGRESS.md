@@ -15640,3 +15640,6 @@ backup is the only rollback that exists.
 
 ### 22:38:06Z — section 7: Milos yes, but routes the feature call to Bogdan
 - Milos DM 22:37:01Z: yes, but ask Bogdan (features are his domain). Put to Bogdan on Discord (both recommend yes). Link 11 told to hold section 7 until Bogdan answers. Watcher re-armed (b34m39jnn).
+
+### 22:38:29Z — Bogdan sets the responsibility split
+- Verified 1552448998214729891 (22:38:04Z): Milos makes the app only; functionality, API, business logic, tier separation, endpoints and features are Bogdan's. Memory kinreply-outward-contacts-are-authorised updated. Feature questions go to Bogdan first from now on. Kept Milos's kinreply-db PR review (his rule), said so. Section 7 question still open with Bogdan.
