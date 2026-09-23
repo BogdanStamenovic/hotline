@@ -15559,3 +15559,9 @@ backup is the only rollback that exists.
 - Reaping link 10 (asked --done). Link 11 is spawned ON MERGE, not before: the remaining work is post-merge (deploy staging, add message.sent to the DEV webhook only, IG before/after, Done-when 6 needs a real IG DM from his second account or is deferred to chunk 20).
 - Prod is now 3 chunks behind (15-17) on Milos's OTA hold. Asked him at 16:22Z.
 - 17:37Z backstop: all endpoints = baseline. Disk 11G / 86%, go-build 2.4G. Idle (no go process), so go clean -cache freed 2381 MB; now 13G / 82%. The chain regrows about 2-4G per link; I clear at each idle boundary.
+
+## 18:11:53Z (read) — Milos: "Everything will be done by 01:30AM"; chain paused until then
+
+- Milos DM 1552381658030940242 (18:10:29Z). Read as PR #2 review plus the OTA, around 01:30 CEST (23:30Z). PR #2 still OPEN.
+- No build agent running. seed11 is ready (chunk 17 post-merge). Watchers armed: PR #2 (2 min), Milos DMs (from 1552381658030940242). 2h health backstop.
+- Discord: told him the chain is paused on Milos until about 01:30; nothing needed from him.
