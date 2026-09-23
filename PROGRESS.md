@@ -15466,3 +15466,11 @@ backup is the only rollback that exists.
 - Graph update 5: 8594 to 9205 nodes, 58 files (it picked up chunk 12, Milos's app 1.1.0, kinreply-db main, pull.sh). Health clean. Noted a pre-existing httpapi_fixture node-id collision between two test files; not caused by this run.
 - Heads before spawn = remote and clean: api 05899c0, mail dff30c1, docs eb5742e, lifecycle ca04567, kinreply-db main 4331ff2.
 - tmux kr3build-08, Opus. Declared api-df. Pane at 40s: thinking, no wedge. Run: step 0 (branch switch), chunk 13 via PR, WAIT for Milos's merge, staging, then prod (1.1.0 lands on prod then; I tell Milos).
+
+## 12:21:25Z (read) — chunk 13 PR open; waiting on Milos's merge
+
+- api-df: step 0 done. KINREPLY_DB_BRANCH=main (prod.conf; staging.conf never set it), deploy.sh default main, and two guards fixed: the branch check ran AFTER the pull, and the pull followed any upstream. The host's kinreply-db is on main. Dry-run deploys passed the gates with no container touched. Docs switched.
+- 00026 proven with the real goose v3.28.0 (up/down/up); the deliberate same-file-use failure reproduced (55P04 under goose, silent success under psql autocommit). Found: goose rejects comment lines with its annotation marker; FIVE platform-typed columns, not 3/4; the RLS EXPLAIN redone as kr_app over 200k rows.
+- No-knowledge guard in the docs: gate 9a KNOWLEDGE_EMPTY; EMPTY = zero compiled PUBLIC entries (not "compile pending"); a leased job is ABANDONED not FAILED (avoids chunk 29's holding-reply backstop); no aiState value, so no contract change.
+- VERIFIED: PR #1 OPEN, one file, no attribution in the body or commit; api 7ad2cc9, docs 2c5ec6b, lifecycle 3ae958a = remote; host db on main 4331ff2; DB_BRANCH=main on prod; tags unchanged; both readyz 200.
+- DMed Milos that PR #1 is ready (1552293910448046141). A background watcher polls the PR every 2 min for state, reviews and comments. The link waits. Discord posted.
