@@ -15460,3 +15460,9 @@ backup is the only rollback that exists.
 - Replied to Milos (id 1552282939436441742): all points acknowledged; I will tell him when prod has 1.1.0; the TikTok prod hold is on me.
 - Graph update 5 running (Sonnet). seed8 written: step 0 (the branch switch everywhere, with grep proof, host checkout, deploy without --no-pull), chunk 13 on a branch + gh PR, WAIT for merge (never self-merge), then staging, then a prod promotion that carries 1.1.0 (report the tag, I tell Milos), plus the no-knowledge guard into 03/22/28 while waiting.
 - Discord posted.
+
+## 11:49:20Z (read) — link 8 (api-df) spawned for chunk 13
+
+- Graph update 5: 8594 to 9205 nodes, 58 files (it picked up chunk 12, Milos's app 1.1.0, kinreply-db main, pull.sh). Health clean. Noted a pre-existing httpapi_fixture node-id collision between two test files; not caused by this run.
+- Heads before spawn = remote and clean: api 05899c0, mail dff30c1, docs eb5742e, lifecycle ca04567, kinreply-db main 4331ff2.
+- tmux kr3build-08, Opus. Declared api-df. Pane at 40s: thinking, no wedge. Run: step 0 (branch switch), chunk 13 via PR, WAIT for Milos's merge, staging, then prod (1.1.0 lands on prod then; I tell Milos).
