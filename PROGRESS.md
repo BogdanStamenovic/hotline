@@ -15570,3 +15570,11 @@ backup is the only rollback that exists.
 
 - MERGED 20:40:41Z by milosvuksan, APPROVED with his own verification (27 migrations apply, 00027 up/down/up clean, an Index Only Scan matching IdentifyEcho). VERIFIED: main is 2ab7f1f; d804c5c..main = exactly 00027 (+59); the PR head is in main; the content diff is empty.
 - Graph update 8 running (asked it to extract BUILD-LOG, README and 03 in chunks this time). seed11 updated with the merge facts. Spawning link 11 after the graph finishes.
+
+## 20:44Z-21:00Z — Milos: trigger PR yes; asks US to publish the OTA; put to Bogdan
+
+- Milos DM 1552420333708124161 (20:44:10Z): PR #2 verified and merged; chunk 15/16 changes already covered by app 541915a; agrees the confirm dialog waits for the Phase 5 webapp; YES to the updated_at trigger PR with the 00024 comment fix; asks us to publish `eas update --channel production` (he has no EAS access) from kinreply-app 541915a (runtime follows appVersion 1.0.0); prod may take chunks 15/16 once it is published; keep TikTok unconnected until then.
+- The OTA is OUTWARD (real users' phones, Bogdan's Expo account), so it needs Bogdan's yes. Capability: no eas CLI, no ~/.expo, no EXPO_TOKEN/EAS_PROJECT_ID anywhere; arch offline.
+- VERIFIED his claim myself: kinreply-app local = origin/main = 541915a; npm ci ok; tsc --noEmit exit 0; jest 78/78 in 8 suites; tree still clean (node_modules 522M, gitignored). Honest scope: 541915a is the whole 1.1.0 client update (~1.4k lines), not just labels.
+- Put to Bogdan on Discord: A (EXPO_TOKEN + EAS_PROJECT_ID in prod.env, operator publishes; recommended) / B (he runs it) / not yet. Rollback via EAS.
+- Trigger PR added to seed11 (a new migration, prove channelhealth now bumps updated_at, list other tables). Told Milos (1552420704178278572).
