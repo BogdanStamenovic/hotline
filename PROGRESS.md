@@ -15649,3 +15649,6 @@ backup is the only rollback that exists.
 
 ### 23:31:09Z — disk 6.2G free; go-build 5.6G (link 11 mutation sweeps)
 - Surveyed: uv cache 8.4G (uv cache prune freed 128 KiB; the venvs hardlink into it), yay 1.5G (built AUR packages, the only rollback copies, kept), journal 99M. The Go cache is the grower, and it isn't deleted mid-run (it could corrupt a mutation result). Asked link 11 for a "go cache free" idle point. Alarm under 3G (bx18r2vs2).
+
+### 23:33:56Z — Go cache cleared at link 11's idle point
+- Link 11 said "go cache free" (reviewer done, /tmp/kr-mut* removed). No go process was running. go clean -cache: 5.6G down to 12K; root went from 6086M to 11991M free. Told the link "cleared".
