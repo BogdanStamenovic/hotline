@@ -15313,3 +15313,5 @@ backup is the only rollback that exists.
 - Verified ON THE LAPTOP with the spec's own method: fingerprint 33a038085cd4, matching the build log. Shape `1 44` (version 1, 32 bytes).
 - This is a deviation from the spec (clipboard route, no file), at his request. His half: store it in the password manager, check the note against the fingerprint, delete the file, then say "prod key stored, fingerprint matches". Chunk 10 must not open signup until that sentence is in the build log.
 - uxonews ssh warned about a non-post-quantum key exchange. Informational.
+
+- 00:01Z: he confirmed "Stored fingerprint matches". Relayed verbatim to api-6c to record in BUILD-LOG-PHASE3 (it owns the log). The key file is STILL on his laptop (~/keys, 01:57); asked him to delete it rather than doing it myself. Page updated: chunk 4 done.
