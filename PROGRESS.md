@@ -15527,3 +15527,9 @@ backup is the only rollback that exists.
 - Link 9 retired: "done: api-c9" in its transcript; api 75a4519 = remote; tmux killed; pid 3159539 gone.
 - Chunk 16 = Facebook via Zernio (live FB test skipped by decision) plus Caddy log redaction on the staging+prod site blocks. That Caddy is SHARED with live uxonews/dds sites. seed10: chunk 10's procedure (capture neighbours byte-for-byte, validate, reload never restart, neighbours identical after, redaction proven by behaviour with a negative control, restore on failure). The Caddy redaction MAY go to prod (a security fix, independent of TikTok); the api IMAGE stays staging-only (Milos hold). The dds carve-out is restated.
 - Graph update 7 (Sonnet) also deletes the 3 oldest graph.json backups (~48 MB) for disk.
+
+## 15:36:39Z (read) — link 10 (api-3f) spawned for chunk 16
+
+- Graph update 7: 9234 to 9390 nodes, 36 files; deleted backups 1-3. CAVEAT: BUILD-LOG (339 KB) was over the extractor's 256 KB read limit, so it is a stub node; README and 03 were truncated in extraction. Graph coverage of those three docs is PARTIAL. Added to seed10: never trust graph answers about them. Worth fixing in the graphify runbook later (chunked extraction of big docs). Not done now.
+- Heads = remote and clean: api 75a4519, docs 4516906, lifecycle 3ae958a, kinreply-db d804c5c. Disk 13G free / 83%.
+- tmux kr3build-10, Opus. Declared api-3f. Pane at 40s: reading the chunk 16 spec, no wedge.
