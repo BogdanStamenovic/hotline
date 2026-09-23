@@ -15521,3 +15521,9 @@ backup is the only rollback that exists.
 - DISK: 8.3G free / 88%, from about 13G at boot. The Go build cache had regrown to 4.2G (the chain's make check and mutation sweeps). No go build running, so go clean -cache freed 4248 MB; now 13G free / 82%. uv cache 8.4G left alone (hardlink farm, frees about 0). Recheck at each link boundary.
 - Flagged to him on Discord: the /connect/start launch gap (no seller-facing connect screen in Phase 3).
 - Link 9 retiring (64%); link 10 takes chunk 16.
+
+## ~15:30Z (approx) — link 9 reaped; seed10 ready; graph update 7 running
+
+- Link 9 retired: "done: api-c9" in its transcript; api 75a4519 = remote; tmux killed; pid 3159539 gone.
+- Chunk 16 = Facebook via Zernio (live FB test skipped by decision) plus Caddy log redaction on the staging+prod site blocks. That Caddy is SHARED with live uxonews/dds sites. seed10: chunk 10's procedure (capture neighbours byte-for-byte, validate, reload never restart, neighbours identical after, redaction proven by behaviour with a negative control, restore on failure). The Caddy redaction MAY go to prod (a security fix, independent of TikTok); the api IMAGE stays staging-only (Milos hold). The dds carve-out is restated.
+- Graph update 7 (Sonnet) also deletes the 3 oldest graph.json backups (~48 MB) for disk.
