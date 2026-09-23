@@ -15646,3 +15646,6 @@ backup is the only rollback that exists.
 
 ### 22:39:00Z — Bogdan: section 7 YES; DB keeps going through Milos
 - Verified 1552449159892701196 (22:38:42Z). Link 11 told to build section 7 with chunk 19 (tests changed on purpose, with his message id; hand it over if it won't fit under ~850k). Milos told his form must allow an empty DM. Discord acked.
+
+### 23:31:09Z — disk 6.2G free; go-build 5.6G (link 11 mutation sweeps)
+- Surveyed: uv cache 8.4G (uv cache prune freed 128 KiB; the venvs hardlink into it), yay 1.5G (built AUR packages, the only rollback copies, kept), journal 99M. The Go cache is the grower, and it isn't deleted mid-run (it could corrupt a mutation result). Asked link 11 for a "go cache free" idle point. Alarm under 3G (bx18r2vs2).
