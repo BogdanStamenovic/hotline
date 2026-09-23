@@ -15387,3 +15387,9 @@ backup is the only rollback that exists.
 - Link 5 retired. My first transcript search matched its messages that MENTION hotline --done; a second search found the real output "deleted its channel / done: api-61 / done exit=0". tmux killed; pid 1344572 gone.
 - Graph update subagent running; seed6 ready (chunk 11: 03-tier2-smart.md plus stale docs; his decisions, and the open questions Z.ai, TikTok and kinreply-db, carried as open).
 - Discord: signup open plus the Resend Free-plan quota note. Page v11.
+
+## 09:31Z — link 6 (api-cd) spawned for chunk 11
+
+- Graph: 8319 to 8455 nodes, 47 files re-extracted (graph.json 11:28 CEST). The re-extracted kinreply-app files are Milos's own 2be1f26, from a fast-forward pull; kinreply-db is untouched at bb2a61a. Both clean.
+- Heads before spawn = remote and clean: api 052d7df, mail dff30c1, docs e89609b, lifecycle acfc195.
+- tmux kr3build-06, Opus. Declared api-cd. Pane at 40s: build log read, onto the README and chunk 11 spec, no wedge. Run: chunk 11, then stop. Chunk 12 is decided with it after reading its 03.
