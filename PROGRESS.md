@@ -15599,3 +15599,8 @@ backup is the only rollback that exists.
 - So the promotion is cleared by both. No production build exists, so the OTA gates nothing. CONTRADICTION parked: each says the other owns EAS, and the config has no owner or projectId, so the project most likely doesn't exist. Told Milos (the app is his; the first prod build means creating it) (1552425065713373185). Told Bogdan no token is needed.
 - GO sent to api-f4 (queued behind its turn): finish chunk 17 staging incl. the IG before/after (STOP if not clean); promote to PROD (15-17 + 00027) with proofs; then add message.sent to the PROD webhook 6ab33a... via the redacted adm path; TikTok stays unconnected; report the prod tag; then the trigger PR.
 - The OTA is NOT published. His "publish A" stands but is unnecessary for now.
+
+### 21:05:45Z — EAS loop closed; link 11 still on trigger analysis
+- Milos (DM 21:04:05Z): no Expo account he knows of; he owns kinreply-app and waits for the backend. So no EAS project exists; the first build's setup is his. Posted to Discord.
+- Link 11 is reading channel_account writers for the updated_at trigger PR. Staging still e19e00a-d804c5c, prod 7ad2cc9-d804c5c, api main f5ec836. My promotion GO is queued for its next turn.
+- Milos watcher re-armed past 1552425345607536741 (b596wms80).
