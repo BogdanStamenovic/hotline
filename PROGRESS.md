@@ -15550,3 +15550,11 @@ backup is the only rollback that exists.
 - It widened scope correctly: chunk 23's warning that linking echoes would render our own messages as INBOUND contact turns (transcript, /v1 detail, AI bundle). Fixing it in chunk 17, where the hazard is introduced, after auditing every reader of inbound_event.conversation_id.
 - VERIFIED: PR #2 OPEN, one file, 0 attribution hits in body/commits.
 - DMed Milos about PR #2, plus a no-pressure OTA question (prod holds chunks 15+16) (1552354482430414848). The PR #2 watcher is armed; the Milos DM watcher is still armed.
+
+## 17:07:11Z (read) — chunk 17 code done, PR #2 open; link 10 retiring; link 11 waits for the merge
+
+- api-3f stopped at 78% at its tripwire. Code api f5ec836: one Zernio platform table with tiktok; message.sent kept as an ECHO, linked by SELECT only; send.IdentifyEcho origin classes; transcript no longer renders echoes as contact turns. Two reviews each found a REAL cross-contact defect (IdentifyEcho's account-wide content rule; Phase 2's account-wide ungated resolver), both demonstrated on the real DB and fixed with one shared scope. Mutations 23/23 after 4 test fixes.
+- Side task done: Svix-Signature redacted at inbound.kinreply.rs (mail 5c62668, lifecycle b9988dd). caddy.sh check --require-all exits 0 for the first time since chunk 6.
+- VERIFIED: 5 endpoints identical to the 15:36Z baseline; NRestarts=0; tags staging e19e00a, prod 7ad2cc9; heads = remote and clean; PR #2 OPEN.
+- Reaping link 10 (asked --done). Link 11 is spawned ON MERGE, not before: the remaining work is post-merge (deploy staging, add message.sent to the DEV webhook only, IG before/after, Done-when 6 needs a real IG DM from his second account or is deferred to chunk 20).
+- Prod is now 3 chunks behind (15-17) on Milos's OTA hold. Asked him at 16:22Z.
