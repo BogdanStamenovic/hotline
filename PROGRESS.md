@@ -15488,3 +15488,11 @@ backup is the only rollback that exists.
 - Told Milos: prod on 1.1.0, plus the ops workspace note (1552302316001042466).
 - Measured api-df at 555,262 (55.5%). DECISION: continue into chunk 14 (additive Go), with tripwires: stop before prod past ~800k; no IG/FB send-path behaviour change; no TikTok on prod; no deploy unless the spec says so.
 - Discord posted.
+
+## 13:06:13Z (read) — agentstats-38 spawned: stats dashboard on archserver:1414
+
+- His request (Discord 1552304629671264257, hotline-gated): a dashboard on port 1414 showing longest run and mission, tokens per run, Opus 5 vs 5.5 plotted, the FULL graphify node graph, graphify usage per task, tokens saved.
+- Probed first: port free; 1715 transcripts / 941 MB / 35 project dirs; models in the newest 400 files: opus-5 25861, opus-5-5 3481, sonnet-5 1504, opus-4-8 1033; graphify-out/cost.json has a runs list; tailscale IP 100.72.2.62; Linger=yes.
+- Spawned in tmux agentstats, Opus, cwd ~/data/agentstats (a new project, private repo). It REPORTS TO HIM (a task on his behalf); parent hotline-80. Declared agentstats-38. Pane at 35s: reading hotline agents.json, no wedge.
+- Seed constraints: aggregates only, never transcript free text; bind 127.0.0.1 + tailscale IP only; an incremental index at nice 10, RSS < 500 MB (the chain runs concurrently); WebGL for the full graph; "tokens saved" is an ESTIMATE with its method shown; a hand-computed cross-check of one session and one mission; screenshots; a Sonnet privacy+numbers review; a systemd --user unit; the backtick rule.
+- Told him on Discord.
