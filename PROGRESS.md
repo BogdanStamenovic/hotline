@@ -15622,3 +15622,6 @@ backup is the only rollback that exists.
 ### 21:30:11Z — link 11 continues into chunk 18 (TikTok send)
 - Link 11 stopped after PR 3 (api main def3cd1, verified by ls-remote). Measured 459,289 tokens. Chunk 18 is additive and bounded (fake Zernio only), so per OPERATING-RULES it continues; a stop at about 800k.
 - PR 3's post-merge steps (pull.sh, doc fix, staging then prod deploy, pg_trigger) go at chunk 18's end, together with chunk 18's own deploy. Discord posted.
+
+### 21:31:23Z — PR 3 APPROVED by Milos (not merged)
+- Review: keeps the health-reading exclusion; he tested on a scratch PG16 (health-only, no-op, explicit value, forgetful writer, same-as-OLD, new column). Post-merge: the api DisconnectIfUnchangedTx doc. Merge is his step. Watcher bd4m9560e (merge or comment). Discord posted.
