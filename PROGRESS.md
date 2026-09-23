@@ -15317,3 +15317,5 @@ backup is the only rollback that exists.
 - 00:01Z: he confirmed "Stored fingerprint matches". Relayed verbatim to api-6c to record in BUILD-LOG-PHASE3 (it owns the log). The key file is STILL on his laptop (~/keys, 01:57); asked him to delete it rather than doing it myself. Page updated: chunk 4 done.
 
 - 00:10Z: at his request, spawned ONE Remote Control agent: `claude --model opus --permission-mode bypassPermissions --remote-control archserver-rc` in tmux rc-archserver, cwd ~/data, no seed ("just spawn ... and thats it"). URL https://claude.ai/code/session_01TCYqSQNHmxXm1jajW6qBmy. No trust wedge. It reports to him, not me. It has no backtick-rule seed, on purpose, per his "thats it"; told him so on Discord.
+
+- 00:46Z: api-6c t0 at 00:40:23.8Z. One DNS update, 9 s. The in-window probe shows "delivered" at the sender but is in no received list and never reached the relay, which is the provisional "accepted and silently lost" case. Waiting on Receiving verification, polling with a monitor. Short heartbeat posted to Discord. Fallback check at 01:20Z.
