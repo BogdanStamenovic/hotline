@@ -15604,3 +15604,7 @@ backup is the only rollback that exists.
 - Milos (DM 21:04:05Z): no Expo account he knows of; he owns kinreply-app and waits for the backend. So no EAS project exists; the first build's setup is his. Posted to Discord.
 - Link 11 is reading channel_account writers for the updated_at trigger PR. Staging still e19e00a-d804c5c, prod 7ad2cc9-d804c5c, api main f5ec836. My promotion GO is queued for its next turn.
 - Milos watcher re-armed past 1552425345607536741 (b596wms80).
+
+### 21:06:49Z — Bogdan asked where "Expo exists / app on phones" came from
+- Source: Milos (DM 11:36Z "ships as an over-the-air update"; DM 20:44Z "reaches installed 1.0.0 builds", asked us to run eas update). The repo is a real Expo app (expo 54, expo-updates, eas.json).
+- My error: I relayed "installed builds" as fact and wrote "Bogdan's Expo account", which nobody had said. I never probed whether a project or builds existed; the repo pointed the other way (projectId from an unset env var, appleId REPLACE_ME). Owned it on Discord; memory a-peers-premise-is-not-a-deployment saved.
