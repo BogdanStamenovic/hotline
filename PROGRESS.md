@@ -15326,3 +15326,10 @@ backup is the only rollback that exists.
 - MY CHECK: new account GET /domains lists kinreply.rs bcaad59b verified eu-west-1; the shared account (control) no longer does. MX @1.1.1.1 and @8.8.8.8 is inbound-smtp.eu-west-1.amazonaws.com.
 - FOUND ALONG THE WAY: the shared account's uxonews.com is partially_failed. Only the Receiving MX failed, because the apex has no MX at all; DKIM and SPF are verified and sending is enabled. Pre-existing (handoff ~1793), not chunk 7's. Told api-6c not to "fix" it and to note it in the log.
 - Posted to Discord: move done, the 8-minute lost-mail window stated plainly, doubling over, next the Gmail send-as checkpoint.
+
+## ~01:10Z — chunk 7 CHECKPOINT (Gmail send-as); link 4 continues into chunk 8
+
+- api-6c reports chunk 7 done except the Gmail "Send mail as support@" hand step. Verified: heads = remotes (api 185bed8, mail 067bfe2, docs 9415da8, lifecycle 0df7cd8), clean; gmail-smtp-key mode 600. Context measured at 428,693 (42.9%).
+- Its review found a real guard defect: resend-account.sh checked only request PATHS, so a key scoped to dds's domain could be minted via the body. Fixed with named tests. Its own slips: it printed 3 characters each of two relay credentials and 1 character of the Gmail key. Logged; nothing usable.
+- DECISION (mine, per OPERATING-RULES §1): continue link 4 into chunk 8. It is additive and bounded, and spec says no prod key goes into a running stack. Stop before chunk 9. Constraints sent: laptop is `arch`, touch only ~/.kinreply there, ~/keys read-only, reconcile by adding and never overwriting, a differing value means stop, Z.ai classified absent-by-decision.
+- Gmail hand step posted to Discord for the morning with all 8 steps. Checkpoint page v7: chunks 1-7 done, chunk 8 running, Gmail "waiting on you".
