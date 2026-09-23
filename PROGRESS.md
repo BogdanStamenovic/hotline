@@ -15631,3 +15631,9 @@ backup is the only rollback that exists.
 
 ### 21:33:41Z — Milos DM 21:32Z: no second trigger on conversation
 - He declines the literal version and confirms the scratch-DB checks. Leave conversation alone (all writers set updated_at) until something needs it. Passed to link 11 to record in the build log. Watcher re-armed (b10a1iauk).
+
+### 22:19:52Z — chunk 18 plus 00028 on PROD (4e998ce-cb7de88), verified; link 11 on to chunk 19
+- My probes at 22:18:46Z: api main 939948c (4e998ce..939948c is the build log only), db main cb7de88; both stacks and workers on 4e998ce-cb7de88; goose 28 plus channel_account_touch_updated_at enabled on both; pg StartedAt unchanged; SIGNUPS true; readyz 200; knowledge 401 with a 404 control; neighbours equal to the baseline.
+- Link 11 measured 536k. Continues to chunk 19 (the last for it; chunk 20 is live, so a fresh link); a stop at about 850k.
+- First item for link 11: the humanContent byte-vs-character check (Cyrillic over ~500 chars refused). Told it to settle with evidence, because the chunk 12 contract says Instagram caps at 1000 UTF-8 bytes.
+- Spec section 7 (public-reply-only comment automations on IG/FB) not built, pending a product call. Asked Milos (DM 1552444366658732184), recommending yes. Discord posted.
