@@ -15393,3 +15393,7 @@ backup is the only rollback that exists.
 - Graph: 8319 to 8455 nodes, 47 files re-extracted (graph.json 11:28 CEST). The re-extracted kinreply-app files are Milos's own 2be1f26, from a fast-forward pull; kinreply-db is untouched at bb2a61a. Both clean.
 - Heads before spawn = remote and clean: api 052d7df, mail dff30c1, docs e89609b, lifecycle acfc195.
 - tmux kr3build-06, Opus. Declared api-cd. Pane at 40s: build log read, onto the README and chunk 11 spec, no wedge. Run: chunk 11, then stop. Chunk 12 is decided with it after reading its 03.
+
+## 10:20Z — chunk 11 done; link 6 reaped; link 7 queued for chunk 12
+
+- api-cd: 03-tier2-smart.md (1876 lines) plus stale docs corrected in every copy. VERIFIED: heads = remote and clean (api e818af1, then 9b73aff; docs 2f285bb; lifecycle ca04567); all 16 Frankfurt mentions in 03 are supersession or context; both readyz 200. Context 762,648 (76.3
