@@ -15558,3 +15558,4 @@ backup is the only rollback that exists.
 - VERIFIED: 5 endpoints identical to the 15:36Z baseline; NRestarts=0; tags staging e19e00a, prod 7ad2cc9; heads = remote and clean; PR #2 OPEN.
 - Reaping link 10 (asked --done). Link 11 is spawned ON MERGE, not before: the remaining work is post-merge (deploy staging, add message.sent to the DEV webhook only, IG before/after, Done-when 6 needs a real IG DM from his second account or is deferred to chunk 20).
 - Prod is now 3 chunks behind (15-17) on Milos's OTA hold. Asked him at 16:22Z.
+- 17:37Z backstop: all endpoints = baseline. Disk 11G / 86%, go-build 2.4G. Idle (no go process), so go clean -cache freed 2381 MB; now 13G / 82%. The chain regrows about 2-4G per link; I clear at each idle boundary.
