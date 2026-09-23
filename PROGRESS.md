@@ -15380,3 +15380,10 @@ backup is the only rollback that exists.
 - His words (terminal): "Its in. Open signup and continue working". Read 2 = arrival confirmed by him; From/prefix rest on api-61's Resend evidence, recorded as such. Chunk 9 checkpoint CLOSED.
 - GO sent to api-61 with his quote: README procedure, dry run must be exactly the one ~ line or STOP, prove by behaviour (202 + relay), rollback on failure. Then it retires, and link 6 takes chunk 11.
 - "continue working" = keep the chain running. It stops at chunk 13 without Milos.
+
+## 09:23Z — prod signup OPEN; link 5 reaped; link 6 queued
+
+- api-61: flip done 09:19Z. Dry run exactly the rehearsed one line; 202 {"sent":true} (was 403 this morning); relay stored it; Resend delivered; the code was left unspent so no workspace exists. VERIFIED on the host: SIGNUPS_ENABLED=true, api logs 0 "signup is disabled" lines, prod postgres untouched (04:08:06Z, r=0), host at acfc195, readyz 200. Heads: api 052d7df, lifecycle acfc195, docs e89609b, mail dff30c1, all clean = remote.
+- Link 5 retired. My first transcript search matched its messages that MENTION hotline --done; a second search found the real output "deleted its channel / done: api-61 / done exit=0". tmux killed; pid 1344572 gone.
+- Graph update subagent running; seed6 ready (chunk 11: 03-tier2-smart.md plus stale docs; his decisions, and the open questions Z.ai, TikTok and kinreply-db, carried as open).
+- Discord: signup open plus the Resend Free-plan quota note. Page v11.
