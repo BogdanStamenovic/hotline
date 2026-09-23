@@ -15578,3 +15578,10 @@ backup is the only rollback that exists.
 - VERIFIED his claim myself: kinreply-app local = origin/main = 541915a; npm ci ok; tsc --noEmit exit 0; jest 78/78 in 8 suites; tree still clean (node_modules 522M, gitignored). Honest scope: 541915a is the whole 1.1.0 client update (~1.4k lines), not just labels.
 - Put to Bogdan on Discord: A (EXPO_TOKEN + EAS_PROJECT_ID in prod.env, operator publishes; recommended) / B (he runs it) / not yet. Rollback via EAS.
 - Trigger PR added to seed11 (a new migration, prove channelhealth now bumps updated_at, list other tables). Told Milos (1552420704178278572).
+
+## ~20:55Z (approx) — he said "Publish A", but "no user phones" means the OTA likely reaches nobody
+
+- His Discord 1552424414543347804 (provenance VERIFIED): "Publish A / There is no user phones we are vuilding the apl / And ehat is expo?"
+- Checked kinreply-app: no expo owner in app.config.ts; projectId only from the EAS_PROJECT_ID env (set nowhere here); README only shows development builds. An OTA to the production channel reaches only production-channel installs, so it plausibly reaches NOBODY, and Milos's hold (protecting installed apps from TIKTOK) may protect nothing.
+- NOT publishing. His "publish A" stands for when needed. Asked Milos: any production-channel build installed anywhere? who owns the EAS project? OK to promote chunks 15-17 to prod now with TikTok unconnected? (It's his hold and his app.)
+- Explained Expo/EAS/OTA to him in plain terms on Discord.
