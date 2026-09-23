@@ -15511,3 +15511,13 @@ backup is the only rollback that exists.
 - Graph update 6: 9205 to 9234 nodes, 69 files re-extracted, health clean (two pre-existing id collisions). About 26 min.
 - Heads before spawn = remote and clean: api c8f068d, docs 76a4740, lifecycle 3ae958a, kinreply-db d804c5c.
 - tmux kr3build-09, Opus. Declared api-c9. Pane at 40s: reading HANDOFF-PHASE3.md, no wedge. Run: chunk 15; staging only; prod on my word (Milos's TikTok hold).
+
+## 15:24:21Z (read) — chunk 15 on staging, prod HELD; disk cleared; link 9 retiring
+
+- api-c9: connect-url takes {platform, replaceExisting}; TIKTOK served, FACEBOOK 501; 409 ACCOUNT_WOULD_BE_REPLACED (now also on a no-body start when an IG Zernio row exists); room gate before the provider; mirrorAReplacement at callback; includeOverLimit=true found (the default listing hides over-limit accounts, so they read as deleted). Review pass 1 found a REAL race (a revive in the read-then-lock window disconnects a live row and queues a Zernio delete), fixed with an updated_at recheck under the lock; the restoring mutation is caught. Live: a dev-team TikTok authUrl only (profile kr-live-connect-probe; nothing connected). Staging deployed d2b9146-d804c5c, no migrations, pg unchanged.
+- VERIFIED: api 4787e0a, docs 4516906 = remote; tags staging d2b9146, prod 7ad2cc9; both readyz 200. Context 643,434 (64.3%).
+- PROD PROMOTION HELD for Milos's OTA confirmation (asked him; id 1552340081220521986). The next chunk's promotion carries d2b9146 anyway.
+- Milos told: the 409 on no-body starts; /connect/start is Phase 5 with NO Phase 3 owner; recommended an updated_at trigger (his call; no PR unless he asks). DM watcher re-armed from that id.
+- DISK: 8.3G free / 88%, from about 13G at boot. The Go build cache had regrown to 4.2G (the chain's make check and mutation sweeps). No go build running, so go clean -cache freed 4248 MB; now 13G free / 82%. uv cache 8.4G left alone (hardlink farm, frees about 0). Recheck at each link boundary.
+- Flagged to him on Discord: the /connect/start launch gap (no seller-facing connect screen in Phase 3).
+- Link 9 retiring (64%); link 10 takes chunk 16.
