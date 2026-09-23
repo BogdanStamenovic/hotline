@@ -15403,3 +15403,9 @@ backup is the only rollback that exists.
 - The 13 "for Bogdan to overrule" items posted to Discord in plain terms, plus the $23-vs-$10 cap question.
 - Link 6 retired: "done: api-cd" in its transcript; tmux killed; pid 2547930 gone. Graph update 4 running; seed7 ready (keep 03 items 7 and 12 as single values, since an overrule must be cheap before Milos regenerates; the handoff note for Milos comes to me to send).
 - Lesson: never printf a log line containing %. Quoted heredoc only.
+
+## 10:30Z — link 7 (api-45) spawned for chunk 12
+
+- Graph update 4: 8455 to 8594 nodes, 48 files re-extracted. 03-tier2-smart.md has 19 nodes (I checked the count myself). Health: 0 dangling, 0 self-loops. About 17 min of wall clock.
+- Heads before spawn = remote and clean: api 9b73aff, mail dff30c1, docs 2f285bb, lifecycle ca04567.
+- tmux kr3build-07, Opus. Declared api-45. Pane at 40s: reading 03, no wedge. Run: chunk 12, then stop. The Milos note comes to me.
