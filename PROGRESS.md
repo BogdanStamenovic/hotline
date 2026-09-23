@@ -15637,3 +15637,6 @@ backup is the only rollback that exists.
 - Link 11 measured 536k. Continues to chunk 19 (the last for it; chunk 20 is live, so a fresh link); a stop at about 850k.
 - First item for link 11: the humanContent byte-vs-character check (Cyrillic over ~500 chars refused). Told it to settle with evidence, because the chunk 12 contract says Instagram caps at 1000 UTF-8 bytes.
 - Spec section 7 (public-reply-only comment automations on IG/FB) not built, pending a product call. Asked Milos (DM 1552444366658732184), recommending yes. Discord posted.
+
+### 22:38:06Z — section 7: Milos yes, but routes the feature call to Bogdan
+- Milos DM 22:37:01Z: yes, but ask Bogdan (features are his domain). Put to Bogdan on Discord (both recommend yes). Link 11 told to hold section 7 until Bogdan answers. Watcher re-armed (b34m39jnn).
