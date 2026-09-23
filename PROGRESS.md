@@ -15315,3 +15315,5 @@ backup is the only rollback that exists.
 - uxonews ssh warned about a non-post-quantum key exchange. Informational.
 
 - 00:01Z: he confirmed "Stored fingerprint matches". Relayed verbatim to api-6c to record in BUILD-LOG-PHASE3 (it owns the log). The key file is STILL on his laptop (~/keys, 01:57); asked him to delete it rather than doing it myself. Page updated: chunk 4 done.
+
+- 00:10Z: at his request, spawned ONE Remote Control agent: `claude --model opus --permission-mode bypassPermissions --remote-control archserver-rc` in tmux rc-archserver, cwd ~/data, no seed ("just spawn ... and thats it"). URL https://claude.ai/code/session_01TCYqSQNHmxXm1jajW6qBmy. No trust wedge. It reports to him, not me. It has no backtick-rule seed, on purpose, per his "thats it"; told him so on Discord.
