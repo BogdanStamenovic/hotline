@@ -15432,3 +15432,10 @@ backup is the only rollback that exists.
 - DECISION (mine): deploy STAGING only, now, so Milos codes against 1.1.0. Prod rides the next deploying chunk; there's no reason to restart prod with live signups for a contract-only release. api-45 deploys staging, proves it, logs that prod is still 1.0.0, then retires.
 - Milos note split into 3 DMs (under 2000 chars each), plus a gentle kinreply-db follow-up. Sending after the staging proof.
 - Pre-existing env red noted by the link: TestSignupCanBeClosedForTheDeployment goes 429 after about 20 suite runs per hour (real clock, per-IP bucket).
+
+## 11:32Z — staging on 1.1.0; link 7 reaped; Milos note sent; chain PAUSED at chunk 13
+
+- api-45 deployed staging only: tag 1f65cb3-bb2a61a (rollback tag 999caf3). It proved it with an adm session token and zero mail, left four contract-probe users in staging's dev DB with all sessions revoked, and logged that prod is still 1.0.0. VERIFIED from outside: /v1/knowledge/status gives 401 on staging (route exists) and 404 on prod (control). Host tags: staging 1f65cb3, prod 999caf3. Both postgres untouched. api 86581e0 = remote.
+- Link 7 retired: "done: api-45 / done exit=0" in its transcript; tmux killed; pid 2711563 gone.
+- Milos note sent as 3 DMs (ids ...8884583943, ...8889219366913, ...8893031989361), including the kinreply-db follow-up. The watcher on his DM channel is still running.
+- Chain PAUSED at chunk 13 (migration, needs Milos). No build agent running. Discord posted; page v12.
