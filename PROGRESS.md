@@ -15474,3 +15474,9 @@ backup is the only rollback that exists.
 - No-knowledge guard in the docs: gate 9a KNOWLEDGE_EMPTY; EMPTY = zero compiled PUBLIC entries (not "compile pending"); a leased job is ABANDONED not FAILED (avoids chunk 29's holding-reply backstop); no aiState value, so no contract change.
 - VERIFIED: PR #1 OPEN, one file, no attribution in the body or commit; api 7ad2cc9, docs 2c5ec6b, lifecycle 3ae958a = remote; host db on main 4331ff2; DB_BRANCH=main on prod; tags unchanged; both readyz 200.
 - DMed Milos that PR #1 is ready (1552293910448046141). A background watcher polls the PR every 2 min for state, reviews and comments. The link waits. Discord posted.
+
+## 12:50:01Z (watcher) — PR #1 MERGED by Milos; GO to link 8
+
+- gh: MERGED 12:48:17Z by milosvuksan, APPROVED "LGTM"; main is d804c5c. VERIFIED 4331ff2..main = exactly 00026 (+175); 8e2917a is an ancestor of main; the content diff between 8e2917a and main is empty.
+- GO sent to api-df: db to main, staging from main (prove TIKTOK and health), prod promotion carrying 1.1.0 (prove channelPlatforms and TIKTOK on prod, ~10 s downtime, pg not restarted), then report the tags and stop. No TikTok on prod.
+- Thanked Milos, and told him staging then prod, and that I will message when prod is on 1.1.0 (1552301112915263562).
