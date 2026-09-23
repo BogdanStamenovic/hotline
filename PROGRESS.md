@@ -15608,3 +15608,9 @@ backup is the only rollback that exists.
 ### 21:06:49Z — Bogdan asked where "Expo exists / app on phones" came from
 - Source: Milos (DM 11:36Z "ships as an over-the-air update"; DM 20:44Z "reaches installed 1.0.0 builds", asked us to run eas update). The repo is a real Expo app (expo 54, expo-updates, eas.json).
 - My error: I relayed "installed builds" as fact and wrote "Bogdan's Expo account", which nobody had said. I never probed whether a project or builds existed; the repo pointed the other way (projectId from an unset env var, appleId REPLACE_ME). Owned it on Discord; memory a-peers-premise-is-not-a-deployment saved.
+
+### 21:11:15Z — PROD carries chunks 15-17 (f5ec836-2ab7f1f), verified independently
+- Link 11 report received. My own probes at 21:10:35Z: api main d992971, db main 2ab7f1f; prod and staging api plus worker on f5ec836-2ab7f1f; prod pg StartedAt 04:08:06.221Z r=0, staging 04:07:01.158Z r=0 (unchanged); goose 27 via psql.sh; SIGNUPS true line present; readyz 200/15B on both; /v1/knowledge/status 401, with a 404 control on an unknown route; neighbours equal to the 15:36:54Z baseline (uxonews 307/6B, dds 200/92517B, kinreply.uxonews.com 000).
+- Prod webhook 6ab33a... listing via adm (file, then deleted): message.sent present, active true; prod key hits 0, secret hits 0.
+- Link 11 measured about 1 s of api downtime. Done-when 6 is deferred to chunk 20 (it needs a live DM).
+- Milos DM 1552427125343256587 sent; Discord posted. Link 11 is now on the updated_at trigger PR (it flagged the health.go markDisconnected staleness side effect).
