@@ -15396,4 +15396,10 @@ backup is the only rollback that exists.
 
 ## 10:20Z — chunk 11 done; link 6 reaped; link 7 queued for chunk 12
 
-- api-cd: 03-tier2-smart.md (1876 lines) plus stale docs corrected in every copy. VERIFIED: heads = remote and clean (api e818af1, then 9b73aff; docs 2f285bb; lifecycle ca04567); all 16 Frankfurt mentions in 03 are supersession or context; both readyz 200. Context 762,648 (76.3
+- api-cd: 03-tier2-smart.md (1876 lines) plus stale docs corrected in every copy. VERIFIED: heads = remote and clean (api e818af1, then 9b73aff; docs 2f285bb; lifecycle ca04567); all 16 Frankfurt mentions in 03 are supersession or context; both readyz 200. Context 762,648 (76.3  [entry continues; printf choked on a percent sign, so the rest is appended with a quoted heredoc]
+- Context 762,648 (76.3%), so replaced.
+- Its catches: chunk 40 ${ZAI:?} refuses an EMPTY value, so llm-subsys would not have started on either stack; migration-number collisions across chunk specs; spend caps sum to $23/mo against a $10 top-up (money, his); pull.sh bare-pulls kinreply-db (MINE, pending Milos); cmd/adm gofmt nit (to link 7).
+- Its item 4 flagged "max_tokens did not cap thinking" as sourced only from my brief. Correct: my measurement lived only in hotline PROGRESS. It added a build-log line citing my numbers (766 completion / 676 reasoning, max_tokens 200).
+- The 13 "for Bogdan to overrule" items posted to Discord in plain terms, plus the $23-vs-$10 cap question.
+- Link 6 retired: "done: api-cd" in its transcript; tmux killed; pid 2547930 gone. Graph update 4 running; seed7 ready (keep 03 items 7 and 12 as single values, since an overrule must be cheap before Milos regenerates; the handoff note for Milos comes to me to send).
+- Lesson: never printf a log line containing %. Quoted heredoc only.
