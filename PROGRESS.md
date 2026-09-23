@@ -15452,3 +15452,11 @@ backup is the only rollback that exists.
 
 - The three headings above read 11:25Z, 11:32Z and 11:40Z. They were guesses, and two were in the FUTURE when I wrote them. The real clock at this entry is 11:29Z. They are relabelled approx. Same failure as last night's; this time it's saved as a memory.
 - The checkpoints page's "Updated 13:42" is really about 13:29 CEST.
+
+## 11:37Z (read) — MILOS ANSWERED; chain unblocked; pull.sh fixed; link 8 queued
+
+- Milos DM 1552282504076206111 (11:36:28Z): main is THE branch; switch deploy scripts, pull.sh and docs; migrations via branch + PR against main that he reviews and merges; his app is done against 1.1.0 (anchored 6214f3a, 16 new / 0 removed, null fallback so it works on prod 1.0.0); no TikTok on a PROD workspace until he confirms his OTA update is out; the ACCOUNT_WOULD_BE_REPLACED confirmation belongs on the unbuilt web /connect/start page; tell him when prod gets 1.1.0.
+- MINE, done: archserver kinreply-db checked out on main 4331ff2 (ff-only; local main was an ancestor; pruned; the stale phase1 branch is left local). pull.sh backed up, then kinreply-db changed to "git checkout -q main && git pull --ff-only" with a comment. Ran pull.sh: exit 0; it pulled his kinreply-app 1.1.0 update (20 files).
+- Replied to Milos (id 1552282939436441742): all points acknowledged; I will tell him when prod has 1.1.0; the TikTok prod hold is on me.
+- Graph update 5 running (Sonnet). seed8 written: step 0 (the branch switch everywhere, with grep proof, host checkout, deploy without --no-pull), chunk 13 on a branch + gh PR, WAIT for merge (never self-merge), then staging, then a prod promotion that carries 1.1.0 (report the tag, I tell Milos), plus the no-knowledge guard into 03/22/28 while waiting.
+- Discord posted.
