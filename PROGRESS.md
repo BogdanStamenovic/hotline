@@ -15358,3 +15358,13 @@ backup is the only rollback that exists.
 - Its slip: staging was taken down after its backup.sh exited 1 (it chained with ";"). The SQL half was written; the exports tar failed. Counts and volumes identical after. Prod's down was then gated on a verified dump.
 - HOLD: the flip needs Bogdan's two chunk 9 Gmail reads plus his word ("open signup"). Link 5 is at ~63% and idle until then; afterwards it retires, and a fresh link takes chunk 11.
 - Discord posted; page v10.
+
+## 09:14Z — chunk 8 laptop half DONE (operator)
+
+- arch online at 09:11:50Z (the watcher fired). Laptop ~/.kinreply held only phase2.env. Tar backup: arch:~/kinreply-dotdir-backup-20260923-111408.tgz.
+- keys-sync status: every name only-archserver, zero DIFFERENT. I name-compared laptop phase2.env against all archserver files: one laptop-only name, KINREPLY_META_WEBHOOK_VERIFY_TOKEN, documented as read by nothing, kept in the retired copy.
+- push prod (5 new names printed, 17 total) and push dev (13): exit 0. Re-status: prod 17/17, dev 13/13 both-same. Laptop env files 600.
+- Retired the laptop phase2.env into ~/.kinreply/retired/phase2.env.20260923. Nothing deleted.
+- He had already deleted ~/keys/kinreply-prod-encryption-key.txt himself.
+- Asked api-61 to record it in the build log (the log is its). Posted to Discord.
+- Still waiting: his Gmail reads and "open signup", and Milos.
