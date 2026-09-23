@@ -15333,3 +15333,13 @@ backup is the only rollback that exists.
 - Its review found a real guard defect: resend-account.sh checked only request PATHS, so a key scoped to dds's domain could be minted via the body. Fixed with named tests. Its own slips: it printed 3 characters each of two relay credentials and 1 character of the Gmail key. Logged; nothing usable.
 - DECISION (mine, per OPERATING-RULES §1): continue link 4 into chunk 8. It is additive and bounded, and spec says no prod key goes into a running stack. Stop before chunk 9. Constraints sent: laptop is `arch`, touch only ~/.kinreply there, ~/keys read-only, reconcile by adding and never overwriting, a differing value means stop, Z.ai classified absent-by-decision.
 - Gmail hand step posted to Discord for the morning with all 8 steps. Checkpoint page v7: chunks 1-7 done, chunk 8 running, Gmail "waiting on you".
+
+## 02:07Z — chunk 8 done, link 4 reaped, link 5 (api-61) spawned for chunk 9
+
+- api-6c reported chunk 8 done on archserver and uxonews, with the laptop half OPEN because arch is offline (tailscale: last seen ~1h). Verified: heads = remotes and clean; dev.env and prod.env 600; phase2.env and its backups in retired/; docker inactive; both readyz 200.
+- It found 4 real guard defects: a SIGPIPE-flaky compose-name check that could drop a live variable, a psql wrong-name bug the fixtures agreed with, a dns suite red since chunk 6, and a push-env guard that ignored compose.yaml. It also owned up to a stray git stash -u (restored) and secret fragments left in scratch (shredded). It corrected its own chunk 7 claim about --require-all and Z.ai.
+- Measured at 700,597 (70.1%). Chunk 9 wires PROD, so it was replaced for margin per OPERATING-RULES §1, not for fault. Before going it wrote its handoff (api 6c68c9b) and a lifecycle fix (2ca8b20), and ran hotline --done. VERIFIED in its transcript: 02:00:12Z "done: api-6c, deleted its channel", repos clean at that moment. Pane input showed "run hotline --done and stop", which was ghost text, not trusted. tmux kill; pid 316274 confirmed gone.
+- Fixed my own stale prod.env comments (lines 4, 5, 8, 9) after the link stopped writing it; backup *-operator.
+- Graph: Sonnet subagent, 8121 to 8319 nodes, 33 files re-extracted (chunk 7/8 scope). Verified the counts. It began ~01:57Z and may miss the last two commits; seed says so.
+- Spawned link 5: tmux kr3build-05, Opus, cwd api. Declared api-61. Pane at 30s: verifying the brief against the remotes, no wedge. Its run is chunk 9, stopping at the Gmail "Show original" checkpoint.
+- Discord: one consolidated message covering chunk 8, why a new link, 4 bugs, and his 4 open items. Page v8.
