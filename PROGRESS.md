@@ -15505,3 +15505,9 @@ backup is the only rollback that exists.
 - agentstats-38 DONE in 25 min: user unit active, bound 127.0.0.1 + 100.72.2.62 only (LAN refuses). It corrected the brief: records are per content block, so counting records doubles tokens. It verified the parser against a jq hand-sum of api-61's session and posted screenshots (desktop + 390px dark). Its limitation: transcript tokens are a FLOOR.
 - MY CHECK: the first leak probe fetched 0 bytes (the zsh no-word-split trap, which is in my own memory notes) and was worthless; I redid it with a read loop: 7 endpoints, 1,241,246 bytes, zero hits for 12 transcript-only patterns; positive control (mission text) found. /api/graph?key=kinreply serves 9205/34136 = graph.json. RSS 176 MB, nice 10.
 - Posted a short verification note to his channel (no duplication of its report).
+
+## 14:29:07Z (read) — link 9 (api-c9) spawned for chunk 15
+
+- Graph update 6: 9205 to 9234 nodes, 69 files re-extracted, health clean (two pre-existing id collisions). About 26 min.
+- Heads before spawn = remote and clean: api c8f068d, docs 76a4740, lifecycle 3ae958a, kinreply-db d804c5c.
+- tmux kr3build-09, Opus. Declared api-c9. Pane at 40s: reading HANDOFF-PHASE3.md, no wedge. Run: chunk 15; staging only; prod on my word (Milos's TikTok hold).
