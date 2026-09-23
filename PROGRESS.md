@@ -15480,3 +15480,11 @@ backup is the only rollback that exists.
 - gh: MERGED 12:48:17Z by milosvuksan, APPROVED "LGTM"; main is d804c5c. VERIFIED 4331ff2..main = exactly 00026 (+175); 8e2917a is an ancestor of main; the content diff between 8e2917a and main is empty.
 - GO sent to api-df: db to main, staging from main (prove TIKTOK and health), prod promotion carrying 1.1.0 (prove channelPlatforms and TIKTOK on prod, ~10 s downtime, pg not restarted), then report the tags and stop. No TikTok on prod.
 - Thanked Milos, and told him staging then prod, and that I will message when prod is on 1.1.0 (1552301112915263562).
+
+## 12:54:41Z (read) — chunk 13 LIVE on prod (1.1.0 + TIKTOK); link 8 continues into chunk 14
+
+- api-df: staging deployed from main (no --no-pull), prod promoted as 7ad2cc9-d804c5c. goose OK 00026 on both. About 1 s api downtime measured by polling readyz every 0.5 s. It created prod workspace ws_01M37580KNVHHFN4ZJRGYN2TGP "KinReply ops probe" (owner dkim-check@) to prove /v1/me without mail. Zero mail sent.
+- VERIFIED from outside: /v1/knowledge/status on prod is 401 (it was 404 this morning), so 1.1.0 is live. Host tags both 7ad2cc9-d804c5c; pg unchanged r=0; enum via psql.sh (after my own direct psql probe failed on auth) is INSTAGRAM,FACEBOOK,TIKTOK on BOTH; heads = remote; SIGNUPS true.
+- Told Milos: prod on 1.1.0, plus the ops workspace note (1552302316001042466).
+- Measured api-df at 555,262 (55.5%). DECISION: continue into chunk 14 (additive Go), with tripwires: stop before prod past ~800k; no IG/FB send-path behaviour change; no TikTok on prod; no deploy unless the spec says so.
+- Discord posted.
