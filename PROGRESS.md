@@ -15585,3 +15585,9 @@ backup is the only rollback that exists.
 - Checked kinreply-app: no expo owner in app.config.ts; projectId only from the EAS_PROJECT_ID env (set nowhere here); README only shows development builds. An OTA to the production channel reaches only production-channel installs, so it plausibly reaches NOBODY, and Milos's hold (protecting installed apps from TIKTOK) may protect nothing.
 - NOT publishing. His "publish A" stands for when needed. Asked Milos: any production-channel build installed anywhere? who owns the EAS project? OK to promote chunks 15-17 to prod now with TikTok unconnected? (It's his hold and his app.)
 - Explained Expo/EAS/OTA to him in plain terms on Discord.
+
+## 21:02:11Z (read) — link 11 (api-f4) spawned: chunk 17 post-merge + the updated_at trigger PR
+
+- Graph update 8: 9390 to 9800 nodes. BUILD-LOG (1 to 109 nodes), README (15 to 64) and 03 (11 to 92) were extracted IN FULL via chunked reads. FINDING: `--update` never re-extracts a doc whose content hash is unchanged, so a TRUNCATED first extraction stays cached as if complete. 03 had to be forced (stale cache entry deleted). Worth a note in the graphify runbook: after any truncation warning, force the file.
+- Heads = remote and clean: api f5ec836, mail 5c62668, docs 9ee64e0, lifecycle b9988dd. Disk 12G / 83%.
+- tmux kr3build-11, Opus. Declared api-f4. Pane at 40s: reading the build log in chunks, no wedge. Run: chunk 17 post-merge (staging, message.sent on the DEV webhook only, IG before/after), then the Milos-approved updated_at trigger PR, then stop.
