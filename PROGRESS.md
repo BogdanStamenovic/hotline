@@ -15374,3 +15374,9 @@ backup is the only rollback that exists.
 - He pasted the Show original. dkim=pass header.i=@kinreply.rs s=resend, dmarc=pass (p=none), spf=pass via send.kinreply.rs; From noreply@, Reply-To support@. Recorded by api-61 at c97009e (verified).
 - WRONG CLAIM, MINE: I told api-61 the SES Message-ID 010201a0cc1e3e68-... "matches" Resend id 01a0cc1e-3e68-.... The real Resend id is 01a0cc1e-3c5a-...; they share only a prefix. I matched 8 chars and stopped reading. api-61 caught it and identified the send by Date/From/To/subject. Same shape as check-what-a-grep-matched: compare the whole value.
 - Waiting: read 2 (the 05:32 alert digest) and "open signup".
+
+## 09:18Z — GO for the prod signup flip
+
+- His words (terminal): "Its in. Open signup and continue working". Read 2 = arrival confirmed by him; From/prefix rest on api-61's Resend evidence, recorded as such. Chunk 9 checkpoint CLOSED.
+- GO sent to api-61 with his quote: README procedure, dry run must be exactly the one ~ line or STOP, prove by behaviour (202 + relay), rollback on failure. Then it retires, and link 6 takes chunk 11.
+- "continue working" = keep the chain running. It stops at chunk 13 without Milos.
