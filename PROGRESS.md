@@ -15409,3 +15409,10 @@ backup is the only rollback that exists.
 - Graph update 4: 8455 to 8594 nodes, 48 files re-extracted. 03-tier2-smart.md has 19 nodes (I checked the count myself). Health: 0 dangling, 0 self-loops. About 17 min of wall clock.
 - Heads before spawn = remote and clean: api 9b73aff, mail dff30c1, docs 2f285bb, lifecycle ca04567.
 - tmux kr3build-07, Opus. Declared api-45. Pane at 40s: reading 03, no wedge. Run: chunk 12, then stop. The Milos note comes to me.
+
+## 11:09Z — he asked "am I needed in the next 4-5 hours"; answered no
+
+- Discord 1552275445607563295, provenance VERIFIED. He has an hour free, then is logged out until about 16-17 CEST.
+- Answer: nothing blocks on him. Link 7 is busy mid chunk 12 (pane: new operationIds written, make check running). The chain stops at chunk 13 on Milos, not on him.
+- Offered, in order of value: 03 items 7 and 12 (the cheapest moment to overrule is before Milos regenerates), Gmail send-as, a yes/no on the staging key on dds's account. Everything else waits until chunk 32.
+- If Milos is still silent this afternoon I nudge him (standing authorisation; the DM went at 03:39Z).
