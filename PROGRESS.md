@@ -15416,3 +15416,11 @@ backup is the only rollback that exists.
 - Answer: nothing blocks on him. Link 7 is busy mid chunk 12 (pane: new operationIds written, make check running). The chain stops at chunk 13 on Milos, not on him.
 - Offered, in order of value: 03 items 7 and 12 (the cheapest moment to overrule is before Milos regenerates), Gmail send-as, a yes/no on the staging key on dds's account. Everything else waits until chunk 32.
 - If Milos is still silent this afternoon I nudge him (standing authorisation; the DM went at 03:39Z).
+
+## 11:15Z — his answers: item 12 OVERRULED (AI on for Smart/Remember), keep the staging key, Gmail now
+
+- Discord 1552276002888224810 (hotline-gated): "Thats okay. Buy remember thst ai is on gor tier 2 and tier 3 subs while tier 1 gets nonr." / "As for gmail il do that give me the steps now" / "As gor 3. Dont replace the key".
+- Mapped onto 03 section 1 tiers: Reply (1) no AI; Smart (2) and Remember (3) AI. So item 7 is accepted, and item 12 (aiEnabled default false) is OVERRULED to default ON wherever the tier includes AI.
+- Relayed to api-45 mid chunk 12, queued behind its turn: keep it one named value, update 03 in 3 places with his quote, no kinreply-db. Also asked it to report what a Smart channel with AI on and NO knowledge does at dispatch (03's old reason for false, now a risk). Told it not to build a guard he didn't ask for.
+- Staging's full-access Resend key on dds's account: KEEP (his decision). Closed.
+- Gmail send-as: posted full 8 steps, with the key fetch first. gmail-smtp-key is present (600). After his test I verify delivery in Resend and delete the key file.
