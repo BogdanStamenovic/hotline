@@ -15319,3 +15319,10 @@ backup is the only rollback that exists.
 - 00:10Z: at his request, spawned ONE Remote Control agent: `claude --model opus --permission-mode bypassPermissions --remote-control archserver-rc` in tmux rc-archserver, cwd ~/data, no seed ("just spawn ... and thats it"). URL https://claude.ai/code/session_01TCYqSQNHmxXm1jajW6qBmy. No trust wedge. It reports to him, not me. It has no backtick-rule seed, on purpose, per his "thats it"; told him so on Discord.
 
 - 00:46Z: api-6c t0 at 00:40:23.8Z. One DNS update, 9 s. The in-window probe shows "delivered" at the sender but is in no received list and never reached the relay, which is the provisional "accepted and silently lost" case. Waiting on Receiving verification, polling with a monitor. Short heartbeat posted to Discord. Fallback check at 01:20Z.
+
+## 00:50Z — chunk 7 window CLOSED; verified independently
+
+- api-6c: t0 00:40:14.9Z (DELETE on shared), POST on new 00:40:21.4 on the first attempt, DKIM 00:40:23.8, all records including Receiving verified 00:48:36. Window <= 8 min 21 s. In-window mail was ACCEPTED AND SILENTLY LOST: the probe showed "delivered" at the sender, but it is in neither received list and no webhook fired. dds doubling ENDED, proven by pre/post probes with a control.
+- MY CHECK: new account GET /domains lists kinreply.rs bcaad59b verified eu-west-1; the shared account (control) no longer does. MX @1.1.1.1 and @8.8.8.8 is inbound-smtp.eu-west-1.amazonaws.com.
+- FOUND ALONG THE WAY: the shared account's uxonews.com is partially_failed. Only the Receiving MX failed, because the apex has no MX at all; DKIM and SPF are verified and sending is enabled. Pre-existing (handoff ~1793), not chunk 7's. Told api-6c not to "fix" it and to note it in the log.
+- Posted to Discord: move done, the 8-minute lost-mail window stated plainly, doubling over, next the Gmail send-as checkpoint.
