@@ -15591,3 +15591,11 @@ backup is the only rollback that exists.
 - Graph update 8: 9390 to 9800 nodes. BUILD-LOG (1 to 109 nodes), README (15 to 64) and 03 (11 to 92) were extracted IN FULL via chunked reads. FINDING: `--update` never re-extracts a doc whose content hash is unchanged, so a TRUNCATED first extraction stays cached as if complete. 03 had to be forced (stale cache entry deleted). Worth a note in the graphify runbook: after any truncation warning, force the file.
 - Heads = remote and clean: api f5ec836, mail 5c62668, docs 9ee64e0, lifecycle b9988dd. Disk 12G / 83%.
 - tmux kr3build-11, Opus. Declared api-f4. Pane at 40s: reading the build log in chunks, no wedge. Run: chunk 17 post-merge (staging, message.sent on the DEV webhook only, IG before/after), then the Milos-approved updated_at trigger PR, then stop.
+
+## 21:02-21:05Z — PROD HOLD LIFTED: "Move all chunks to prod"
+
+- Bogdan 1552424867167731845 (provenance VERIFIED 21:02:10Z): the app is fully Milos's; he never set up Expo; "Move all chunks to prod".
+- Milos 1552424890966089822 (21:02:16Z): no builds anywhere as far as he knows; "Bogdan owns the EAS project. OK with me, check with Bogdan too".
+- So the promotion is cleared by both. No production build exists, so the OTA gates nothing. CONTRADICTION parked: each says the other owns EAS, and the config has no owner or projectId, so the project most likely doesn't exist. Told Milos (the app is his; the first prod build means creating it) (1552425065713373185). Told Bogdan no token is needed.
+- GO sent to api-f4 (queued behind its turn): finish chunk 17 staging incl. the IG before/after (STOP if not clean); promote to PROD (15-17 + 00027) with proofs; then add message.sent to the PROD webhook 6ab33a... via the redacted adm path; TikTok stays unconnected; report the prod tag; then the trigger PR.
+- The OTA is NOT published. His "publish A" stands but is unnecessary for now.
