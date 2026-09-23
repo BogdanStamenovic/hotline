@@ -15643,3 +15643,6 @@ backup is the only rollback that exists.
 
 ### 22:38:29Z — Bogdan sets the responsibility split
 - Verified 1552448998214729891 (22:38:04Z): Milos makes the app only; functionality, API, business logic, tier separation, endpoints and features are Bogdan's. Memory kinreply-outward-contacts-are-authorised updated. Feature questions go to Bogdan first from now on. Kept Milos's kinreply-db PR review (his rule), said so. Section 7 question still open with Bogdan.
+
+### 22:39:00Z — Bogdan: section 7 YES; DB keeps going through Milos
+- Verified 1552449159892701196 (22:38:42Z). Link 11 told to build section 7 with chunk 19 (tests changed on purpose, with his message id; hand it over if it won't fit under ~850k). Milos told his form must allow an empty DM. Discord acked.
