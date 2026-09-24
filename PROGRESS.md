@@ -15827,3 +15827,7 @@ backup is the only rollback that exists.
 - Link 13 retired at 714,954 tokens: "done: api-24" in the transcript; api main 2605d86 (handoff); tree clean; tmux killed; pid 1691641 gone; docker inactive; Go cache cleared (9.5G free).
 - Milos DM 1552679637165805589 about #9. Discord posted with the 3 open questions. Graph update 11 (Sonnet): remove stale chunk22-prefixed nodes, add only NEW chunk-24 files.
 - Next: link 14 for chunk 25 (the knowledge writer: staging only, NOT prod before chunk 40 unless guarded) plus the #9 post-merge deploy.
+
+### 14:23:01Z — link 14 spawned (tmux kr3build-14, Opus): #9 deploy on merge, then chunk 25 (staging only / guarded)
+- Graph update 11: 11,214 nodes / 39,358 edges; 491 stale chunk22 nodes removed (0 left); 112 chunk-24 new-file nodes; BUILD-LOG 79 nodes (full coverage, coarser); main's entitlements Service.Usage dropped in an id collision. Caveats put in seed14. One backup kept (pre-update-11).
+- seed14: state d0c7b1b-858807f, goose 34; A) the #9 per-merge deploy (rebase chunk-24 first); B) chunk 25 (00036, stack on #9 only if dependent); C) no prod for chunk 25 unless guarded; D) onward with max 3 stacked. No schedule talk.
