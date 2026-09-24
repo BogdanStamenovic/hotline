@@ -15794,3 +15794,8 @@ backup is the only rollback that exists.
 - Verified PR 7 (63f12c0, 00033 only, no attribution); api branch feedback-endpoint e304684. Contract 1.2.0 additive. 5/h and 20/day in the same txn as the insert (20-way race: exactly 5 x 201, 5 of 5 runs). 57 mutations; review found no defect.
 - Asked Bogdan: the name, and keep (anonymised) vs delete a removed member's reports (recommended keep). Milos DM 1552649042377576580.
 - Link 13 told to fix 2 found bugs first (NUL gives a 500 on the message post; a real-clock flaky signup test), then deploy, then chunk 24 (00034 off main). Link at 536k.
+
+### 12:19:40Z — PR #7 merged (12:17:10Z); Bogdan: keep reports AND the person link, trust scores later
+- Milos DM 12:17:51Z: merged, can't build the app screen now, "you can if you want" (recommended to Bogdan: not now, the app is his). Watcher re-armed (milos_watch10).
+- Bogdan 1552655509578846262 (verified): keep plus link; per-person bug-validity and feature-value scores that set priority. My plan to him: 00034 keeps rows past membership/workspace end (user FK to app_user, CASCADE only on account erasure); capture severity/steps/expected/actual and feature motivation NOW; defer the score tables to the home-server design; privacy (profiling: a policy line, export, erasure; Stefan for the policy).
+- Queued to link 13 after the 2 bug fixes; #7 and 00034 deploy together after Milos merges 00034.
