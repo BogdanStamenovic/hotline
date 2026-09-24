@@ -15677,3 +15677,8 @@ backup is the only rollback that exists.
 ### 01:47:21Z — approved link 12's scratch-rm prompt; the "Bogdan says yes" line was a prompt suggestion
 - permwatcher flagged api-9a blocked on a subagent Bash rm -rf $S/*.frag. S is set to a literal scratchpad path in the same command, so it's safe. Approved with Enter; the link moved on.
 - The pane's input box then showed "Bogdan says yes to pgvector, go ahead and install it". Checked: no Bogdan message on Discord; no tmux client attached; no ccd-cli; not in the transcript; capture-pane -e shows it dimmed (\e[2m). It is Claude Code's prompt suggestion, not input. pgvector is still NOT approved. Memory a-dim-line-in-a-pane-is-a-suggestion saved.
+
+### 03:08:05Z — chunk 21 staging swapped (verified); prod switch announced for ~03:35Z
+- Link 12: staging on pgvector/pgvector:0.8.6-pg18-trixie, new volume kinreply-staging_pgdata_pgv, 58 s downtime, 31/32 tables identical (job +1 = the worker startup), backup@staging Result=success plus verify-backup PASSED. Three review rounds fixed 5+ script defects. api 8d68ebf, lifecycle 1941297.
+- My probes at 03:07:25Z: image and volume as claimed; vector 0.8.6 available; C.UTF-8 builtin; goose 28; app_user 9 / workspace 5; readyz 200, knowledge 401; prod untouched (alpine, pgdata, StartedAt 04:08:06Z); neighbours equal to the baseline; archserver docker inactive; repos clean.
+- Told Bogdan (Discord, 03:07:49Z): the prod switch at ~03:35Z unless he says stop (~1 min downtime, proven backup, 17 s rollback, old volume kept). Link 12: step 0 dry-run only; steps 1-4 only on my explicit "GO PROD".
