@@ -15700,3 +15700,8 @@ backup is the only rollback that exists.
 - Reviews found 3 real defects (plan-limit check in the wrong txn; two voices across a tier change between retries, where the spec's own test encoded the bug; a Reply-row written before the guards). All fixed and pinned.
 - Link 12 at 70%: finishes the #4/#5 post-merge deploys, then a fresh link for chunk 23. Asked it to PROVE, before #5 reaches prod, that no prod workspace can reach SMART/REMEMBER with knowledge before chunk 40 (else a staging-only deploy).
 - Milos DM 1552554115832356946 about #5 (merge #4 first). Discord posted.
+
+### 05:37:08Z — #5 on prod is safe: gate 9a (no knowledge = no AI) closes it
+- Link 12's evidence: all signups and adm creates provision REPLY/TRIALING; nothing writes the billed tier; the only path to SMART is adm SetManualTier; live, all subscriptions on both stacks are REPLY, no manual_tier. decide.go:97 CompiledEmpty runs before the enqueue.
+- My spot-check: on origin/chunk-22-ai-dispatch, 0 non-test writers of knowledge_{compilation,entry,source} (the same grep sees 18 test lines).
+- RULE FOR LATER SEEDS: chunk 25 (the first knowledge writer) must NOT deploy to prod before chunk 40, unless guarded, and no prod workspace may be set SMART or REMEMBER before chunk 40 (DMs would record KNOWLEDGE_EMPTY and supersede automation follow-ups).
