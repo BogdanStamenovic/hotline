@@ -15762,3 +15762,6 @@ backup is the only rollback that exists.
 - Link 13: 4c split via eff.Channels.Allows (same as the connect gate); test inverted on purpose; 5 mutations killed; review of every InPlan reader, no defect. api main 51144c1 (b47d346..main is the log only). chunk-21/22 api branches rebased (43aff11, 9489da7).
 - My probes at 09:06:40Z: both stacks on b47d346-cb7de88; pg StartedAt unchanged; SIGNUPS true; readyz 200; knowledge 401; neighbours equal to the baseline.
 - Asked Bogdan: a write-time 402 instead of 202-then-SKIPPED for refused human sends (recommended yes).
+
+### 09:24:00Z — Go cache cleared for link 13's chunk 23 sweep; docker images trimmed
+- No go process running; go clean -cache freed 1.6G. Removed the pgvector/pgvector docker image (pgvector is native now), an exited container (36h old) and dangling layers (441.8MB reclaimed); kept kinreply/mail, golang, alpine and busybox. Docker stopped again. Root 8.0G free.
