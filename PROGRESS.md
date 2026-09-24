@@ -15694,3 +15694,9 @@ backup is the only rollback that exists.
 
 ### 04:16:08Z — Go cache cleared for link 12's chunk 22 mutation sweep
 - Chunk 22 built on stacked branches (db chunk-22-ai-dispatch bb34218 = 00031; api da72e9a). No go process running (a pgrep -f match was my own shell). go clean -cache freed 1.2G, root 10.1G to 11.2G. Told the link to stack chunk 22's db PR on #4. The prod poller finished: only the 03:37:11-03:37:52 window was non-200.
+
+### 05:35:57Z — chunk 22 built and reviewed; kinreply-db PR #5 stacked on #4
+- PR 5 verified: base chunk-21-pgvector-knowledge, e758d4d, 00031_ai_dispatch only, no attribution. api main bdc612c; branches chunk-21-knowledge 81e2f45, chunk-22-ai-dispatch 7ce450f. Docker inactive. Disk 9.1G.
+- Reviews found 3 real defects (plan-limit check in the wrong txn; two voices across a tier change between retries, where the spec's own test encoded the bug; a Reply-row written before the guards). All fixed and pinned.
+- Link 12 at 70%: finishes the #4/#5 post-merge deploys, then a fresh link for chunk 23. Asked it to PROVE, before #5 reaches prod, that no prod workspace can reach SMART/REMEMBER with knowledge before chunk 40 (else a staging-only deploy).
+- Milos DM 1552554115832356946 about #5 (merge #4 first). Discord posted.
