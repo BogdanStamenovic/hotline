@@ -15664,3 +15664,7 @@ backup is the only rollback that exists.
 ### 00:12:56Z — link 12 spawned (tmux kr3build-12, Opus): chunk 21
 - Graph update 9 verified: 10,106 nodes / 34,990 edges; BUILD-LOG 127 nodes (chunked, read in full to line 5543); 00028 present; backups 8 and 9 kept, 5-7 deleted; repos clean.
 - Seed12: A) prose-only openapi descriptions (PostMessageRequest.text, createAutomation/dmMessage); B) chunk 21 migrations as a PR for Milos; C) pgvector image swap by dump and restore, staging first; D) PROD HARD STOP until my GO (Bogdan told before). Chunk 20 parked. Traps from link 11 included. Pane: declaring, no trust prompt.
+
+### 00:20:09Z — link 12 (api-9a) item A done; pgvector install asked
+- api 9bd9a5f (ls-remote). Link corrected my brief: a description edit DOES change the generated code (comments and whitespace only). Proven by a token-stream comparison with controls. Told it to also fix the stale startZernioConnect 501 sentence.
+- The pgvector Arch package (0.8.6-1, 626 KB) is a system-wide install, so I asked Bogdan on Discord (CLAUDE.md rule), despite passwordless sudo. Link told not to install it; docker fallback if blocked.
