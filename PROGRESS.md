@@ -15734,3 +15734,8 @@ backup is the only rollback that exists.
 ### 08:02:56Z — Bogdan asked for the next-chunk ETA and the last Milos contact
 - Verified 1552591009978777663. Answered: Milos's last message 09-23 22:37:01Z; mine since, unanswered: 01:35:04Z (PR 4), 03:42:25Z (swap), 05:35:46Z (PR 5); his last GitHub action was the PR 3 merge at 21:31:32Z.
 - Plan given: chunk 23 does not wait for Milos (stacked on the chunk-22 branch, like 22). Link 12 finishes manual replies (~30-60 min), then retires; a fresh link 13 does chunk 23 plus the #4/#5 post-merge deploys; graph refresh first. ETA about 1h. Risk: 3-deep stacked PRs.
+
+### 08:05:26Z — Bogdan: "do everything you can until Milos merges; we're behind schedule (the build has run 3 days)"
+- Verified 1552591597512949761. Mapped chunk deps for 23-39: nearly linear through 21/22/25/28; parallel links rejected (disk ~6G shared, migration-number collisions, one api repo).
+- Cutting gaps instead: graph update 10 started now (Sonnet subagent, main plus branch exports read-only), so link 13 can spawn as soon as link 12 finishes manual replies. Stacking continues (chunk 23 on the chunk-22 branch).
+- Nudged Milos about reviewing #4/#5 (standing auth; 10:05 his time). Discord posted.
