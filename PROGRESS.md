@@ -15848,3 +15848,8 @@ backup is the only rollback that exists.
 ### 18:25:32Z — chunk 24 on PROD (6d9ce72-30db6b4, goose 35), verified; Go cache cleared for chunk 26
 - My probes at 18:25:14Z: api main 068d60f; both stacks on 6d9ce72-30db6b4; prod goose 35, knowledge_entry 0, max ai_generations 0; pg unchanged; SIGNUPS true; KNOWLEDGE_WRITES false; readyz 200; /v1/usage 401 unauth; neighbours fine. Link 14 re-proved the 501 on this image.
 - Chunk 26 (uploads; pdftotext subprocess; switch covers upload and worker ingest) on branch 93bfc47, sweep next. Asked for a hostile-PDF review (limits, sandbox or no shell, zip bomb). Cache cleared, 8.9G free. Discord posted.
+
+### 20:15:47Z — chunk 26 (knowledge uploads) on PROD, switched off (640ce2b-30db6b4), verified
+- My probes at 20:15:19Z: api main 5a6b06f; both stacks and workers on 640ce2b-30db6b4; pg unchanged; goose 35; knowledge_upload 0; pdftotext in the worker; the prod worker boot line "knowledge writes: disabled on this worker"; SIGNUPS true; neighbours fine.
+- The review found the pdftotext/pdfinfo exec inheriting the worker env (DSN password, provider keys). Fixed: empty env plus a static check. PDF confinement: no shell, RLIMIT_AS 192M, -l 300, output caps, a pgroup kill on timeout (bomb.pdf 4.7GB unconfined, dies in 0.5s confined). 71 mutations (found a real 33KB over-read). Image 69.6MB to 109MB.
+- Go cache cleared (7.8G free). Link 14 (588k) takes chunk 27 as coordinator, stop at 850k. Discord posted.
