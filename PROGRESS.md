@@ -15785,3 +15785,7 @@ backup is the only rollback that exists.
 ### 11:02:52Z — Bogdan: new feedback endpoint (bugs / feature requests), groundwork only
 - Verified 1552636250878648401 (11:02Z). Plan and defaults posted: /v1/feedback (recommended over "reviews"), signed-in sellers only, POST plus own GET, 5/h and 20/day per user, 4000 chars, table with status NEW/SEEN/DONE, privacy and retention covered, no home-server reader yet.
 - Queued to link 13 after the chunk 21-23 deploy and before chunk 24: a spec in the log first, a migration PR (base main), a contract bump with HANDOFF notes, review plus a mutation sweep.
+
+### 11:03:29Z — chunks 21-23 on PROD (c3bc437-15a9d4f, goose 32), verified
+- My probes at 11:03:11Z: api main 32f625d; both stacks and workers on c3bc437-15a9d4f; goose 32 both; vector 0.8.6 installed both; knowledge_entry 0 and ai_dispatch 0 both; ai_enabled default true; pg StartedAt unchanged (03:37:44Z / 03:01:14Z r=0); SIGNUPS true; readyz 200; knowledge 401; neighbours equal to the baseline.
+- Link 13 at 509k, now on the feedback endpoint. Bogdan and Milos told.
