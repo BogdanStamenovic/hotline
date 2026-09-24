@@ -15710,3 +15710,10 @@ backup is the only rollback that exists.
 - Verified 1552583437209042975 (07:32:17Z). Backed up track.db and wake.db. PAUSED both assignments (10ee961f laptop, e400d473 GPU); not removed, because remove deletes history. Disabled and stopped track-web.service.
 - TRAP: pausing the first re-armed track-slot-0800 for the remaining assignment with "then powers the machine off". After the second pause: no pending wake tasks (the 08:00 WOL self-wake is gone too), wake sync pushed 0 / pulled 0, /sys wakealarm empty. Memory updated.
 - Status summary and the 4 open questions posted to Discord.
+
+### 07:51:03Z — Bogdan's answers: pgvector yes (installed), volumes ~Oct 1, TikTok waits on company registration
+- Verified 1552587954474459219. Installed pgvector 0.8.6-1 via sudo pacman (vector.control present); told link 12 to prove make check on the native cluster.
+- Old pgdata volumes: approved for deletion after a week clean. Project memory saved (NOT kinreply_pgdata).
+- TikTok: blocked until the company is registered (postponed), or someone else's Business account. Chunk 20 stays parked.
+- Explained "manual replies on over-plan accounts" (A block / B allow; I lean B), his call.
+- FOUND: pacman local db /var/lib/pacman/local/cuda-13.4.2-1 lacks desc and files (only install and mtree), from the 09-23 00:55 local -Syu. Fix: sudo pacman -S cuda from the cached package. A system package, so asked him.
