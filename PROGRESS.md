@@ -15745,3 +15745,8 @@ backup is the only rollback that exists.
 
 ### 08:09:12Z — Bogdan: use judgement, wait where rework is likely
 - Verified 1552592665168846869. Decision: chunk 23 stacked (3 deep: #4, #5, 23), no 4th stacked db PR; if still unmerged after chunk 23, wait (except work needing no unmerged schema). seed13 updated. Discord told.
+
+### 08:19:56Z — manual replies on PROD (745d878-cb7de88), verified; link 12 reaped
+- My probes at 08:19:07Z: both stacks on 745d878-cb7de88; pg StartedAt unchanged (prod 03:37:44Z, staging 03:01:14Z); SIGNUPS true; readyz 200, knowledge 401 with a 404 control; neighbours equal to the baseline; 745d878..64f6fc2 docs only.
+- Open with Bogdan: whether human sends are allowed on a platform the plan excludes entirely (built allowed; default stays allowed).
+- Reaped: "done: api-9a" (08:19:37Z), api main 64f6fc2, tree clean, docker inactive, tmux killed, pid 3927417 gone. Link 13 waits for graph update 10.
