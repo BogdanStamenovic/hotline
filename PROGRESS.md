@@ -15831,3 +15831,9 @@ backup is the only rollback that exists.
 ### 14:23:01Z — link 14 spawned (tmux kr3build-14, Opus): #9 deploy on merge, then chunk 25 (staging only / guarded)
 - Graph update 11: 11,214 nodes / 39,358 edges; 491 stale chunk22 nodes removed (0 left); 112 chunk-24 new-file nodes; BUILD-LOG 79 nodes (full coverage, coarser); main's entitlements Service.Usage dropped in an id collision. Caveats put in seed14. One backup kept (pre-update-11).
 - seed14: state d0c7b1b-858807f, goose 34; A) the #9 per-merge deploy (rebase chunk-24 first); B) chunk 25 (00036, stack on #9 only if dependent); C) no prod for chunk 25 unless guarded; D) onward with max 3 stacked. No schedule talk.
+
+### 16:25:05Z — chunk 25 (knowledge write API) on PROD with writes OFF (b048a3d-858807f), verified
+- No migration (chunk 21's columns). Guard KINREPLY_KNOWLEDGE_WRITES_ENABLED (strict; prod.conf false, staging.conf true), enforced in knowledge.Writer.begin; an arch test forbids knowledge writes elsewhere (the reviews found 3 real holes in that static proof, fixed). 68 plus 7 mutations.
+- My probes at 16:24Z: both stacks on b048a3d-858807f; env prod=false, staging=true; the prod boot line "knowledge writes: disabled ... answers 501"; prod goose 34, knowledge_source 0, knowledge_entry 0; pg unchanged. Link 14's signed-in prod probe: 4 writes -> 501, reads 200; staging control 402/422/404/404.
+- TRAP saved to memory: agent cd is a zoxide fuzzy wrapper (a reviewer landed in the real api tree). Added to the seed traps.
+- Link 14 on chunk 26 (uploads); PR #9 still unreviewed. Discord posted.
