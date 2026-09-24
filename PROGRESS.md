@@ -15804,3 +15804,7 @@ backup is the only rollback that exists.
 - My probes at 12:20:28Z: both stacks on 38c567a-15a9d4f, goose 32, pg unchanged; cv%00x -> 400, control -> 401; neighbours fine. api main baadeeb.
 - Approved the review finding: an inbound webhook NUL -> U+FFFD at ingest plus a WARNING (a permanent 500 means endless redelivery and a lost message).
 - DEPLOY HOLD: #7 is merged, so any deploy.sh applies 00033; no deploys until 00034 merges, then #7 + 00034 + feedback api + the NUL ingest fix together. Chunk 24 renumbered to 00035. Link 13 at 575k: expects to hand chunk 24's sweep, review and PR to the next link.
+
+### 12:35:08Z — disk 5.0G with two link-13 builders running; freed 1.5G
+- Removed yay source archives (.deb/.tar.gz) and debug packages (2112M to 1318M; built .pkg.tar.zst kept for rollback). Pacman cache: dropped 5 files beyond the newest 2 versions per package (uv 0.12.13, nodejs 26.8.2, python-wcwidth 0.8.3, ollama and ollama-cuda 0.34.0; 0.82 GB). Root 5.0G to 6.5G.
+- Told link 13: "go cache free" only when BOTH builders are idle; pause both under 3.5G. Large but kept: uv cache 8.4G (hardlinked venvs), ~/.swiftpm 3.1G (iOS re-sign SDK).
