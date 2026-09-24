@@ -15742,3 +15742,6 @@ backup is the only rollback that exists.
 
 ### 08:07:37Z — Bogdan: no speed-up, no deadline talk to agents, no parallelism
 - Verified 1552592227233046592. The meaning was "don't idle 6h waiting on Milos". Corrected link 12 (disregard "behind schedule"); removed the schedule framing from seed13; feedback memory saved. The plan is unchanged: build ahead on stacked branches.
+
+### 08:09:12Z — Bogdan: use judgement, wait where rework is likely
+- Verified 1552592665168846869. Decision: chunk 23 stacked (3 deep: #4, #5, 23), no 4th stacked db PR; if still unmerged after chunk 23, wait (except work needing no unmerged schema). seed13 updated. Discord told.
