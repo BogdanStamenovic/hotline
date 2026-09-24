@@ -15781,3 +15781,7 @@ backup is the only rollback that exists.
 - He reviewed: scratch PG18 up / down-to-28 / up, the data-map gate, spot-checks; the pgvector parts are left to our runs; nothing needed changes. Merges: #4 20fd3ef, #5 fe5f253, #6 15a9d4f. He hasn't deployed; that's ours.
 - Notes passed to link 13 for the log: entry_ids has no FK (scope it in chunks 25/27/28); use the composite (workspace_id, id) FK pattern for new tables; deleting a stacked PR's base branch CLOSES the child PR (he restored #5/#6 by hand), so retarget before merge next time.
 - Milos watcher re-armed (milos_watch9).
+
+### 11:02:52Z — Bogdan: new feedback endpoint (bugs / feature requests), groundwork only
+- Verified 1552636250878648401 (11:02Z). Plan and defaults posted: /v1/feedback (recommended over "reviews"), signed-in sellers only, POST plus own GET, 5/h and 20/day per user, 4000 chars, table with status NEW/SEEN/DONE, privacy and retention covered, no home-server reader yet.
+- Queued to link 13 after the chunk 21-23 deploy and before chunk 24: a spec in the log first, a migration PR (base main), a contract bump with HANDOFF notes, review plus a mutation sweep.
