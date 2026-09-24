@@ -15844,3 +15844,7 @@ backup is the only rollback that exists.
 ### 18:12:11Z — Milos's review of #9 plus the app contract anchor moved
 - DM 18:11:25Z: the kinreply-app anchor is at d0c7b1b (1.3.0, 66 ops; commit 8361fa8), only the feedback additions. #9 checked locally (34 then 35: data map, down/up, support counters, the cross-tenant sum, EXECUTE only kinreply_app, RLS guard, the quota index predicate matches). Not deployed by him.
 - Note passed to link 14: ai_cost_for_period is exact only for the current month (workspace_usage resets); document it in Go now and via COMMENT ON FUNCTION in the next migration; last month's spend must be snapshotted or taken from llm-subsys's ledger (chunks 32/33). Watcher re-armed (milos_watch12).
+
+### 18:25:32Z — chunk 24 on PROD (6d9ce72-30db6b4, goose 35), verified; Go cache cleared for chunk 26
+- My probes at 18:25:14Z: api main 068d60f; both stacks on 6d9ce72-30db6b4; prod goose 35, knowledge_entry 0, max ai_generations 0; pg unchanged; SIGNUPS true; KNOWLEDGE_WRITES false; readyz 200; /v1/usage 401 unauth; neighbours fine. Link 14 re-proved the 501 on this image.
+- Chunk 26 (uploads; pdftotext subprocess; switch covers upload and worker ingest) on branch 93bfc47, sweep next. Asked for a hostile-PDF review (limits, sandbox or no shell, zip bomb). Cache cleared, 8.9G free. Discord posted.
