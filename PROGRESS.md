@@ -15808,3 +15808,8 @@ backup is the only rollback that exists.
 ### 12:35:08Z — disk 5.0G with two link-13 builders running; freed 1.5G
 - Removed yay source archives (.deb/.tar.gz) and debug packages (2112M to 1318M; built .pkg.tar.zst kept for rollback). Pacman cache: dropped 5 files beyond the newest 2 versions per package (uv 0.12.13, nodejs 26.8.2, python-wcwidth 0.8.3, ollama and ollama-cuda 0.34.0; 0.82 GB). Root 5.0G to 6.5G.
 - Told link 13: "go cache free" only when BOTH builders are idle; pause both under 3.5G. Large but kept: uv cache 8.4G (hardlinked venvs), ~/.swiftpm 3.1G (iOS re-sign SDK).
+
+### 13:14:56Z — feedback keep-and-link built (PR #8, 00034); inbound NUL fix built; hold stands
+- Verified PR 8 (6e65364, 00034 only, no attribution); api branches feedback-endpoint 4f7e1c6, inbound-nul 6a6881a; main baadeeb. Contract 1.3.0 (severity required on BUG; steps/expected/actual; motivation). SECURITY DEFINER expire_feedback (clamped) and feedback_by_author. 27 mutations incl. DB-level; review ran live as the app role, no defect.
+- Inbound NUL: the failure was at the webhook_delivery.payload jsonb; chunk 15's test pinned the opposite without ever reaching it. Replacement in persist.Record (NUL and unpaired surrogates to U+FFFD); signatures over the original bytes; dedupe unchanged. 23/23 mutations killed.
+- Milos DM 1552671335395459308 about #8 plus the deploy hold. Discord posted. Link 13 at 670k: chunk 24 sweep running, then the 00035 PR, then a handoff.
