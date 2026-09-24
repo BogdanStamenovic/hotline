@@ -15682,3 +15682,6 @@ backup is the only rollback that exists.
 - Link 12: staging on pgvector/pgvector:0.8.6-pg18-trixie, new volume kinreply-staging_pgdata_pgv, 58 s downtime, 31/32 tables identical (job +1 = the worker startup), backup@staging Result=success plus verify-backup PASSED. Three review rounds fixed 5+ script defects. api 8d68ebf, lifecycle 1941297.
 - My probes at 03:07:25Z: image and volume as claimed; vector 0.8.6 available; C.UTF-8 builtin; goose 28; app_user 9 / workspace 5; readyz 200, knowledge 401; prod untouched (alpine, pgdata, StartedAt 04:08:06Z); neighbours equal to the baseline; archserver docker inactive; repos clean.
 - Told Bogdan (Discord, 03:07:49Z): the prod switch at ~03:35Z unless he says stop (~1 min downtime, proven backup, 17 s rollback, old volume kept). Link 12: step 0 dry-run only; steps 1-4 only on my explicit "GO PROD".
+
+### 03:35:27Z — GO PROD sent to link 12 (pgvector swap on prod)
+- 03:35:06Z: no message from Bogdan in #agent-hotline-80 since the 03:07:49Z heads-up. Link 12's prod step 0 dry-run passed (transcript). Pane showed a dimmed "GO PROD" prompt suggestion again (\e[2m), not input. Sent GO via hotline at 03:35:21Z. Independent 2 s poller on prod readyz and uxonews running (scratchpad/prodpoll.log).
