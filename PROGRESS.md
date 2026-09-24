@@ -15789,3 +15789,8 @@ backup is the only rollback that exists.
 ### 11:03:29Z — chunks 21-23 on PROD (c3bc437-15a9d4f, goose 32), verified
 - My probes at 11:03:11Z: api main 32f625d; both stacks and workers on c3bc437-15a9d4f; goose 32 both; vector 0.8.6 installed both; knowledge_entry 0 and ai_dispatch 0 both; ai_enabled default true; pg StartedAt unchanged (03:37:44Z / 03:01:14Z r=0); SIGNUPS true; readyz 200; knowledge 401; neighbours equal to the baseline.
 - Link 13 at 509k, now on the feedback endpoint. Bogdan and Milos told.
+
+### 11:53:10Z — feedback endpoint built; kinreply-db PR #7 (00033, base main)
+- Verified PR 7 (63f12c0, 00033 only, no attribution); api branch feedback-endpoint e304684. Contract 1.2.0 additive. 5/h and 20/day in the same txn as the insert (20-way race: exactly 5 x 201, 5 of 5 runs). 57 mutations; review found no defect.
+- Asked Bogdan: the name, and keep (anonymised) vs delete a removed member's reports (recommended keep). Milos DM 1552649042377576580.
+- Link 13 told to fix 2 found bugs first (NUL gives a 500 on the message post; a real-clock flaky signup test), then deploy, then chunk 24 (00034 off main). Link at 536k.
