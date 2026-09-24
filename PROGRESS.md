@@ -15853,3 +15853,9 @@ backup is the only rollback that exists.
 - My probes at 20:15:19Z: api main 5a6b06f; both stacks and workers on 640ce2b-30db6b4; pg unchanged; goose 35; knowledge_upload 0; pdftotext in the worker; the prod worker boot line "knowledge writes: disabled on this worker"; SIGNUPS true; neighbours fine.
 - The review found the pdftotext/pdfinfo exec inheriting the worker env (DSN password, provider keys). Fixed: empty env plus a static check. PDF confinement: no shell, RLIMIT_AS 192M, -l 300, output caps, a pgroup kill on timeout (bomb.pdf 4.7GB unconfined, dies in 0.5s confined). 71 mutations (found a real 33KB over-read). Image 69.6MB to 109MB.
 - Go cache cleared (7.8G free). Link 14 (588k) takes chunk 27 as coordinator, stop at 850k. Discord posted.
+
+### 22:23:58Z — chunk 27 (knowledge embed and hybrid search) on PROD, dormant (a275d8d-30db6b4), verified
+- My probes at 22:23:31Z: api main de81ce9; prod api and worker on a275d8d-30db6b4; pg unchanged; goose 35; knowledge_entry 0; knowledge_embed jobs 0; the worker boot line: embeddings sweep off; only 8080 published (127.0.0.1), internal 8090 unpublished; SIGNUPS true; neighbours fine.
+- 82 mutations (2 real gaps fixed); the review found no demonstrated defect. MRR: vector .953, hybrid .935, trigram .582.
+- FINDING sent to Milos (DM 1552807787468431411): trgm/pgvector operators aren't LEAKPROOF, so under forced RLS there's no index use (1.2-2.1 s at 20k entries). Proposed (a) a SECURITY DEFINER search function (my lean) vs (b) LEAKPROOF. Discord posted.
+- Link 14 at 638k: chunk 28 next as coordinator, stop at 850k.
