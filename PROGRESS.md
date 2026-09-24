@@ -15717,3 +15717,6 @@ backup is the only rollback that exists.
 - TikTok: blocked until the company is registered (postponed), or someone else's Business account. Chunk 20 stays parked.
 - Explained "manual replies on over-plan accounts" (A block / B allow; I lean B), his call.
 - FOUND: pacman local db /var/lib/pacman/local/cuda-13.4.2-1 lacks desc and files (only install and mtree), from the 09-23 00:55 local -Syu. Fix: sudo pacman -S cuda from the cached package. A system package, so asked him.
+
+### 07:52:23Z — Bogdan: ALLOW manual replies on over-plan accounts
+- Verified 1552588414191407195 (07:52:03Z): "Allow manual replies. It becomes an incentive to upgrade again cuz they still use the app." Handed to link 12: on api main (code only), human sends allowed in step 4c, automation and AI still refused, a test flipped on purpose citing the id, a review, then staging and prod. Discord acked.
