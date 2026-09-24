@@ -15727,3 +15727,6 @@ backup is the only rollback that exists.
 - pacman -Syu: 38 pkgs, rc 0, no pacnew. yay AUR: claude-code, claude-desktop, google-chrome and codex ok; python-hermes-agent failed in prepare() (the AUR PKGBUILD's py3.14 patch is obsolete, since upstream 2026.9.21 fixed it version-aware). Edited the local PKGBUILD to apply the patch only if _create_worker_context is absent (original saved in backup); makepkg ok, 0.21.4. 0 updates left; same package names, 44 versions changed. No reboot needed.
 - ollama restarted (idle) to 0.34.3. Removed yay src/pkg build dirs. Disk 6.5G free.
 - Failed user units predate the upgrade: xdg-desktop-portal-gtk (no display, headless) and bsajt-verify. FINDING: bogdanstamenovic.com (192.64.119.224) times out from archserver and uxonews; every bsajt-verify run since at least 09-21 timed out. Asked him.
+
+### 08:01:23Z — bsajt-verify.timer disabled (site doesn't exist yet)
+- Bogdan 1552590663504232529 (verified): the domain is bought and the site is on hold. Disabled bsajt-verify.timer and reset-failed the service; nothing deleted. Memory saved. Discord told.
