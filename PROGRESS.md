@@ -15691,3 +15691,6 @@ backup is the only rollback that exists.
 - My probes at 03:41:54Z plus my own 2 s public poll: 502 from 03:37:11 to 03:37:52 (last 200 at 03:37:09, first at 03:37:55, so 41-46 s); uxonews 307 on all 150 polls; prod pg on kinreply-prod_pgdata_pgv, StartedAt 03:37:44Z r=0; goose 28; vector 0.8.6 available; C.UTF-8 builtin; app_user 2, workspace 1; SIGNUPS true; readyz 200; knowledge 401; neighbours equal to the baseline; old volumes kinreply-{staging,prod}_pgdata present.
 - Discord posted. Milos DM 1552525590660128850 (hazard gone). Link 12 continues: PR #4 post-merge deploy (staging, then prod), and meanwhile chunk 22 code; stop at about 850k.
 - OPEN for Bogdan: delete the old pgdata volumes after a week (ask again about 2026-10-01); the pgvector pacman install; over-plan manual sends; TikTok Business status. PR 4 watcher b6fzvaowh.
+
+### 04:16:08Z — Go cache cleared for link 12's chunk 22 mutation sweep
+- Chunk 22 built on stacked branches (db chunk-22-ai-dispatch bb34218 = 00031; api da72e9a). No go process running (a pgrep -f match was my own shell). go clean -cache freed 1.2G, root 10.1G to 11.2G. Told the link to stack chunk 22's db PR on #4. The prod poller finished: only the 03:37:11-03:37:52 window was non-200.
