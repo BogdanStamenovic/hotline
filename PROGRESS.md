@@ -15757,3 +15757,8 @@ backup is the only rollback that exists.
 
 ### 08:51:36Z — Bogdan (terminal): human sends on a platform NOT in the plan are NOT allowed
 - "Not allowed as that eats up usage for no apparent reason." Human sends stay allowed only for the over-count case. Sent to link 13 (api-24) as a first item on api main (split 4c, invert the test, review, then staging and prod), before chunk 23. Discord acked.
+
+### 09:06:58Z — unsold-platform human-send refusal on PROD (b47d346-cb7de88), verified
+- Link 13: 4c split via eff.Channels.Allows (same as the connect gate); test inverted on purpose; 5 mutations killed; review of every InPlan reader, no defect. api main 51144c1 (b47d346..main is the log only). chunk-21/22 api branches rebased (43aff11, 9489da7).
+- My probes at 09:06:40Z: both stacks on b47d346-cb7de88; pg StartedAt unchanged; SIGNUPS true; readyz 200; knowledge 401; neighbours equal to the baseline.
+- Asked Bogdan: a write-time 402 instead of 202-then-SKIPPED for refused human sends (recommended yes).
