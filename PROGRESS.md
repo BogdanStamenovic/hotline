@@ -15799,3 +15799,8 @@ backup is the only rollback that exists.
 - Milos DM 12:17:51Z: merged, can't build the app screen now, "you can if you want" (recommended to Bogdan: not now, the app is his). Watcher re-armed (milos_watch10).
 - Bogdan 1552655509578846262 (verified): keep plus link; per-person bug-validity and feature-value scores that set priority. My plan to him: 00034 keeps rows past membership/workspace end (user FK to app_user, CASCADE only on account erasure); capture severity/steps/expected/actual and feature motivation NOW; defer the score tables to the home-server design; privacy (profiling: a policy line, export, erasure; Stefan for the policy).
 - Queued to link 13 after the 2 bug fixes; #7 and 00034 deploy together after Milos merges 00034.
+
+### 12:20:51Z — NUL fixes and the fixture-clock test on PROD (38c567a-15a9d4f), verified
+- My probes at 12:20:28Z: both stacks on 38c567a-15a9d4f, goose 32, pg unchanged; cv%00x -> 400, control -> 401; neighbours fine. api main baadeeb.
+- Approved the review finding: an inbound webhook NUL -> U+FFFD at ingest plus a WARNING (a permanent 500 means endless redelivery and a lost message).
+- DEPLOY HOLD: #7 is merged, so any deploy.sh applies 00033; no deploys until 00034 merges, then #7 + 00034 + feedback api + the NUL ingest fix together. Chunk 24 renumbered to 00035. Link 13 at 575k: expects to hand chunk 24's sweep, review and PR to the next link.
