@@ -15720,3 +15720,10 @@ backup is the only rollback that exists.
 
 ### 07:52:23Z — Bogdan: ALLOW manual replies on over-plan accounts
 - Verified 1552588414191407195 (07:52:03Z): "Allow manual replies. It becomes an incentive to upgrade again cuz they still use the app." Handed to link 12: on api main (code only), human sends allowed in step 4c, automation and AI still refused, a test flipped on purpose citing the id, a review, then staging and prod. Discord acked.
+
+### 07:58:55Z — Bogdan: "fix my system packages, full system upgrade": DONE
+- Verified 1552588674464747580. Backups in ~/data/sysupgrade-backup-20260924T075348Z (pacman local db 13M, /etc 3.5M, pacman -Q before/after, logs). No timeshift (needs 15.5G, had 11G; nothing boot-related changed).
+- cuda-13.4.2-1: local db lacked desc/files AND 175 files were missing on disk (/opt/cuda 2.6G of 5.2G); the 09-23 00:55 local -Syu was cut off. Moved the broken entry aside (kept in backup), then pacman -U from cache with --overwrite scoped to cuda's paths. After: pacman -Dk clean; -Qkk cuda 1366 files, 0 altered; /opt/cuda 5.3G.
+- pacman -Syu: 38 pkgs, rc 0, no pacnew. yay AUR: claude-code, claude-desktop, google-chrome and codex ok; python-hermes-agent failed in prepare() (the AUR PKGBUILD's py3.14 patch is obsolete, since upstream 2026.9.21 fixed it version-aware). Edited the local PKGBUILD to apply the patch only if _create_worker_context is absent (original saved in backup); makepkg ok, 0.21.4. 0 updates left; same package names, 44 versions changed. No reboot needed.
+- ollama restarted (idle) to 0.34.3. Removed yay src/pkg build dirs. Disk 6.5G free.
+- Failed user units predate the upgrade: xdg-desktop-portal-gtk (no display, headless) and bsajt-verify. FINDING: bogdanstamenovic.com (192.64.119.224) times out from archserver and uxonews; every bsajt-verify run since at least 09-21 timed out. Asked him.
