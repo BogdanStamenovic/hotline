@@ -15770,3 +15770,6 @@ backup is the only rollback that exists.
 - PR 6 verified: base chunk-22-ai-dispatch, cc16495, 00032 only, no attribution. api branches 21 1021526, 22 4579735, 23 c3bc437 (rebased on main 51144c1); tree clean.
 - Chunk 23: human-reply pause (default 12h), enforced at dispatch, lease, complete and send step 2c; 55 mutations, 9 real gaps fixed; review found no defect. Slip: the builder's cleanup emptied link 13's shared scratchpad; nothing committed was lost; subagents now get their own subdirs.
 - Link 13 at 481k, waiting (no 4th PR). Milos DM 1552616507349925960 about #6. Go cache cleared at idle (8.0G free). Discord posted.
+
+### 10:47:18Z — PR #4 MERGED by Milos (10:45:51Z, 20fd3ef); link 13 deploying
+- No review body. #5 auto-retargeted to main; #6 still on chunk-22-ai-dispatch. GO sent to link 13 for the #4 per-merge procedure (api merge, staging, then prod with goose 30 plus the vector and knowledge-table proofs). Discord posted.
