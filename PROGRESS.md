@@ -15668,3 +15668,8 @@ backup is the only rollback that exists.
 ### 00:20:09Z — link 12 (api-9a) item A done; pgvector install asked
 - api 9bd9a5f (ls-remote). Link corrected my brief: a description edit DOES change the generated code (comments and whitespace only). Proven by a token-stream comparison with controls. Told it to also fix the stale startZernioConnect 501 sentence.
 - The pgvector Arch package (0.8.6-1, 626 KB) is a system-wide install, so I asked Bogdan on Discord (CLAUDE.md rule), despite passwordless sudo. Link told not to install it; docker fallback if blocked.
+
+### 01:35:16Z — chunk 21: kinreply-db PR #4 open; image-swap script under repair
+- PR 4 (59b87cd, +771/-3; 00029 pgvector guard, 00030 knowledge/ai_settings/ai_state, ai_enabled DEFAULT TRUE; no attribution). The api registrations are on branch chunk-21-knowledge 81e2f45, main c88484e (prose fixes). Link caught ai_enabled under the 00028 trigger; the exclusion was extended in 00030.
+- HAZARD: after the merge, deploy.sh onto an alpine stack fails at migrate. uxonews has no deploy timer (checked), only backup timers (staging 02:27Z, prod 02:50Z daily). Told Milos (1552493541307973726) not to deploy prod between his merge and the swap. Told the link to handle backup timers during the swap and to prove backup/restore on the new image.
+- In-place hazard proven on staging data (3 corrupt indexes, no warning). pg-rebase.sh rehearsed (fingerprints identical, rollback x4, 34 s downtime locally); review found 5 defects, being fixed. Docker active (test cluster). Discord posted.
