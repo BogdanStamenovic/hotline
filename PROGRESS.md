@@ -15652,3 +15652,11 @@ backup is the only rollback that exists.
 
 ### 23:33:56Z — Go cache cleared at link 11's idle point
 - Link 11 said "go cache free" (reviewer done, /tmp/kr-mut* removed). No go process was running. go clean -cache: 5.6G down to 12K; root went from 6086M to 11991M free. Told the link "cleared".
+
+### 00:01:05Z — chunk 19 on PROD (ddd20c6-cb7de88), verified; link 11 reaped; chunk 20 parked; graph update 9 running
+- Link 11 report: chunk 19 (tier channel limits) plus the length fix (/v1 counts characters; the IG 1000-byte cap in CheckDM, per Meta's page) plus section 7 (Bogdan's yes). Review 1 found a real defect (a TikTok account left over after a downgrade filled REPLY's slot); fixed in 7116773 with InPlanTotal.
+- My probes at 23:58:36Z: api main ad2cda9 (ddd20c6..main is the log only); both stacks on ddd20c6-cb7de88; goose 28; pg StartedAt unchanged; SIGNUPS true; readyz 200; knowledge 401 with a 404 control; neighbours equal to the baseline. Link 11's slip (2 dkim-check@ sessions from a bad ssh bash -s): prod auth_session for dkim-check@ is 0 live, 4 recent.
+- Reaped: "done: api-f4" in the transcript (23:59:34Z); api main 5baa8d4 (the chunk 20 handoff); tree clean; /tmp review dirs gone; tmux killed; pid 3601041 gone.
+- Chunk 20 PARKED (TikTok Business blocked on business verification; FB skipped by the no-card decision; only chunk 41 depends on it). Chunk 21 next on a FRESH link: a prod Postgres image swap by dump and restore, which is irreversible-class. Told Bogdan the plan on Discord (proceed unless he objects; I'll tell him before the prod switch) and asked if TikTok Business is still blocked. His open question: whether over-plan accounts may send manual replies.
+- Milos DM 1552469845499580431: chunk 19 live, blank-DM live, the two suggested contract descriptions, a heads-up on the chunk 21 image swap.
+- Graph update 9: Sonnet subagent reporting to me, BUILD-LOG to be read in full.
