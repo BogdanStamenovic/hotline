@@ -15705,3 +15705,8 @@ backup is the only rollback that exists.
 - Link 12's evidence: all signups and adm creates provision REPLY/TRIALING; nothing writes the billed tier; the only path to SMART is adm SetManualTier; live, all subscriptions on both stacks are REPLY, no manual_tier. decide.go:97 CompiledEmpty runs before the enqueue.
 - My spot-check: on origin/chunk-22-ai-dispatch, 0 non-test writers of knowledge_{compilation,entry,source} (the same grep sees 18 test lines).
 - RULE FOR LATER SEEDS: chunk 25 (the first knowledge writer) must NOT deploy to prod before chunk 40, unless guarded, and no prod workspace may be set SMART or REMEMBER before chunk 40 (DMs would record KNOWLEDGE_EMPTY and supersede automation follow-ups).
+
+### 07:33:31Z — Bogdan: "stop track tracking, I don't need it anymore"; status given
+- Verified 1552583437209042975 (07:32:17Z). Backed up track.db and wake.db. PAUSED both assignments (10ee961f laptop, e400d473 GPU); not removed, because remove deletes history. Disabled and stopped track-web.service.
+- TRAP: pausing the first re-armed track-slot-0800 for the remaining assignment with "then powers the machine off". After the second pause: no pending wake tasks (the 08:00 WOL self-wake is gone too), wake sync pushed 0 / pulled 0, /sys wakealarm empty. Memory updated.
+- Status summary and the 4 open questions posted to Discord.
