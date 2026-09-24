@@ -15750,3 +15750,7 @@ backup is the only rollback that exists.
 - My probes at 08:19:07Z: both stacks on 745d878-cb7de88; pg StartedAt unchanged (prod 03:37:44Z, staging 03:01:14Z); SIGNUPS true; readyz 200, knowledge 401 with a 404 control; neighbours equal to the baseline; 745d878..64f6fc2 docs only.
 - Open with Bogdan: whether human sends are allowed on a platform the plan excludes entirely (built allowed; default stays allowed).
 - Reaped: "done: api-9a" (08:19:37Z), api main 64f6fc2, tree clean, docker inactive, tmux killed, pid 3927417 gone. Link 13 waits for graph update 10.
+
+### 08:33:32Z — link 13 spawned (tmux kr3build-13, Opus): chunk 23 stacked, then the #4/#5 deploys on merge
+- Graph update 10: 10,651 nodes / 36,904 edges; BUILD-LOG 191 nodes (read in full); 491 branch-export nodes (new files only). CAVEAT: 112 colliding IDs from 17 branch-MODIFIED files were excluded, so the graph shows main's version for those. Put into seed13. Backups 9 and 10 kept, 8 deleted. Disk 6.4G.
+- seed13: no schedule talk; chunk 23 stacked on chunk-22-ai-dispatch (migration 00032, a PR on #5); #4/#5/#6 deploys in order on merge (link 12's HANDOFF TO LINK 13); max 3 stacked db PRs, then wait; chunk 25 prod rule; the open platform-not-in-plan question.
