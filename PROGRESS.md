@@ -15859,3 +15859,7 @@ backup is the only rollback that exists.
 - 82 mutations (2 real gaps fixed); the review found no demonstrated defect. MRR: vector .953, hybrid .935, trigram .582.
 - FINDING sent to Milos (DM 1552807787468431411): trgm/pgvector operators aren't LEAKPROOF, so under forced RLS there's no index use (1.2-2.1 s at 20k entries). Proposed (a) a SECURITY DEFINER search function (my lean) vs (b) LEAKPROOF. Discord posted.
 - Link 14 at 638k: chunk 28 next as coordinator, stop at 850k.
+
+### 22:29:10Z — Milos: option (a), a SECURITY DEFINER tenant-scoped search function, with a precise spec
+- DMs 22:27:55-22:28:05Z: no workspace param (read app.workspace_id), fail closed on empty, visibility='PUBLIC' verbatim, hnsw.iterative_scan=relaxed_order plus a MATERIALIZED re-sort, STABLE, pinned search_path, REVOKE PUBLIC / GRANT kinreply_app, an owner-bypasses-RLS apply check, tenant-isolation tests (vector and trigram, unset raises, no widening), EXPLAIN showing both indexes, new timings vs the 0.3-2.1 s baseline; note the trigram GIN doesn't lead on workspace_id. "No rush, put it in the next link."
+- Spec saved (scratchpad/milos-search-fn-spec.txt) and forwarded verbatim to link 14 for its handoff. Watcher re-armed (milos_watch13).
