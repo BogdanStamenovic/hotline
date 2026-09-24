@@ -15660,3 +15660,7 @@ backup is the only rollback that exists.
 - Chunk 20 PARKED (TikTok Business blocked on business verification; FB skipped by the no-card decision; only chunk 41 depends on it). Chunk 21 next on a FRESH link: a prod Postgres image swap by dump and restore, which is irreversible-class. Told Bogdan the plan on Discord (proceed unless he objects; I'll tell him before the prod switch) and asked if TikTok Business is still blocked. His open question: whether over-plan accounts may send manual replies.
 - Milos DM 1552469845499580431: chunk 19 live, blank-DM live, the two suggested contract descriptions, a heads-up on the chunk 21 image swap.
 - Graph update 9: Sonnet subagent reporting to me, BUILD-LOG to be read in full.
+
+### 00:12:56Z — link 12 spawned (tmux kr3build-12, Opus): chunk 21
+- Graph update 9 verified: 10,106 nodes / 34,990 edges; BUILD-LOG 127 nodes (chunked, read in full to line 5543); 00028 present; backups 8 and 9 kept, 5-7 deleted; repos clean.
+- Seed12: A) prose-only openapi descriptions (PostMessageRequest.text, createAutomation/dmMessage); B) chunk 21 migrations as a PR for Milos; C) pgvector image swap by dump and restore, staging first; D) PROD HARD STOP until my GO (Bogdan told before). Chunk 20 parked. Traps from link 11 included. Pane: declaring, no trust prompt.
