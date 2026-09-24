@@ -15739,3 +15739,6 @@ backup is the only rollback that exists.
 - Verified 1552591597512949761. Mapped chunk deps for 23-39: nearly linear through 21/22/25/28; parallel links rejected (disk ~6G shared, migration-number collisions, one api repo).
 - Cutting gaps instead: graph update 10 started now (Sonnet subagent, main plus branch exports read-only), so link 13 can spawn as soon as link 12 finishes manual replies. Stacking continues (chunk 23 on the chunk-22 branch).
 - Nudged Milos about reviewing #4/#5 (standing auth; 10:05 his time). Discord posted.
+
+### 08:07:37Z — Bogdan: no speed-up, no deadline talk to agents, no parallelism
+- Verified 1552592227233046592. The meaning was "don't idle 6h waiting on Milos". Corrected link 12 (disregard "behind schedule"); removed the schedule framing from seed13; feedback memory saved. The plan is unchanged: build ahead on stacked branches.
