@@ -15776,3 +15776,8 @@ backup is the only rollback that exists.
 
 ### 10:48:44Z — PRs #5 and #6 MERGED too (10:47:38Z, 10:47:53Z); kinreply-db main 15a9d4f
 - All three merged by milosvuksan within 2 min, with no review body or comments. Told link 13 it may do one combined deploy (api 21, 22, 23 into main, each with a green make check; staging then prod to goose 32), or finish a #4-only deploy first if already underway.
+
+### 10:50:12Z — Milos's review of #4-#6 (DM 10:48:48Z)
+- He reviewed: scratch PG18 up / down-to-28 / up, the data-map gate, spot-checks; the pgvector parts are left to our runs; nothing needed changes. Merges: #4 20fd3ef, #5 fe5f253, #6 15a9d4f. He hasn't deployed; that's ours.
+- Notes passed to link 13 for the log: entry_ids has no FK (scope it in chunks 25/27/28); use the composite (workspace_id, id) FK pattern for new tables; deleting a stacked PR's base branch CLOSES the child PR (he restored #5/#6 by hand), so retarget before merge next time.
+- Milos watcher re-armed (milos_watch9).
