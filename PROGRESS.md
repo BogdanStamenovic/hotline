@@ -15821,3 +15821,9 @@ backup is the only rollback that exists.
 ### 13:46:36Z — feedback feature plus inbound NUL fix on PROD (d0c7b1b-858807f, goose 34), verified
 - My probes at 13:46:15Z: api main df578da (d0c7b1b = code); both stacks on d0c7b1b-858807f; goose 34 both; feedback 0 rows both; pg unchanged; SIGNUPS true; /v1/feedback 401 (was 404); cv%00x 400; readyz 200; neighbours equal to the baseline. Link 13 ran the staging signed-NUL probe (old 500, new 200 with U+FFFD).
 - Milos DM 1552677599371731036 (anchor d0c7b1b). Discord posted. Link 13 at ~700k: chunk 24 sweep, review, 00035 PR, then a handoff.
+
+### 13:54:45Z — chunk 24 built (PR #9, 00035); link 13 reaped; graph update 11 running
+- PR 9 verified: base main, f9580bd, 00035 only, no attribution; api branch chunk-24-ai-quota-metering 1e86e4d (predates the feedback/NUL work; must be rebased before merging). 68 mutations; review found no defect (without FOR UPDATE, 15-16 admitted against limit 5).
+- Link 13 retired at 714,954 tokens: "done: api-24" in the transcript; api main 2605d86 (handoff); tree clean; tmux killed; pid 1691641 gone; docker inactive; Go cache cleared (9.5G free).
+- Milos DM 1552679637165805589 about #9. Discord posted with the 3 open questions. Graph update 11 (Sonnet): remove stale chunk22-prefixed nodes, add only NEW chunk-24 files.
+- Next: link 14 for chunk 25 (the knowledge writer: staging only, NOT prod before chunk 40 unless guarded) plus the #9 post-merge deploy.
