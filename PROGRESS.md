@@ -15754,3 +15754,6 @@ backup is the only rollback that exists.
 ### 08:33:32Z — link 13 spawned (tmux kr3build-13, Opus): chunk 23 stacked, then the #4/#5 deploys on merge
 - Graph update 10: 10,651 nodes / 36,904 edges; BUILD-LOG 191 nodes (read in full); 491 branch-export nodes (new files only). CAVEAT: 112 colliding IDs from 17 branch-MODIFIED files were excluded, so the graph shows main's version for those. Put into seed13. Backups 9 and 10 kept, 8 deleted. Disk 6.4G.
 - seed13: no schedule talk; chunk 23 stacked on chunk-22-ai-dispatch (migration 00032, a PR on #5); #4/#5/#6 deploys in order on merge (link 12's HANDOFF TO LINK 13); max 3 stacked db PRs, then wait; chunk 25 prod rule; the open platform-not-in-plan question.
+
+### 08:51:36Z — Bogdan (terminal): human sends on a platform NOT in the plan are NOT allowed
+- "Not allowed as that eats up usage for no apparent reason." Human sends stay allowed only for the over-count case. Sent to link 13 (api-24) as a first item on api main (split 4c, invert the test, review, then staging and prod), before chunk 23. Discord acked.
