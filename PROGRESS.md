@@ -15685,3 +15685,9 @@ backup is the only rollback that exists.
 
 ### 03:35:27Z — GO PROD sent to link 12 (pgvector swap on prod)
 - 03:35:06Z: no message from Bogdan in #agent-hotline-80 since the 03:07:49Z heads-up. Link 12's prod step 0 dry-run passed (transcript). Pane showed a dimmed "GO PROD" prompt suggestion again (\e[2m), not input. Sent GO via hotline at 03:35:21Z. Independent 2 s poller on prod readyz and uxonews running (scratchpad/prodpoll.log).
+
+### 03:42:45Z — PROD on pgvector (verified); link 12 continues to PR #4 deploy and chunk 22
+- Link 12: prod dump kinreply-20260924T033711Z.sql.gz proven before the switch; 51 s api-stop-to-readyz; 31/32 tables identical (job +1 = worker startup); backup@prod Result=success plus verify-backup PASSED; signup 202 to dkim-check@ only, sessions revoked. api df46f00, lifecycle bebceb2.
+- My probes at 03:41:54Z plus my own 2 s public poll: 502 from 03:37:11 to 03:37:52 (last 200 at 03:37:09, first at 03:37:55, so 41-46 s); uxonews 307 on all 150 polls; prod pg on kinreply-prod_pgdata_pgv, StartedAt 03:37:44Z r=0; goose 28; vector 0.8.6 available; C.UTF-8 builtin; app_user 2, workspace 1; SIGNUPS true; readyz 200; knowledge 401; neighbours equal to the baseline; old volumes kinreply-{staging,prod}_pgdata present.
+- Discord posted. Milos DM 1552525590660128850 (hazard gone). Link 12 continues: PR #4 post-merge deploy (staging, then prod), and meanwhile chunk 22 code; stop at about 850k.
+- OPEN for Bogdan: delete the old pgdata volumes after a week (ask again about 2026-10-01); the pgvector pacman install; over-plan manual sends; TikTok Business status. PR 4 watcher b6fzvaowh.
