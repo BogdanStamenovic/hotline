@@ -15773,3 +15773,6 @@ backup is the only rollback that exists.
 
 ### 10:47:18Z — PR #4 MERGED by Milos (10:45:51Z, 20fd3ef); link 13 deploying
 - No review body. #5 auto-retargeted to main; #6 still on chunk-22-ai-dispatch. GO sent to link 13 for the #4 per-merge procedure (api merge, staging, then prod with goose 30 plus the vector and knowledge-table proofs). Discord posted.
+
+### 10:48:44Z — PRs #5 and #6 MERGED too (10:47:38Z, 10:47:53Z); kinreply-db main 15a9d4f
+- All three merged by milosvuksan within 2 min, with no review body or comments. Told link 13 it may do one combined deploy (api 21, 22, 23 into main, each with a green make check; staging then prod to goose 32), or finish a #4-only deploy first if already underway.
