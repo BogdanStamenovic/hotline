@@ -15817,3 +15817,7 @@ backup is the only rollback that exists.
 ### 13:33:24Z — PR #8 MERGED (13:23:18Z, 858807f); deploy hold lifted; Milos built the app screens
 - Milos DM 13:31:50Z: re-ran #8 locally, all fine; hasn't deployed; feedback screens on kinreply-app main 5abd22d (against 1.3.0, CI green); he'll move the contract anchor once the api is on main. Offered to write the privacy-policy profiling line (needs Bogdan's description of the scores). Notes: derived-data retention, off-box copies must be deleted, and kinreply_readonly can't see feedback (the reader needs its own function or role, i.e. a migration).
 - GO sent to link 13 for the combined deploy (inbound-nul plus feedback into main; staging then prod to goose 34). Discord: relayed the 4 points; point 1 needs Bogdan. Watcher re-armed (milos_watch11).
+
+### 13:46:36Z — feedback feature plus inbound NUL fix on PROD (d0c7b1b-858807f, goose 34), verified
+- My probes at 13:46:15Z: api main df578da (d0c7b1b = code); both stacks on d0c7b1b-858807f; goose 34 both; feedback 0 rows both; pg unchanged; SIGNUPS true; /v1/feedback 401 (was 404); cv%00x 400; readyz 200; neighbours equal to the baseline. Link 13 ran the staging signed-NUL probe (old 500, new 200 with U+FFFD).
+- Milos DM 1552677599371731036 (anchor d0c7b1b). Discord posted. Link 13 at ~700k: chunk 24 sweep, review, 00035 PR, then a handoff.
