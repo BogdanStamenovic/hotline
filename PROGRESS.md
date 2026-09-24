@@ -15837,3 +15837,6 @@ backup is the only rollback that exists.
 - My probes at 16:24Z: both stacks on b048a3d-858807f; env prod=false, staging=true; the prod boot line "knowledge writes: disabled ... answers 501"; prod goose 34, knowledge_source 0, knowledge_entry 0; pg unchanged. Link 14's signed-in prod probe: 4 writes -> 501, reads 200; staging control 402/422/404/404.
 - TRAP saved to memory: agent cd is a zoxide fuzzy wrapper (a reviewer landed in the real api tree). Added to the seed traps.
 - Link 14 on chunk 26 (uploads); PR #9 still unreviewed. Discord posted.
+
+### 18:11:08Z — PR #9 MERGED by Milos (18:10:23Z, 30db6b4)
+- No review body. GO to link 14 for chunk 24's post-merge deploy at a chunk-26 step boundary (goose 35; re-prove the knowledge 501 on prod).
