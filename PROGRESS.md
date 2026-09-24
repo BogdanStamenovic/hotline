@@ -15769,4 +15769,4 @@ backup is the only rollback that exists.
 ### 09:43:42Z — chunk 23 built; PR #6 stacked (3 deep); chain WAITS for Milos
 - PR 6 verified: base chunk-22-ai-dispatch, cc16495, 00032 only, no attribution. api branches 21 1021526, 22 4579735, 23 c3bc437 (rebased on main 51144c1); tree clean.
 - Chunk 23: human-reply pause (default 12h), enforced at dispatch, lease, complete and send step 2c; 55 mutations, 9 real gaps fixed; review found no defect. Slip: the builder's cleanup emptied link 13's shared scratchpad; nothing committed was lost; subagents now get their own subdirs.
-- Link 13 at 481k, waiting (no 4th PR). Milos DM 1552613009773723779 about #6. Go cache cleared at idle (8.0G free). Discord posted.
+- Link 13 at 481k, waiting (no 4th PR). Milos DM 1552616507349925960 about #6. Go cache cleared at idle (8.0G free). Discord posted.
