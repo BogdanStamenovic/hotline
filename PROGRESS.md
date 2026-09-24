@@ -15730,3 +15730,7 @@ backup is the only rollback that exists.
 
 ### 08:01:23Z — bsajt-verify.timer disabled (site doesn't exist yet)
 - Bogdan 1552590663504232529 (verified): the domain is bought and the site is on hold. Disabled bsajt-verify.timer and reset-failed the service; nothing deleted. Memory saved. Discord told.
+
+### 08:02:56Z — Bogdan asked for the next-chunk ETA and the last Milos contact
+- Verified 1552591009978777663. Answered: Milos's last message 09-23 22:37:01Z; mine since, unanswered: 01:35:04Z (PR 4), 03:42:25Z (swap), 05:35:46Z (PR 5); his last GitHub action was the PR 3 merge at 21:31:32Z.
+- Plan given: chunk 23 does not wait for Milos (stacked on the chunk-22 branch, like 22). Link 12 finishes manual replies (~30-60 min), then retires; a fresh link 13 does chunk 23 plus the #4/#5 post-merge deploys; graph refresh first. ETA about 1h. Risk: 3-deep stacked PRs.
