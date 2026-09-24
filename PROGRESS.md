@@ -15840,3 +15840,7 @@ backup is the only rollback that exists.
 
 ### 18:11:08Z — PR #9 MERGED by Milos (18:10:23Z, 30db6b4)
 - No review body. GO to link 14 for chunk 24's post-merge deploy at a chunk-26 step boundary (goose 35; re-prove the knowledge 501 on prod).
+
+### 18:12:11Z — Milos's review of #9 plus the app contract anchor moved
+- DM 18:11:25Z: the kinreply-app anchor is at d0c7b1b (1.3.0, 66 ops; commit 8361fa8), only the feedback additions. #9 checked locally (34 then 35: data map, down/up, support counters, the cross-tenant sum, EXECUTE only kinreply_app, RLS guard, the quota index predicate matches). Not deployed by him.
+- Note passed to link 14: ai_cost_for_period is exact only for the current month (workspace_usage resets); document it in Go now and via COMMENT ON FUNCTION in the next migration; last month's spend must be snapshotted or taken from llm-subsys's ledger (chunks 32/33). Watcher re-armed (milos_watch12).
