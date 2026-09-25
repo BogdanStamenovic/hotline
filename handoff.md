@@ -15,7 +15,14 @@
 >   Evidence and numbers: memory `kinreply-reply-quality-findings`. NOT YET written into the docs
 >   repo: record them in README §2.6 / 03 Open questions at a chunk boundary (link 18 owns docs now).
 >
-> **Luna trial:** on pairs that count defects (31–32): Luna 6, Sonnet 0. As a JUDGE on the model
+> - **Later on 09-25 (Discord, verified):** a **Jev** contradiction check (via OpenRouter `POST /api/alpha/decisions`,
+>   pin `typesafe/jev-1.13-20260917`; KinReply key `KINREPLY_OPENROUTER_API_KEY` in prod.env, $5 credit) sits after
+>   the code checks. **Option (a):** Scaleway stays the backup, and **OpenRouter qwen3.8-27b pinned to Parasail** is a THIRD rung.
+>   The number check must accept numbers the CUSTOMER wrote. All of this goes to chunk 38. Evidence: memory `kinreply-reply-quality-findings`.
+> - Chunk 33 done (link 18, api c43d74d / llm-subsys d4e8d3c / docs 7f82949). **Link 19 (`api-b4`, tmux `kr3build-19`) is on chunk 34**;
+>   its TEI weights go to /mnt/offload/kinreply-tei because root has ~4 GB free.
+>
+> **Luna trial:** on pairs that count defects (31–33): Luna 10, Sonnet 2. Earlier line kept for history:: Luna 6, Sonnet 0. As a JUDGE on the model
 > bench, Luna over-flagged and Sonnet was closer to my hand read; both missed things a regex caught.
 
 > ## (superseded) 2026-09-25 ~12:10Z — link 17 (`api-2a`) on chunk 32; chunk 31 done
