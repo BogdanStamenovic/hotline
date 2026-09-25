@@ -15895,3 +15895,8 @@ backup is the only rollback that exists.
 
 ### 05:37:23Z — Codex logged in and verified
 - `codex login status`: "Logged in using ChatGPT" (05:37Z). Test: codex exec -s read-only -m gpt-5.6-luna returned "codex ok" (2,862 tokens). tmux codex-login closed. Discord told.
+
+### 05:41:48Z — quota-watch built and running (Bogdan's request 1552917110349631632)
+- ~/data/quota-watch (local git 54e3d7e, not pushed): a user service; polls claude tmux panes every 60s; the limit = a line starting with "Paused · usage limit" or "You've hit your limit" (strings from the claude 2.1.281 binary) in the last 8 lines, no quotes, 2 consecutive passes. Pings once via hotline-say; probes claude -p every 5 min; on success types continue+Enter into still-paused panes and reports.
+- Found: Claude Code auto-continues only when the reset is <24h out, hence the need.
+- Bug found in my own test: v1 matched any "usage limit" text and typed "continue" into hotline:0.0 (this session). Tightened, and re-tested on fake panes (a detect/ignore/quote/resume matrix passes). The real probe was tested once (usage available True, 5s).
