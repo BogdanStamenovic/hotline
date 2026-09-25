@@ -1,3 +1,32 @@
+> ## CURRENT 2026-09-25 ~11:20Z — chunks 28–30 LIVE on prod; link 16 (`api-63`) on chunk 31
+>
+> **Supersedes the 07:40Z banner directly below.** Milos reviewed and merged kinreply-db PRs
+> **#10 → #11 → #12 in that order** (10:18–10:42Z). Link 15 deployed `c9ee42d-89cd55d` to staging
+> then prod: **goose 38**, Postgres never restarted, prod still REPLY-tier with no AI so none of
+> the new machinery fires on real traffic. **Zero PRs open.** api main `101dca3`, kinreply-db
+> main `89cd55d`, lifecycle main `d2d5b70`, all verified by `ls-remote`.
+>
+> **Prod signup is OPEN, legitimately** — "prod key stored, fingerprint matches" is in the build
+> log at line 2403 (fingerprint `33a038085cd4`) and precedes the first "signup open" entry. The
+> chunk-4 precondition held. Do not "fix" it.
+>
+> **Link 16 (`api-63`, tmux `kr3build-16`, Opus 5.5)** is on **chunk 31, the llm-subsys scaffold**
+> — unsplittable, started on a full window on purpose. Its dependency (chunk 28's lease bundle
+> v2) is on main.
+>
+> **Luna trial after 2 chunks: Luna 4 real defects, Sonnet 1** (Luna also found that one). Both
+> times the extra defect was Luna-only, both at HIGH effort — so not yet a clean model comparison.
+> Links now name the effort in every pair and log only verified findings. `luna report`.
+>
+> **Graph:** `graphify update .` refreshes CODE with no key/LLM (13,076 nodes at 11:15Z).
+> `graphify . --update` (the full extract) needs an API key for docs and FAILS headless — use
+> `update`. The doc half is from 05:31Z.
+>
+> **Archserver had 3 DNS failures + a real network outage (01:13–01:35Z) this week.** A `000`
+> from a neighbour check is probably this box, not the site — confirm from the host
+> (`ssh uxonews` + `--resolve ...:127.0.0.1`) before calling an outage. Flagged to Bogdan; making
+> a public resolver primary is his call.
+
 > ## CURRENT 2026-09-25 ~07:40Z — link 15 on chunk 29; GPT-6 Luna subagent trial started
 >
 > **This banner replaces the 09-23 one below it, which said "chunk 6, parked" and was two days
