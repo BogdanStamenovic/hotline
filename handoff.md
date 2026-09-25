@@ -1,3 +1,37 @@
+> ## CURRENT 2026-09-25 ~07:40Z — link 15 on chunk 29; GPT-6 Luna subagent trial started
+>
+> **This banner replaces the 09-23 one below it, which said "chunk 6, parked" and was two days
+> stale** — the operator sessions between 09-23 and 09-25 ran links 4 through 15 without
+> updating the top of this file. **For what happened in those two days, the build log is the
+> record** (`api/BUILD-LOG-PHASE3.md`, entries from link 4 onward), not this banner. I did not
+> see those sessions and I am not reconstructing them here.
+>
+> **Verified by me this session:**
+> - **Link 15 (`api-e1`)** is building chunk 29 (handoff application), stacked on
+>   `chunk-28-bundle-v2`. Context ~470k of an 850k stop line at its last report.
+> - **Two kinreply-db PRs are OPEN, waiting on Milos, both unmerged:** **#10** (00036,
+>   `ai_generation`) and **#11** (00037, SECURITY DEFINER knowledge search). **#10 must merge
+>   before #11** — goose refuses a lower version afterwards. A third open PR is the stated
+>   limit; chunk 29 may create it.
+> - All four hosts healthy: `api.kinreply.rs` 200, staging 200, `uxonews.com` 307/6,
+>   `dds.uxonews.com` 200/92517.
+> - **Disk freed: 6.6 GB → 13 GB free (91% → 82%).** Deleted the currently-installed-version
+>   pacman cache files and the AUR build dirs; **kept all 242 old-version files, which are the
+>   only package rollback.** See memory `pacman-sc-deletes-the-rollback`.
+>
+> **THE LUNA TRIAL (Bogdan, 07:18Z, `1552942316669509653`).** Subagents move from Sonnet 5 to
+> Codex **`gpt-6-luna`** — NOT `gpt-5.6-luna`, which the 05:37Z setup used by mistake. Every
+> job goes through `~/.claude/bin/luna` and needs a `luna verdict`; **the adversarial reviewer
+> runs Luna AND Sonnet on the same diff** and is logged with `luna pair`, because a Luna-only
+> review that finds nothing is indistinguishable from one that missed a defect. Protocol:
+> `docs/OPERATING-RULES.md` (`6701d45`). Log: `~/data/kinreply/.model-trial/runs.jsonl`.
+> `luna report` is what he reads to decide. **Link 15 has been asked to update the build
+> mandate's "Spawn Sonnet" line** so the trial reaches links after it — check it landed.
+>
+> **Claude weekly usage was at 83% on 09-25 05:31Z** (resets Sep 28 06:00Z). His instruction:
+> do not slow down, he has a banked reset. `quota-watch` (~/data/quota-watch) resumes panes
+> that hit the limit.
+
 > ## RESTART 2026-09-23 ~01:00 CEST — upgrading to Opus 5.5, chain PARKED at the chunk 6 checkpoint
 >
 > **Nothing is broken. The chain is parked on purpose and Bogdan is registering accounts.**
