@@ -15882,3 +15882,7 @@ backup is the only rollback that exists.
 ### 05:13:16Z — network outage killed graph update 12; ~3.5h idle; retry running
 - NetworkManager: CONNECTED_SITE 01:16:48Z, CONNECTED_GLOBAL 01:35:21Z (hotlined DNS failures from ~01:13Z). Graph update 12 and its BUILD-LOG sub-extractor died with ENOTFOUND. Their failure notifications only reached this session at ~05:10Z, together with Bogdan's "how is it coming along" (his iPhone ssh at 05:10Z), so there was no link running from 01:00Z to ~05:40Z.
 - graph.json was left PARTIAL (11,102 nodes: chunk24 removed, nothing merged); bak-pre-update-12 intact. The retry subagent restores the backup first and restores it again if the network fails. Prod, uxonews and dds fine at 05:12Z. Discord posted.
+
+### 05:31:04Z — graph update 12 (retry) done; link 15 spawned (tmux kr3build-15, Opus)
+- Verified: 12,755 nodes / 44,117 edges; chunk24-prefixed 0; chunk28-prefixed 128; BUILD-LOG 408 nodes (4 subagents, non-overlapping ranges covering all 9,270 lines); Service.Usage restored (now in aiusage.go); 17 collisions, main kept. One backup (pre-update-12). Community labels heuristic.
+- seed15: FIRST Milos's search function (his spec verbatim in link 14's handoff); B) the #10 post-merge deploy; C) chunk 29 onward; D) the switch rule. Spawned 05:30:50Z.
