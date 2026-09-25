@@ -15886,3 +15886,6 @@ backup is the only rollback that exists.
 ### 05:31:04Z — graph update 12 (retry) done; link 15 spawned (tmux kr3build-15, Opus)
 - Verified: 12,755 nodes / 44,117 edges; chunk24-prefixed 0; chunk28-prefixed 128; BUILD-LOG 408 nodes (4 subagents, non-overlapping ranges covering all 9,270 lines); Service.Usage restored (now in aiusage.go); 17 collisions, main kept. One backup (pre-update-12). Community labels heuristic.
 - seed15: FIRST Milos's search function (his spec verbatim in link 14's handoff); B) the #10 post-merge deploy; C) chunk 29 onward; D) the switch rule. Spawned 05:30:50Z.
+
+### 05:31:24Z — WEEKLY USAGE LIMIT at 83% (resets Sep 28 08:00 Belgrade = 06:00Z)
+- Seen in link 15's pane after spawn. At today's burn (chunks 21-28 in about 24h) the remaining 17% may run out before the reset; a hard stop would halt every agent, the operator included. Asked Bogdan: A) continue, B) finish link 15's search function then pause until the reset (my recommendation; the default after ~1h with no answer), C) he adds usage or upgrades (money).
