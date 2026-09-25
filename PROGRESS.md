@@ -15872,3 +15872,9 @@ backup is the only rollback that exists.
 ### 00:36:20Z — chunk 28 built; kinreply-db PR #10 (00036) open
 - Verified PR 10: base main, c077911, 00036 only, no attribution. api chunk-28-bundle-v2 566d304. 124 mutations; review fixed a defect (malformed result on an EXPIRED job accepted); lease probes now need bundleVersion 2.
 - Milos DM 1552841109993029753. The RLIMIT_CORE=0 builder is running. Link 14 at ~715k: a handoff next. Discord posted.
+
+### 01:00:53Z — core-dump fix on PROD (2dfe6b2-30db6b4); link 14 reaped
+- My probes at 01:00:14Z: api main 32e5ffa, tree clean; prod api and worker on 2dfe6b2-30db6b4; pg unchanged; the worker logs the limited pdftotext -v; neighbours fine. Deleted the 14 leftover root-owned pdf/bash cores (4 chrome cores from 17:26Z remain, not ours).
+- Reaped: "done: api-51"; tmux killed; pid 2170099 gone; docker inactive; Go cache cleared (7.9G free).
+- Link 14 total: chunk 24 deploy; chunks 25/26/27 on prod behind the switch; chunk 28 PR #10; the env-leak and core fixes.
+- Next: graph update 12, then link 15 (FIRST Milos's search function, then the #10 deploy on merge, then chunk 29).
