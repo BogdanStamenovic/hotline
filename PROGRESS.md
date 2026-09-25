@@ -15863,3 +15863,8 @@ backup is the only rollback that exists.
 ### 22:29:10Z — Milos: option (a), a SECURITY DEFINER tenant-scoped search function, with a precise spec
 - DMs 22:27:55-22:28:05Z: no workspace param (read app.workspace_id), fail closed on empty, visibility='PUBLIC' verbatim, hnsw.iterative_scan=relaxed_order plus a MATERIALIZED re-sort, STABLE, pinned search_path, REVOKE PUBLIC / GRANT kinreply_app, an owner-bypasses-RLS apply check, tenant-isolation tests (vector and trigram, unset raises, no widening), EXPLAIN showing both indexes, new timings vs the 0.3-2.1 s baseline; note the trigram GIN doesn't lead on workspace_id. "No rush, put it in the next link."
 - Spec saved (scratchpad/milos-search-fn-spec.txt) and forwarded verbatim to link 14 for its handoff. Watcher re-armed (milos_watch13).
+
+### 00:29:46Z — disk leak found: test core dumps (1.1G); deleted; a core-limit fix for pdftotext requested
+- The post-clear baseline had dropped 9.5G to 6.6G. /var/lib/systemd/coredump held 1.1G: 250 cores of pdftotext SIGABRT (4.5MB) and bash SIGSEGV from chunk 26/28 PDF confinement tests on every make check. Deleted them (now 9.5M); root 7.5G.
+- Prod angle: a killed pdftotext could dump seller document contents. uxonews: core_pattern apport, shell ulimit -c 0, container Ulimits [], 127G free, so defense in depth, not a live leak. Asked link 14 to set RLIMIT_CORE=0 on the child plus a test (or hand it on).
+- Chunk 28: the review found an expired-job malformed-result defect (fixed); the final suite, push and PR #10 pending.
