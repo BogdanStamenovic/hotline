@@ -15878,3 +15878,7 @@ backup is the only rollback that exists.
 - Reaped: "done: api-51"; tmux killed; pid 2170099 gone; docker inactive; Go cache cleared (7.9G free).
 - Link 14 total: chunk 24 deploy; chunks 25/26/27 on prod behind the switch; chunk 28 PR #10; the env-leak and core fixes.
 - Next: graph update 12, then link 15 (FIRST Milos's search function, then the #10 deploy on merge, then chunk 29).
+
+### 05:13:16Z — network outage killed graph update 12; ~3.5h idle; retry running
+- NetworkManager: CONNECTED_SITE 01:16:48Z, CONNECTED_GLOBAL 01:35:21Z (hotlined DNS failures from ~01:13Z). Graph update 12 and its BUILD-LOG sub-extractor died with ENOTFOUND. Their failure notifications only reached this session at ~05:10Z, together with Bogdan's "how is it coming along" (his iPhone ssh at 05:10Z), so there was no link running from 01:00Z to ~05:40Z.
+- graph.json was left PARTIAL (11,102 nodes: chunk24 removed, nothing merged); bak-pre-update-12 intact. The retry subagent restores the backup first and restores it again if the network fails. Prod, uxonews and dds fine at 05:12Z. Discord posted.
