@@ -15889,3 +15889,6 @@ backup is the only rollback that exists.
 
 ### 05:31:24Z — WEEKLY USAGE LIMIT at 83% (resets Sep 28 08:00 Belgrade = 06:00Z)
 - Seen in link 15's pane after spawn. At today's burn (chunks 21-28 in about 24h) the remaining 17% may run out before the reset; a hard stop would halt every agent, the operator included. Asked Bogdan: A) continue, B) finish link 15's search function then pause until the reset (my recommendation; the default after ~1h with no answer), C) he adds usage or upgrades (money).
+
+### 05:34:48Z — Bogdan: don't slow down (banked reset); use Codex models as subagents; log Codex in
+- Verified 1552916053565120583. Stopped the 1h default-B timer. codex 0.156.1 already installed, not logged in; started `codex login --device-auth` in tmux codex-login; sent him the link and code (expires ~05:52Z). A watcher is polling `codex login status`. Memory saved: Codex only as subagents, compare against the Sonnet baseline first.
