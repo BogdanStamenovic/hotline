@@ -19,8 +19,12 @@
 >   pin `typesafe/jev-1.13-20260917`; KinReply key `KINREPLY_OPENROUTER_API_KEY` in prod.env, $5 credit) sits after
 >   the code checks. **Option (a):** Scaleway stays the backup, and **OpenRouter qwen3.8-27b pinned to Parasail** is a THIRD rung.
 >   The number check must accept numbers the CUSTOMER wrote. All of this goes to chunk 38. Evidence: memory `kinreply-reply-quality-findings`.
-> - Chunk 33 done (link 18, api c43d74d / llm-subsys d4e8d3c / docs 7f82949). **Link 19 (`api-b4`, tmux `kr3build-19`) is on chunk 34**;
->   its TEI weights go to /mnt/offload/kinreply-tei because root has ~4 GB free.
+> - Chunks 33 + 34 done. At the 34 boundary: api `eb69cd9`, llm-subsys `b985ea7`, lifecycle `56d6305`, docs `23ae0b1`.
+>   **Link 20 (tmux `kr3build-20`, seed `seed20.txt`) is on chunk 35**: measure bge-m3 ON UXONEWS (the archserver numbers
+>   passed Bogdan's gate with thin margins). It's a checkpoint only if bge-m3 misses a limit there.
+> - **Open with Bogdan:** activate qwen3.5-flash in the Frankfurt workspace `ws-snvh5hyvtupii1ys` (403 AccessDenied.Unpurchased).
+>   Its key is on the laptop at `~/keys/qwenclou-eu`, endpoint `https://ws-snvh5hyvtupii1ys.eu-central-1.maas.aliyuncs.com/compatible-mode/v1`.
+>   Then run the short Frankfurt check; the switch to 3.5-flash is recommended but NOT yet decided.
 >
 > **Luna trial:** on pairs that count defects (31–33): Luna 10, Sonnet 2. Earlier line kept for history:: Luna 6, Sonnet 0. As a JUDGE on the model
 > bench, Luna over-flagged and Sonnet was closer to my hand read; both missed things a regex caught.
