@@ -1,4 +1,24 @@
-> ## CURRENT 2026-09-25 ~12:10Z — link 17 (`api-2a`) on chunk 32; chunk 31 done
+> ## CURRENT 2026-09-25 ~16:16Z — link 18 (tmux `kr3build-18`) on chunk 33; chunk 32 done
+>
+> **Supersedes the banner below.** **Chunks 1–32 done**; 28–30 live on prod (goose 38); 31–32 are
+> llm-subsys code, not deployed until chunk 40. Heads verified against origin at the 32 boundary:
+> api `19d6f09`, llm-subsys `e416029`, lifecycle `c362944`, docs `8d779d4` (branch phase1-api-spec),
+> kinreply-db `89cd55d`. Seed for link 18: session scratchpad `seed18.txt`.
+>
+> **BOGDAN'S DECISIONS TODAY (09-25), all verified as typed by him in this terminal:**
+> - Backup provider **Scaleway**, backup model **`qwen3.8-27b`** (key `KINREPLY_SCALEWAY_API_KEY`
+>   in prod.env, quota live after his card). Primary qwen3.7-flash stays **thinking OFF**.
+> - **APPROVED for chunks 36/38/39 seeds:** (1) Latin→Cyrillic transliteration in CODE when the
+>   customer writes Cyrillic; (2) code checks every price/total/delivery claim against the catalogue
+>   (items named, discount, 6.000 threshold, paid-vs-free delivery); (3) on a failed check or bad
+>   output, regenerate ONCE on qwen3.8-27b, re-check, then hand off. Same-model second pass REJECTED.
+>   Evidence and numbers: memory `kinreply-reply-quality-findings`. NOT YET written into the docs
+>   repo: record them in README §2.6 / 03 Open questions at a chunk boundary (link 18 owns docs now).
+>
+> **Luna trial:** on pairs that count defects (31–32): Luna 6, Sonnet 0. As a JUDGE on the model
+> bench, Luna over-flagged and Sonnet was closer to my hand read; both missed things a regex caught.
+
+> ## (superseded) 2026-09-25 ~12:10Z — link 17 (`api-2a`) on chunk 32; chunk 31 done
 >
 > **Supersedes the 11:20Z banner below.** **Chunks 1–31 done**; 28–30 live on prod (goose 38).
 > **Link 17 (`api-2a`, tmux `kr3build-17`)** is on **chunk 32, providers and failover**.
