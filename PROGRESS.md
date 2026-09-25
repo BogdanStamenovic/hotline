@@ -15892,3 +15892,6 @@ backup is the only rollback that exists.
 
 ### 05:34:48Z — Bogdan: don't slow down (banked reset); use Codex models as subagents; log Codex in
 - Verified 1552916053565120583. Stopped the 1h default-B timer. codex 0.156.1 already installed, not logged in; started `codex login --device-auth` in tmux codex-login; sent him the link and code (expires ~05:52Z). A watcher is polling `codex login status`. Memory saved: Codex only as subagents, compare against the Sonnet baseline first.
+
+### 05:37:23Z — Codex logged in and verified
+- `codex login status`: "Logged in using ChatGPT" (05:37Z). Test: codex exec -s read-only -m gpt-5.6-luna returned "codex ok" (2,862 tokens). tmux codex-login closed. Discord told.
