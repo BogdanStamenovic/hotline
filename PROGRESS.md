@@ -15868,3 +15868,7 @@ backup is the only rollback that exists.
 - The post-clear baseline had dropped 9.5G to 6.6G. /var/lib/systemd/coredump held 1.1G: 250 cores of pdftotext SIGABRT (4.5MB) and bash SIGSEGV from chunk 26/28 PDF confinement tests on every make check. Deleted them (now 9.5M); root 7.5G.
 - Prod angle: a killed pdftotext could dump seller document contents. uxonews: core_pattern apport, shell ulimit -c 0, container Ulimits [], 127G free, so defense in depth, not a live leak. Asked link 14 to set RLIMIT_CORE=0 on the child plus a test (or hand it on).
 - Chunk 28: the review found an expired-job malformed-result defect (fixed); the final suite, push and PR #10 pending.
+
+### 00:36:20Z — chunk 28 built; kinreply-db PR #10 (00036) open
+- Verified PR 10: base main, c077911, 00036 only, no attribution. api chunk-28-bundle-v2 566d304. 124 mutations; review fixed a defect (malformed result on an EXPIRED job accepted); lease probes now need bundleVersion 2.
+- Milos DM 1552841109993029753. The RLIMIT_CORE=0 builder is running. Link 14 at ~715k: a handoff next. Discord posted.
