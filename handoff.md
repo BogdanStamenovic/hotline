@@ -1,3 +1,23 @@
+> ## CURRENT 2026-09-25 ~12:10Z — link 17 (`api-2a`) on chunk 32; chunk 31 done
+>
+> **Supersedes the 11:20Z banner below.** **Chunks 1–31 done**; 28–30 live on prod (goose 38).
+> **Link 17 (`api-2a`, tmux `kr3build-17`)** is on **chunk 32, providers and failover**.
+> llm-subsys main `28cd1f7`, api main `a5ac0e2`, both clean, zero PRs open.
+>
+> **Z.ai IS SET ASIDE BY BOGDAN'S DECISION (09-23).** `KINREPLY_ZAI_API_KEY` is EMPTY ON PURPOSE.
+> Do not call it a blocker. I did, told him to create a key, and had to correct it — see memory
+> `an-empty-value-can-be-a-decision`. The failover gate criterion stays NOT PASSED until he names
+> a backup provider; that is his open question, not urgent.
+>
+> **Luna trial, on DEFECTS (what the reviewer is for): Luna ~6, Sonnet 1** (Luna also found that
+> one). My recommendation to him: Luna primary now, keep Sonnet as second witness through ~chunk
+> 34, then drop it if Luna still hasn't missed a defect Sonnet caught. He has not answered.
+> `luna pair` now takes `--luna-defects/--sonnet-defects`; `luna report` shows them and dedupes a
+> re-logged chunk (it was double-counting chunk 31 before).
+>
+> **THE OPERATOR IS AT ~80% CONTEXT** and should hand off at the next quiet point. Everything the
+> next operator needs is in this banner, the build log, and `docs/OPERATING-RULES.md`.
+
 > ## CURRENT 2026-09-25 ~11:20Z — chunks 28–30 LIVE on prod; link 16 (`api-63`) on chunk 31
 >
 > **Supersedes the 07:40Z banner directly below.** Milos reviewed and merged kinreply-db PRs
