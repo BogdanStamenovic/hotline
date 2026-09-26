@@ -28,6 +28,13 @@
 >   TWO PARALLEL LINES: link 21 (`kr3build-21`, api-83) on 35B, running batch-2 on uxonews by day. **Link 22 (`kr3build-22`,
 >   seed22) on chunk 36**, in worktrees `~/data/kinreply-wt/36/*` with GOCACHE/TMPDIR on /mnt/offload. Both append the api
 >   build log with `pull --rebase`. Line 2 continues 36→37→38; 39 needs 35+38.
+> - **ROSTER 09-26 ~16:50Z (all Opus):** chain line 1 `kr3build-21` api-83 (35B, batch-2/cpus2/batch-1 re-measure armed on uxonews for
+>   00:00Z); chain line 2 `kr3build-22` api-f4 (36, per-session AI disclosure BR-25/26/34/35); fix lines `kr3fix-1` api-54 (BR-01/02/45/43),
+>   `kr3fix-2` api-dd (BR-15/16/27/17/18), `kr3fix-3` api-7f (BR-36/37/09/11/19-22/24/39/40), each in `~/data/kinreply-wt/fixN`;
+>   managers `legal-mgr` kinreply-legal-1d (register ~/data/kinreply-legal/register/build-requirements.md, BR-01..46, routed) and
+>   `site-mgr` kinreply-site-fa (skills → 5-10 mockups). GOCACHE is user-wide /mnt/offload/go-cache; offload grown to 53G.
+>   Asked Milos about the prod magic-link 404 (api.kinreply.rs/auth/callback). Pending with Bogdan: BR-23 purge, a migration manager,
+>   GitHub settings, BR-42 staging keys.
 > - **Open with Bogdan:** activate qwen3.5-flash in the Frankfurt workspace `ws-snvh5hyvtupii1ys` (403 AccessDenied.Unpurchased).
 >   Its key is on the laptop at `~/keys/qwenclou-eu`, endpoint `https://ws-snvh5hyvtupii1ys.eu-central-1.maas.aliyuncs.com/compatible-mode/v1`.
 >   Then run the short Frankfurt check; the switch to 3.5-flash is recommended but NOT yet decided.
