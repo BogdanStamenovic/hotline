@@ -42,11 +42,12 @@
 > - **MILOS QUEUE (send batched, not one by one):** BR-61 (app copy: "Forget this contact?" promises deletion + 14-day backups the code does not do; delete-account says "was emailed" before BR-02 ships; match drafts/en/11). BR-54 (Sentry off by default + in-app opt-in; no session tracking/tracing without
 >   consent; EU region, IP storage off). Already sent 09-26: the magic-link 404 question, BR-29/30/47. No reply yet.
 > - **FOR FUTURE CHAIN SEEDS (from the legal register):** chunk 37: BR-58, the validator enforces fail-closed with no silent pass-through, plus a
->   bot-question check (link 22's note). Chunk 38: BR-62 (deterministic sensitive-topic handoff in the api BEFORE dispatch; link 22 deferred it here), BR-31 WIDENED (NO EU *or Serbian* traffic to Singapore; ZZPL art. 65, so in practice the primary must be EU-scoped) and BR-32 (OpenRouter zdr:true / Jev and Parasail
->   off for EU). Chunk 39: eval cases for BR-35 (link 22 wrote the fixture) and per-session disclosure. Chunk 40: BR-58, llm-subsys refuses
+>   bot-question check (link 22's note). Chunk 38: BR-62 (deterministic sensitive-topic handoff in the api BEFORE dispatch; link 22 deferred it here), BR-31 WIDENED (NO EU *or Serbian* traffic to Singapore; ZZPL art. 65, so in practice the primary must be EU-scoped) and BR-32 REVISED (Jev/TypeSafe and Parasail via OpenRouter OFF for EU AND Serbian
+>   traffic until an SCC-backed agreement exists; ZDR is not a transfer tool), BR-79 (the default provider order is still Alibaba first:
+>   flip it with the model decision; tokcal rows for the backup; a scheduled backup smoke test). Chunk 39: eval cases for BR-35 (link 22 wrote the fixture) and per-session disclosure. Chunk 40: BR-58, llm-subsys refuses
 >   to START on prod unless the validator is enforcing; BR-42 staging keys once Bogdan makes them; BR-52 time-capped logs.
 > - **Migration numbers (kinreply-db, PRs merged by Milos):** 00039-41 F3, 00042-43 F2, 00044 link 22 (BR-65), 00045+ ask hotline-80.
-> - **EU PRIMARY: A (Scaleway qwen3.8-27b, legal's pick, my recommendation) vs B (Frankfurt qwen3.5-flash, needs Alibaba's written EU-residency answer).**
+> - **EU PRIMARY: A (Scaleway qwen3.8-27b). B (Frankfurt) is NOT acceptable until Alibaba confirms in writing (legal's corrected view). EU BACKUP: IONOS AI Model Hub qwen3.8-27B (DE, low risk; needs an account = Bogdan) per legal research/08; then OVHcloud and Regolo.**
 >   Put to Bogdan 09-26 ~17:45Z; default A if he's silent. The EU backup under A is OPEN (asked legal for candidates). qwen3.5-flash needs a tokcal run.
 > - **Tell site-mgr (kinreply-site-fa) when chunk 40 STARTS:** /customer-notice (legal BR-70, a permanent path) must be live before AI replies on prod.
 > - **Standing rule BR-57:** any analytics or new third-party SDK (site, app, api) goes through the legal manager before release.
