@@ -35,7 +35,7 @@
 >   `site-mgr` kinreply-site-fa (skills → 5-10 mockups). GOCACHE is user-wide /mnt/offload/go-cache; offload grown to 53G.
 >   Asked Milos about the prod magic-link 404 (api.kinreply.rs/auth/callback). Pending with Bogdan: BR-23 purge, a migration manager,
 >   GitHub settings, BR-42 staging keys.
-> - **MILOS QUEUE (send batched, not one by one):** BR-54 (Sentry off by default + in-app opt-in; no session tracking/tracing without
+> - **MILOS QUEUE (send batched, not one by one):** BR-61 (app copy: "Forget this contact?" promises deletion + 14-day backups the code does not do; delete-account says "was emailed" before BR-02 ships; match drafts/en/11). BR-54 (Sentry off by default + in-app opt-in; no session tracking/tracing without
 >   consent; EU region, IP storage off). Already sent 09-26: the magic-link 404 question, BR-29/30/47. No reply yet.
 > - **FOR FUTURE CHAIN SEEDS (from the legal register):** chunk 37: BR-58, the validator enforces fail-closed with no silent pass-through, plus a
 >   bot-question check (link 22's note). Chunk 38: BR-31 (EU traffic never to Singapore) and BR-32 (OpenRouter zdr:true / Jev and Parasail
