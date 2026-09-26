@@ -60,6 +60,9 @@
 > - **Tell site-mgr (kinreply-site-fa) when chunk 40 STARTS:** /customer-notice (legal BR-70, a permanent path) must be live before AI replies on prod.
 > - **Chunk 41 seed:** docs chunk-41 T7 (line ~362) says to run `adm workspace tier --manual REMEMBER`; F1 (BR-71) made that refuse, so fix the test step.
 > - **Ping kinreply-legal-1d** whenever api COOKIES.md lands on main or changes (it re-pins, then runs scripts/check-cookies.py).
+> - **OUTWARD AFTER BR-15 DEPLOYS (Bogdan/Milos, Meta console):** FB Login settings: Deauthorize https://api.kinreply.rs/meta/deauthorize/facebook, Data Deletion
+>   https://api.kinreply.rs/meta/data-deletion/facebook; IG business login settings: .../meta/deauthorize/instagram + .../meta/data-deletion/instagram. Prod env needs
+>   KINREPLY_META_APP_SECRET, KINREPLY_INSTAGRAM_APP_SECRET; the site's deletion form origin may need KINREPLY_CORS_ORIGINS. BR-60 must be live before AI on prod.
 > - **Standing rule BR-57:** any analytics or new third-party SDK (site, app, api) goes through the legal manager before release.
 > - **Open with Bogdan:** activate qwen3.5-flash in the Frankfurt workspace `ws-snvh5hyvtupii1ys` (403 AccessDenied.Unpurchased).
 >   Its key is on the laptop at `~/keys/qwenclou-eu`, endpoint `https://ws-snvh5hyvtupii1ys.eu-central-1.maas.aliyuncs.com/compatible-mode/v1`.
