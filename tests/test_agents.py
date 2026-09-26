@@ -239,3 +239,35 @@ def test_retasking_does_not_rename(registry: Registry) -> None:
     assert retasked.name == "hotline-80"
     assert retasked.task == "something else now"
     assert registry.by_name("hotline-80") is retasked
+
+
+def test_a_stale_registry_does_not_erase_another_process_update(tmp_path: Path) -> None:
+    """2026-09-26: a `--declare` saved its new channel_id while another process
+    held a registry loaded earlier; that process then saved the whole file and
+    the channel_id was gone. Each save may write only what its own instance
+    changed."""
+    path = tmp_path / "agents.json"
+    seed = Registry(path=path)
+    seed.declare("sid-a", "site", "website")
+    seed.declare("sid-b", "legal", "legal")
+    stale = Registry(path=path)          # loaded before the channel is recorded
+    fresh = Registry(path=path)
+    fresh.agents["sid-a"].channel_id = 1553408952388026418
+    fresh.save()
+    stale.retask("sid-b", "legal, now with the DPIA")
+    after = Registry(path=path)
+    assert after.agents["sid-a"].channel_id == 1553408952388026418
+    assert after.agents["sid-b"].task == "legal, now with the DPIA"
+
+
+def test_a_stale_registry_does_not_resurrect_a_removed_agent(tmp_path: Path) -> None:
+    path = tmp_path / "agents.json"
+    seed = Registry(path=path)
+    seed.declare("sid-a", "one", "x")
+    seed.declare("sid-b", "two", "y")
+    stale = Registry(path=path)
+    remover = Registry(path=path)
+    remover.agents.pop("sid-a")
+    remover.save()
+    stale.retask("sid-b", "y2")
+    assert "sid-a" not in Registry(path=path).agents

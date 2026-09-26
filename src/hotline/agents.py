@@ -22,8 +22,10 @@ makes the lifecycle testable without a guild.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
+import tempfile
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -95,16 +97,22 @@ class Registry:
     def __init__(self, path: Any = None) -> None:
         self.path = path or agents_file()
         self.agents: dict[str, Agent] = {}
+        # What each record looked like when this instance read it. save() writes
+        # back only the records this instance changed, so two processes that each
+        # hold a stale copy of the registry cannot overwrite each other's updates.
+        self._loaded: dict[str, dict] = {}
         self.load()
 
     # ---- persistence ----------------------------------------------------
 
-    def load(self) -> None:
+    def _read_disk(self) -> list[dict]:
         try:
-            raw = json.loads(self.path.read_text())
+            return list(json.loads(self.path.read_text()).get("agents", []))
         except (OSError, ValueError):
-            return
-        for entry in raw.get("agents", []):
+            return []
+
+    def load(self) -> None:
+        for entry in self._read_disk():
             try:
                 agent = Agent(**entry)
             except TypeError:
@@ -113,13 +121,48 @@ class Registry:
                 # and silently forgetting every agent on the machine.
                 continue
             self.agents[agent.session_id] = agent
+            self._loaded[agent.session_id] = asdict(agent)
 
     def save(self) -> None:
+        # Many short-lived processes (every `hotline --declare`, the daemon's sweep,
+        # permwatch) load the registry, act for seconds, and save it whole. A plain
+        # whole-file write loses any update another process made in between: a
+        # declare's channel_id was lost this way on 2026-09-26. So: lock, re-read,
+        # apply only this instance's own changes and removals, write atomically.
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = self.path.with_suffix(".tmp")
-            tmp.write_text(json.dumps({"agents": [asdict(a) for a in self.agents.values()]}))
-            os.replace(tmp, self.path)
+            with open(self.path.with_suffix(".lock"), "w") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                removed = set(self._loaded) - set(self.agents)
+                merged: dict[str, dict] = {}
+                for entry in self._read_disk():
+                    sid = entry.get("session_id")
+                    if sid and sid not in removed:
+                        merged[sid] = entry
+                for sid, agent in self.agents.items():
+                    now = asdict(agent)
+                    if now != self._loaded.get(sid):
+                        merged[sid] = now
+                fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".agents.", suffix=".tmp")
+                with os.fdopen(fd, "w") as f:
+                    json.dump({"agents": list(merged.values())}, f)
+                os.replace(tmp, self.path)
+            # Refresh in place: callers may hold references to Agent objects.
+            for sid in list(self.agents):
+                if sid not in merged:
+                    del self.agents[sid]
+            for sid, entry in merged.items():
+                agent = self.agents.get(sid)
+                if agent is None:
+                    try:
+                        self.agents[sid] = Agent(**entry)
+                    except TypeError:
+                        continue
+                else:
+                    for key, value in entry.items():
+                        if hasattr(agent, key):
+                            setattr(agent, key, value)
+            self._loaded = {sid: asdict(a) for sid, a in self.agents.items()}
         except OSError:
             pass
 
