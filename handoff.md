@@ -24,6 +24,10 @@
 >   batch 4, --cpus 1.0, made by me under Bogdan's written delegation (Discord 1553158737944903801). Its 1,238 ms p95 came from a
 >   too-light bench cadence (fixed). **Link 21 (tmux `kr3build-21`, seed `seed21.txt`) is on Part B**; its step 0 is re-measuring
 >   batch 4 on uxonews off-peak. Over 1,500 ms → it stops, and the fallback (--cpus 2.0 shares 512) goes to Bogdan.
+> - **09-26 ~14:30Z, Bogdan: "burn tokens today and tomorrow"; Phase 4 CANCELLED (legal, recorded in docs ROADMAP §7).**
+>   TWO PARALLEL LINES: link 21 (`kr3build-21`, api-83) on 35B, running batch-2 on uxonews by day. **Link 22 (`kr3build-22`,
+>   seed22) on chunk 36**, in worktrees `~/data/kinreply-wt/36/*` with GOCACHE/TMPDIR on /mnt/offload. Both append the api
+>   build log with `pull --rebase`. Line 2 continues 36→37→38; 39 needs 35+38.
 > - **Open with Bogdan:** activate qwen3.5-flash in the Frankfurt workspace `ws-snvh5hyvtupii1ys` (403 AccessDenied.Unpurchased).
 >   Its key is on the laptop at `~/keys/qwenclou-eu`, endpoint `https://ws-snvh5hyvtupii1ys.eu-central-1.maas.aliyuncs.com/compatible-mode/v1`.
 >   Then run the short Frankfurt check; the switch to 3.5-flash is recommended but NOT yet decided.
