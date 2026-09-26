@@ -48,6 +48,9 @@
 > - **09-26 ~20:00Z:** chunk 36 DONE (link 22 api-f4, kept IDLE to do its own post-freeze rebase/merge; PR kinreply-db#14 = 00044). **Link 23 (`kr3build-23`,
 >   seed23) on chunk 37, STACKED on 36's branches** in ~/data/kinreply-wt/37. Lifecycle main bf0278e = the migration merge. Held until after the cutover:
 >   link 21 chunk-35-embed (63b81f8), F3 mail fix3-mail-logs, link 22's lifecycle 1270d84. Then tell kinreply-site-fa when exceptions.json lands on api main.
+> - **09-26 ~21:15Z:** chunk 37 DONE (link 23 api-b7, reaped at 66% context): unmerged branches llm-subsys 3dc891a / api d9c09bb / lifecycle 47150d2 / docs ec4ceb6.
+>   **Link 24 (`kr3build-24`, seed24) on chunk 38, stacked on 37**, in ~/data/kinreply-wt/38. Merge order when the DB PRs land: 36, then 37, then 38 (each lifecycle row through me).
+>   Link 22 (api-f4) is IDLE and does 36's merge. F1 (api-54) and F2 (api-dd) are idle/standby. The whole chain waits on Milos merging kinreply-db #15, #13, #14.
 > - **FREEZE LIFTED 09-26 ~20:30Z** (Bogdan: V1 CPX32 + Storage Box, the purchase date open). Re-pin + re-rehearse at purchase, then a short freeze. kinreply-db PRs merge
 >   in NUMBER order: F3 00039-41, then F2 00042-43 (#13), then link 22 00044 (#14). Lifecycle order: link 21 DONE (aad51df), then link 22's rows, then F3's rows, then the bootstrap fix
 >   6f315ac, then F1's journal rows (only when F1's writer lands on api main). **HAZARD: no staging push-env/up on uxonews before the move**
