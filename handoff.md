@@ -50,6 +50,7 @@
 > - **EU PRIMARY: A (Scaleway qwen3.8-27b). B (Frankfurt) is NOT acceptable until Alibaba confirms in writing (legal's corrected view). EU BACKUP: IONOS AI Model Hub qwen3.8-27B (DE, low risk; needs an account = Bogdan) per legal research/08; then OVHcloud and Regolo.**
 >   Put to Bogdan 09-26 ~17:45Z; default A if he's silent. The EU backup under A is OPEN (asked legal for candidates). qwen3.5-flash needs a tokcal run.
 > - **Tell site-mgr (kinreply-site-fa) when chunk 40 STARTS:** /customer-notice (legal BR-70, a permanent path) must be live before AI replies on prod.
+> - **Chunk 41 seed:** docs chunk-41 T7 (line ~362) says to run `adm workspace tier --manual REMEMBER`; F1 (BR-71) made that refuse, so fix the test step.
 > - **Standing rule BR-57:** any analytics or new third-party SDK (site, app, api) goes through the legal manager before release.
 > - **Open with Bogdan:** activate qwen3.5-flash in the Frankfurt workspace `ws-snvh5hyvtupii1ys` (403 AccessDenied.Unpurchased).
 >   Its key is on the laptop at `~/keys/qwenclou-eu`, endpoint `https://ws-snvh5hyvtupii1ys.eu-central-1.maas.aliyuncs.com/compatible-mode/v1`.
