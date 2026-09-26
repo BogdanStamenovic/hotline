@@ -66,6 +66,7 @@
 > - **OUTWARD AFTER BR-15 DEPLOYS (Bogdan/Milos, Meta console):** FB Login settings: Deauthorize https://api.kinreply.rs/meta/deauthorize/facebook, Data Deletion
 >   https://api.kinreply.rs/meta/data-deletion/facebook; IG business login settings: .../meta/deauthorize/instagram + .../meta/data-deletion/instagram. Prod env needs
 >   KINREPLY_META_APP_SECRET, KINREPLY_INSTAGRAM_APP_SECRET; the site's deletion form origin may need KINREPLY_CORS_ORIGINS. BR-60 must be live before AI on prod.
+> - **F4 = mail-4a (`kr3fix-4`, ~/data/kinreply-wt/f4, mail branch f4-staff-inbox): the self-hosted staff inbox (BR-84; Bogdan 09-27, Discord 1553527301772284026). Design first -> forward to kinreply-legal-1d for review. Synthetic mail only.**
 > - **Standing rule BR-57:** any analytics or new third-party SDK (site, app, api) goes through the legal manager before release.
 > - **Open with Bogdan:** activate qwen3.5-flash in the Frankfurt workspace `ws-snvh5hyvtupii1ys` (403 AccessDenied.Unpurchased).
 >   Its key is on the laptop at `~/keys/qwenclou-eu`, endpoint `https://ws-snvh5hyvtupii1ys.eu-central-1.maas.aliyuncs.com/compatible-mode/v1`.
