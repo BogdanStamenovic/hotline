@@ -35,6 +35,9 @@
 >   `site-mgr` kinreply-site-fa (skills → 5-10 mockups). GOCACHE is user-wide /mnt/offload/go-cache; offload grown to 53G.
 >   Asked Milos about the prod magic-link 404 (api.kinreply.rs/auth/callback). Pending with Bogdan: BR-23 purge, a migration manager,
 >   GitHub settings, BR-42 staging keys.
+> - **MILOS QUEUE (send batched, not one by one):** BR-54 (Sentry off by default + in-app opt-in; no session tracking/tracing without
+>   consent; EU region, IP storage off). Already sent 09-26: the magic-link 404 question, BR-29/30/47. No reply yet.
+> - **Standing rule BR-57:** any analytics or new third-party SDK (site, app, api) goes through the legal manager before release.
 > - **Open with Bogdan:** activate qwen3.5-flash in the Frankfurt workspace `ws-snvh5hyvtupii1ys` (403 AccessDenied.Unpurchased).
 >   Its key is on the laptop at `~/keys/qwenclou-eu`, endpoint `https://ws-snvh5hyvtupii1ys.eu-central-1.maas.aliyuncs.com/compatible-mode/v1`.
 >   Then run the short Frankfurt check; the switch to 3.5-flash is recommended but NOT yet decided.
