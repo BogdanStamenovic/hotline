@@ -1,0 +1,82 @@
+2026-09-26T15:13:42Z
+== BEFORE: volumes (name, links, size)
+kinreply-staging_pgdata_pgv                                        1         70.43MB
+kinreply-prod_pgdata_pgv                                           1         69.82MB
+kinreply_pgdata                                                    1         69.59MB
+kinreply-staging_pgdata                                            0         69.48MB
+kinreply-prod_pgdata                                               0         68.78MB
+kinreply-prod_exports                                              2         0B
+kinreply_exports                                                   2         0B
+kinreply-staging_exports                                           2         0B
+== BEFORE: legacy containers
+kinreply-api-1 Exited (0) 3 days ago
+kinreply-api-worker-1 Exited (0) 3 days ago
+kinreply-migrate-1 Exited (0) 5 days ago
+kinreply-postgres-1 Exited (0) 3 days ago
+== BEFORE: legacy files (name bytes)
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260921T002105Z.sql.gz 22030
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260921T002440Z.sql.gz 22029
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260921T002719Z.sql.gz 22039
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260921T005835Z.sql.gz 22033
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260921T022817Z.sql.gz 22290
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260921T083249Z.sql.gz 28155
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260921T104414Z.sql.gz 32457
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260921T140214Z.sql.gz 38664
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260921T153423Z.sql.gz 42181
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260921T153529Z.sql.gz 42182
+/home/ubuntu/kinreply/lifecycle/backups/kinreply-20260922T022814Z.sql.gz 42411
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260921T002105Z.tar.gz 93
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260921T002440Z.tar.gz 93
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260921T002719Z.tar.gz 93
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260921T005835Z.tar.gz 93
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260921T022817Z.tar.gz 93
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260921T083249Z.tar.gz 93
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260921T104414Z.tar.gz 93
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260921T140214Z.tar.gz 93
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260921T153423Z.tar.gz 93
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260921T153529Z.tar.gz 93
+/home/ubuntu/kinreply/lifecycle/backups/exports-20260922T022814Z.tar.gz 93
+== DELETE 2026-09-26T15:13:52Z
+container removed: kinreply-postgres-1
+container removed: kinreply-api-1
+container removed: kinreply-api-worker-1
+container removed: kinreply-migrate-1
+volume removed: kinreply-prod_pgdata
+volume removed: kinreply-staging_pgdata
+volume removed: kinreply_pgdata
+volume removed: kinreply_exports
+file removed: kinreply-20260921T002105Z.sql.gz
+file removed: kinreply-20260921T002440Z.sql.gz
+file removed: kinreply-20260921T002719Z.sql.gz
+file removed: kinreply-20260921T005835Z.sql.gz
+file removed: kinreply-20260921T022817Z.sql.gz
+file removed: kinreply-20260921T083249Z.sql.gz
+file removed: kinreply-20260921T104414Z.sql.gz
+file removed: kinreply-20260921T140214Z.sql.gz
+file removed: kinreply-20260921T153423Z.sql.gz
+file removed: kinreply-20260921T153529Z.sql.gz
+file removed: kinreply-20260922T022814Z.sql.gz
+file removed: exports-20260921T002105Z.tar.gz
+file removed: exports-20260921T002440Z.tar.gz
+file removed: exports-20260921T002719Z.tar.gz
+file removed: exports-20260921T005835Z.tar.gz
+file removed: exports-20260921T022817Z.tar.gz
+file removed: exports-20260921T083249Z.tar.gz
+file removed: exports-20260921T104414Z.tar.gz
+file removed: exports-20260921T140214Z.tar.gz
+file removed: exports-20260921T153423Z.tar.gz
+file removed: exports-20260921T153529Z.tar.gz
+file removed: exports-20260922T022814Z.tar.gz
+== AFTER
+kinreply-prod_exports
+kinreply-prod_pgdata_pgv
+kinreply-staging_exports
+kinreply-staging_pgdata_pgv
+0
+kinreply-prod-api-1 Up 28 hours (healthy)
+kinreply-prod-api-worker-1 Up 28 hours (healthy)
+kinreply-staging-api-1 Up 28 hours (healthy)
+kinreply-staging-api-worker-1 Up 28 hours (healthy)
+kinreply-prod-postgres-1 Up 2 days (healthy)
+kinreply-staging-postgres-1 Up 2 days (healthy)
+prod readyz 200
