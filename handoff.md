@@ -1,4 +1,4 @@
-> ## CURRENT 2026-09-25 ~16:16Z — link 18 (tmux `kr3build-18`) on chunk 33; chunk 32 done
+> ## CURRENT 2026-09-27 ~09:11Z — DB PRs merged (kinreply-db main 30261c8); api merge order running (F3 first); chunk 39 at CHECKPOINT (gate failed narrowly, waiting on Bogdan); F6 building; Hetzner re-pin pending purchase
 >
 > **Supersedes the banner below.** **Chunks 1–32 done**; 28–30 live on prod (goose 38); 31–32 are
 > llm-subsys code, not deployed until chunk 40. Heads verified against origin at the 32 boundary:
@@ -95,7 +95,7 @@
 > **THE OPERATOR IS AT ~80% CONTEXT** and should hand off at the next quiet point. Everything the
 > next operator needs is in this banner, the build log, and `docs/OPERATING-RULES.md`.
 
-> ## CURRENT 2026-09-25 ~11:20Z — chunks 28–30 LIVE on prod; link 16 (`api-63`) on chunk 31
+> ## SUPERSEDED (historical, was "CURRENT" 2026-09-25 ~11:20Z) — chunks 28–30 LIVE on prod; link 16 (`api-63`) on chunk 31
 >
 > **Supersedes the 07:40Z banner directly below.** Milos reviewed and merged kinreply-db PRs
 > **#10 → #11 → #12 in that order** (10:18–10:42Z). Link 15 deployed `c9ee42d-89cd55d` to staging
