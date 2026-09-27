@@ -124,7 +124,7 @@
 > (`ssh uxonews` + `--resolve ...:127.0.0.1`) before calling an outage. Flagged to Bogdan; making
 > a public resolver primary is his call.
 
-> ## CURRENT 2026-09-25 ~07:40Z — link 15 on chunk 29; GPT-6 Luna subagent trial started
+> ## SUPERSEDED (historical, was "CURRENT" 2026-09-25 ~07:40Z; kinreply-db #10-#12 all merged 09-25) — link 15 on chunk 29; GPT-6 Luna subagent trial started
 >
 > **This banner replaces the 09-23 one below it, which said "chunk 6, parked" and was two days
 > stale** — the operator sessions between 09-23 and 09-25 ran links 4 through 15 without
