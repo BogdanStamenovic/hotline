@@ -1,4 +1,4 @@
-> ## CURRENT 2026-09-27 ~14:40Z — kinreply.rs LIVE (interim on uxonews); ALL mains green (api 8249271 (A7), llm 3b40704, lifecycle 7e18b9a (green vs O6 fix head 7cc2469; O6 rebases before landing). W1 queue: A8(1.12.0 gating), R1, A4, L1, Q0+O6, V1, V3 (internal search contract, lockstep llm fixture), V2, db 8bde095); staff-inbox UI in review; chunk 39 eval CHECKPOINT waits on Bogdan; Hetzner purchase pending
+> ## CURRENT 2026-09-30 ~02:54Z — kinreply.rs LIVE (interim on uxonews); ALL mains green (api 8249271 (A7), llm 3b40704, lifecycle 7e18b9a (green vs O6 fix head 7cc2469; O6 rebases before landing). W1 queue: A8(1.12.0 gating), R1, A4, L1, Q0+O6, V1, V3 (internal search contract, lockstep llm fixture), V2, db 8bde095); staff-inbox UI in review; chunk 39 eval CHECKPOINT waits on Bogdan; Hetzner purchase pending
 >
 > **Supersedes the banner below.** **Chunks 1–32 done**; 28–30 live on prod (goose 38); 31–32 are
 > llm-subsys code, not deployed until chunk 40. Heads verified against origin at the 32 boundary:
