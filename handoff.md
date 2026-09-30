@@ -1,4 +1,4 @@
-> ## CURRENT 2026-09-27 ~14:40Z — kinreply.rs LIVE (interim on uxonews); ALL mains green (api b20a091, llm 3b40704, lifecycle 20ebdd4, db 8bde095); staff-inbox UI in review; chunk 39 eval CHECKPOINT waits on Bogdan; Hetzner purchase pending
+> ## CURRENT 2026-09-27 ~14:40Z — kinreply.rs LIVE (interim on uxonews); ALL mains green (api b20a091, llm 3b40704, lifecycle 7e18b9a (auth-mail-budget merged; O6+A0b in api-ab security review; V2 price-marker field queued AFTER V1), db 8bde095); staff-inbox UI in review; chunk 39 eval CHECKPOINT waits on Bogdan; Hetzner purchase pending
 >
 > **Supersedes the banner below.** **Chunks 1–32 done**; 28–30 live on prod (goose 38); 31–32 are
 > llm-subsys code, not deployed until chunk 40. Heads verified against origin at the 32 boundary:
