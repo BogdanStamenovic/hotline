@@ -12,3 +12,5 @@ backups/
 .testbed/
 watchdog.log
 archive/
+# Archived Discord channel history (personal message content) - never commit
+discord-archive/
