@@ -16,3 +16,4 @@ when it is done or he drops it, instead of marking it done.
 - `bsajt-verify.timer` on archserver IS armed (user unit, every boot + 6 h).
   Against a dead site it times out, exits 1 and leaves a `failed` unit. It does
   **not** ring him (journal-verified 09-17 08:03 and 11:55).
+| 5 | **After db 00057 (follows_us DROP, #22) is DEPLOYED**: ping legal so the export README's SCHEMA VERSIONS sentence can widen from "no longer asks for it or exports it" to "asks for, keeps or exports" (legal 10-05). | 10-05 | trigger = 00057 on prod | |
