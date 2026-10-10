@@ -20,6 +20,7 @@ from typing import Any
 
 from .agents import Agent, Registry
 from .errors import HotlineError
+from .teams import parent_for
 from .transcript import transcript_path
 
 
@@ -159,7 +160,15 @@ def rehome(
     if old_channel is not None and manager.exists(old_channel):
         revived.channel_id = old_channel
     else:
-        revived.channel_id = manager.create_text(revived.name, topic=revived.task)
+        # A team member's channel is recreated inside its team's category, so a
+        # resumed manager reappears where Bogdan keeps it.
+        parent = parent_for(manager, revived.name, registry.path.with_name("teams.json"))
+        if parent is not None:
+            revived.channel_id = manager.create_text(
+                revived.name, topic=revived.task, parent_id=parent
+            )
+        else:
+            revived.channel_id = manager.create_text(revived.name, topic=revived.task)
     registry.save()
     return revived
 

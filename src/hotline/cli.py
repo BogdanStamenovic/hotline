@@ -34,6 +34,7 @@ from .revive import NoSuchAgent, NothingToResumeFrom
 from .revive import resume as resume_agent
 from .router import Route, Router, describe, mid_turn, parse_utterance
 from .stops import install_hook, stops_dir
+from .teams import Teams, move_into, parent_for
 
 
 class _UsageError(Exception):
@@ -96,6 +97,26 @@ def _build_parser() -> argparse.ArgumentParser:
         help="with --done: the handoff this agent wrote, which becomes its only record",
     )
     parser.add_argument("--agents", action="store_true", help="list known agents and exit")
+    # Teams: a Discord category per team, and members exempt from retention.
+    # Bogdan's ask was a place to keep the manager agents he talks to for weeks.
+    parser.add_argument(
+        "--teams", action="store_true", help="list teams and their members, then exit"
+    )
+    parser.add_argument(
+        "--team",
+        metavar="TEAM",
+        help="with --join/--leave: the team (its Discord category); case-insensitive",
+    )
+    parser.add_argument(
+        "--join",
+        metavar="NAME",
+        help="with --team: add an agent to the team and move its channel into the category",
+    )
+    parser.add_argument(
+        "--leave",
+        metavar="NAME",
+        help="with --team: take an agent out of the team; normal retention applies again",
+    )
     parser.add_argument(
         "--claim",
         nargs="?",
@@ -214,6 +235,12 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             print(agent.describe())
         return 0
 
+    if args.teams:
+        return _list_teams(registry, log)
+
+    if args.team or args.join or args.leave:
+        return _team_command(args, registry, log)
+
     if args.claim is not None:
         return _claim(args.claim, args.session_id, log)
 
@@ -259,7 +286,12 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             print("hotline: error: Discord is not configured", file=sys.stderr)
             return 1
         try:
-            speaker.voice_channel_id = manager.create_voice(speaker.name)
+            parent = parent_for(manager, speaker.name, _teams_path(registry))
+            speaker.voice_channel_id = (
+                manager.create_voice(speaker.name, parent_id=parent)
+                if parent is not None
+                else manager.create_voice(speaker.name)
+            )
         except HotlineError as exc:
             print(f"hotline: error: {exc}", file=sys.stderr)
             return 1
@@ -285,7 +317,10 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
                 log("no Discord configured; skipping the channel")
             else:
                 try:
-                    agent.channel_id = manager.create_text(agent.name, topic=agent.task)
+                    parent = parent_for(manager, agent.name, _teams_path(registry))
+                    agent.channel_id = manager.create_text(
+                        agent.name, topic=agent.task, parent_id=parent
+                    )
                     registry.save()
                     log(f"channel: #{channel_slug(agent.name)}")
                 except HotlineError as exc:
@@ -314,6 +349,16 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
         # record of an agent vanish quietly.
         log("warning: finished with no --handoff; nothing will survive the channel")
 
+    team = Teams(_teams_path(registry)).team_of(finished.name)
+    if team is not None:
+        # A team member keeps its channel through `--done`. Bogdan puts the
+        # manager agents he wants to persist into a team so he can keep them;
+        # deleting the channel here would throw away the thread he reads them
+        # by. The handoff is still written above, so a resume has it.
+        registry.save()
+        log(f"done: {finished.name} (kept its channel: member of team {team.display})")
+        return 0
+
     manager = channels_from_env()
     for attr in ("channel_id", "voice_channel_id"):
         cid = getattr(finished, attr)
@@ -328,6 +373,98 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             setattr(finished, attr, None)
     registry.save()
     log(f"done: {finished.name}")
+    return 0
+
+
+def _teams_path(registry: Registry) -> Any:
+    return registry.path.with_name("teams.json")
+
+
+def _list_teams(registry: Registry, log: Callable[[str], None]) -> int:
+    """`--teams`: each team, then one line per member.
+
+    Liveness is the same test `--list` uses -- a verified session descriptor
+    for the agent's current session id -- not the registry's own `[working]`,
+    which only means nobody has run `--done`.
+    """
+    teams = Teams(_teams_path(registry)).all()
+    if not teams:
+        log("no teams")
+        return 0
+    live = {s.session_id for s in discover(include_self=True, include_programmatic=True)}
+    for team in teams:
+        print(f"{team.display} ({len(team.members)})")
+        for name in team.members:
+            agent = registry.by_name(name)
+            if agent is None:
+                print(f"  {name:<28} {'-':<8}  no record")
+                continue
+            if agent.session_id in live:
+                state = "live"
+            elif agent.done:
+                state = "done"
+            else:
+                state = "stopped"
+            where = f"#{channel_slug(agent.name)}" if agent.channel_id else "(no channel)"
+            print(f"  {agent.name:<28} {agent.session_id[:8]:<8}  {state:<7}  {where}")
+    return 0
+
+
+def _team_command(args: argparse.Namespace, registry: Registry, log: Callable[[str], None]) -> int:
+    if not args.team or bool(args.join) == bool(args.leave):
+        print(
+            "hotline: error: use --team TEAM with exactly one of --join NAME or --leave NAME",
+            file=sys.stderr,
+        )
+        return 2
+    teams = Teams(_teams_path(registry))
+    name = args.join or args.leave
+    agent = registry.by_name(name)
+    if args.join and agent is None:
+        # Not invented: a team of names nothing answers to would list ghosts.
+        print(
+            f"hotline: error: no agent called {name!r}. Use --agents to see them.",
+            file=sys.stderr,
+        )
+        return 1
+    channel_ids = (
+        [c for c in (agent.channel_id, agent.voice_channel_id) if c is not None] if agent else []
+    )
+    manager = channels_from_env()
+
+    if args.join:
+        assert agent is not None
+        previous = teams.team_of(agent.name)
+        team = teams.join(args.team, agent.name)
+        moved = f" (left {previous.display})" if previous and previous.key != team.key else ""
+        log(f"{agent.name} joined team {team.display}{moved}; exempt from retention")
+        if not channel_ids:
+            log("it has no channel; a new one will be created inside the category")
+            return 0
+        if manager is None:
+            log("warning: Discord is not configured; its channel was not moved")
+            return 1
+        if not move_into(manager, team, channel_ids, log):
+            log("membership is recorded; re-run the same --join to retry the move")
+            return 1
+        log(f"moved #{channel_slug(agent.name)} into category {team.display}")
+        return 0
+
+    if not teams.leave(args.team, name):
+        print(f"hotline: error: {name!r} is not in team {args.team!r}", file=sys.stderr)
+        return 1
+    log(f"{name} left team {args.team}; normal retention applies again")
+    if channel_ids and manager is not None:
+        failed = False
+        for cid in channel_ids:
+            try:
+                manager.move(cid, None)
+            except HotlineError as exc:
+                log(f"warning: could not move channel {cid} out of the category: {exc}")
+                failed = True
+        if failed:
+            return 1
+        log(f"moved #{channel_slug(name)} out of the category")
     return 0
 
 
@@ -800,6 +937,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.declare
         or args.done
         or args.agents
+        or args.teams
+        or args.team
+        or args.join
+        or args.leave
         or args.resume
         or args.voice
         or args.adopt

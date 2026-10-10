@@ -122,6 +122,41 @@ class Channels:
                 return int(channel["id"])
         return None
 
+    # ---- categories (teams) ------------------------------------------------
+
+    def create_category(self, name: str) -> int:
+        # Not slugified and not prefixed: a category is a heading Bogdan reads
+        # ("KinReply"), and Discord keeps category names as typed.
+        body = {"name": name.strip()[:100], "type": CATEGORY}
+        return int(self._call(f"/guilds/{self.guild_id}/channels", "POST", body)["id"])
+
+    def ensure_category(self, name: str) -> int:
+        """Find a category by name, ignoring case, or create it.
+
+        Case-insensitive so `--team kinreply` finds the "KinReply" category a
+        previous join made, rather than minting a second one beside it.
+        """
+        wanted = name.strip().casefold()
+        for channel in self.all():
+            if (
+                channel.get("type") == CATEGORY
+                and str(channel.get("name", "")).casefold() == wanted
+            ):
+                return int(channel["id"])
+        return self.create_category(name)
+
+    def move(self, channel_id: int, parent_id: int | None) -> None:
+        """Put a channel under a category, or take it out with parent_id=None.
+
+        Unlike delete there is no prefix guard: a move is reversible and loses
+        nothing, so a wrong id costs a drag in the Discord sidebar.
+        """
+        self._call(
+            f"/channels/{channel_id}",
+            "PATCH",
+            {"parent_id": str(parent_id) if parent_id is not None else None},
+        )
+
     # ---- lifecycle -------------------------------------------------------
 
     def create_text(self, name: str, topic: str = "", parent_id: int | None = None) -> int:

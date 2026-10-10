@@ -300,6 +300,7 @@ class Registry:
         delete the channel of something still running.
         """
         moment = time.time() if now is None else now
+        kept = self.team_members()
         return [
             a
             for a in self.agents.values()
@@ -307,8 +308,25 @@ class Registry:
             # own sessions -- "you never really go away, you just recycle" -- and
             # a retention sweep quietly deleting it three days after one stint
             # ended would take the role with it.
-            if not a.privileged and a.expires_at is not None and moment >= a.expires_at
+            if not a.privileged
+            # Nor does a team member. Bogdan groups the manager agents he wants
+            # to persist (KinReply site, legal, migration) into a team precisely
+            # so their channels stay; reaping one three days after a `--done`
+            # would undo that. Leaving the team restores normal retention.
+            and a.name.lower() not in kept
+            and a.expires_at is not None
+            and moment >= a.expires_at
         ]
+
+    def team_members(self) -> set[str]:
+        """Lowercased names of every agent in a team.
+
+        Read from `teams.json` beside this registry's own file, so a registry
+        opened on a test path never consults the real teams.
+        """
+        from .teams import Teams
+
+        return Teams(self.path.with_name("teams.json")).member_names()
 
     def needing_channel(self) -> list[Agent]:
         return [a for a in self.working() if a.wants_channel and a.channel_id is None]
