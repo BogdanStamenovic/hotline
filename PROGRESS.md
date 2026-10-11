@@ -15900,3 +15900,31 @@ backup is the only rollback that exists.
 - ~/data/quota-watch (local git 54e3d7e, not pushed): a user service; polls claude tmux panes every 60s; the limit = a line starting with "Paused · usage limit" or "You've hit your limit" (strings from the claude 2.1.281 binary) in the last 8 lines, no quotes, 2 consecutive passes. Pings once via hotline-say; probes claude -p every 5 min; on success types continue+Enter into still-paused panes and reports.
 - Found: Claude Code auto-continues only when the reset is <24h out, hence the need.
 - Bug found in my own test: v1 matched any "usage limit" text and typed "continue" into hotline:0.0 (this session). Tightened, and re-tested on fake panes (a detect/ignore/quote/resume matrix passes). The real probe was tested once (usage available True, 5s).
+
+## 2026-10-10 19:49 CEST — operator hotline-80 (session hotline-b0): he woke the box himself 6 min after ordering it off
+
+- Powered off 19:40 at his request (fgc-2026-e4 relay, 17:38:07Z). Back at 19:46: Pigion sshd shows his laptop `arch` (100.103.46.118) logged in 19:45:44 and left at 19:46:11. That was the WoL. Watchdog spawned me at 19:49:18.
+- He hasn't said anything in any channel since 17:38Z (checked all channels' history via the bot API).
+- Probed: only I'm running; docker inactive; wake.db has no future tasks (so no then_do=poweroff); hotline-ios degradations []; kernel now 7.2.6 (the reboot picked up the pending upgrade); root 8 GB free (89%).
+- Posted one consolidated status + question in #agent-hotline-80: restart the 4 KinReply agents (W1 starts with #46 P1), or something else? Not restarting anything without his word. A launcher can ask for less, never more.
+
+## 2026-10-10 20:00 CEST — operator hotline-80 (restart #2 after the 17:40Z power-off)
+- Box came up 19:46 (he WoL'd it from his laptop). The watchdog started an operator at 19:49. That operator asked him on Discord why the box was woken and got no reply. Its tmux scope ended at 20:00:25 and I was started at 20:00:44.
+- He ssh'd in from arch (100.103.46.118) at 19:57 and has been attached to tmux session hotline since 20:00:54, so he is watching this pane.
+- Discord: nothing from him since 17:38Z (shutdown) in #agent-hotline-80 or main. Nothing was missed while the box was off.
+- State: only the operator is running. KinReply agents are stopped, and each pushed before the shutdown. Docker is inactive. Root disk is 89%.
+- Posted one hello asking what he wants. Started nothing. Waiting.
+- 20:22 His verified request (Discord 1558545316251304117), four parts: desktop + VNC to the locked desktop, rent a 3090 on vast.ai, benchmark abliterated Qwen 3.8 27B against stock and piccolo-gorgone, and a Teams section in hotline.
+- desktop on. Screen-share mirror cannot show GDM, so I enabled system RDP remote login with `grdctl --system` and a fresh password in ~/.local/state/desktop/rdp-system.pw. Positive and negative auth tests both behaved. He logged in at 20:24.
+- After he disconnected RDP the session had zero monitors and use-computer failed with "Unknown monitor". Patched it to fall back to RecordVirtual: use-computer 1d08961, pushed. MISTAKE: I first hand-copied the file into the ownbox install, whose checkout was newer, and clobbered its bus_address change. Restored from git, re-applied the patch on upstream, then ran `ownbox update use-computer --yes`. He then made a rule of it: ownbox is the install/update path (memory and CLAUDE.md).
+- Teams: Opus subagent built it, hotline d0ce557. I verified in Discord myself: the KinReply category holds site-fa, legal-1d and migration-21. hotlined has not been restarted.
+- Research subagent: candidates are heretic-ara, huihui abliterated and 0bserverx RVN against stock, all mradermacher i1-Q4_K_M via llama.cpp. Picked vast offer 55102467 (Nevada, $0.216/h). Asked him before adding an SSH key to his vast account. Waiting.
+- 20:35 Nevada offer was gone, so I rented Wisconsin, instance 55262332, at $0.254/h. In his vast account: added the SSH key (his yes) and a private Llama.cpp template. vast's stock template required gpu_total_ram>=32000, which hides every single 3090, and it auto-downloads a 35B model. I removed both.
+- 20:40 Spawned standalone Opus agent qwen-abl-bench in tmux qwen-abl-bench. Seed: ~/data/qwen-abl-bench/SEED.md. Accepted its folder-trust prompt.
+- 20:42 He changed the scope (verified, 1558549170577473587): the benchmark is about coding, reasoning and agentic work. Relayed to the agent with a warrant and saved it to memory.
+- Still on: RDP system remote login and GDM. His session is in use.
+- 2026-10-11 ~03:00 qwen-abl-bench finished. Verdict: Huihui abliterated is the best uncensored 27B (49/50 and 42/50 complied, capability equal to stock), but BFCL irrelevance is 63 vs 80. Report: artifact Dq1RARw5YxMSCayp6gCkgw. Repo BogdanStamenovic/qwen-abl-bench is private. I verified myself: instance ssh refused, repo private and pushed, artifact present. About $1.33. Its --done deleted its channel along with the final post, so I relayed the result in my channel.
+- Left on, waiting for his call: GDM and system RDP, with his remote session open.
+- 10-11 18:40 qwen-abl-bench got his verified "spend everything left" (1558881417348259843). I told it the route: no API key on archserver, so it rents through his browser with use-computer --real and the private template. Balance was $2.46.
+- 10-11 23:40 Verified "Kill the remote sesh". Checked vast first: 0 instances, $1.01. Terminated logind session 10, disabled system RDP and deleted the password file. Did the blind X/Y review he asked for. My guess, X = Huihui and Y = stock, was correct.
+- 10-12 00:34 Verified "shutdown if nothing running". Checked that nothing was running, wrote the banner, committed, pushed, and powered off.
