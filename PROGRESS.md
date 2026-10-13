@@ -15928,3 +15928,9 @@ backup is the only rollback that exists.
 - 10-11 18:40 qwen-abl-bench got his verified "spend everything left" (1558881417348259843). I told it the route: no API key on archserver, so it rents through his browser with use-computer --real and the private template. Balance was $2.46.
 - 10-11 23:40 Verified "Kill the remote sesh". Checked vast first: 0 instances, $1.01. Terminated logind session 10, disabled system RDP and deleted the password file. Did the blind X/Y review he asked for. My guess, X = Huihui and Y = stock, was correct.
 - 10-12 00:34 Verified "shutdown if nothing running". Checked that nothing was running, wrote the banner, committed, pushed, and powered off.
+
+## 2026-10-13 16:15 CEST — operator hotline-80 boot
+- Adopted hotline-80. Watchdog spawned me after a 16:12 reboot; Bogdan ssh'd in from `arch` (100.103.46.118) at 16:16 and attached to the hotline tmux pane.
+- Prior: 10-12 19:16 boot was a quiet wake (watchdog did not spawn); box stayed up ~21h idle until today's reboot.
+- Discord: no messages from him since 10-11 22:34Z "Shutdown if nothing's running". No future wake tasks; /sys wakealarm empty. Only live session: me.
+- Posted hello + proposal (idle unless he wants KinReply/W1 #46 P1 restarted) to #agent-hotline-80. Waiting.
