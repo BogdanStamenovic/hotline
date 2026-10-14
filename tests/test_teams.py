@@ -1,4 +1,4 @@
-"""Teams: a Discord category per team, and members kept through retention.
+"""Teams: a Discord category per team (one per repo), keepers kept through retention.
 
 Bogdan asked for a place to keep the KinReply manager agents (site, legal,
 hosting migration). The two promises tested here are that their channels end up
@@ -257,3 +257,132 @@ def test_teams_listing(
 def test_no_teams(guild: FakeGuild, capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(["--teams"]) == 0
     assert "no teams" in capsys.readouterr().err
+
+
+# ---- repo teams and personas (10-14) ------------------------------------------
+
+
+def _git(*args: str, cwd: Path) -> None:
+    import subprocess
+
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
+
+
+def _repo(tmp_path: Path, name: str) -> Path:
+    root = tmp_path / name
+    root.mkdir()
+    _git("init", "-q", "-b", "main", cwd=root)
+    _git(
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@t",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "x",
+        cwd=root,
+    )
+    return root
+
+
+def test_rows_from_before_personas_read_as_keepers(tmp_path: Path) -> None:
+    path = tmp_path / "teams.json"
+    path.write_text(json.dumps({"teams": [{"display": "KinReply", "members": ["site", "legal"]}]}))
+    teams = Teams(path)
+    assert teams.keeper_names() == {"site", "legal"}
+    assert teams.persona_of("site") == "keeper"
+
+
+def test_a_passing_member_expires_and_a_keeper_does_not(tmp_path: Path) -> None:
+    registry = Registry(path=tmp_path / "agents.json")
+    registry.declare("s1", "operator", "keep me")
+    registry.declare("s2", "worker", "reap me")
+    registry.complete("s1")
+    registry.complete("s2")
+    teams = Teams(tmp_path / "teams.json")
+    teams.join("hotline", "operator", keeper=True)
+    teams.join("hotline", "worker", keeper=False)
+
+    later = time.time() + 30 * 86400
+    assert [a.name for a in registry.expired(now=later)] == ["worker"]
+    teams.set_persona("worker", "keeper")
+    assert registry.expired(now=later) == []
+
+
+def test_declare_inside_a_repo_joins_its_team_as_passing(
+    guild: FakeGuild, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    root = _repo(tmp_path, "tells")
+    (root / "src").mkdir()
+    monkeypatch.chdir(root / "src")
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "abcdef12-0000")
+    assert cli.main(["--declare", "build the app"]) == 0
+
+    team = Teams(agents_file().with_name("teams.json")).get("tells")
+    assert team is not None and team.members == ["abcdef12"]
+    assert team.path == str(root) and team.keepers == []
+    agent = Registry().by_name("abcdef12")
+    assert agent is not None
+    category = next(c for c in guild.categories() if c["name"] == "tells")
+    assert guild.by_id(agent.channel_id)["parent_id"] == category["id"]
+
+
+def test_declare_with_persona_keeper(
+    guild: FakeGuild, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.chdir(_repo(tmp_path, "hotline"))
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "op000000-0000")
+    assert cli.main(["--declare", "operate", "--persona", "keeper"]) == 0
+    assert Teams(agents_file().with_name("teams.json")).persona_of("op000000") == "keeper"
+
+
+def test_a_worktree_joins_the_team_of_its_main_repo(tmp_path: Path) -> None:
+    root = _repo(tmp_path, "api")
+    wt = tmp_path / "wt" / "36"
+    _git("worktree", "add", "-q", str(wt), "-b", "chunk36", cwd=root)
+    teams = Teams(tmp_path / "teams.json")
+    team = teams.join_repo("link-36", wt, keeper=False)
+    assert team is not None and team.display == "api" and team.path == str(root)
+
+
+def test_outside_a_repo_there_is_no_team(tmp_path: Path) -> None:
+    assert Teams(tmp_path / "teams.json").join_repo("x", tmp_path, keeper=False) is None
+
+
+def test_a_hand_made_team_wins_over_the_repo(tmp_path: Path) -> None:
+    root = _repo(tmp_path, "kinreply-legal")
+    teams = Teams(tmp_path / "teams.json")
+    teams.join("KinReply", "legal")
+    assert teams.join_repo("legal", root, keeper=False).display == "KinReply"
+    assert teams.persona_of("legal") == "keeper"
+
+
+def test_done_on_a_passing_member_deletes_its_channel(
+    guild: FakeGuild, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    agent = _seed(guild, "worker-1", "sid-w")
+    Teams(agents_file().with_name("teams.json")).join("tells", "worker-1", keeper=False)
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "sid-w")
+    assert cli.main(["--done", "--handoff", "/tmp/h.md"]) == 0
+    assert guild.by_id(agent.channel_id) is None
+
+
+def test_set_persona_command_and_listing_puts_keepers_first(
+    guild: FakeGuild, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _seed(guild, "worker-1", "aaaaaaaa-1")
+    _seed(guild, "operator", "bbbbbbbb-2")
+    teams = Teams(agents_file().with_name("teams.json"))
+    teams.join("hotline", "worker-1", keeper=False, path="/r/hotline")
+    teams.join("hotline", "operator", keeper=False)
+    assert cli.main(["--set-persona", "operator", "keeper"]) == 0
+    assert cli.main(["--set-persona", "nobody", "keeper"]) == 1
+    capsys.readouterr()
+
+    assert cli.main(["--teams"]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0] == "hotline (2)  /r/hotline"
+    assert "operator" in lines[1] and "keeper" in lines[1]
+    assert "worker-1" in lines[2] and "passing" in lines[2]

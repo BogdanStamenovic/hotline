@@ -34,7 +34,7 @@ from .revive import NoSuchAgent, NothingToResumeFrom
 from .revive import resume as resume_agent
 from .router import Route, Router, describe, mid_turn, parse_utterance
 from .stops import install_hook, stops_dir
-from .teams import Teams, move_into, parent_for
+from .teams import PERSONAS, Teams, move_into, parent_for
 
 
 class _UsageError(Exception):
@@ -116,6 +116,19 @@ def _build_parser() -> argparse.ArgumentParser:
         "--leave",
         metavar="NAME",
         help="with --team: take an agent out of the team; normal retention applies again",
+    )
+    # Personas (10-14): keepers are a team's standing agents, reviewed first and
+    # kept through retention; passing agents come and go.
+    parser.add_argument(
+        "--persona",
+        choices=PERSONAS,
+        help="with --declare: this agent's persona in its repo team (default passing)",
+    )
+    parser.add_argument(
+        "--set-persona",
+        nargs=2,
+        metavar=("NAME", "PERSONA"),
+        help="mark a team member keeper or passing",
     )
     parser.add_argument(
         "--claim",
@@ -241,6 +254,18 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
     if args.team or args.join or args.leave:
         return _team_command(args, registry, log)
 
+    if args.set_persona:
+        who, persona = args.set_persona
+        if persona not in PERSONAS:
+            print(f"hotline: error: persona must be one of {', '.join(PERSONAS)}", file=sys.stderr)
+            return 2
+        team = Teams(_teams_path(registry)).set_persona(who, persona)
+        if team is None:
+            print(f"hotline: error: {who!r} is in no team", file=sys.stderr)
+            return 1
+        log(f"{who} is now a {persona} of team {team.display}")
+        return 0
+
     if args.claim is not None:
         return _claim(args.claim, args.session_id, log)
 
@@ -311,6 +336,18 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             keep_days=args.keep_days if args.keep_days is not None else DEFAULT_KEEP_DAYS,
         )
         log(f"declared: {agent.describe()}")
+        # The repo it works in is its team. Never fatal: a declaration that
+        # failed over a git probe would leave the session unregistered.
+        teams = Teams(_teams_path(registry))
+        try:
+            team = teams.join_repo(agent.name, os.getcwd(), keeper=args.persona == "keeper")
+            if team is not None and args.persona:
+                team = teams.set_persona(agent.name, args.persona) or team
+        except (HotlineError, OSError) as exc:
+            team = None
+            log(f"warning: could not record the team: {exc}")
+        if team is not None:
+            log(f"team: {team.display} ({teams.persona_of(agent.name)})")
         if agent.wants_channel and agent.channel_id is None:
             manager = channels_from_env()
             if manager is None:
@@ -350,13 +387,13 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
         log("warning: finished with no --handoff; nothing will survive the channel")
 
     team = Teams(_teams_path(registry)).team_of(finished.name)
-    if team is not None:
-        # A team member keeps its channel through `--done`. Bogdan puts the
-        # manager agents he wants to persist into a team so he can keep them;
+    if team is not None and team.is_keeper(finished.name):
+        # A keeper keeps its channel through `--done`. Bogdan marks the
+        # standing agents he wants to persist as keepers so he can keep them;
         # deleting the channel here would throw away the thread he reads them
         # by. The handoff is still written above, so a resume has it.
         registry.save()
-        log(f"done: {finished.name} (kept its channel: member of team {team.display})")
+        log(f"done: {finished.name} (kept its channel: keeper of team {team.display})")
         return 0
 
     manager = channels_from_env()
@@ -393,11 +430,13 @@ def _list_teams(registry: Registry, log: Callable[[str], None]) -> int:
         return 0
     live = {s.session_id for s in discover(include_self=True, include_programmatic=True)}
     for team in teams:
-        print(f"{team.display} ({len(team.members)})")
-        for name in team.members:
+        where_repo = f"  {team.path}" if team.path else ""
+        print(f"{team.display} ({len(team.members)}){where_repo}")
+        for name in team.ordered():
+            persona = "keeper" if team.is_keeper(name) else "passing"
             agent = registry.by_name(name)
             if agent is None:
-                print(f"  {name:<28} {'-':<8}  no record")
+                print(f"  {name:<28} {persona:<8} {'-':<8}  no record")
                 continue
             if agent.session_id in live:
                 state = "live"
@@ -406,7 +445,7 @@ def _list_teams(registry: Registry, log: Callable[[str], None]) -> int:
             else:
                 state = "stopped"
             where = f"#{channel_slug(agent.name)}" if agent.channel_id else "(no channel)"
-            print(f"  {agent.name:<28} {agent.session_id[:8]:<8}  {state:<7}  {where}")
+            print(f"  {agent.name:<28} {persona:<8} {agent.session_id[:8]:<8}  {state:<7}  {where}")
     return 0
 
 
@@ -941,6 +980,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         or args.team
         or args.join
         or args.leave
+        or args.set_persona
         or args.resume
         or args.voice
         or args.adopt
