@@ -15949,3 +15949,4 @@ backup is the only rollback that exists.
 - 14:00 credit $0.73 at $0.34/h (download fee ~$0.20); hard stop moved to 16:00 CEST; backstop re-armed (bg b4uxx02iz); told qwen-arch with warrant; told Bogdan.
 - 14:03 qwen-arch reports Qwen agent live in #qwen-arch via systemd --user qwen-relay; verified: unit active, test task answered 6s, Ready posted; its teardown timer 15:45 (warn 15:15); my backstop 16:00 kept.
 - 14:51 qwen-arch destroyed 55919981 on Bogdan's verified 'destroy the qwen instance' (1559911368604520461, read myself); ssh refused 14:52; my backstop stopped. Billing unreadable (arch rebooted ~14:46, Chrome down); estimate ~$0.44 left, labelled estimate. TODO: read real credit when laptop Chrome is back.
+- 21:25 power-off checklist done (agents idle, repos clean, docker off, no vast, WoL g); banner written; powering off per his 19:13Z 'Lets shutdown. Goodnight'.

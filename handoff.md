@@ -1,3 +1,10 @@
+> ## POWER-OFF 2026-10-14 ~21:25 CEST at Bogdan's request (verified Discord 1560007652937957459, "Lets shutdown. Goodnight")
+> - **Nothing was running.** All agents idle, every repo clean and pushed. No vast instance (Qwen 3090 55919981 destroyed 14:51 on his word; credit ~$0.44 ESTIMATED, not read: laptop Chrome was down). Docker inactive. classwatch-asr up but no traffic for 30 min. WoL `Wake-on: g` checked with sudo.
+> - **Built this session (hotline, pushed):** da78529 teams follow the repo with keeper/passing personas (only keepers skip retention; `--persona` on declare, `--set-persona NAME P`); ced9c8e Discord category icons plus persona-first topics; 88ee96f the Pigion sentinel now wakes archserver when he WRITES while it's down, posts "archserver is asleep, waking it", and no longer watches voice joins (cvoice calls). Deployed on Pigion; **not yet exercised end to end**: the first real test is his next message while the box is off. hotlined restarted onto the new code.
+> - **Agents alive at poweroff (they die with it; none mid-task):** tells-09 (social-intuition app, #agent-tells-09), data-10 (manager, classwatch on arch), data-f8 (standalone, "Pančevo route"), qwen-arch-agent-e8 (its GPU is gone). Don't respawn any unless he asks.
+> - **Changed system state:** GDM autologin is ON (/etc/gdm/custom.conf, backup ~/.local/state/desktop/custom.conf.bak-20261014). The login keyring stays locked under autologin, so Chrome on archserver can't read its cookies. Options were offered to him; nothing chosen.
+> - **vast:** his account is bodastamen@gmail.com, and auto top-up is ON to Mastercard …2463. A stray empty vast account was created on bogdan.stamenovic@gmail.com by my first Google click; deleting it is his call.
+
 > ## POWER-OFF 2026-10-12 ~00:36 CEST at Bogdan's request (verified Discord 1558971059301253151, "Shutdown if nothing's running. Goodnight")
 > - **Nothing was running when it went down.** Only the operator and qwen-abl-bench (idle, waiting for questions) were alive. Docker inactive, GPU idle, no vast instance (0 instances, $1.01 credit at 23:40). WoL Wake-on: g verified.
 > - **Session 10-10/11 (operator hotline-80):**
