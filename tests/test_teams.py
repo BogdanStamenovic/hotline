@@ -176,7 +176,7 @@ def test_join_creates_the_category_and_moves_the_channel(guild: FakeGuild) -> No
     assert cli.main(["--team", "kinreply", "--join", "kinreply-legal-1d"]) == 0
 
     cats = guild.categories()
-    assert [c["name"] for c in cats] == ["KinReply"]
+    assert [c["name"] for c in cats] == ["💬 KinReply"]
     for agent in (site, legal):
         assert guild.by_id(agent.channel_id)["parent_id"] == cats[0]["id"]
     team = Teams(agents_file().with_name("teams.json")).get("KINREPLY")
@@ -325,7 +325,7 @@ def test_declare_inside_a_repo_joins_its_team_as_passing(
     assert team.path == str(root) and team.keepers == []
     agent = Registry().by_name("abcdef12")
     assert agent is not None
-    category = next(c for c in guild.categories() if c["name"] == "tells")
+    category = next(c for c in guild.categories() if c["name"] == "🧠 tells")
     assert guild.by_id(agent.channel_id)["parent_id"] == category["id"]
 
 
@@ -386,3 +386,21 @@ def test_set_persona_command_and_listing_puts_keepers_first(
     assert lines[0] == "hotline (2)  /r/hotline"
     assert "operator" in lines[1] and "keeper" in lines[1]
     assert "worker-1" in lines[2] and "passing" in lines[2]
+
+
+def test_a_category_made_before_icons_is_still_found(guild: FakeGuild) -> None:
+    guild.channels.append({"id": "700", "name": "KinReply", "type": CATEGORY})
+    site = _seed(guild, "kinreply-site-fa", "sid-site")
+    assert cli.main(["--team", "KinReply", "--join", "kinreply-site-fa"]) == 0
+    assert len(guild.categories()) == 1
+    assert guild.by_id(site.channel_id)["parent_id"] == "700"
+
+
+def test_topic_leads_with_the_persona(
+    guild: FakeGuild, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.chdir(_repo(tmp_path, "hotline"))
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "op000000-0000")
+    assert cli.main(["--declare", "operate", "--persona", "keeper"]) == 0
+    agent = Registry().by_name("op000000")
+    assert guild.by_id(agent.channel_id)["topic"] == "⭐ keeper · operate"

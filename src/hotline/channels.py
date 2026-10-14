@@ -57,6 +57,26 @@ def slug(name: str) -> str:
     return (PREFIX + (cleaned or "unnamed"))[:100]
 
 
+# Category icons. Cosmetic only: categories are matched with the icon stripped
+# (see `bare`), so changing or removing one here never orphans a team.
+ICONS = {"hotline": "🛰️", "kinreply": "💬", "tells": "🧠", "qwen-arch-agent": "🦙"}
+DEFAULT_ICON = "📂"
+
+
+def bare(name: str) -> str:
+    """A category name with any leading icon and spacing removed, casefolded."""
+    stripped = name.strip()
+    i = 0
+    while i < len(stripped) and not stripped[i].isalnum():
+        i += 1
+    return stripped[i:].strip().casefold()
+
+
+def dressed(name: str) -> str:
+    plain = name.strip()
+    return f"{ICONS.get(bare(plain), DEFAULT_ICON)} {plain}"
+
+
 class Channels:
     def __init__(self, token: str, guild_id: int, timeout: float = 20.0) -> None:
         self.token = token
@@ -126,8 +146,9 @@ class Channels:
 
     def create_category(self, name: str) -> int:
         # Not slugified and not prefixed: a category is a heading Bogdan reads
-        # ("KinReply"), and Discord keeps category names as typed.
-        body = {"name": name.strip()[:100], "type": CATEGORY}
+        # ("KinReply"), and Discord keeps category names as typed. It gets an
+        # icon in front (10-14, "give the channels a bit more pizzazz").
+        body = {"name": dressed(name)[:100], "type": CATEGORY}
         return int(self._call(f"/guilds/{self.guild_id}/channels", "POST", body)["id"])
 
     def ensure_category(self, name: str) -> int:
@@ -136,12 +157,9 @@ class Channels:
         Case-insensitive so `--team kinreply` finds the "KinReply" category a
         previous join made, rather than minting a second one beside it.
         """
-        wanted = name.strip().casefold()
+        wanted = bare(name)
         for channel in self.all():
-            if (
-                channel.get("type") == CATEGORY
-                and str(channel.get("name", "")).casefold() == wanted
-            ):
+            if channel.get("type") == CATEGORY and bare(str(channel.get("name", ""))) == wanted:
                 return int(channel["id"])
         return self.create_category(name)
 

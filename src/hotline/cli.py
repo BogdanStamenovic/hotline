@@ -348,6 +348,7 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             log(f"warning: could not record the team: {exc}")
         if team is not None:
             log(f"team: {team.display} ({teams.persona_of(agent.name)})")
+        topic = _topic(teams.persona_of(agent.name), agent.task)
         if agent.wants_channel and agent.channel_id is None:
             manager = channels_from_env()
             if manager is None:
@@ -356,7 +357,7 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
                 try:
                     parent = parent_for(manager, agent.name, _teams_path(registry))
                     agent.channel_id = manager.create_text(
-                        agent.name, topic=agent.task, parent_id=parent
+                        agent.name, topic=topic, parent_id=parent
                     )
                     registry.save()
                     log(f"channel: #{channel_slug(agent.name)}")
@@ -369,7 +370,7 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             manager = channels_from_env()
             if manager is not None:
                 with contextlib.suppress(HotlineError):
-                    manager.retopic(agent.channel_id, agent.task)
+                    manager.retopic(agent.channel_id, topic)
         return 0
 
     finished = registry.complete(session_id, handoff=args.handoff)
@@ -411,6 +412,12 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
     registry.save()
     log(f"done: {finished.name}")
     return 0
+
+
+def _topic(persona: str | None, task: str) -> str:
+    """Channel topic: the persona first, so a glance tells keeper from passing."""
+    badge = {"keeper": "⭐ keeper", "passing": "· passing"}.get(persona or "")
+    return f"{badge} · {task}" if badge else task
 
 
 def _teams_path(registry: Registry) -> Any:
