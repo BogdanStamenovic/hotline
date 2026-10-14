@@ -15942,3 +15942,4 @@ backup is the only rollback that exists.
 - 10-14 10:07Z Bogdan (verified): new manager agent in a new channel. Spawned blank Opus manager (tmux manager, hotline data-10, #agent-data-10, cwd ~/data, seed seed-mgr.txt), awaiting his brief there.
 - 10-14 10:15Z Bogdan (verified): /rc into the manager pane. Done; RC session_017Ja9Eif5XxncqAqhJgrJ3k. Manager already on his 'classwatch' brief (Whisper on arch).
 - 10-14 10:18Z Bogdan (verified): 'another standalone agent so not the manager'. Spawned blank Opus agent (tmux agent2, hotline data-f8, #agent-data-f8, seed seed-agent2.txt), /rc on: session_01B5rvPojKHMt4SF2KozyM6k. Manager data-10 left running.
+- 10-14 11:05Z Bogdan (verified): vast balance? No API key on archserver; reachable Chrome is on arch laptop and logged out; archserver Chrome launch via use-computer virtual + headless both failed. Reported last known $1.01 (10-11) and the two routes (he logs in / API key file).
