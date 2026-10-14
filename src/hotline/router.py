@@ -155,6 +155,14 @@ _HELP = re.compile(r"^(?:help|commands?|what\s+can\s+(?:you|i)\s+do)\s*[.?!]?$",
 _RESUME = re.compile(
     r"^(?:resume|revive|bring\s+back)(?:\s+(?:agent\s+)?(.+?))?\s*[.?]?$", re.IGNORECASE
 )
+# `wake` brings back a team or one agent. Bare `wake` lists teams, awake and
+# asleep. "wake up" alone is deliberately NOT a command: said in an agent's own
+# channel it is far more likely to be prose for that agent than a request to
+# revive something unnamed.
+_WAKE = re.compile(
+    r"^wake(?:\s+up)?(?:\s+the)?(?:\s+(team))?(?:\s+(.+?))?(?:\s+team)?\s*[.?!]?$",
+    re.IGNORECASE,
+)
 _RESOURCES = re.compile(
     r"^(?:resources?|load|how\s+(?:much|is)\s+(?:ram|memory|vram|load)\S*)\s*[.?]?$", re.IGNORECASE
 )
@@ -189,6 +197,18 @@ def parse_utterance(utterance: str) -> Route:
     if resume:
         target = (resume.group(1) or "").strip()
         return Route("control", target or None, text, action="resume")
+    wake = _WAKE.match(text)
+    if wake and not (re.match(r"^wake\s+up\s*[.?!]?$", low)):
+        target = (wake.group(2) or "").strip()
+        if wake.group(1) and not target:
+            target = ""
+        return Route(
+            "control",
+            target or None,
+            text,
+            action="wake",
+            explicit=bool(wake.group(1)) or low.rstrip(".?! ").endswith(" team"),
+        )
     if _RESOURCES.match(low):
         return Route("control", None, text, action="resources")
     if _AGENTS.match(low):

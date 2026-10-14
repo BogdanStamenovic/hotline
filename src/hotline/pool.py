@@ -173,6 +173,7 @@ class SessionPool:
         # ceremony with no question behind it.
         self.confirm_keys = confirm_keys or set()
         self.conversations: dict[str, Conversation] = {}
+        self._seeds: set[asyncio.Task[None]] = set()
         # Why a conversation went away, kept until the caller is told. Bogdan had
         # five turns with a session, it vanished mid-message, and the reply came
         # back from a stranger with none of the context -- with nothing anywhere
@@ -488,6 +489,9 @@ class SessionPool:
             # an ordinary question rather than swallowed.
             return None
 
+        if route.action == "wake":
+            return await self._wake(conv, route, live)
+
         if route.action == "detach":
             was = conv.attached_to
             conv.attached_to = conv.attached_id = None
@@ -669,8 +673,7 @@ class SessionPool:
         rest of that conversation belongs anyway.
         """
         from .agents import Agent, Registry
-        from .channels import from_env as channels_from_env
-        from .revive import brief_for, rehome, resumable
+        from .revive import brief_for, resumable
 
         registry = Registry()
         live_ids = {s.session_id for s in live}
@@ -728,6 +731,84 @@ class SessionPool:
         if agent is None or agent.session_id in live_ids:
             return None
 
+        return await self._revive(agent, cwd=_home_of(agent.name))
+
+    async def _wake(self, conv: Conversation, route: Route, live: list[LiveSession]) -> Reply:
+        """`wake` -- teams awake and asleep; `wake X` revives a team or one agent.
+
+        An agent name wins over a team name unless the caller said `team`, so
+        `wake tells-09` is that agent and `wake team tells` is everyone in it.
+        A whole-team wake brings back only the members that are not running;
+        the ones already up are left alone, never forked.
+        """
+        from .agents import Registry
+        from .teams import Teams
+
+        registry = Registry()
+        teams = Teams(registry.path.with_name("teams.json"))
+        live_ids = {s.session_id for s in live}
+
+        def awake(name: str) -> bool:
+            agent = registry.by_name(name)
+            return agent is not None and agent.session_id in live_ids
+
+        if not route.target:
+            lines = ["Teams (⭐ keeper, · passing; ● awake, ○ asleep):"]
+            for listed in sorted(teams.all(), key=lambda t: not any(awake(m) for m in t.members)):
+                if not listed.members:
+                    continue
+                state = "awake" if any(awake(m) for m in listed.members) else "asleep"
+                members = ", ".join(
+                    f"{'⭐' if listed.is_keeper(m) else '·'}{m} {'●' if awake(m) else '○'}"
+                    for m in listed.ordered()
+                )
+                lines.append(f"**{listed.display}** [{state}] — {members}")
+            lines.append("")
+            lines.append('Say "wake team KinReply" for the whole team, or "wake <agent>" for one.')
+            return Reply(text="\n".join(lines), subtype="control")
+
+        spec = route.target.strip()
+        agent = None if route.explicit else registry.by_name(spec)
+        if agent is not None:
+            if agent.session_id in live_ids:
+                return Reply(text=f"**{agent.name}** is already awake.", subtype="control")
+            reply = await self._revive(agent, cwd=_home_of(agent.name))
+            await self._rearrange()
+            return reply
+
+        team = teams.get(spec)
+        if team is None:
+            return Reply(
+                text=f"No agent or team called {spec!r}. Bare `wake` lists the teams.",
+                subtype="control",
+            )
+        out = [f"Waking **{team.display}**:"]
+        for name in team.ordered():
+            member = registry.by_name(name)
+            if member is None:
+                out.append(f"- {name}: no record left, nothing to wake")
+            elif member.session_id in live_ids:
+                out.append(f"- {name}: already awake")
+            else:
+                reply = await self._revive(member, cwd=team.path or _home_of(name))
+                out.append(f"- {reply.text}")
+        await self._rearrange()
+        return Reply(text="\n".join(out), subtype="control")
+
+    async def _rearrange(self) -> None:
+        """Run the sidebar pass now, so a woken team's category is back at once."""
+        with contextlib.suppress(Exception):
+            from .daemon import housekeep
+
+            await asyncio.to_thread(housekeep, lambda line: log.info("%s", line), False)
+
+    async def _revive(self, agent: Any, cwd: str | None = None) -> Reply:
+        """Spawn a session for a stopped agent and seed it from its brief."""
+        from .agents import Registry
+        from .channels import from_env as channels_from_env
+        from .revive import brief_for, rehome
+
+        registry = Registry()
         brief = brief_for(agent)
         if brief is None:
             return Reply(
@@ -736,7 +817,7 @@ class SessionPool:
                 subtype="control",
             )
         try:
-            session = await tmuxen.spawn(agent.name, cwd=self.cwd, name=agent.name)
+            session = await tmuxen.spawn(agent.name, cwd=cwd or self.cwd, name=agent.name)
         except HotlineError as exc:
             return Reply(
                 text=f"Could not start a session for {agent.name}: {exc}", subtype="control"
@@ -755,7 +836,11 @@ class SessionPool:
             with contextlib.suppress(Exception):
                 await self.router.ask_session(session.name, brief.seed, timeout=600.0)
 
-        self._seeding = asyncio.create_task(seed())
+        # Held in a set: a wake of a whole team starts several seeds at once,
+        # and asyncio keeps only a weak reference to a task nobody holds.
+        task_ = asyncio.create_task(seed())
+        self._seeds.add(task_)
+        task_.add_done_callback(self._seeds.discard)
 
         where = f" — reading it in <#{channel}> now" if channel else ""
         source = (
@@ -1060,6 +1145,14 @@ class SessionPool:
         }
 
 
+def _home_of(name: str) -> str | None:
+    """The repo an agent's team is, so a revived member starts where it works."""
+    from .teams import Teams
+
+    team = Teams().team_of(name)
+    return team.path if team is not None else None
+
+
 HELP_TEXT = """**Commands** (these are handled by hotline itself, not sent to a model)
 
 `help` — this
@@ -1072,6 +1165,7 @@ HELP_TEXT = """**Commands** (these are handled by hotline itself, not sent to a 
 `agents` — who is working on what, and who has finished
 `new agent <task>` — start a SEPARATE agent with its own session and channel
 `resume` — agents you can bring back, numbered; `resume 2` or `resume <name>`
+`wake` — teams, awake and asleep; `wake team <team>` wakes all of it, `wake <agent>` one member
 
 Every message relayed into a session now carries a provenance header saying
 where it came from. A message relayed from here carries the Discord channel and

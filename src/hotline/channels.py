@@ -59,7 +59,7 @@ def slug(name: str) -> str:
 
 # Category icons. Cosmetic only: categories are matched with the icon stripped
 # (see `bare`), so changing or removing one here never orphans a team.
-ICONS = {"hotline": "🛰️", "kinreply": "💬", "tells": "🧠", "qwen-arch-agent": "🦙"}
+ICONS = {"hotline": "🛰️", "kinreply": "💬", "tells": "🧠", "qwen-arch-agent": "🦙", "asleep": "💤"}
 DEFAULT_ICON = "📂"
 
 
@@ -174,6 +174,43 @@ class Channels:
             "PATCH",
             {"parent_id": str(parent_id) if parent_id is not None else None},
         )
+
+    def patch(self, channel_id: int, body: dict[str, Any]) -> None:
+        """Move or reposition a channel. Reversible, so unguarded, like `move`."""
+        self._call(f"/channels/{channel_id}", "PATCH", body)
+
+    def delete_category(self, category_id: int) -> bool:
+        """Delete an EMPTY category. Refuses one that still holds channels.
+
+        Deleting a category in Discord does not delete its channels, it orphans
+        them to the top row, so a wrong id here would scatter a team rather than
+        destroy it. Still refused: the caller asked for an empty one.
+        """
+        listing = self.all()
+        target = next((c for c in listing if int(c["id"]) == int(category_id)), None)
+        if target is None:
+            return False
+        if target.get("type") != CATEGORY:
+            raise HotlineError(f"refusing to delete #{target.get('name')}: not a category")
+        if any(str(c.get("parent_id") or "") == str(category_id) for c in listing):
+            raise HotlineError(f"refusing to delete category {target.get('name')}: not empty")
+        self._call(f"/channels/{category_id}", "DELETE")
+        return True
+
+    def history(self, channel_id: int) -> tuple[dict, list[dict]]:
+        """A channel's metadata and every message in it, oldest first."""
+        meta = self._call(f"/channels/{channel_id}")
+        messages: list[dict] = []
+        before = ""
+        while True:
+            page = self._call(f"/channels/{channel_id}/messages?limit=100{before}")
+            if not isinstance(page, list) or not page:
+                break
+            messages.extend(page)
+            if len(page) < 100:
+                break
+            before = f"&before={page[-1]['id']}"
+        return meta, list(reversed(messages))
 
     # ---- lifecycle -------------------------------------------------------
 

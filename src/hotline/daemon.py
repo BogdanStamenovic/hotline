@@ -300,25 +300,62 @@ def build_server(pool: SessionPool, host: str, port: int, verbose: bool = False)
     return server
 
 
-async def _sweep_forever(log: Callable[[str], None], every: float = 600.0) -> None:
-    """Delete the channels of agents whose three days are up.
+def housekeep(log: Callable[[str], None], sweep: bool) -> None:
+    """One pass: record who is alive, arrange the sidebar, and maybe sweep.
 
-    Ten minutes is deliberately coarse. The deadline is measured in days, nothing
-    downstream cares about the difference between deleting a channel now and
-    deleting it at teatime, and each pass costs a Discord round trip.
+    All three need the same fact -- which agents are live -- and reading it once
+    keeps them agreeing with each other. Liveness is the session socket, probed,
+    not the registry's [working] field, which goes on saying working after a
+    power-off.
     """
     from .agents import Registry
+    from .ccsocks import discover
     from .channels import from_env as channels_from_env
+    from .config import state_dir
+    from .layout import arrange
+    from .seen import seen_beside
 
+    registry = Registry()
+    live_ids = {s.session_id for s in discover()}
+    alive = [a.name for a in registry.agents.values() if a.session_id in live_ids]
+    seen = seen_beside(registry.path).update(alive, [a.name for a in registry.agents.values()])
+    manager = channels_from_env()
+    if manager is not None:
+        try:
+            arrange(manager, registry, live_ids, log=log)
+        except Exception as exc:  # noqa: BLE001 - cosmetic; must never stop the sweep
+            log(f"discord arrange failed: {type(exc).__name__}: {exc}")
+    if not sweep:
+        return
+    swept = registry.sweep(
+        manager,
+        log=log,
+        live_ids=live_ids,
+        seen=seen,
+        archive_dir=state_dir() / "discord-archive" / time.strftime("%Y-%m-%d"),
+    )
+    if swept:
+        log(f"swept {len(swept)} expired agent(s): {', '.join(swept)}")
+
+
+async def _sweep_forever(
+    log: Callable[[str], None], every: float = 60.0, sweep_every: int = 10
+) -> None:
+    """Housekeeping on a timer: arrange each minute, sweep each ten.
+
+    The sweep is deliberately coarse. The deadline is measured in days, nothing
+    downstream cares about deleting a channel now or at teatime, and each delete
+    costs a history download first. The arrange is finer because it is what he
+    sees: an agent that died should leave the top of the sidebar within a minute.
+    """
+    tick = 0
     while True:
         await asyncio.sleep(every)
+        tick += 1
         try:
-            swept = await asyncio.to_thread(lambda: Registry().sweep(channels_from_env(), log=log))
-        except Exception as exc:  # noqa: BLE001 - a sweep must never take the daemon down
-            log(f"agent sweep failed: {type(exc).__name__}: {exc}")
-            continue
-        if swept:
-            log(f"swept {len(swept)} expired agent(s): {', '.join(swept)}")
+            await asyncio.to_thread(housekeep, log, tick % sweep_every == 0)
+        except Exception as exc:  # noqa: BLE001 - housekeeping must never take the daemon down
+            log(f"housekeeping failed: {type(exc).__name__}: {exc}")
 
 
 def _relay_to(bot: Any, log: Callable[[str], None]) -> Callable[[str, str], Awaitable[None]]:

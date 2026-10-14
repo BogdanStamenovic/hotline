@@ -28,6 +28,7 @@ import os
 import tempfile
 import time
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 
 from .config import agents_file
@@ -292,15 +293,33 @@ class Registry:
     def working(self) -> list[Agent]:
         return [a for a in self.agents.values() if not a.done]
 
-    def expired(self, now: float | None = None) -> list[Agent]:
+    def expired(
+        self,
+        now: float | None = None,
+        live_ids: set[str] | None = None,
+        seen: dict[str, float] | None = None,
+    ) -> list[Agent]:
         """Agents whose retention has run out and whose record should go.
 
-        Only completed ones can expire. An agent that has been working for a
-        fortnight is not stale, it is busy, and nothing here should be able to
-        delete the channel of something still running.
+        A completed agent expires `keep_days` after its `--done`. A stopped one
+        -- killed, or gone with a power-off -- expires `keep_days` after it was
+        last seen alive, but only when the caller can say who is alive
+        (`live_ids`) and when (`seen`): without both, nothing that has not
+        finished can expire. An agent that has been working for a fortnight is
+        not stale, it is busy, and nothing here may delete the channel of
+        something still running.
         """
         moment = time.time() if now is None else now
         kept = self.team_members()
+
+        def due(a: Agent) -> bool:
+            if a.expires_at is not None and moment >= a.expires_at:
+                return True
+            if live_ids is None or seen is None or a.session_id in live_ids:
+                return False
+            last = seen.get(a.name.lower())
+            return last is not None and moment >= last + a.keep_days * 86400
+
         return [
             a
             for a in self.agents.values()
@@ -314,8 +333,7 @@ class Registry:
             # precisely so their channels stay; reaping one three days after a
             # `--done` would undo that. Passing members expire like anyone.
             and a.name.lower() not in kept
-            and a.expires_at is not None
-            and moment >= a.expires_at
+            and due(a)
         ]
 
     def team_members(self) -> set[str]:
@@ -336,6 +354,9 @@ class Registry:
         manager: Any = None,
         now: float | None = None,
         log: Any = None,
+        live_ids: set[str] | None = None,
+        seen: dict[str, float] | None = None,
+        archive_dir: Path | None = None,
     ) -> list[str]:
         """Close out agents whose retention has run out. Returns what was swept.
 
@@ -345,12 +366,22 @@ class Registry:
         pointing at a channel that no longer exists.
         """
         swept: list[str] = []
-        for agent in self.expired(now):
+        for agent in self.expired(now, live_ids=live_ids, seen=seen):
             if manager is not None:
                 for attr in ("channel_id", "voice_channel_id"):
                     cid = getattr(agent, attr)
                     if cid is None:
                         continue
+                    if archive_dir is not None:
+                        from .seen import archive_channel
+
+                        # Purged from Discord, kept on disk: a channel delete takes
+                        # its scrollback, and a passing agent's thread is still
+                        # sometimes the only record of what it found.
+                        if archive_channel(manager, cid, archive_dir) is None:
+                            if log is not None:
+                                log(f"not deleting channel {cid} for {agent.name}: archive failed")
+                            continue
                     try:
                         manager.delete(cid)
                     except Exception as exc:  # noqa: BLE001 - one bad id must not stop the sweep
@@ -361,6 +392,13 @@ class Registry:
                             log(f"could not delete channel {cid} for {agent.name}: {exc}")
                         continue
                     setattr(agent, attr, None)
+            # A channel survived (archive or delete failed). Forgetting the record
+            # now would orphan it, since only the record knows the id; keep both
+            # and let the next pass try again.
+            if manager is not None and (
+                agent.channel_id is not None or agent.voice_channel_id is not None
+            ):
+                continue
             swept.append(agent.name)
             self.agents.pop(agent.session_id, None)
         if swept:
