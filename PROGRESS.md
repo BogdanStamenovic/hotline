@@ -15941,3 +15941,4 @@ backup is the only rollback that exists.
 - Root disk 4.6G free (19.5G on 09-22); no new >500M file since 10-09; uv cache 14G, `uv cache prune` freed 15 MiB. Told him FYI; datasets go to /mnt/windows.
 - 10-14 10:07Z Bogdan (verified): new manager agent in a new channel. Spawned blank Opus manager (tmux manager, hotline data-10, #agent-data-10, cwd ~/data, seed seed-mgr.txt), awaiting his brief there.
 - 10-14 10:15Z Bogdan (verified): /rc into the manager pane. Done; RC session_017Ja9Eif5XxncqAqhJgrJ3k. Manager already on his 'classwatch' brief (Whisper on arch).
+- 10-14 10:18Z Bogdan (verified): 'another standalone agent so not the manager'. Spawned blank Opus agent (tmux agent2, hotline data-f8, #agent-data-f8, seed seed-agent2.txt), /rc on: session_01B5rvPojKHMt4SF2KozyM6k. Manager data-10 left running.
