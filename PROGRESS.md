@@ -15950,3 +15950,17 @@ backup is the only rollback that exists.
 - 14:03 qwen-arch reports Qwen agent live in #qwen-arch via systemd --user qwen-relay; verified: unit active, test task answered 6s, Ready posted; its teardown timer 15:45 (warn 15:15); my backstop 16:00 kept.
 - 14:51 qwen-arch destroyed 55919981 on Bogdan's verified 'destroy the qwen instance' (1559911368604520461, read myself); ssh refused 14:52; my backstop stopped. Billing unreadable (arch rebooted ~14:46, Chrome down); estimate ~$0.44 left, labelled estimate. TODO: read real credit when laptop Chrome is back.
 - 21:25 power-off checklist done (agents idle, repos clean, docker off, no vast, WoL g); banner written; powering off per his 19:13Z 'Lets shutdown. Goodnight'.
+
+## 2026-10-14 21:26 CEST — operator hotline-80 boot (sentinel wake)
+- Box powered off 21:23 on his "Goodnight", then he wrote "Yeah so come back on ill be waiting" (19:23:34Z). hotline-sentinel announced waking at 19:23:38Z and reported up at 19:24:11Z (`last -x`: down 21:23, boot 21:23). First real end-to-end run of 88ee96f: PASS.
+- Adopted hotline-80. Only session alive. docker and gdm inactive. Future wake tasks: track-slot-0900 (10-15 09:00, then_do empty). RTC wakealarm empty.
+- Posted hello + state to #agent-hotline-80. Waiting on him.
+
+## 2026-10-14 21:30-21:55 CEST — layout, retention, wake, knowledge base (his Discord asks, all verified)
+- e290020: hotlined `housekeep` every 60 s: seen.json (last alive), `layout.arrange` (operator #agent-hotline-80 uncategorized pos 0; dead teams out of their categories; empty team categories deleted), sweep every 10 min now purges stopped PASSING agents 3 days after last seen, archiving each channel to ~/.local/state/hotline/discord-archive/DATE first. Fixed: a failed delete used to forget the record anyway (orphan channel). Bot `wake` / `wake team X` / `wake NAME`.
+- He: "one asleep section, subfolders per team". Discord cannot nest categories → a983911: one 💤 asleep category with read-only divider channels 📁-kinreply / 📁-tells / 📁-no-team, ordered. (227bd16 per-team sleep categories superseded.) Verified live listing; settled pass = 1 GET.
+- tells-09 → keeper. qwen-arch-agent-e8 purged at his word (archived 160 KB). Backlog of dead passing agents got 3 days' grace: purge ≈10-17 21:40 unless promoted (halo-research-36, fgc-2026-e4, qwen-abl-bench, data-10, data-f8 have channels).
+- fb7a79e hotline-kb + forum #knowledge-base (id in .env as HOTLINE_KB_FORUM_ID), linked into /usr/local/bin. Filed: Halo dossier, Qwen abliterated bench, lying/psychopathy datasets. ~/.claude/hooks/kb-nudge.py PostToolUse on Artifact (settings.json backup .bak-20261014-kb) + ~/.claude/skills/knowledge-base. Positive + 2 negative hook cases tested.
+- Not exercised: a real `wake` revive (would restart his agents).
+- 21:58 KB backfill at his rule: +6 (Twin P100, image bake-off, voice bake-off, UniFi teardown, A/B/C run, unit economics); summaries from a Sonnet subagent reading each artifact; skipped one-offs listed in Discord.
+- 22:40 power-off on his verified "Shutdown goodnight"; handoff banner written.
