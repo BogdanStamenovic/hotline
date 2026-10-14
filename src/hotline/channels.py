@@ -35,6 +35,7 @@ API = "https://discord.com/api/v10"
 USER_AGENT = "DiscordBot (https://github.com/BogdanStamenovic/hotline, 1.0)"
 
 TEXT, VOICE, CATEGORY = 0, 2, 4
+SEND_MESSAGES = 1 << 11
 
 # Every channel hotline owns carries this prefix. It is the only thing standing
 # between a caller bug and someone's real channels, so deletion checks it rather
@@ -86,7 +87,7 @@ class Channels:
 
     # ---- transport -------------------------------------------------------
 
-    def _call(self, path: str, method: str = "GET", body: dict | None = None) -> Any:
+    def _call(self, path: str, method: str = "GET", body: dict | list | None = None) -> Any:
         data = json.dumps(body).encode() if body is not None else None
         request = urllib.request.Request(
             f"{API}{path}",
@@ -212,6 +213,29 @@ class Channels:
                 break
             before = f"&before={page[-1]['id']}"
         return meta, list(reversed(messages))
+
+    def create_divider(self, name: str, parent_id: int, label: str) -> int:
+        """A read-only label channel, the stand-in for a subfolder (see layout)."""
+        body = {
+            "name": name[:100],
+            "type": TEXT,
+            "parent_id": str(parent_id),
+            "topic": f"── {label} ── (divider; the channels below are this team's)",
+            # @everyone's role id is the guild id. Owners bypass this, which is
+            # fine: it only stops anyone else posting into a label.
+            "permission_overwrites": [
+                {"id": str(self.guild_id), "type": 0, "deny": str(SEND_MESSAGES)}
+            ],
+        }
+        return int(self._call(f"/guilds/{self.guild_id}/channels", "POST", body)["id"])
+
+    def reorder(self, positions: list[tuple[int, int]]) -> None:
+        """Set several channel positions in one call."""
+        self._call(
+            f"/guilds/{self.guild_id}/channels",
+            "PATCH",
+            [{"id": str(cid), "position": pos} for cid, pos in positions],
+        )
 
     # ---- lifecycle -------------------------------------------------------
 

@@ -1,8 +1,9 @@
 """The sidebar layout and stopped-agent retention Bogdan asked for on 10-14.
 
 * The operator's channel is outside every category, at the top.
-* A team with no live member goes to its own "<team> · asleep" category at the
-  bottom (still grouped by team: Discord cannot nest categories), and
+* A team with no live member goes to one "asleep" category at the bottom,
+  grouped there under a divider channel per team (Discord cannot nest
+  categories), and
   its own category disappears while empty; waking a member brings it back.
 * Passing agents are purged three days after they stop -- archived first --
   and keepers never are.
@@ -75,7 +76,7 @@ def test_dead_team_goes_to_sleep_and_its_category_disappears(world) -> None:
     assert _category_of(fake, site) == _category_of(fake, legal) == "kinreply"
 
     arrange(manager, registry, set(), teams=teams)
-    assert _category_of(fake, site) == _category_of(fake, legal) == "kinreply · asleep"
+    assert _category_of(fake, site) == _category_of(fake, legal) == "asleep"
     assert not any(bare(c["name"]) == "kinreply" for c in fake.categories())
     # Nothing was deleted except the empty heading: both channels still exist.
     assert fake.by_id(site.channel_id) and fake.by_id(legal.channel_id)
@@ -109,7 +110,7 @@ def test_loose_dead_agents_sleep_and_live_ones_stay_on_top(world) -> None:
     dead = _agent(fake, registry, "data-f8", "s1")
     live = _agent(fake, registry, "data-10", "s2")
     arrange(manager, registry, {"s2"}, teams=teams)
-    assert _category_of(fake, dead) == "loose · asleep"
+    assert _category_of(fake, dead) == "asleep"
     assert _category_of(fake, live) is None
 
 
@@ -212,24 +213,52 @@ def test_bare_wake_up_is_prose_for_the_agent() -> None:
     assert parse_utterance("wake up").action is None
 
 
-def test_sleeping_teams_stay_grouped_and_below_awake_ones(world) -> None:
+def test_sleeping_teams_are_grouped_under_dividers_in_one_section(world) -> None:
     fake, manager, registry, teams = world
     site = _agent(fake, registry, "kinreply-site-fa", "s1")
+    legal = _agent(fake, registry, "kinreply-legal-1d", "s5")
     tells = _agent(fake, registry, "tells-09", "s2")
-    loose = _agent(fake, registry, "data-f8", "s3")
+    _agent(fake, registry, "data-f8", "s3")
     worker = _agent(fake, registry, "hotline-4e", "s4")
-    teams.join("KinReply", site.name)
     teams.join("tells", tells.name)
+    teams.join("KinReply", site.name)
+    teams.join("KinReply", legal.name)
     teams.join("hotline", worker.name, keeper=False)
 
     arrange(manager, registry, {"s4"}, teams=teams)
 
-    assert _category_of(fake, site) == "kinreply · asleep"
-    assert _category_of(fake, tells) == "tells · asleep"
-    assert _category_of(fake, loose) == "loose · asleep"
+    beds = [c for c in fake.categories() if "asleep" in bare(c["name"])]
+    assert [bare(c["name"]) for c in beds] == ["asleep"]
+    bed = beds[0]["id"]
+    inside = sorted(
+        (c for c in fake.channels if c.get("parent_id") == bed),
+        key=lambda c: (c["position"], int(c["id"])),
+    )
+    assert [c["name"] for c in inside] == [
+        "📁-kinreply",
+        "agent-kinreply-site-fa",
+        "agent-kinreply-legal-1d",
+        "📁-tells",
+        "agent-tells-09",
+        "📁-no-team",
+        "agent-data-f8",
+    ]
     assert _category_of(fake, worker) == "hotline"
     pos = {bare(c["name"]): c["position"] for c in fake.categories()}
-    assert pos["hotline"] < pos["kinreply · asleep"] < pos["tells · asleep"] < pos["loose · asleep"]
-    assert next(c for c in fake.categories() if bare(c["name"]) == "tells · asleep")[
-        "name"
-    ].startswith("💤")
+    assert pos["hotline"] < pos["asleep"]
+
+    # Settled: a second pass writes nothing.
+    fake.calls.clear()
+    arrange(manager, registry, {"s4"}, teams=teams)
+    assert [m for m, _, _ in fake.calls if m != "GET"] == []
+
+    # tells wakes: its divider goes, the rest stays in order.
+    arrange(manager, registry, {"s4", "s2"}, teams=teams)
+    names = [c["name"] for c in fake.channels if c.get("parent_id") == bed]
+    assert "📁-tells" not in names and "📁-kinreply" in names
+    assert _category_of(fake, tells) == "tells"
+
+    # Everyone wakes: no asleep section, no dividers anywhere.
+    arrange(manager, registry, {"s1", "s2", "s3", "s4", "s5"}, teams=teams)
+    assert not any(str(c["name"]).startswith("📁-") for c in fake.channels)
+    assert not any("asleep" in bare(c["name"]) for c in fake.categories())

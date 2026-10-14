@@ -13,6 +13,11 @@ Bogdan's layout (10-14):
   channels moved into one **asleep** category at the bottom, which he collapses
   once and Discord keeps collapsed for him. Its own category is deleted while
   empty and comes back, icon and all, when a member wakes.
+* **Inside asleep, still grouped by team.** He asked for subfolders; Discord
+  has none (a category cannot hold a category). The closest real thing is a
+  read-only *divider* channel per team (`📁-kinreply`) with that team's channels
+  ordered under it. Dividers are created and removed here, and are recognised
+  by their prefix inside the asleep category only.
 
 Agents outside any team follow the same rule: live ones stay loose under the
 operator, dead ones go to sleep. Otherwise the top row would be a column of dead
@@ -34,13 +39,18 @@ from typing import Any
 from .channels import CATEGORY, bare
 from .teams import Teams
 
-ASLEEP = "asleep"  # the single category of the first version, still cleaned up
-LOOSE = "loose"
+ASLEEP = "asleep"
+LOOSE = "no team"
+DIVIDER = "📁-"
 
 
 def sleeping(team: str) -> str:
-    """The category a sleeping team's channels wait in."""
+    """227bd16's per-team sleep category; only still named so it gets cleaned up."""
     return f"{team} · {ASLEEP}"
+
+
+def divider_name(team: str) -> str:
+    return DIVIDER + "-".join(team.casefold().split())
 
 
 @dataclass
@@ -124,10 +134,6 @@ def arrange(
         for cid in channels_of(agent):
             place(cid, None, "operator", position=0)
 
-    # Sleeping channels stay grouped by team (10-14, "if agents are in the
-    # asleep folder they should be categorised in teams there"). Discord has no
-    # nested categories, so each sleeping team gets its own "· asleep" category,
-    # all of them below every awake one.
     asleep: dict[str, list[int]] = {}
     in_a_team: set[str] = set()
     for team in teams.all():
@@ -157,30 +163,18 @@ def arrange(
 
     # Teams alphabetically, the teamless ones last.
     order = sorted(asleep, key=lambda t: (t == LOOSE, t.casefold()))
-    beds: list[int] = []
+    bed = category(ASLEEP) if asleep else None
     for team_name in order:
-        bed = category(sleeping(team_name))
-        beds.append(bed)
         for cid in asleep[team_name]:
             place(cid, bed, f"{team_name} asleep")
-    if beds and not dry_run:
-        cats = {
-            int(c["id"]): int(c.get("position", 0))
-            for c in manager.all()
-            if c.get("type") == CATEGORY
-        }
-        awake_top = max((p for cid, p in cats.items() if cid not in beds), default=-1)
-        wanted = [cats.get(bed, 0) for bed in beds]
-        settled = all(p > awake_top for p in wanted) and wanted == sorted(set(wanted))
-        if not settled:
-            for i, bed in enumerate(beds, 1):
-                manager.patch(bed, {"position": awake_top + i})
+    if not dry_run:
+        _tidy_bed(manager, bed, [(t, asleep[t]) for t in order], plan)
 
     # Empty team categories: the dead team's heading would otherwise stay in the
     # sidebar with nothing under it, which is the visible thing he asked to lose.
     # A dry run moved nothing, so it has nothing to count yet and removes nothing.
     if not dry_run:
-        ours = {team.key for team in teams.all()} | {ASLEEP, bare(sleeping(LOOSE))}
+        ours = {team.key for team in teams.all()} | {ASLEEP, bare(sleeping("loose"))}
         ours |= {bare(sleeping(team.display)) for team in teams.all()}
         occupied = {_parent(c) for c in manager.all()}
         for cid, name in category_names.items():
@@ -191,3 +185,63 @@ def arrange(
     if plan and log is not None:
         log(f"arranged discord: {plan.describe()}")
     return plan
+
+
+def _tidy_bed(
+    manager: Any, bed: int | None, groups: list[tuple[str, list[int]]], plan: Plan
+) -> None:
+    """Dividers and order inside asleep, and asleep below every other category.
+
+    Writes only when something is out of place, so a settled sidebar costs the
+    one extra GET this needs to see the moves it just made.
+    """
+    listing = manager.all()
+    stale = [
+        c
+        for c in listing
+        if str(c.get("name", "")).startswith(DIVIDER)
+        and (bed is None or _parent(c) != bed)
+        and c.get("type") != CATEGORY
+    ]
+    if bed is None:
+        for c in stale:
+            manager.delete(int(c["id"]), force=True)
+            plan.removed.append(f"#{c['name']}")
+        return
+    children = [c for c in listing if _parent(c) == bed]
+    dividers = {
+        str(c["name"]): int(c["id"]) for c in children if str(c["name"]).startswith(DIVIDER)
+    }
+    wanted: list[int] = []
+    for team_name, cids in groups:
+        name = divider_name(team_name)
+        if name not in dividers:
+            dividers[name] = manager.create_divider(name, bed, team_name)
+            plan.moves.append(f"#{name} created in asleep")
+        wanted.append(dividers[name])
+        wanted.extend(cids)
+    keep = set(wanted)
+    for name, cid in dividers.items():
+        if cid not in keep:
+            manager.delete(cid, force=True)
+            plan.removed.append(f"#{name}")
+    for c in stale:
+        manager.delete(int(c["id"]), force=True)
+        plan.removed.append(f"#{c['name']}")
+
+    listing = manager.all()
+    current = [
+        int(c["id"])
+        for c in sorted(
+            (c for c in listing if _parent(c) == bed and int(c["id"]) in keep),
+            key=lambda c: (int(c.get("position", 0)), int(c["id"])),
+        )
+    ]
+    if current != wanted:
+        manager.reorder([(cid, i) for i, cid in enumerate(wanted)])
+        plan.moves.append("asleep reordered by team")
+
+    cats = {int(c["id"]): int(c.get("position", 0)) for c in listing if c.get("type") == CATEGORY}
+    others = [p for cid, p in cats.items() if cid != bed]
+    if others and cats.get(bed, 0) <= max(others):
+        manager.patch(bed, {"position": max(others) + 1})

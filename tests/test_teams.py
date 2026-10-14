@@ -36,6 +36,12 @@ class FakeGuild:
             made = {"id": str(self._next), "parent_id": None, "position": len(self.channels), **(body or {})}
             self.channels.append(made)
             return made
+        if method == "PATCH" and isinstance(body, list):
+            for change in body:
+                for c in self.channels:
+                    if c["id"] == change["id"]:
+                        c["position"] = change["position"]
+            return {}
         if method == "PATCH":
             cid = path.rsplit("/", 1)[-1]
             for c in self.channels:
