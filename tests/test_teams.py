@@ -33,7 +33,7 @@ class FakeGuild:
             return [dict(c) for c in self.channels]
         if method == "POST":
             self._next += 1
-            made = {"id": str(self._next), "parent_id": None, **(body or {})}
+            made = {"id": str(self._next), "parent_id": None, "position": len(self.channels), **(body or {})}
             self.channels.append(made)
             return made
         if method == "PATCH":

@@ -34,7 +34,13 @@ from typing import Any
 from .channels import CATEGORY, bare
 from .teams import Teams
 
-ASLEEP = "asleep"
+ASLEEP = "asleep"  # the single category of the first version, still cleaned up
+LOOSE = "loose"
+
+
+def sleeping(team: str) -> str:
+    """The category a sleeping team's channels wait in."""
+    return f"{team} · {ASLEEP}"
 
 
 @dataclass
@@ -118,7 +124,11 @@ def arrange(
         for cid in channels_of(agent):
             place(cid, None, "operator", position=0)
 
-    asleep: list[tuple[int, str]] = []
+    # Sleeping channels stay grouped by team (10-14, "if agents are in the
+    # asleep folder they should be categorised in teams there"). Discord has no
+    # nested categories, so each sleeping team gets its own "· asleep" category,
+    # all of them below every awake one.
+    asleep: dict[str, list[int]] = {}
     in_a_team: set[str] = set()
     for team in teams.all():
         members = [registry.by_name(m) for m in team.members if m.lower() not in operator_names]
@@ -132,7 +142,9 @@ def arrange(
                 for cid in channels_of(agent):
                     place(cid, home, f"{team.display} is awake")
         else:
-            asleep.extend((cid, team.display) for a in members for cid in channels_of(a))
+            asleep.setdefault(team.display, []).extend(
+                cid for a in members for cid in channels_of(a)
+            )
 
     for agent in agents:
         if agent.name.lower() in operator_names or agent.name.lower() in in_a_team:
@@ -141,24 +153,35 @@ def arrange(
             if agent.session_id in live_ids:
                 place(cid, None, "live, no team")
             else:
-                asleep.append((cid, "no team"))
+                asleep.setdefault(LOOSE, []).append(cid)
 
-    if asleep:
-        bed = category(ASLEEP)
-        for cid, why in asleep:
-            place(cid, bed, f"{why} asleep")
-        if not dry_run:
-            cats = [c for c in manager.all() if c.get("type") == CATEGORY]
-            mine = next((c for c in cats if int(c["id"]) == bed), None)
-            others = [int(c.get("position", 0)) for c in cats if int(c["id"]) != bed]
-            if mine is not None and others and int(mine.get("position", 0)) <= max(others):
-                manager.patch(bed, {"position": max(others) + 1})
+    # Teams alphabetically, the teamless ones last.
+    order = sorted(asleep, key=lambda t: (t == LOOSE, t.casefold()))
+    beds: list[int] = []
+    for team_name in order:
+        bed = category(sleeping(team_name))
+        beds.append(bed)
+        for cid in asleep[team_name]:
+            place(cid, bed, f"{team_name} asleep")
+    if beds and not dry_run:
+        cats = {
+            int(c["id"]): int(c.get("position", 0))
+            for c in manager.all()
+            if c.get("type") == CATEGORY
+        }
+        awake_top = max((p for cid, p in cats.items() if cid not in beds), default=-1)
+        wanted = [cats.get(bed, 0) for bed in beds]
+        settled = all(p > awake_top for p in wanted) and wanted == sorted(set(wanted))
+        if not settled:
+            for i, bed in enumerate(beds, 1):
+                manager.patch(bed, {"position": awake_top + i})
 
     # Empty team categories: the dead team's heading would otherwise stay in the
     # sidebar with nothing under it, which is the visible thing he asked to lose.
     # A dry run moved nothing, so it has nothing to count yet and removes nothing.
     if not dry_run:
-        ours = {team.key for team in teams.all()} | {ASLEEP}
+        ours = {team.key for team in teams.all()} | {ASLEEP, bare(sleeping(LOOSE))}
+        ours |= {bare(sleeping(team.display)) for team in teams.all()}
         occupied = {_parent(c) for c in manager.all()}
         for cid, name in category_names.items():
             if bare(name) in ours and cid not in occupied:

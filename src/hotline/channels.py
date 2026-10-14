@@ -74,7 +74,8 @@ def bare(name: str) -> str:
 
 def dressed(name: str) -> str:
     plain = name.strip()
-    return f"{ICONS.get(bare(plain), DEFAULT_ICON)} {plain}"
+    icon = ICONS["asleep"] if plain.endswith(" · asleep") else ICONS.get(bare(plain), DEFAULT_ICON)
+    return f"{icon} {plain}"
 
 
 class Channels:
