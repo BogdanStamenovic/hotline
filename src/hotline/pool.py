@@ -782,6 +782,10 @@ class SessionPool:
                 text=f"No agent or team called {spec!r}. Bare `wake` lists the teams.",
                 subtype="control",
             )
+        if not team.members:
+            return Reply(
+                text=f"Team **{team.display}** has nobody in it to wake.", subtype="control"
+            )
         out = [f"Waking **{team.display}**:"]
         for name in team.ordered():
             member = registry.by_name(name)
