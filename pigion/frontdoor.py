@@ -23,8 +23,11 @@ import json
 import os
 import socket
 import sys
+import threading
+import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -65,7 +68,7 @@ def upstream_awake() -> bool:
         return False
 
 
-def wake_upstream(wait: bool = False) -> bool:
+def wake_upstream(wait: bool = False, deadline: float | None = None) -> bool:
     """Broadcast a magic packet at archserver, optionally waiting for it to answer.
 
     Never verified end to end: archserver's ethernet port has no cable in it, so
@@ -78,7 +81,10 @@ def wake_upstream(wait: bool = False) -> bool:
     try:
         if wait:
             woke = wake.wake_and_wait(
-                UPSTREAM_MAC, f"{UPSTREAM}/health", WAKE_BROADCAST, deadline=WAKE_DEADLINE
+                UPSTREAM_MAC,
+                f"{UPSTREAM}/health",
+                WAKE_BROADCAST,
+                deadline=WAKE_DEADLINE if deadline is None else deadline,
             )
             log(f"wake {'succeeded' if woke else 'timed out'} for {UPSTREAM_MAC}")
             return woke
@@ -172,7 +178,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def start_sentinel() -> None:
-    """Watch Discord for Bogdan joining the voice channel, and wake archserver.
+    """Watch Discord for Bogdan writing while archserver is off, and wake it.
 
     In this process as a thread, not a second service: two Python interpreters on
     a 415 MB Pi costs about 12 MB for nothing, and this machine also runs
@@ -180,23 +186,87 @@ def start_sentinel() -> None:
     """
     token = os.environ.get("SENTINEL_BOT_TOKEN")
     user_id = os.environ.get("DISCORD_USER_ID")
-    channel_id = os.environ.get("DISCORD_VOICE_CHANNEL_ID")
-    if not (token and user_id and channel_id):
-        log("sentinel not configured (needs SENTINEL_BOT_TOKEN, DISCORD_USER_ID, "
-            "DISCORD_VOICE_CHANNEL_ID); not watching for calls")
+    if not (token and user_id):
+        log("sentinel not configured (needs SENTINEL_BOT_TOKEN, DISCORD_USER_ID); "
+            "not watching for messages")
         return
     try:
         from sentinel import Sentinel
     except ImportError as exc:
-        log(f"sentinel unavailable ({exc}); not watching for calls")
+        log(f"sentinel unavailable ({exc}); not watching for messages")
         return
 
-    def on_join() -> None:
-        log("call incoming -- waking archserver")
-        wake_upstream(wait=True)
+    Sentinel(token, int(user_id), _waker(token)).start()
+    log("sentinel watching for Bogdan's messages")
 
-    Sentinel(token, int(user_id), int(channel_id), on_join).start()
-    log("sentinel watching for voice joins")
+
+# One wake attempt per window, however many messages he sends while it boots:
+# a burst of five messages must not become five notices and five wake threads.
+MESSAGE_WAKE_COOLDOWN = float(os.environ.get("HOTLINE_MESSAGE_WAKE_COOLDOWN", "600"))
+# A full boot to hotlined answering takes longer than the 90 s an iPhone
+# Shortcut can afford to wait; nobody is blocked on this one.
+MESSAGE_WAKE_DEADLINE = float(os.environ.get("HOTLINE_MESSAGE_WAKE_DEADLINE", "300"))
+
+
+def post_message(token: str, channel_id: int, text: str) -> bool:
+    """Say something in a channel as the sentinel bot. Never raises.
+
+    Discord's API rejects requests without a User-Agent with a 403 that reads
+    like a permissions problem, so it is always set.
+    """
+    request = urllib.request.Request(
+        f"https://discord.com/api/v10/channels/{channel_id}/messages",
+        data=json.dumps({"content": text}).encode(),
+        headers={
+            "Authorization": f"Bot {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "hotline-sentinel (pigion, 1.0)",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10):
+            return True
+    except (urllib.error.URLError, OSError) as exc:
+        log(f"could not post to channel {channel_id}: {exc}")
+        return False
+
+
+def _waker(token: str) -> Callable[[int], None]:
+    """Bogdan wrote something: if archserver is off, say so and wake it."""
+    state = {"last": 0.0}
+    lock = threading.Lock()
+
+    def on_message(channel_id: int) -> None:
+        with lock:
+            if time.monotonic() - state["last"] < MESSAGE_WAKE_COOLDOWN:
+                return
+            if upstream_awake():
+                return
+            state["last"] = time.monotonic()
+
+        def run() -> None:
+            log(f"bogdan wrote in {channel_id} while archserver is down -- waking it")
+            post_message(
+                token,
+                channel_id,
+                "archserver is asleep, so I'm waking it now. It will be up in about 2 "
+                "minutes, and the operator reads this channel's history when it starts, "
+                "so your message is not lost.",
+            )
+            if wake_upstream(wait=True, deadline=MESSAGE_WAKE_DEADLINE):
+                post_message(token, channel_id, "archserver is up. The operator is starting.")
+            else:
+                post_message(
+                    token,
+                    channel_id,
+                    f"archserver did not answer within {MESSAGE_WAKE_DEADLINE:.0f} s of the wake. "
+                    "It may still be booting; if nothing answers soon, it needs a hand.",
+                )
+
+        threading.Thread(target=run, name="message-wake", daemon=True).start()
+
+    return on_message
 
 
 def main() -> int:

@@ -1,15 +1,19 @@
-"""Pigion's ear on Discord: notice Bogdan joining the voice channel, wake the box.
+"""Pigion's ear on Discord: notice Bogdan writing while archserver is off, wake it.
 
-archserver has the GPU and gets powered off. Pigion has 36 days of uptime and
-about 80 MB of free RAM. So the thing that has to be awake to notice a call is
-here, and it does exactly one job.
+archserver has the GPU and gets powered off. Pigion is always on with about 80 MB
+of free RAM. So the thing that has to be awake to notice him is here, and it does
+exactly one job.
 
 **Hand-rolled gateway client, deliberately.** A full `discord.py` with default
 caching is 60-150 MB resident, which this machine does not have. This subscribes
-to `GUILD_VOICE_STATES` alone (intent `1 << 7`), caches nothing, and ignores every
-event but `VOICE_STATE_UPDATE`. ~25 MB, and it runs as a thread inside
-`frontdoor.py` rather than a second process -- two Python interpreters on a 415 MB
-Pi is roughly 12 MB wasted for no reason.
+to GUILD_MESSAGES (`1 << 9`) and DIRECT_MESSAGES (`1 << 12`) alone, caches
+nothing, and ignores every event but `MESSAGE_CREATE`. Neither intent is
+privileged: the author id arrives without MESSAGE_CONTENT, and the content is
+never needed, because a message from him is the whole signal. It runs as a thread
+inside `frontdoor.py` rather than a second process.
+
+Until 10-14 it watched him joining a voice channel instead. He dropped that:
+cvoice places real phone calls now, so a voice join is no longer how he calls.
 
 It never thinks. It receives, wakes, and gets out of the way.
 """
@@ -27,7 +31,8 @@ import websockets
 log = logging.getLogger("sentinel")
 
 GATEWAY = "wss://gateway.discord.gg/?v=10&encoding=json"
-GUILD_VOICE_STATES = 1 << 7
+GUILD_MESSAGES = 1 << 9
+DIRECT_MESSAGES = 1 << 12
 
 OP_DISPATCH = 0
 OP_HEARTBEAT = 1
@@ -43,16 +48,11 @@ class Sentinel:
         self,
         token: str,
         user_id: int,
-        voice_channel_id: int,
-        on_join: Callable[[], None],
-        on_leave: Callable[[], None] | None = None,
+        on_message: Callable[[int], None],
     ) -> None:
         self.token = token
         self.user_id = user_id
-        self.voice_channel_id = voice_channel_id
-        self.on_join = on_join
-        self.on_leave = on_leave
-        self._present = False
+        self.on_message = on_message
         self._seq: int | None = None
         self._stop = threading.Event()
 
@@ -75,14 +75,13 @@ class Sentinel:
                         "op": OP_IDENTIFY,
                         "d": {
                             "token": self.token,
-                            "intents": GUILD_VOICE_STATES,
+                            "intents": GUILD_MESSAGES | DIRECT_MESSAGES,
                             "properties": {"os": "linux", "browser": "hotline", "device": "pigion"},
                         },
                     }
                 )
             )
-            log.info("identified; watching voice channel %s for user %s",
-                     self.voice_channel_id, self.user_id)
+            log.info("identified; watching for messages from user %s", self.user_id)
 
             try:
                 async for raw in socket:
@@ -90,42 +89,26 @@ class Sentinel:
                     if payload.get("s") is not None:
                         self._seq = payload["s"]
                     op = payload.get("op")
-                    if op == OP_DISPATCH and payload.get("t") == "VOICE_STATE_UPDATE":
-                        self._on_voice_state(payload.get("d") or {})
+                    if op == OP_DISPATCH and payload.get("t") == "MESSAGE_CREATE":
+                        self._on_message(payload.get("d") or {})
                     elif op in (OP_RECONNECT, OP_INVALID_SESSION):
                         log.info("gateway asked us to reconnect (op %s)", op)
                         return
             finally:
                 beat.cancel()
 
-    def _on_voice_state(self, data: dict) -> None:
+    def _on_message(self, data: dict) -> None:
         try:
-            user = int(data.get("user_id") or 0)
+            author = int((data.get("author") or {}).get("id") or 0)
+            channel = int(data.get("channel_id") or 0)
         except (TypeError, ValueError):
             return
-        if user != self.user_id:
+        if author != self.user_id or not channel:
             return
-        channel = data.get("channel_id")
-        here = channel is not None and int(channel) == self.voice_channel_id
-
-        # Edge-triggered. Discord sends VOICE_STATE_UPDATE for mute, deafen, video
-        # and streaming too, and firing a wake on every one of those would send a
-        # magic packet each time he touched his microphone.
-        if here and not self._present:
-            self._present = True
-            log.info("bogdan joined the voice channel")
-            try:
-                self.on_join()
-            except Exception:
-                log.exception("on_join failed")
-        elif not here and self._present:
-            self._present = False
-            log.info("bogdan left the voice channel")
-            if self.on_leave:
-                try:
-                    self.on_leave()
-                except Exception:
-                    log.exception("on_leave failed")
+        try:
+            self.on_message(channel)
+        except Exception:
+            log.exception("on_message failed")
 
     async def _run(self) -> None:
         delay = 5.0
