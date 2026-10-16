@@ -16134,3 +16134,4 @@ backup is the only rollback that exists.
 - LIVE: main 3a9ef78 (stock PP default, guests classic, GPU handoff, fallback, call lock), verified. Skill updated (~/.claude 04f10d9), operator told. Asked Bogdan for live test call. Root 91%; duplex-lab pruning.
 - Cleanup: duplex-lab pruned caches (27 MB); archiving ~2.25 GB (lab wavs + llama-voicechat.cpp) to /mnt/windows/ml/duplex/archive instead of deleting; removing stale worktrees incl. ~/data/opus-wideband.
 - Archive done: root 9.1 GB free; lab-audio-20261016.tar 1.86 GB + llama-voicechat.cpp tar 482 MB on /mnt/windows/ml/duplex/archive, verified; worktrees removed; ARCHIVE.md written.
+- 22:35 power-off at his verified request (msg 1560752784280658101). Pre-checks: idle agents, docker inactive, GPU idle, Wake-on g, handoff ffd6cc1 pushed.
