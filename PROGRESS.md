@@ -16135,3 +16135,15 @@ backup is the only rollback that exists.
 - Cleanup: duplex-lab pruned caches (27 MB); archiving ~2.25 GB (lab wavs + llama-voicechat.cpp) to /mnt/windows/ml/duplex/archive instead of deleting; removing stale worktrees incl. ~/data/opus-wideband.
 - Archive done: root 9.1 GB free; lab-audio-20261016.tar 1.86 GB + llama-voicechat.cpp tar 482 MB on /mnt/windows/ml/duplex/archive, verified; worktrees removed; ARCHIVE.md written.
 - 22:35 power-off at his verified request (msg 1560752784280658101). Pre-checks: idle agents, docker inactive, GPU idle, Wake-on g, handoff ffd6cc1 pushed.
+
+## 2026-10-17 09:03 CEST — operator hotline-80: scheduled track wake
+- Booted 09:00 by track-slot-0900 (WoL). Adopted hotline-80, read handoff + Discord: nothing from him since 10-16 20:34Z "goodnight". No mandate, nothing started.
+- track run --slot 09:00 running (pid 1050); wake will poweroff after it (then_do=poweroff, timeout 1620 s). Posted a one-line hello in #agent-hotline-80; watching the channel until the poweroff in case he wants the box kept up.
+
+## 2026-10-17 20:21 CEST — operator hotline-80: woken by the sentinel on his message
+- Box powered off 09:06 after the track slot; sentinel woke it 20:18 on his 18:18Z message 1561080970965422186 ("I need a fresh agent which reorts to me"), author id verified against DISCORD_USER_ID.
+- Spawned data-51 (Opus, ~/data, tmux hl-agent-33087f) via tmuxen.spawn; my script's enrol gave no channel (.env not exported into os.environ), so created #agent-data-51 (1561082061996036266) by hand with .env sourced. Seeded with --warrant, reports to him directly, posting-safety rule included. It verified the warrant and posted hello 20:23. Told him in #agent-hotline-80.
+- 20:3x relayed data-51's "use-computer ready" (his ask 1561085175675224106, verified). Checked myself: keyring status desktop agent running/unlocked, Chrome --password-store=gnome-libsecret pid 10191. Posted in #agent-hotline-80.
+- 20:4x his ARG request (1561087452381192295, provenance VERIFIED): spawned arg-polish-66 (Opus, ~/data/arg-polish, tmux hl-agent-166b99, #agent-arg-polish-66 1561087541472403526) with --warrant; reports to him. Seed: back up originals, keep decode chain, flashes <=3/s (WCAG 2.3.1) + warning, nothing public / nothing to the friend. Told him, flash limit flagged as overridable.
+- 21:3x arg-polish-66 reports done (doc restyled, Signal 03 v2 unlisted nXxSPz0i4N8, site v2 on uxonews VPS Caddy /var/lib/portal-gift). Verified: site 200, oembed resolves (not private), www has no answer (DNS open item, his yes in its channel). He iterated with it directly 19:12Z. Root 93% / 4.9G after its ComfyUI venv rebuild (it briefly hit 100% at ~21:01, cleared 5.1G uv wheels). Open in its channel: www record yes?, delete private draft video.
+- 02:14 CEST 10-18: his "Perfect lets shutdown hood night" (1561170365701431349, VERIFIED). Pre-checks: only the operator's claude alive (data-51 and arg-polish-66 both finished and exited), docker inactive, GPU 468 MiB/3%, Wake-on g (sudo). arg final video L6VTdL6V5tQ worst flash 2/s. Handoff banner written; powering off.
