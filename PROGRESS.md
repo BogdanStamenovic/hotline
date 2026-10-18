@@ -16152,3 +16152,8 @@ backup is the only rollback that exists.
 - Watchdog spawned me after WoL 07:00Z. Read handoff + Discord (general, hotline-80, arg-polish-66, data-51): nothing from him since "Perfect lets shutdown hood night" 00:13Z. No live agents but me.
 - track-slot-0900 shows `pending` past its 07:02Z time because it is RUNNING: track pid 1058 started 07:02Z; status updates on completion, then then_do=poweroff (timeout 1620 s). Not a stuck task — check `ps` before reading `pending` as a failure.
 - Posted one status message to #agent-hotline-80 offering to cancel this poweroff if he wants the box up. Otherwise letting the slot power off as designed.
+
+## 2026-10-18 16:45 CEST — operator hotline-80: woken by the sentinel on his message
+- Box powered off ~09:06 after the track slot; sentinel woke it 16:42 on his 14:42Z message 1561389011367362663 ("Hello we need to do a deepdive into a big subject get your horses and time ready"), author id = DISCORD_USER_ID. No subject given yet.
+- Checked: no other agents, docker inactive, GPU 2 MiB/0%, root 94% (4.8G free). Armed: track-slot-0900 WoL 07:00Z + poweroff 07:02Z 10-19; uxonews-shadow-compare 11-05.
+- Posted hello in #agent-hotline-80 asking for the subject and deliverable; proposed a fresh Opus research lead reporting to him. Waiting.
