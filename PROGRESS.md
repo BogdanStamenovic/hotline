@@ -16157,3 +16157,9 @@ backup is the only rollback that exists.
 - Box powered off ~09:06 after the track slot; sentinel woke it 16:42 on his 14:42Z message 1561389011367362663 ("Hello we need to do a deepdive into a big subject get your horses and time ready"), author id = DISCORD_USER_ID. No subject given yet.
 - Checked: no other agents, docker inactive, GPU 2 MiB/0%, root 94% (4.8G free). Armed: track-slot-0900 WoL 07:00Z + poweroff 07:02Z 10-19; uxonews-shadow-compare 11-05.
 - Posted hello in #agent-hotline-80 asking for the subject and deliverable; proposed a fresh Opus research lead reporting to him. Waiting.
+
+## 2026-10-19 09:03 CEST — operator hotline-80: track-slot wake
+- Woken by track-slot-0900 WoL (07:00Z); track run started 07:02Z, poweroff follows it (then_do=poweroff).
+- Discord: nothing from him since 10-18 15:32Z "yeah i made a mistake shutdown".
+- FOUND + FIXED: 3 active track assignments (4b8301a6, cbcc3b4a, 602bdd8c) had notify_agent=data-f8; data-f8 was purged by retention ~10-17, so hotline-say failed "no channel for this session" and 10-17/10-18 summaries were never posted (runs/findings themselves fine). Backed up track.db -> track.db.bak-20261019-notify, set notify_agent=hotline-80. Told him in #agent-hotline-80.
+- Generalisable gap (not acted on): retention purges an agent without checking whether anything (track assignments, wake tasks) still names it as a notify target.
