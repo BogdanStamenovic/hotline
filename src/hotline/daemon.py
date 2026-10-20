@@ -358,6 +358,26 @@ async def _sweep_forever(
             log(f"housekeeping failed: {type(exc).__name__}: {exc}")
 
 
+async def _mail_forever(log: Callable[[str], None], every: float = 300.0) -> None:
+    """The expected-mail board's check, every five minutes while hotlined is up.
+
+    Here rather than a user timer because "while the box is up" already means
+    "while hotlined is up", every other periodic job in hotline lives in this
+    process, and the board needs the same registry and Discord manager the
+    housekeeping pass uses. Its own task rather than a tick of `_sweep_forever`
+    because an IMAP login can take the whole 30s timeout, and the sidebar
+    arrange must not wait on Gmail. `HOTLINE_MAIL=0` turns it off.
+    """
+    from .mail.cli import check_once
+
+    while True:
+        await asyncio.sleep(every)
+        try:
+            await asyncio.to_thread(check_once, log)
+        except Exception as exc:  # noqa: BLE001 - a mail problem must never take the daemon down
+            log(f"mail check failed: {type(exc).__name__}: {exc}")
+
+
 def _relay_to(bot: Any, log: Callable[[str], None]) -> Callable[[str, str], Awaitable[None]]:
     """Route an unsolicited message to whichever transport its key belongs to.
 
@@ -435,6 +455,11 @@ async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: b
                 bot_task = asyncio.create_task(run_bot(bot, token, log, rebuild=rebuild))
 
     sweeper = asyncio.create_task(_sweep_forever(log))
+    mailer = (
+        asyncio.create_task(_mail_forever(log))
+        if os.environ.get("HOTLINE_MAIL", "1") != "0"
+        else None
+    )
 
     try:
         await server.serve_forever()
@@ -442,6 +467,10 @@ async def serve(host: str, port: int, cwd: str | None, verbose: bool, discord: b
         sweeper.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await sweeper
+        if mailer is not None:
+            mailer.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await mailer
         if bot_task is not None:
             bot_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):

@@ -41,6 +41,7 @@ hotlined = "hotline.daemon:main"
 hotline-page = "hotline.page_cli:main"
 hotline-permwatcher = "hotline.permwatch:main"
 hotline-kb = "hotline.kb:main"
+hotline-mail = "hotline.mail.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hotline"]
