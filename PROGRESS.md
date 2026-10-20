@@ -16222,3 +16222,4 @@ backup is the only rollback that exists.
 - 04:3x hypo-lab retired (cbc5b33=origin clean, handoff, completed). Overview Docs artifact 7z2fGf89gZPeeqaNedjDBE written + filed KB 1561910689700778086.
 - 04:4x final update posted to him (overview link, 2 decisions: OpenRouter top-up, H03 forward run). papertrade told to close out.
 - 04:5x papertrade retired (178078c=origin clean). H03 runner notes: belongs in hypo-lab; 07:00Z slot can reconstruct 00:00Z decision from REST (count as live only same-day, needs FORWARD.md amendment); REST OI/LS history ~30 days. All research agents gone.
+- CORRECTION (clock read 03:17 CEST at commit b79ab0b): the "HH:MMx" times on entries after 01:22 above were ESTIMATED, not read, and run late; everything from "02:0x sat-gates FINAL" onward happened between ~01:45 and 03:17. Only 00:05, 00:07, 00:28, 00:33, 00:55, 00:58, 01:22 and 03:17 were read from the clock.
