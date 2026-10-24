@@ -1,3 +1,10 @@
+> ## STATE 2026-10-24 ~05:xx CEST (operator hotline-80, session 7efaa4e8) -- written before a self-/compact
+> - **NO DAILY POWEROFF** still in force (his order 10-22; again 10-24 "tomorrow a shutdown cannot happen"). track-slot-0900-nopower only.
+> - **Running:** pm-maker2 (Opus, spawned ~05:00: S3 opening-maker + S4 Kalshi-anchored maker forward paper test; will list sudo cmds if VPS). sot-watch.service (pm-sot-live forward source-of-truth test; its SESSION died idle 02:54; wake notify pm-sot-live-resume-dryday 10-24 18:05Z -> resume claude 0928b85c..., cwd ~/data/pm-sot-live, write dry-day report + apply data-api ts-lag check). VPS: pm-maker-rec, pm-copy-live. Daily h03/h11.
+> - **Scheduled:** pm-maker-interim-1025 (Sun 07:01:20Z) + notify 09:30Z -> send him first weather/S1 numbers; pm-copy-live-weekly Thu; pm-maker-weekly Mon; decisions 11-18 / 11-24.
+> - **Done since 10-22 (all retired, KB-filed):** pm-identity v2, pm-trace, pm-scalp, pm-xvenue, pm-newmkt: all NO; lesson: mispricings belong to resting makers. Cleanup 10-24: 12 finished .venv + checker-model venv deleted; /mnt/offload/tmp + jev-bench archived to /mnt/windows/ml/archive-20261024/.
+> - **Open:** OpenRouter support (admin@kinreply.rs suppression) -- request sent FROM admin@ via Resend 10-22; reply lands in kinreply@gmail.com (NOT on hotline-mail board; check by hand). Idle agent sessions die (pm-maker 10-21 06:15:47, pm-sot-live 10-24 02:54:57) at the same second as fgc-investigate.timer -- unproven; investigate. pm-maker-rec healthcheck RED = false alarm (counts file cache; anon ~71 MB) -> fix healthcheck to use anon. hotline-mail: follow-up expectations re-match old mail (default since 24h) -> design fix pending.
+
 > ## NO DAILY POWEROFF (his order 2026-10-22 02:2x CEST, Discord 1562622622192246826): "a shutdown must NOT happen ... the machine must stay active"
 > - track-slot-0900 (then_do=poweroff) is CANCELLED; replaced by track-slot-0900-nopower (same track run, 07:02Z daily, no then_do). No task with then_do is pending. Restore poweroff ONLY on his explicit word. Agents still running: pm-identity (Look 2 after the Tenderly quota reset ~22:45Z 10-22).
 
