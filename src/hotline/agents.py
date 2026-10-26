@@ -22,6 +22,7 @@ makes the lifecycle testable without a guild.
 
 from __future__ import annotations
 
+import contextlib
 import fcntl
 import json
 import os
@@ -366,6 +367,8 @@ class Registry:
         pointing at a channel that no longer exists.
         """
         swept: list[str] = []
+        present: set[int] | None = None
+        listed = False
         for agent in self.expired(now, live_ids=live_ids, seen=seen):
             if manager is not None:
                 for attr in ("channel_id", "voice_channel_id"):
@@ -379,6 +382,22 @@ class Registry:
                         # its scrollback, and a passing agent's thread is still
                         # sometimes the only record of what it found.
                         if archive_channel(manager, cid, archive_dir) is None:
+                            # A channel that is already gone cannot be archived,
+                            # and refusing to forget it retried 24 of them every
+                            # ten minutes from 10-22 to 10-26 (14k journal lines).
+                            # Gone is decided from ONE guild listing, and only a
+                            # listing that succeeded counts: `exists()` says False
+                            # when Discord is unreachable, which would forget
+                            # records for channels that are still there.
+                            if not listed:
+                                listed = True
+                                with contextlib.suppress(Exception):
+                                    present = {int(c["id"]) for c in manager.all()}
+                            if present is not None and int(cid) not in present:
+                                if log is not None:
+                                    log(f"channel {cid} for {agent.name} is already gone; forgetting it")
+                                setattr(agent, attr, None)
+                                continue
                             if log is not None:
                                 log(f"not deleting channel {cid} for {agent.name}: archive failed")
                             continue

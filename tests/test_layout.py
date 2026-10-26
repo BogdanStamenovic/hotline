@@ -181,6 +181,43 @@ def test_a_failed_archive_keeps_channel_and_record(world, tmp_path) -> None:
     assert Registry(registry.path).by_name("data-f8") is not None
 
 
+def test_an_already_deleted_channel_is_forgotten_not_retried(world, tmp_path) -> None:
+    """24 such agents were retried every ten minutes from 10-22 (14k journal lines)."""
+    fake, manager, registry, _teams = world
+    gone = _agent(fake, registry, "api-f4", "s1")
+    fake.channels = [c for c in fake.channels if str(c["id"]) != str(gone.channel_id)]
+
+    def unknown(cid):
+        raise OSError("404 Unknown Channel")
+
+    manager.history = unknown  # type: ignore[method-assign]
+    now = time.time()
+    swept = registry.sweep(
+        manager, now=now, live_ids=set(), seen={"api-f4": now - 4 * 86400}, archive_dir=tmp_path
+    )
+    assert swept == ["api-f4"]
+    assert Registry(registry.path).by_name("api-f4") is None
+
+
+def test_an_unreadable_guild_forgets_nothing(world, tmp_path) -> None:
+    """If the listing fails, absence is unknown, so the record and its id are kept."""
+    fake, manager, registry, _teams = world
+    gone = _agent(fake, registry, "api-f4", "s1")
+    fake.channels = [c for c in fake.channels if str(c["id"]) != str(gone.channel_id)]
+
+    def down(*a, **k):
+        raise OSError("discord down")
+
+    manager.history = down  # type: ignore[method-assign]
+    manager.all = down  # type: ignore[method-assign]
+    now = time.time()
+    swept = registry.sweep(
+        manager, now=now, live_ids=set(), seen={"api-f4": now - 4 * 86400}, archive_dir=tmp_path
+    )
+    assert swept == []
+    assert Registry(registry.path).by_name("api-f4").channel_id == gone.channel_id
+
+
 def test_unseen_agents_get_grace_not_purge(tmp_path) -> None:
     seen = Seen(tmp_path / "seen.json")
     now = 1000.0
