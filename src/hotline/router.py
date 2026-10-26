@@ -552,10 +552,11 @@ class Router:
         try:
             return self.resolve(spec)
         except SessionNotFound:
-            agent = _registered(spec)
+            from .sleep import remembered, sleeping, wake
+
+            agent = _registered(spec) or remembered(spec)
             if agent is None:
                 raise
-            from .sleep import sleeping, wake
 
             if not sleeping(agent):
                 raise

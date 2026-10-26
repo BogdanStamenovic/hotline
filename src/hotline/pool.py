@@ -283,6 +283,10 @@ class SessionPool:
                 continue
             who = agent.name if agent is not None else session.name
             log.info("putting %s to sleep (pid %s): fully idle", who, session.pid)
+            if agent is None:
+                from .sleep import remember
+
+                remember(session)
             with contextlib.suppress(HotlineError, SessionNotFound, OSError):
                 await self.router.kill_session(str(session.pid))
 

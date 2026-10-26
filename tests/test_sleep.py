@@ -289,3 +289,25 @@ def test_idle_after_is_thirty_minutes() -> None:
     # Pinned so a change to it is a decision, not an accident.
     assert sleep_mod.IDLE_AFTER == 1800.0
     assert time.time() < NOW  # NOW is safely in the future for mtime arithmetic
+
+
+async def test_an_unregistered_session_put_to_sleep_still_wakes_by_name(
+    fake_claude: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """meme-trend had wake tasks addressed to it by name and no registry record."""
+    make_session(fake_claude, 6, "meme-trend", str(tmp_path), session_id="sid-meme",
+                 tmux="hl-meme-trend:@0.%0")
+    s = next(x for x in discover() if x.pid == 6)
+    sleep_mod.remember(s)
+    (fake_claude / "sessions" / "6.json").unlink()
+    make_session(fake_claude, 5, "someone-else", "/tmp", session_id="sid-z")
+    woke: list[str] = []
+
+    async def wake(agent, timeout=120.0):
+        woke.append(agent.session_id)
+        make_session(fake_claude, 81, agent.name, str(tmp_path), session_id=agent.session_id)
+        return next(x for x in discover() if x.pid == 81)
+
+    monkeypatch.setattr(sleep_mod, "wake", wake)
+    got = await Router().resolve_waking("meme-trend")
+    assert woke == ["sid-meme"] and got.session_id == "sid-meme"

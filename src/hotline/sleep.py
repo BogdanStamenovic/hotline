@@ -156,6 +156,50 @@ def candidates(
     return out
 
 
+# ---- sessions with no registry record --------------------------------------
+#
+# Not every hl-* pane is a registered agent (meme-trend was not, and it had wake
+# tasks addressed to it by name). The registry is what makes a sleeping agent
+# findable, so a session put to sleep without a record gets a small one here:
+# name -> session id. Without it, "anything put to sleep can be woken" would be
+# true only for the agents that happened to declare themselves.
+
+
+def _slept_path() -> Path:
+    from .config import state_dir
+
+    return state_dir() / "slept.json"
+
+
+def remember(session: LiveSession) -> None:
+    """Record an unregistered session as it is put to sleep, so its name still wakes it."""
+    path = _slept_path()
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        data = {}
+    data[session.name.lower()] = {"session_id": session.session_id, "at": time.time()}
+    if session.tmux_session:
+        data[session.tmux_session.lower()] = data[session.name.lower()]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=1))
+    os.replace(tmp, path)
+
+
+def remembered(spec: str) -> Agent | None:
+    """A stand-in Agent for an unregistered session we put to sleep, or None."""
+    try:
+        data = json.loads(_slept_path().read_text())
+    except (OSError, ValueError):
+        return None
+    want = spec.strip().strip("'\"").lower()
+    entry = data.get(want) or data.get(want.replace(" ", "-"))
+    if not isinstance(entry, dict) or not entry.get("session_id"):
+        return None
+    return Agent(session_id=entry["session_id"], name=want, task="")
+
+
 # ---- waking ---------------------------------------------------------------
 
 
