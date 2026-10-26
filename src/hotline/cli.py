@@ -26,7 +26,7 @@ from .ccsocks import discover
 from .channels import from_env as channels_from_env
 from .channels import slug as channel_slug
 from .config import load_env
-from .errors import HotlineError, ReplyTimeout
+from .errors import HotlineError, ReplyTimeout, SessionNotFound
 from .fresh import Event
 from .guard import install_guard
 from .provenance import MARKER, Origin, body_of, parse, verify
@@ -1061,7 +1061,14 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         if args.to:
-            target = router.resolve(args.to)
+            # Waking, not just resolving: an agent put to sleep while idle is
+            # still the one being addressed, and a wake task firing at 07:00 is
+            # exactly the caller who must not be told it "died".
+            try:
+                target = router.resolve(args.to)
+            except SessionNotFound:
+                target = asyncio.run(router.resolve_waking(args.to))
+                log(f"   (it was asleep; woke it with its own session {target.session_id[:8]})")
             log(f"-> {describe(target)}")
             # Said before the wait, not after it. A message to a busy session is
             # queued until its current turn ends, and a caller who is not told

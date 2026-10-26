@@ -197,6 +197,15 @@ class HotlineBot(discord.Bot):
         if owner is not None:
             self.pool.bind(key, owner.name, owner.session_id)
         placeholder = await message.channel.send(THINKING)
+        if owner is not None:
+            from .sleep import sleeping
+
+            # The wake itself happens in the router; this only says so, because
+            # a resume is ten or twenty silent seconds he would otherwise read
+            # as the agent ignoring him.
+            if sleeping(owner):
+                with contextlib.suppress(discord.HTTPException):
+                    await placeholder.edit(content=f"💤 {owner.name} was asleep — waking it…")
         narration = Narration(placeholder)
         pending: list[Event] = []
 

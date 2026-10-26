@@ -20,10 +20,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import time
 from dataclasses import dataclass, replace
 from time import monotonic
+from typing import Any
 
 from .agents import Registry
 from .ccsocks import LiveSession, discover, inject, status_of, terminate
@@ -40,6 +42,8 @@ from .fresh import Event, FreshSession, Narrator, Reply
 from .provenance import Origin
 from .stops import stop_stamp
 from .transcript import read_since, size_of, transcript_path, turn_in_flight
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "AmbiguousSession",
@@ -385,6 +389,28 @@ def describe(session: LiveSession) -> str:
     return f"{name} (pid {session.pid}, {session.cwd})"
 
 
+
+def _registered(spec: str) -> Any:
+    """The registered agent a spec names -- by name or by (a prefix of) session id."""
+    want = spec.strip().strip("'\"").lower()
+    if not want:
+        return None
+    registry = Registry()
+    for candidate in (want, want.replace(" ", "-"), want.replace(" ", "")):
+        agent = registry.by_name(candidate)
+        if agent is not None:
+            return agent
+    exact = [a for a in registry.agents.values() if a.session_id.lower() == want]
+    if exact:
+        return exact[0]
+    # A prefix only when long enough that it cannot be a word that happens to
+    # start some uuid; the Discord binding always carries the full id anyway.
+    if len(want) >= 8:
+        hits = [a for a in registry.agents.values() if a.session_id.lower().startswith(want)]
+        if len(hits) == 1:
+            return hits[0]
+    return None
+
 class Router:
     def __init__(self, default_cwd: str | None = None, bypass: bool = True) -> None:
         self.default_cwd = default_cwd
@@ -514,6 +540,28 @@ class Router:
         async with FreshSession(cwd or self.default_cwd, bypass=self.bypass) as session:
             return await session.ask(text, narrator=narrator, timeout=timeout)
 
+    async def resolve_waking(self, spec: str) -> LiveSession:
+        """`resolve`, except that a registered agent which is only asleep is woken.
+
+        Asleep means its session was put down while idle (see `hotline.sleep`):
+        not finished, transcript still there. Every way of reaching an agent
+        comes through here -- his message in its channel, `hotline --to` from
+        another agent, the wake tasks -- so all of them wake it the same way.
+        A spec that names no registered agent fails exactly as `resolve` does.
+        """
+        try:
+            return self.resolve(spec)
+        except SessionNotFound:
+            agent = _registered(spec)
+            if agent is None:
+                raise
+            from .sleep import sleeping, wake
+
+            if not sleeping(agent):
+                raise
+            log.info("waking %s (%s) for a message", agent.name, agent.session_id[:8])
+            return await wake(agent)
+
     async def deliver(self, spec: str, text: str, origin: Origin | None = None) -> Watch:
         """Resolve a session, put the message in its inbox, and hand back a receipt.
 
@@ -527,7 +575,7 @@ class Router:
         already working, the next stop event belongs to the turn in flight and its
         reply is not ours.
         """
-        session = self.resolve(spec)
+        session = await self.resolve_waking(spec)
         # The header goes on before the marker is taken, because the marker is
         # how the reply is found in the transcript and the transcript will hold
         # what was actually delivered, header and all.

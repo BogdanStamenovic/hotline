@@ -332,8 +332,12 @@ async def spawn(
     timeout: float = 90.0,
     name: str | None = None,
     model: str | None = DEFAULT_MODEL,
+    resume: str | None = None,
 ) -> LiveSession:
     """Start a claude in its own tmux session and wait until it can be messaged.
+
+    `resume` is a session id to continue (`claude --resume`) instead of starting
+    a new one; `cwd` must then be the directory that session ran in.
 
     Returns only once the descriptor exists, which is also the point at which the
     socket is listening -- so callers never race the CLI's own startup.
@@ -357,6 +361,8 @@ async def spawn(
         # back as `hotline-36` and stops being recognisable as the thing you
         # resumed -- which is the whole of its identity.
         argv += ["--name", name]
+    if resume:
+        argv += ["--resume", resume]
     try:
         _detached_tmux(
             "new-session",
