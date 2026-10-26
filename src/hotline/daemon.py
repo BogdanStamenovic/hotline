@@ -325,6 +325,7 @@ def housekeep(log: Callable[[str], None], sweep: bool) -> None:
             arrange(manager, registry, live_ids, log=log)
         except Exception as exc:  # noqa: BLE001 - cosmetic; must never stop the sweep
             log(f"discord arrange failed: {type(exc).__name__}: {exc}")
+        _ask_keepers(manager, registry, live_ids, seen, log)
     if not sweep:
         return
     swept = registry.sweep(
@@ -336,6 +337,21 @@ def housekeep(log: Callable[[str], None], sweep: bool) -> None:
     )
     if swept:
         log(f"swept {len(swept)} expired agent(s): {', '.join(swept)}")
+
+
+def _ask_keepers(
+    manager: Any, registry: Any, live_ids: set[str], seen: dict[str, float], log: Callable[[str], None]
+) -> None:
+    """Ask once, in its channel, whether an agent that just fell asleep should be a keeper."""
+    from .keeper import ask, due, prompts_beside
+
+    prompts = prompts_beside(registry.path)
+    for agent in due(registry, live_ids, seen, prompts):
+        try:
+            ask(manager, agent, prompts)
+            log(f"asked whether {agent.name} should be a keeper")
+        except Exception as exc:  # noqa: BLE001 - one channel must not stop the rest
+            log(f"could not ask about {agent.name}: {type(exc).__name__}: {exc}")
 
 
 async def _sweep_forever(

@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import time
 from collections.abc import Iterable
@@ -39,6 +40,8 @@ from .ccsocks import LiveSession, discover
 from .config import sessions_dir
 from .errors import HotlineError
 from .transcript import transcript_path
+
+log = logging.getLogger(__name__)
 
 # Thirty minutes of full idleness. Short because waking costs seconds and loses
 # nothing; not shorter because he often answers a few minutes after a reply, and
@@ -157,12 +160,16 @@ def candidates(
 
 
 def sleeping(agent: Agent, live_ids: set[str] | None = None) -> bool:
-    """Registered, not finished, session not live, and resumable from its transcript."""
+    """Registered, not finished, and its session is not live.
+
+    Whether it comes back as itself (transcript resume) or as a new session
+    seeded from its handoff is `wake`'s problem, not a reason to say no here.
+    """
     if agent.done:
         return False
     if live_ids is None:
         live_ids = {s.session_id for s in discover()}
-    return agent.session_id not in live_ids and transcript_path(agent.session_id) is not None
+    return agent.session_id not in live_ids
 
 
 def cwd_of(session_id: str) -> str | None:
@@ -192,10 +199,17 @@ _waking: dict[str, asyncio.Future[LiveSession]] = {}
 
 
 async def wake(agent: Agent, timeout: float = 120.0) -> LiveSession:
-    """Resume a sleeping agent's own session in a hotline pane and return it.
+    """Bring a sleeping agent back and return the session to deliver to.
+
+    First choice is its own session (`claude --resume`): same id, whole
+    context. When that is impossible -- transcript gone, folder gone, or the CLI
+    will not resume it -- a new session is started and seeded from its handoff
+    (or what survives of its transcript), the same revive `resume <name>` does.
+    Bogdan's words (10-26): after a restart, "a new agent must run and read the
+    handoff. It should do that too." Either way a message gets an answer.
 
     Concurrent wakes of the same agent (two messages a second apart) share one
-    resume rather than racing two `claude --resume` of one transcript.
+    wake rather than racing two resumes of one transcript.
     """
     pending = _waking.get(agent.session_id)
     if pending is not None:
@@ -204,7 +218,11 @@ async def wake(agent: Agent, timeout: float = 120.0) -> LiveSession:
     fut: asyncio.Future[LiveSession] = loop.create_future()
     _waking[agent.session_id] = fut
     try:
-        session = await _resume(agent, timeout)
+        try:
+            session = await _resume(agent, timeout)
+        except HotlineError as exc:
+            log.warning("could not resume %s (%s); reviving it from its handoff", agent.name, exc)
+            session = await _revive(agent)
         fut.set_result(session)
         return session
     except BaseException as exc:
@@ -230,8 +248,30 @@ async def _resume(agent: Agent, timeout: float) -> LiveSession:
         # The CLI started a new session instead of resuming ours (wrong project,
         # or the transcript was unreadable). Delivering into it would hand his
         # message to a stranger, which is the one outcome worse than failing.
+        # Its pane is closed so the revive below starts clean instead of being
+        # handed this blank session back by name.
+        tmuxen.kill(tmuxen.tmux_name(agent.name))
         raise HotlineError(
             f"resuming {agent.name} came back as session {session.session_id[:8]}, "
-            f"not {agent.session_id[:8]}; not delivering to it"
+            f"not {agent.session_id[:8]}"
         )
     return session
+
+
+async def _revive(agent: Agent) -> LiveSession:
+    """A new session for the agent, seeded from its handoff or transcript."""
+    from .ccsocks import inject
+    from .channels import from_env as channels_from_env
+    from .revive import resume as revive
+
+    cwd = cwd_of(agent.session_id)
+    resumed = await revive(
+        agent.name,
+        Registry(),
+        cwd=cwd if cwd and os.path.isdir(cwd) else None,
+        channels=channels_from_env(),
+    )
+    # The seed goes in first, so the message that caused the wake queues behind
+    # it and is read by an agent that already knows who it is.
+    await inject(resumed.session, resumed.brief.seed)
+    return resumed.session

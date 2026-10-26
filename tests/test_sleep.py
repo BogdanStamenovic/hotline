@@ -13,7 +13,7 @@ from helpers import make_session
 from hotline import sleep as sleep_mod
 from hotline.agents import Registry
 from hotline.ccsocks import LiveSession, discover
-from hotline.errors import HotlineError, SessionNotFound
+from hotline.errors import SessionNotFound
 from hotline.router import Router
 
 NOW = 2_000_000_000.0
@@ -140,11 +140,10 @@ def test_cwd_comes_from_the_transcript(fake_claude: Path) -> None:
     assert sleep_mod.cwd_of("sid-missing") is None
 
 
-def test_sleeping_needs_a_transcript_and_an_unfinished_agent(fake_claude: Path) -> None:
+def test_sleeping_means_unfinished_and_not_live(fake_claude: Path) -> None:
     reg = Registry()
     a = reg.declare("sid-a", "data-a", "x")
-    assert not sleep_mod.sleeping(a, live_ids=set())  # no transcript: nothing to resume
-    _transcript(fake_claude, "sid-a", "/tmp")
+    # No transcript is still asleep: wake revives it from its handoff instead.
     assert sleep_mod.sleeping(a, live_ids=set())
     assert not sleep_mod.sleeping(a, live_ids={"sid-a"})  # it is awake
     reg.complete("sid-a")
@@ -172,19 +171,65 @@ async def test_wake_resumes_in_the_agents_own_directory(
     assert calls == [{"key": "data-a", "cwd": str(other), "resume": "sid-a"}]
 
 
-async def test_wake_refuses_a_stranger(
+async def test_a_stranger_is_closed_and_the_agent_revived_from_its_handoff(
     fake_claude: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Never deliver into the stranger; fall back to a seeded revive (his 10-26 ask)."""
+    from types import SimpleNamespace
+
     _transcript(fake_claude, "sid-a", str(tmp_path))
     agent = Registry().declare("sid-a", "data-a", "x")
+    killed: list[str] = []
+    injected: list[str] = []
 
     async def spawn(key, cwd=None, name=None, resume=None, timeout=90.0):
         make_session(fake_claude, 78, key, cwd, session_id="sid-NEW", tmux=f"hl-{key}:@0.%0")
         return next(s for s in discover() if s.pid == 78)
 
+    revived = SimpleNamespace(session_id="sid-REVIVED", name="data-a")
+
+    async def revive(name, registry, cwd=None, channels=None):
+        assert name == "data-a" and cwd == str(tmp_path)
+        return SimpleNamespace(session=revived, brief=SimpleNamespace(seed="SEED"))
+
+    async def inject(session, text):
+        injected.append(text)
+
     monkeypatch.setattr("hotline.tmuxen.spawn", spawn)
-    with pytest.raises(HotlineError, match="not delivering"):
-        await sleep_mod.wake(agent)
+    monkeypatch.setattr("hotline.tmuxen.kill", lambda name: killed.append(name) or True)
+    monkeypatch.setattr("hotline.revive.resume", revive)
+    monkeypatch.setattr("hotline.ccsocks.inject", inject)
+    s = await sleep_mod.wake(agent)
+    assert s is revived
+    assert killed == ["hl-data-a"]
+    assert injected == ["SEED"]
+
+
+async def test_no_transcript_goes_straight_to_revive(
+    fake_claude: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """After a restart with the transcript gone, the handoff is what is left."""
+    from types import SimpleNamespace
+
+    agent = Registry().declare("sid-gone", "data-g", "x")
+    spawned: list[str] = []
+
+    async def spawn(*a, **k):
+        spawned.append("x")
+        raise AssertionError("must not try to resume without a transcript")
+
+    async def revive(name, registry, cwd=None, channels=None):
+        return SimpleNamespace(session=SimpleNamespace(session_id="sid-new"),
+                               brief=SimpleNamespace(seed="SEED"))
+
+    async def inject(session, text):
+        pass
+
+    monkeypatch.setattr("hotline.tmuxen.spawn", spawn)
+    monkeypatch.setattr("hotline.revive.resume", revive)
+    monkeypatch.setattr("hotline.ccsocks.inject", inject)
+    s = await sleep_mod.wake(agent)
+    assert s.session_id == "sid-new" and spawned == []
 
 
 async def test_two_messages_share_one_wake(

@@ -278,6 +278,10 @@ class Channels:
         """
         self._call(f"/channels/{channel_id}", "PATCH", {"topic": topic[:1024]})
 
+    def send(self, channel_id: int, body: dict[str, Any]) -> Any:
+        """Post a message as the bot. `body` is the raw API payload (content, components)."""
+        return self._call(f"/channels/{channel_id}/messages", "POST", body)
+
     def exists(self, channel_id: int) -> bool:
         """Is this channel still there?
 

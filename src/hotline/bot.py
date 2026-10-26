@@ -26,7 +26,7 @@ import contextlib
 import os
 import time
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import discord
 
@@ -113,6 +113,9 @@ class HotlineBot(discord.Bot):
         self.call: VoiceCall | None = None
         self._joining = False
         self._call_lock = asyncio.Lock()
+        # A listener rather than an on_interaction override: the override would
+        # replace py-cord's own dispatch of slash commands and views.
+        self.add_listener(self._on_keeper_click, "on_interaction")
 
     async def on_ready(self) -> None:
         who = f"{self.user} ({self.user.id})" if self.user else "?"
@@ -195,6 +198,23 @@ class HotlineBot(discord.Bot):
         # available" failure, one layer down.
         owner = self._agent_for_text(message.channel.id)
         if owner is not None:
+            from .keeper import MAKE_KEEPER
+
+            # Same as clicking Yes on the keeper prompt, his words: typing it in
+            # the channel does what the button does, prompt or no prompt.
+            if MAKE_KEEPER.match(text):
+                origin = Origin(
+                    kind="human",
+                    label=str(message.author),
+                    author_id=str(message.author.id),
+                    channel_id=str(message.channel.id),
+                    message_id=str(message.id),
+                )
+                note = await message.channel.send(f"⭐ Making **{owner.name}** a keeper…")
+                result = await self._keep(owner.name, origin)
+                with contextlib.suppress(discord.HTTPException):
+                    await note.edit(content=result)
+                return
             self.pool.bind(key, owner.name, owner.session_id)
         placeholder = await message.channel.send(THINKING)
         if owner is not None:
@@ -316,6 +336,71 @@ class HotlineBot(discord.Bot):
     def _agent_for_voice(self, channel_id: int) -> Agent | None:
         """Which agent owns this voice channel, if any."""
         return self._agent_owning(channel_id, "voice_channel_id")
+
+    async def _keep(self, name: str, origin: Origin) -> str:
+        """Make an agent a keeper, wake it, and ask it for a summary. Returns what to say."""
+        from .agents import Registry
+        from .keeper import SUMMARY_ASK, make_keeper, prompts_beside
+        from .sleep import cwd_of
+
+        registry = Registry()
+        agent = registry.by_name(name)
+        if agent is None or agent.done:
+            return f"There is no working agent called **{name}** any more."
+        team = make_keeper(agent, cwd_of(agent.session_id), registry.path)
+        prompts_beside(registry.path).set(agent.name, "kept")
+        self.log(f"{agent.name} made a keeper (team {team})")
+        try:
+            # By name: a wake that has to revive moves the agent to a new session id.
+            await self.pool.router.deliver(agent.name, SUMMARY_ASK, origin)
+        except HotlineError as exc:
+            return (
+                f"⭐ **{agent.name}** is now a keeper (team *{team}*), but I could not "
+                f"wake it to write the summary: {exc}"
+            )
+        return (
+            f"⭐ **{agent.name}** is now a keeper (team *{team}*). Woke it; it is "
+            "writing a summary and will post it here."
+        )
+
+    async def _on_keeper_click(self, interaction: discord.Interaction) -> None:
+        from .keeper import NO, YES, prompts_beside
+
+        data: dict[str, Any] = dict(interaction.data or {})
+        custom_id = str(data.get("custom_id", ""))
+        if not custom_id.startswith((YES, NO)):
+            return
+        if interaction.user is None or interaction.user.id != self.user_id:
+            with contextlib.suppress(discord.HTTPException):
+                await interaction.response.send_message("Only Bogdan can answer this.", ephemeral=True)
+            return
+        name = custom_id.split(":", 2)[2]
+        if custom_id.startswith(NO):
+            from .agents import Registry
+
+            prompts_beside(Registry().path).set(name, "declined")
+            self.log(f"{name}: keeper prompt declined")
+            with contextlib.suppress(discord.HTTPException):
+                await interaction.response.edit_message(
+                    content=f"OK — **{name}** stays a passing agent. No more questions about it.",
+                    view=None,
+                )
+            return
+        # Answered inside Discord's three seconds; the wake takes longer and
+        # reports through a follow-up.
+        with contextlib.suppress(discord.HTTPException):
+            await interaction.response.edit_message(
+                content=f"⭐ Making **{name}** a keeper — waking it to write a summary…", view=None
+            )
+        # A click is not a message he posted, so it carries no re-fetchable
+        # receipt; say what it is rather than dress it up as a verifiable one.
+        origin = Origin(
+            kind="system",
+            label="hotline, relaying Bogdan's Yes on the keeper prompt in this agent's channel",
+        )
+        result = await self._keep(name, origin)
+        with contextlib.suppress(discord.HTTPException):
+            await interaction.followup.send(result)
 
     def _agent_for_text(self, channel_id: int) -> Agent | None:
         """Which agent owns this text channel, if any.
