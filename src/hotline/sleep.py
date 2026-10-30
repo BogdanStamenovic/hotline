@@ -131,10 +131,38 @@ def busy_reason(
     return None
 
 
+def _awake_path() -> Path:
+    from .config import state_dir
+
+    return state_dir() / "never-sleep.json"
+
+
+def never_sleep() -> set[str]:
+    """Agent names Bogdan wants kept awake (his words for manager-5, 10-30: "make it exempt
+    from sleeping"). A name, not a session id, so it survives resume and revive."""
+    try:
+        data = json.loads(_awake_path().read_text())
+    except (OSError, ValueError):
+        return set()
+    return {str(n) for n in data} if isinstance(data, list) else set()
+
+
+def set_never_sleep(name: str, on: bool = True) -> set[str]:
+    names = never_sleep()
+    names.add(name) if on else names.discard(name)
+    path = _awake_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(sorted(names), indent=1) + "\n")
+    return names
+
+
 def exempt(agent: Agent | None) -> bool:
     """The operator never sleeps. His words: "just hotline 80"; the role, not the name,
-    so a respawned operator that adopts the identity keeps the exemption."""
-    return agent is not None and agent.privileged
+    so a respawned operator that adopts the identity keeps the exemption. Agents he
+    names in never-sleep.json are exempt too."""
+    if agent is None:
+        return False
+    return agent.privileged or agent.name in never_sleep()
 
 
 def candidates(

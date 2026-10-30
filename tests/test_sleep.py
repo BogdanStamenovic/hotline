@@ -311,3 +311,20 @@ async def test_an_unregistered_session_put_to_sleep_still_wakes_by_name(
     monkeypatch.setattr(sleep_mod, "wake", wake)
     got = await Router().resolve_waking("meme-trend")
     assert woke == ["sid-meme"] and got.session_id == "sid-meme"
+
+
+def test_a_never_sleep_agent_is_not_a_candidate(fake_claude: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOTLINE_STATE", str(tmp_path / "state"))
+    make_session(fake_claude, 1, "keep", "/tmp", session_id="sid-k", tmux="hl-keep:@0.%0")
+    make_session(fake_claude, 2, "other", "/tmp", session_id="sid-o", tmux="hl-other:@0.%0")
+    reg = Registry()
+    reg.declare("sid-k", "manager-5", "manager")
+    reg.declare("sid-o", "data-c1", "general agent")
+    reg.save()
+    before = sleep_mod.candidates(discover(), Registry(), bound=set(), prefix="hl-")
+    assert sorted(a.name for _, a in before if a) == ["data-c1", "manager-5"]
+    sleep_mod.set_never_sleep("manager-5")
+    after = sleep_mod.candidates(discover(), Registry(), bound=set(), prefix="hl-")
+    assert [a.name for _, a in after if a] == ["data-c1"]
+    sleep_mod.set_never_sleep("manager-5", on=False)
+    assert "manager-5" not in sleep_mod.never_sleep()
