@@ -128,3 +128,18 @@ def test_format_lists_every_option():
     assert "data-af is asking you a question" in msg
     assert "Pick one" in msg and "the a" in msg and "**b**" in msg
     assert "pick more than one" in msg
+
+
+def test_installed_hook_runs_under_the_installing_interpreter(tmp_path, monkeypatch) -> None:
+    # System python lacks PyNaCl, so a hook run by `env python3` could not import
+    # hotline and silently fell through to the picker (manager-6, 2026-10-31).
+    import sys
+
+    from hotline import ask
+
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr(ask, "hook_path", lambda: str(tmp_path / "hooks" / "hotline-ask.py"))
+    monkeypatch.setattr("hotline.config.settings_path", lambda: tmp_path / "settings.json")
+    ask.install_ask_hook()
+    first = (tmp_path / "hooks" / "hotline-ask.py").read_text().splitlines()[0]
+    assert first == "#!" + sys.executable

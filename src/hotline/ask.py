@@ -25,6 +25,7 @@ this must never intercept a question he is sitting in front of.
 from __future__ import annotations
 
 import os
+import sys
 import time
 from collections.abc import Callable
 from typing import Any
@@ -160,7 +161,11 @@ def decide(
     return _deny(answer=answer, name=agent.name, questions=questions)
 
 
-HOOK_SCRIPT = '''#!/usr/bin/env python3
+# The interpreter is pinned to the one that installed the hook (hotline's venv).
+# `#!/usr/bin/env python3` picked the system python, which lacks PyNaCl; importing
+# hotline then raised, the bare except swallowed it, and every agent question fell
+# through to the keyboard picker and hung (manager-6 waited 5 h on 2026-10-31).
+HOOK_SCRIPT = '''#!{python}
 """hotline AskUserQuestion bridge -- relays the picker to Discord and feeds his
 answer back, so a headless agent never hangs on a menu nobody is sitting at.
 Installed by `hotline --install-hook`. See hotline/ask.py for the reasoning.
@@ -175,6 +180,14 @@ try:
     load_env()
     decision = decide(json.load(sys.stdin))
 except Exception:
+    import os, time, traceback
+    try:
+        log = os.path.expanduser("~/.local/state/hotline/ask-hook-errors.log")
+        os.makedirs(os.path.dirname(log), exist_ok=True)
+        with open(log, "a") as f:
+            f.write(time.strftime("%F %T ") + traceback.format_exc() + "\\n")
+    except Exception:
+        pass
     decision = None
 
 if decision:
@@ -204,7 +217,7 @@ def install_ask_hook() -> tuple[str, bool]:
     package_root = str(Path(__file__).resolve().parent.parent)
     path = Path(hook_path())
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(HOOK_SCRIPT.format(package_root=package_root))
+    path.write_text(HOOK_SCRIPT.format(package_root=package_root, python=sys.executable))
     path.chmod(0o755)
 
     settings_file = settings_path()
