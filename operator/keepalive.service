@@ -1,0 +1,7 @@
+[Unit]
+Description=hotline keepalive: revive never-sleep agents and the stizem team if they died
+
+[Service]
+Type=oneshot
+ExecStart=/home/bodas/data/hotline/operator/keepalive.py
+TimeoutStartSec=600
