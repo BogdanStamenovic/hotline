@@ -126,18 +126,22 @@ def test_dry_run_changes_nothing(world) -> None:
 # ---- retention of stopped agents ------------------------------------------
 
 
-def test_stopped_passing_agent_is_purged_three_days_after_last_seen(world, tmp_path) -> None:
+def _finish(registry, agent, days_ago: float) -> None:
+    agent.completed_at = time.time() - days_ago * 86400
+    registry.save()
+
+
+def test_a_finished_passing_agent_is_purged_three_days_after_done(world, tmp_path) -> None:
     fake, manager, registry, teams = world
     gone = _agent(fake, registry, "qwen-arch-agent-e8", "s1")
     teams.join("qwen-arch-agent", gone.name, keeper=False)
+    _finish(registry, gone, 3 + 1 / 86400)
     now = time.time()
-    seen = {"qwen-arch-agent-e8": now - 3 * 86400 - 1}
-    fake.history = {}
     manager.history = lambda cid: ({"name": "agent-qwen-arch-agent-e8", "id": str(cid)}, [])  # type: ignore[method-assign]
 
     cid = gone.channel_id
     swept = registry.sweep(
-        manager, now=now, live_ids=set(), seen=seen, archive_dir=tmp_path / "arch"
+        manager, now=now, live_ids=set(), seen={}, archive_dir=tmp_path / "arch"
     )
 
     assert swept == ["qwen-arch-agent-e8"]
@@ -145,20 +149,39 @@ def test_stopped_passing_agent_is_purged_three_days_after_last_seen(world, tmp_p
     assert (tmp_path / "arch" / f"agent-qwen-arch-agent-e8-{cid}.json").exists()
 
 
+def test_an_asleep_unfinished_agent_never_expires(world, tmp_path) -> None:
+    """11-01: meme-trend and pm-fed-combo were asleep (idle, not --done) with wake
+    tasks due, and the old "3 days since last seen" rule deleted both records,
+    which is what made them unwakeable. Sleep is not completion."""
+    fake, manager, registry, _teams = world
+    asleep = _agent(fake, registry, "pm-fed-combo", "s1")
+    now = time.time()
+    manager.history = lambda cid: ({"name": "x"}, [])  # type: ignore[method-assign]
+    swept = registry.sweep(
+        manager, now=now, live_ids=set(), seen={"pm-fed-combo": now - 30 * 86400},
+        archive_dir=tmp_path,
+    )
+    assert swept == []
+    assert Registry(registry.path).by_name("pm-fed-combo") is not None
+    assert fake.by_id(asleep.channel_id)
+
+
 def test_negative_cases_keep_the_channel(world, tmp_path) -> None:
-    """Keeper, still alive, under three days, or no liveness info: all kept."""
+    """A keeper finished long ago, an unfinished agent, one finished an hour ago: all kept."""
     fake, manager, registry, teams = world
     now = time.time()
     old = now - 10 * 86400
     keeper = _agent(fake, registry, "tells-09", "s1")
     teams.join("tells", keeper.name, keeper=True)
+    _finish(registry, keeper, 10)
     alive = _agent(fake, registry, "data-10", "s2")
     recent = _agent(fake, registry, "data-f8", "s3")
+    _finish(registry, recent, 1 / 24)
     seen = {"tells-09": old, "data-10": old, "data-f8": now - 3600}
     manager.history = lambda cid: ({"name": "x"}, [])  # type: ignore[method-assign]
 
     assert registry.sweep(manager, now=now, live_ids={"s2"}, seen=seen, archive_dir=tmp_path) == []
-    # Without liveness the old rule holds: only a --done can expire.
+    # Without liveness info nothing changes either: only a --done can expire.
     assert registry.sweep(manager, now=now) == []
     for a in (keeper, alive, recent):
         assert fake.by_id(a.channel_id)
@@ -167,6 +190,7 @@ def test_negative_cases_keep_the_channel(world, tmp_path) -> None:
 def test_a_failed_archive_keeps_channel_and_record(world, tmp_path) -> None:
     fake, manager, registry, _teams = world
     gone = _agent(fake, registry, "data-f8", "s1")
+    _finish(registry, gone, 4)
 
     def broken(cid):
         raise OSError("discord down")
@@ -185,6 +209,7 @@ def test_an_already_deleted_channel_is_forgotten_not_retried(world, tmp_path) ->
     """24 such agents were retried every ten minutes from 10-22 (14k journal lines)."""
     fake, manager, registry, _teams = world
     gone = _agent(fake, registry, "api-f4", "s1")
+    _finish(registry, gone, 4)
     fake.channels = [c for c in fake.channels if str(c["id"]) != str(gone.channel_id)]
 
     def unknown(cid):
@@ -203,6 +228,7 @@ def test_an_unreadable_guild_forgets_nothing(world, tmp_path) -> None:
     """If the listing fails, absence is unknown, so the record and its id are kept."""
     fake, manager, registry, _teams = world
     gone = _agent(fake, registry, "api-f4", "s1")
+    _finish(registry, gone, 4)
     fake.channels = [c for c in fake.channels if str(c["id"]) != str(gone.channel_id)]
 
     def down(*a, **k):

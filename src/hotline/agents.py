@@ -302,24 +302,23 @@ class Registry:
     ) -> list[Agent]:
         """Agents whose retention has run out and whose record should go.
 
-        A completed agent expires `keep_days` after its `--done`. A stopped one
-        -- killed, or gone with a power-off -- expires `keep_days` after it was
-        last seen alive, but only when the caller can say who is alive
-        (`live_ids`) and when (`seen`): without both, nothing that has not
-        finished can expire. An agent that has been working for a fortnight is
-        not stale, it is busy, and nothing here may delete the channel of
-        something still running.
+        Only a completed agent expires: `keep_days` after its `--done`.
+
+        A stopped one used to expire `keep_days` after it was last seen alive
+        (Bogdan's 10-14 rule, written when "not alive" meant killed or gone
+        with a power-off). Since 10-26 every idle agent is put to sleep, so "not
+        seen alive for three days" now mostly means "idle for three days", and
+        the rule started deleting agents that were only asleep: meme-trend
+        (11-01 00:43) and pm-fed-combo (08:45), both unfinished, both with wake
+        tasks due. Deleting the record is what makes a sleeping agent
+        unwakeable, so sleep must never count as completion. `live_ids` and
+        `seen` are still accepted so callers need not change.
         """
         moment = time.time() if now is None else now
         kept = self.team_members()
 
         def due(a: Agent) -> bool:
-            if a.expires_at is not None and moment >= a.expires_at:
-                return True
-            if live_ids is None or seen is None or a.session_id in live_ids:
-                return False
-            last = seen.get(a.name.lower())
-            return last is not None and moment >= last + a.keep_days * 86400
+            return a.expires_at is not None and moment >= a.expires_at
 
         return [
             a

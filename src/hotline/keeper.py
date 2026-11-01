@@ -5,10 +5,11 @@ Bogdan's rule (10-26): after an agent falls asleep its channel gets a message
 summary, and makes it a keeper. No means no more messages about it. Typing
 "make this a keeper" in the channel is the same as clicking Yes.
 
-Why it exists: agents now sleep after 30 idle minutes, and a sleeping *passing*
-agent is purged three days after it was last alive. Before, nothing told him an
-agent had gone to sleep, so the first he heard of a channel he cared about was
-its deletion. The question comes at the moment it is cheapest to answer.
+Why it exists: agents now sleep after 30 idle minutes, and when this was built
+a sleeping *passing* agent was purged three days after it was last alive.
+Since 11-01 only a `--done` starts that clock (see `Registry.expired`), so the
+question now decides what happens to an agent once it has finished: a keeper
+keeps its channel; a passing agent is purged three days after its `--done`.
 
 **Asked once per agent, ever**, unless he answers. The answer and the asking are
 both recorded in `keeper-prompts.json` beside the registry, keyed by agent
@@ -135,8 +136,8 @@ def ask(manager: Any, agent: Agent, prompts: Prompts) -> int | None:
     body = {
         "content": (
             f"💤 **{agent.name}** fell asleep after being idle. Make it a **keeper**? "
-            "A keeper is never deleted; a passing agent is deleted 3 days after it was "
-            "last alive. Yes wakes it and has it write a summary. "
+            "A keeper is never deleted; a passing agent is deleted 3 days after it "
+            "finishes (--done), never just for sleeping. Yes wakes it and has it write a summary. "
             'You can also type "make this a keeper" here any time.'
         ),
         "components": components(agent.name),
