@@ -195,6 +195,11 @@ class Registry:
             # it is doing, not who it is.
             existing.task = task
             existing.completed_at = None
+            # Opting in sticks; opting out does not take a channel away. Without
+            # this an agent first declared --no-channel could never get one
+            # (piccolo-bench, 11-02, retasked to report to Bogdan directly).
+            if wants_channel:
+                existing.wants_channel = True
             self.save()
             return existing
         agent = Agent(

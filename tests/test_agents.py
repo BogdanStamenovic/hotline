@@ -271,3 +271,13 @@ def test_a_stale_registry_does_not_resurrect_a_removed_agent(tmp_path: Path) -> 
     remover.save()
     stale.retask("sid-b", "y2")
     assert "sid-a" not in Registry(path=path).agents
+
+
+def test_redeclare_can_opt_into_a_channel(tmp_path):
+    from hotline.agents import Registry
+
+    reg = Registry(tmp_path / "agents.json")
+    reg.declare("s1", "a", "task", wants_channel=False)
+    assert reg.declare("s1", "a", "task", wants_channel=False).wants_channel is False
+    assert reg.declare("s1", "a", "new task").wants_channel is True
+    assert reg.declare("s1", "a", "again", wants_channel=False).wants_channel is True
