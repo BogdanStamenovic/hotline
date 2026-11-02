@@ -190,6 +190,18 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="ID",
         help="which session to act on (default $CLAUDE_CODE_SESSION_ID)",
     )
+    # Bogdan's ask (11-02): one switch an agent flips on itself. `never` puts it
+    # on the never-sleep list, which keepalive.timer also revives after a crash or
+    # OOM kill; bare `--sleep` takes it off again; `now` also shuts it down at once.
+    parser.add_argument(
+        "--sleep",
+        nargs="?",
+        const="cycle",
+        metavar="never|now",
+        help="this session's sleep: 'never' = never idle out, and revived if it dies; "
+        "no value = back to the normal idle cycle; 'now' = back to the cycle and "
+        "shut down this second (a message wakes it)",
+    )
     parser.add_argument("--list", action="store_true", help="list live sessions and exit")
     parser.add_argument(
         "--install-hook",
@@ -280,6 +292,9 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.sleep is not None:
+        return _sleep_command(args.sleep, session_id, registry, log)
 
     if args.adopt:
         adopted = registry.adopt(args.adopt, session_id)
@@ -411,6 +426,63 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
             setattr(finished, attr, None)
     registry.save()
     log(f"done: {finished.name}")
+    return 0
+
+
+def _sleep_command(
+    mode: str, session_id: str, registry: Registry, log: Callable[[str], None]
+) -> int:
+    """`--sleep never|now` and bare `--sleep`, acting on the calling session."""
+    from . import sleep
+    from .tmuxen import PREFIX
+
+    if mode not in ("never", "now", "cycle"):
+        print("hotline: error: --sleep takes 'never', 'now', or nothing", file=sys.stderr)
+        return 2
+    agent = registry.get(session_id)
+    session = next((s for s in discover() if s.session_id == session_id), None)
+    if agent is not None and agent.privileged:
+        # The operator is exempt by role, not by list; the watchdog respawns it
+        # within minutes anyway, so `now` would only cost a cold start.
+        print(f"hotline: error: {agent.name} is the operator; it never sleeps", file=sys.stderr)
+        return 1
+    if agent is None and (session is None or not (session.tmux_session or "").startswith(PREFIX)):
+        # Only a registered agent or a hotline-spawned pane can be woken again,
+        # so putting anything else down would be a kill, not a sleep.
+        print(
+            "hotline: error: this session is not a registered agent; --declare first, "
+            "so it can be woken again",
+            file=sys.stderr,
+        )
+        return 1
+    name = agent.name if agent is not None else session.name  # type: ignore[union-attr]
+
+    if mode == "never":
+        sleep.set_never_sleep(name, True)
+        log(f"{name}: never sleeps; keepalive revives it if it dies")
+        return 0
+    sleep.set_never_sleep(name, False)
+    if mode == "cycle":
+        log(f"{name}: back on the normal sleep cycle ({int(sleep.IDLE_AFTER // 60)} min idle)")
+        return 0
+    if session is None:
+        log(f"{name}: back on the normal sleep cycle; it is not live, so nothing to stop")
+        return 0
+    if agent is None:
+        sleep.remember(session)
+    log(f"{name}: going to sleep now; a message wakes it")
+    sys.stdout.flush()
+    sys.stderr.flush()
+    # The caller is usually this session's own Bash tool, which dies with the
+    # session. The stop runs in a detached child so it is not cut off halfway
+    # (SIGTERM sent, pane never closed).
+    if os.fork() == 0:
+        os.setsid()
+        from .ccsocks import terminate
+
+        with contextlib.suppress(Exception):
+            asyncio.run(terminate(session))
+        os._exit(0)
     return 0
 
 
@@ -994,6 +1066,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         or args.provenance
         or args.grant
         or args.claim is not None
+        or args.sleep is not None
     ):
         return _agent_command(args, log)
 
