@@ -156,6 +156,25 @@ def set_never_sleep(name: str, on: bool = True) -> set[str]:
     return names
 
 
+def set_mode(agent: Agent, mode: str) -> str:
+    """Apply `sleep never` / `sleep` / `sleep now` to the never-sleep list; say what it did.
+
+    Stopping the session for `now` is the caller's job, because the CLI usually
+    runs inside the very session it stops and the daemon does not.
+    """
+    if agent.privileged:
+        raise HotlineError(f"{agent.name} is the operator; it never sleeps")
+    if mode == "never":
+        set_never_sleep(agent.name, True)
+        return f"{agent.name}: never sleeps; keepalive revives it if it dies"
+    if mode not in ("cycle", "now"):
+        raise HotlineError("sleep takes 'never', 'now', or nothing")
+    set_never_sleep(agent.name, False)
+    if mode == "cycle":
+        return f"{agent.name}: back on the normal sleep cycle ({int(IDLE_AFTER // 60)} min idle)"
+    return f"{agent.name}: going to sleep now; a message wakes it"
+
+
 def exempt(agent: Agent | None) -> bool:
     """The operator never sleeps. His words: "just hotline 80"; the role, not the name,
     so a respawned operator that adopts the identity keeps the exemption. Agents he

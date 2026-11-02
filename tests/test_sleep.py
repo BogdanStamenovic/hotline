@@ -19,8 +19,14 @@ from hotline.router import Router
 NOW = 2_000_000_000.0
 
 
-def _session(home: Path, pid: int = 4242, sid: str = "sid-idle", status: str = "idle",
-             since: float | None = NOW - 3600, tmux: str = "hl-worker:@0.%0") -> LiveSession:
+def _session(
+    home: Path,
+    pid: int = 4242,
+    sid: str = "sid-idle",
+    status: str = "idle",
+    since: float | None = NOW - 3600,
+    tmux: str = "hl-worker:@0.%0",
+) -> LiveSession:
     make_session(home, pid, "worker", "/tmp", session_id=sid, status=status, tmux=tmux)
     desc = home / "sessions" / f"{pid}.json"
     data = json.loads(desc.read_text())
@@ -34,8 +40,10 @@ def _transcript(home: Path, sid: str, cwd: str, mtime: float | None = None) -> P
     path = home / "projects" / ("-" + cwd.strip("/").replace("/", "-")) / f"{sid}.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps({"type": "summary", "leafUuid": "x"}) + "\n"
-        + json.dumps({"type": "user", "cwd": cwd, "sessionId": sid}) + "\n"
+        json.dumps({"type": "summary", "leafUuid": "x"})
+        + "\n"
+        + json.dumps({"type": "user", "cwd": cwd, "sessionId": sid})
+        + "\n"
     )
     if mtime is not None:
         import os
@@ -80,19 +88,28 @@ def test_a_background_tool_shell_keeps_it_awake(fake_claude: Path, tmp_path: Pat
     """The bug that killed pm-maker2 and manager-2: idle prompt, work still running."""
     s = _session(fake_claude)
     _transcript(fake_claude, s.session_id, "/tmp", mtime=NOW - 3600)
-    proc = _proc(tmp_path, {
-        7001: (s.pid, "/usr/bin/zsh -c source /home/b/.claude/shell-snapshots/snap.sh && sleep 999"),
-    })
+    proc = _proc(
+        tmp_path,
+        {
+            7001: (
+                s.pid,
+                "/usr/bin/zsh -c source /home/b/.claude/shell-snapshots/snap.sh && sleep 999",
+            ),
+        },
+    )
     assert "tool shell" in sleep_mod.busy_reason(s, now=NOW, proc=proc)
 
 
 def test_mcp_servers_are_not_work(fake_claude: Path, tmp_path: Path) -> None:
     s = _session(fake_claude)
     _transcript(fake_claude, s.session_id, "/tmp", mtime=NOW - 3600)
-    proc = _proc(tmp_path, {
-        7002: (s.pid, "/home/b/.venv/bin/python /home/b/.venv/bin/use-computer-mcp"),
-        7003: (1, "/usr/bin/zsh -c source /home/b/.claude/shell-snapshots/snap.sh"),  # not ours
-    })
+    proc = _proc(
+        tmp_path,
+        {
+            7002: (s.pid, "/home/b/.venv/bin/python /home/b/.venv/bin/use-computer-mcp"),
+            7003: (1, "/usr/bin/zsh -c source /home/b/.claude/shell-snapshots/snap.sh"),  # not ours
+        },
+    )
     assert sleep_mod.busy_reason(s, now=NOW, proc=proc) is None
 
 
@@ -219,8 +236,9 @@ async def test_no_transcript_goes_straight_to_revive(
         raise AssertionError("must not try to resume without a transcript")
 
     async def revive(name, registry, cwd=None, channels=None):
-        return SimpleNamespace(session=SimpleNamespace(session_id="sid-new"),
-                               brief=SimpleNamespace(seed="SEED"))
+        return SimpleNamespace(
+            session=SimpleNamespace(session_id="sid-new"), brief=SimpleNamespace(seed="SEED")
+        )
 
     async def inject(session, text):
         pass
@@ -295,8 +313,14 @@ async def test_an_unregistered_session_put_to_sleep_still_wakes_by_name(
     fake_claude: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """meme-trend had wake tasks addressed to it by name and no registry record."""
-    make_session(fake_claude, 6, "meme-trend", str(tmp_path), session_id="sid-meme",
-                 tmux="hl-meme-trend:@0.%0")
+    make_session(
+        fake_claude,
+        6,
+        "meme-trend",
+        str(tmp_path),
+        session_id="sid-meme",
+        tmux="hl-meme-trend:@0.%0",
+    )
     s = next(x for x in discover() if x.pid == 6)
     sleep_mod.remember(s)
     (fake_claude / "sessions" / "6.json").unlink()
@@ -313,7 +337,9 @@ async def test_an_unregistered_session_put_to_sleep_still_wakes_by_name(
     assert woke == ["sid-meme"] and got.session_id == "sid-meme"
 
 
-def test_a_never_sleep_agent_is_not_a_candidate(fake_claude: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_never_sleep_agent_is_not_a_candidate(
+    fake_claude: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("HOTLINE_STATE", str(tmp_path / "state"))
     make_session(fake_claude, 1, "keep", "/tmp", session_id="sid-k", tmux="hl-keep:@0.%0")
     make_session(fake_claude, 2, "other", "/tmp", session_id="sid-o", tmux="hl-other:@0.%0")
@@ -328,3 +354,16 @@ def test_a_never_sleep_agent_is_not_a_candidate(fake_claude: Path, tmp_path: Pat
     assert [a.name for _, a in after if a] == ["data-c1"]
     sleep_mod.set_never_sleep("manager-5", on=False)
     assert "manager-5" not in sleep_mod.never_sleep()
+
+
+def test_parse_sleep_commands():
+    from hotline.router import parse_sleep, parse_utterance
+
+    assert parse_sleep("sleep never") == (None, "never")
+    assert parse_sleep("sleep") == (None, "cycle")
+    assert parse_sleep("Sleep now.") == (None, "now")
+    assert parse_sleep("sleep data-13 now") == ("data-13", "now")
+    assert parse_sleep("sleep manager-5") == ("manager-5", "cycle")
+    for prose in ("sleep on it", "go to sleep", "sleep is good for you", "sleep never again"):
+        assert parse_sleep(prose) is None, prose
+    assert parse_utterance("sleep never").action == "sleep"

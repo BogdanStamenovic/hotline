@@ -492,6 +492,9 @@ class SessionPool:
         if route.action == "wake":
             return await self._wake(conv, route, live)
 
+        if route.action == "sleep":
+            return await self._sleep(conv, route, live)
+
         if route.action == "detach":
             was = conv.attached_to
             conv.attached_to = conv.attached_id = None
@@ -732,6 +735,47 @@ class SessionPool:
             return None
 
         return await self._revive(agent, cwd=_home_of(agent.name))
+
+    async def _sleep(
+        self, conv: Conversation, route: Route, live: list[LiveSession]
+    ) -> Reply | None:
+        """`sleep never` / `sleep` / `sleep now` for this channel's agent, or a named one."""
+        from .agents import Registry
+        from .router import parse_sleep
+        from .sleep import set_mode
+
+        parsed = parse_sleep(route.text)
+        mode = parsed[1] if parsed else "cycle"
+        registry = Registry()
+        name = route.target or conv.attached_to
+        if not name:
+            return Reply(
+                text="Sleep for which agent? Say it in the agent's own channel, "
+                "or name it: `sleep <agent> never|now`.",
+                subtype="control",
+            )
+        agent = registry.by_name(name)
+        if agent is None or agent.done:
+            if route.target:
+                # "sleep well" names no agent: prose for whoever is listening.
+                return None
+            return Reply(text=f"No working agent called `{name}`.", subtype="control")
+        try:
+            said = set_mode(agent, mode)
+        except HotlineError as exc:
+            return Reply(text=str(exc), subtype="control")
+        if mode == "now":
+            session = next((s for s in live if s.session_id == agent.session_id), None)
+            if session is None:
+                said = f"{agent.name}: back on the normal sleep cycle; it was already asleep"
+            else:
+                try:
+                    await self.router.kill_session(str(session.pid))
+                except (HotlineError, SessionNotFound, OSError) as exc:
+                    said += f" -- but stopping it failed: {exc}"
+                else:
+                    said = f"💤 {agent.name} is asleep. Any message here wakes it."
+        return Reply(text=said, subtype="control")
 
     async def _wake(self, conv: Conversation, route: Route, live: list[LiveSession]) -> Reply:
         """`wake` -- teams awake and asleep; `wake X` revives a team or one agent.
@@ -1170,6 +1214,9 @@ HELP_TEXT = """**Commands** (these are handled by hotline itself, not sent to a 
 `new agent <task>` — start a SEPARATE agent with its own session and channel
 `resume` — agents you can bring back, numbered; `resume 2` or `resume <name>`
 `wake` — teams, awake and asleep; `wake team <team>` wakes all of it, `wake <agent>` one member
+`sleep never` — in an agent's channel: it never idles out, and is revived if it crashes or the box reboots
+`sleep` — back on the normal 30-minute idle cycle; `sleep now` — that, and shut it down this second
+   (elsewhere name it: `sleep <agent> never|now`)
 
 Every message relayed into a session now carries a provenance header saying
 where it came from. A message relayed from here carries the Discord channel and

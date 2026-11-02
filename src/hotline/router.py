@@ -100,7 +100,7 @@ class Route:
     target: str | None
     text: str
     # Only set for mode == "control": list | connect | detach | where | kill
-    #                               | help | resources | resume | new_agent
+    #                               | help | resources | resume | new_agent | sleep
     action: str | None = None
     # The caller used an unambiguous command form -- `session kill X` rather than
     # a bare `kill X`. It decides what happens when the target does not resolve:
@@ -167,6 +167,22 @@ _WAKE = re.compile(
     r"^wake(?:\s+up)?(?:\s+the)?(?:\s+(team))?(?:\s+(.+?))?(?:\s+team)?\s*[.?!]?$",
     re.IGNORECASE,
 )
+# `sleep never` / `sleep` / `sleep now`, Bogdan's ask (11-02). In an agent's own
+# channel it means that agent; anywhere else the agent is named: `sleep data-13 now`.
+# Anchored and closed: "sleep on it" or "go to sleep" must still reach the model.
+_SLEEP = re.compile(
+    r"^sleep(?:\s+(?!never\b|now\b)([\w.-]+))?(?:\s+(never|now))?\s*[.!]?$", re.IGNORECASE
+)
+
+
+def parse_sleep(text: str) -> tuple[str | None, str] | None:
+    """(agent name or None, 'never' | 'now' | 'cycle') for a sleep command, else None."""
+    match = _SLEEP.match(text.strip())
+    if match is None:
+        return None
+    return match.group(1), (match.group(2) or "cycle").lower()
+
+
 _RESOURCES = re.compile(
     r"^(?:resources?|load|how\s+(?:much|is)\s+(?:ram|memory|vram|load)\S*)\s*[.?]?$", re.IGNORECASE
 )
@@ -213,6 +229,9 @@ def parse_utterance(utterance: str) -> Route:
             action="wake",
             explicit=bool(wake.group(1)) or low.rstrip(".?! ").endswith(" team"),
         )
+    sleep = parse_sleep(text)
+    if sleep is not None:
+        return Route("control", sleep[0], text, action="sleep")
     if _RESOURCES.match(low):
         return Route("control", None, text, action="resources")
     if _AGENTS.match(low):
@@ -389,7 +408,6 @@ def describe(session: LiveSession) -> str:
     return f"{name} (pid {session.pid}, {session.cwd})"
 
 
-
 def _registered(spec: str) -> Any:
     """The registered agent a spec names -- by name or by (a prefix of) session id."""
     want = spec.strip().strip("'\"").lower()
@@ -410,6 +428,7 @@ def _registered(spec: str) -> Any:
         if len(hits) == 1:
             return hits[0]
     return None
+
 
 class Router:
     def __init__(self, default_cwd: str | None = None, bypass: bool = True) -> None:

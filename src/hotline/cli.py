@@ -190,17 +190,15 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="ID",
         help="which session to act on (default $CLAUDE_CODE_SESSION_ID)",
     )
-    # Bogdan's ask (11-02): one switch an agent flips on itself. `never` puts it
-    # on the never-sleep list, which keepalive.timer also revives after a crash or
-    # OOM kill; bare `--sleep` takes it off again; `now` also shuts it down at once.
+    # Bogdan's ask (11-02): the operator's switch for an agent's sleep, the CLI
+    # twin of the Discord `sleep never` / `sleep` / `sleep now`. Operator only, his
+    # words: "thats a you exclusive command".
     parser.add_argument(
         "--sleep",
-        nargs="?",
-        const="cycle",
-        metavar="never|now",
-        help="this session's sleep: 'never' = never idle out, and revived if it dies; "
-        "no value = back to the normal idle cycle; 'now' = back to the cycle and "
-        "shut down this second (a message wakes it)",
+        nargs="+",
+        metavar="NAME [never|now]",
+        help="operator only: 'NAME never' = never idles out, revived if it dies; "
+        "'NAME' = back to the normal idle cycle; 'NAME now' = that, and stop it now",
     )
     parser.add_argument("--list", action="store_true", help="list live sessions and exit")
     parser.add_argument(
@@ -430,59 +428,44 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
 
 
 def _sleep_command(
-    mode: str, session_id: str, registry: Registry, log: Callable[[str], None]
+    spec: list[str], session_id: str, registry: Registry, log: Callable[[str], None]
 ) -> int:
-    """`--sleep never|now` and bare `--sleep`, acting on the calling session."""
+    """`--sleep NAME [never|now]`, for the operator only."""
     from . import sleep
-    from .tmuxen import PREFIX
+    from .ccsocks import terminate
 
-    if mode not in ("never", "now", "cycle"):
-        print("hotline: error: --sleep takes 'never', 'now', or nothing", file=sys.stderr)
-        return 2
-    agent = registry.get(session_id)
-    session = next((s for s in discover() if s.session_id == session_id), None)
-    if agent is not None and agent.privileged:
-        # The operator is exempt by role, not by list; the watchdog respawns it
-        # within minutes anyway, so `now` would only cost a cold start.
-        print(f"hotline: error: {agent.name} is the operator; it never sleeps", file=sys.stderr)
-        return 1
-    if agent is None and (session is None or not (session.tmux_session or "").startswith(PREFIX)):
-        # Only a registered agent or a hotline-spawned pane can be woken again,
-        # so putting anything else down would be a kill, not a sleep.
+    caller = registry.get(session_id)
+    if caller is None or not caller.privileged:
         print(
-            "hotline: error: this session is not a registered agent; --declare first, "
-            "so it can be woken again",
+            "hotline: error: --sleep is the operator's command. Ask Bogdan to type "
+            "`sleep never` / `sleep` / `sleep now` in your channel.",
             file=sys.stderr,
         )
         return 1
-    name = agent.name if agent is not None else session.name  # type: ignore[union-attr]
-
-    if mode == "never":
-        sleep.set_never_sleep(name, True)
-        log(f"{name}: never sleeps; keepalive revives it if it dies")
-        return 0
-    sleep.set_never_sleep(name, False)
-    if mode == "cycle":
-        log(f"{name}: back on the normal sleep cycle ({int(sleep.IDLE_AFTER // 60)} min idle)")
-        return 0
-    if session is None:
-        log(f"{name}: back on the normal sleep cycle; it is not live, so nothing to stop")
-        return 0
-    if agent is None:
-        sleep.remember(session)
-    log(f"{name}: going to sleep now; a message wakes it")
-    sys.stdout.flush()
-    sys.stderr.flush()
-    # The caller is usually this session's own Bash tool, which dies with the
-    # session. The stop runs in a detached child so it is not cut off halfway
-    # (SIGTERM sent, pane never closed).
-    if os.fork() == 0:
-        os.setsid()
-        from .ccsocks import terminate
-
-        with contextlib.suppress(Exception):
-            asyncio.run(terminate(session))
-        os._exit(0)
+    if len(spec) > 2:
+        print("hotline: error: --sleep takes NAME and optionally never|now", file=sys.stderr)
+        return 2
+    name, mode = spec[0], (spec[1].lower() if len(spec) == 2 else "cycle")
+    agent = registry.by_name(name)
+    if agent is None or agent.done:
+        print(f"hotline: error: no working agent called {name!r}", file=sys.stderr)
+        return 1
+    try:
+        said = sleep.set_mode(agent, mode)
+    except HotlineError as exc:
+        print(f"hotline: error: {exc}", file=sys.stderr)
+        return 2 if "takes" in str(exc) else 1
+    if mode == "now":
+        session = next((s for s in discover() if s.session_id == agent.session_id), None)
+        if session is None:
+            said = f"{agent.name}: back on the normal sleep cycle; it was already asleep"
+        else:
+            try:
+                said += f" ({asyncio.run(terminate(session))})"
+            except HotlineError as exc:
+                print(f"hotline: error: {exc}", file=sys.stderr)
+                return 1
+    log(said)
     return 0
 
 
