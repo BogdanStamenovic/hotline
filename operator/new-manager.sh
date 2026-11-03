@@ -19,9 +19,9 @@ timeout 60 bash -c "until tmux capture-pane -pt hl-$name | grep -q 'bypass permi
 seed=$(mktemp)
 cat > "$seed" <<SEED
 From hotline-80 (the operator), on Bogdan's request (Discord $mid, verified): "$words".
-You are $name: a standalone manager agent who answers DIRECTLY to Bogdan in your own Discord channel, not to the operator. He will give you your direction there. Leave the operator's Polymarket/memecoin research alone.
+You are $name: a standalone manager agent who answers DIRECTLY to Bogdan in your own Discord channel, not to the operator. He will give you your direction there.
 1) Register so you get your channel: hotline --declare "$name: new manager for Bogdan, awaiting his direction".
-2) Post one short line in your channel that you are ready and ask what he wants (hotline-say with a quoted-heredoc file).
+2) Post one short line in your channel that you are ready and ask what he wants (write the text to a file with a QUOTED heredoc, <<'EOF', then hotline-say --file FILE: backticks in a double-quoted shell string EXECUTE).
 3) Wait for him. Your CLAUDE.md has his working rules and a "Running as a hotline-native agent" section; read it.
 SEED
 guild=$(grep ^DISCORD_GUILD_ID .env | cut -d= -f2 | tr -d '"')

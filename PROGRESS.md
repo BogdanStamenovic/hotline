@@ -16418,3 +16418,5 @@ backup is the only rollback that exists.
 - devices check 44/0 contradicted; arch unreachable (keeps duties). discover archserver: acgeo-mic.service + acgeo-process.timer unclaimed -> claimed (unit text: Bogdan approved 11-03).
 - Skipped bulk Discord history per banner; read only after 20:00Z: nothing new from him. Posted status + asked whether to make the no-history-read permanent.
 - 21:2x: deleted /mnt/offload/sysbackup-20261103 (27G) at his word (1567271034191741140) after post-boot checks + no failed units; offload 11G -> 38G free.
+- 21:4x: HDD search for him on KupujemProdajem. Pick WD Red 6TB WD60EFRX 6000 din Sombor (oglas 196277872, 1 weak sector); alt WD Red 4TB 7000 din Šabac (190327924). His plan: models+archives on HDD, rebuild recipe on NVMe. On arrival: surface test + SMART, ext4 nofail mount, devices claim, RECIPE manifest. Buying/contacting the seller is his (not asked yet).
+- 21:5x: spawned manager-8 (his msg 1567277083372167421, verified) via operator/new-manager.sh; seed: dropped stale Polymarket line, spelled out the heredoc rule. He messaged the HDD seller himself (1567277116133867695).
