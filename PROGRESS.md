@@ -16417,3 +16417,4 @@ backup is the only rollback that exists.
 - Adopted. Verified: uname 7.2.14, nvidia-smi OK, ollama 0.40.13 :11435 behind gpu-share :11434 (piccolo /v1 responds), postgres 55433, calld /health ring_ready degradations [], keepalive revived manager-5/6/7 + stizem-manager (live in --list), no then_do task pending, root 11G free.
 - devices check 44/0 contradicted; arch unreachable (keeps duties). discover archserver: acgeo-mic.service + acgeo-process.timer unclaimed -> claimed (unit text: Bogdan approved 11-03).
 - Skipped bulk Discord history per banner; read only after 20:00Z: nothing new from him. Posted status + asked whether to make the no-history-read permanent.
+- 21:2x: deleted /mnt/offload/sysbackup-20261103 (27G) at his word (1567271034191741140) after post-boot checks + no failed units; offload 11G -> 38G free.
