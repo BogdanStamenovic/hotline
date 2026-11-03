@@ -16412,3 +16412,8 @@ backup is the only rollback that exists.
 - 10:3x CORRECTED attribution: rust+wa-call = data-6f (not manager-7, my grep matched my own msg). Deleted cargo intermediates 3.4G (kept wa-call binary, verified). manager-7 cleaned its uv wheels. Root 8.4G free.
 - 11:4x his msg 1567127570720227411 (VERIFIED): deleted old ccd-cli 2.1.295/2.1.308, ms-playwright, sweep-venvs, chrome cache, discord app-1.0.153. Root 11G free.
 - 21:1x full system update at his word: backup /mnt/offload/sysbackup-20261103 (27G), pacman -Su 449 pkgs OK, yay -Sua OK, grub-install + mkconfig OK, nvidia modules present for 7.2.14, no pacnew. Agents warned; handoff banner written; rebooting.
+
+## 2026-11-03 21:12 CET -- operator hotline-80: boot after his ordered update reboot
+- Adopted. Verified: uname 7.2.14, nvidia-smi OK, ollama 0.40.13 :11435 behind gpu-share :11434 (piccolo /v1 responds), postgres 55433, calld /health ring_ready degradations [], keepalive revived manager-5/6/7 + stizem-manager (live in --list), no then_do task pending, root 11G free.
+- devices check 44/0 contradicted; arch unreachable (keeps duties). discover archserver: acgeo-mic.service + acgeo-process.timer unclaimed -> claimed (unit text: Bogdan approved 11-03).
+- Skipped bulk Discord history per banner; read only after 20:00Z: nothing new from him. Posted status + asked whether to make the no-history-read permanent.
