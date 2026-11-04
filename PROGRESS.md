@@ -16421,3 +16421,4 @@ backup is the only rollback that exists.
 - 21:4x: HDD search for him on KupujemProdajem. Pick WD Red 6TB WD60EFRX 6000 din Sombor (oglas 196277872, 1 weak sector); alt WD Red 4TB 7000 din Šabac (190327924). His plan: models+archives on HDD, rebuild recipe on NVMe. On arrival: surface test + SMART, ext4 nofail mount, devices claim, RECIPE manifest. Buying/contacting the seller is his (not asked yet).
 - 21:5x: spawned manager-8 (his msg 1567277083372167421, verified) via operator/new-manager.sh; seed: dropped stale Polymarket line, spelled out the heredoc rule. He messaged the HDD seller himself (1567277116133867695).
 - 11-04 01:5x: spawned manager-9 (his msg 1567340088520605791, verified) via new-manager.sh. manager-8 asleep since 00:43 (idle reap), keeper.
+- 11-04 10:15: device sweep: 47/0 contradicted, arch unreachable; claimed archserver/provenance-check (system timer from manager-8's provenance tool, 11-03 22:25).
