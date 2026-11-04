@@ -16422,3 +16422,4 @@ backup is the only rollback that exists.
 - 21:5x: spawned manager-8 (his msg 1567277083372167421, verified) via operator/new-manager.sh; seed: dropped stale Polymarket line, spelled out the heredoc rule. He messaged the HDD seller himself (1567277116133867695).
 - 11-04 01:5x: spawned manager-9 (his msg 1567340088520605791, verified) via new-manager.sh. manager-8 asleep since 00:43 (idle reap), keeper.
 - 11-04 10:15: device sweep: 47/0 contradicted, arch unreachable; claimed archserver/provenance-check (system timer from manager-8's provenance tool, 11-03 22:25).
+- 11-04 11:59: spawned manager-10 (his msg 1567493414574887053, verified fresh, same text as 1567340088520605791).
