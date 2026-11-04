@@ -16431,3 +16431,4 @@ backup is the only rollback that exists.
 - 11-04 13:1x: his msg 1567507130431574088: deleted /mnt/offload/piccolo-bench/runs (245M).
 - 11-04 13:00: acgeo-process hung (NaN loop, 95 min, 2.9GiB GPU) -> manager-7 stopped it + acgeo-process.timer; NaN guard uncommitted (m7 hit classifier). acgeo-mic still records ~1.2GB/day. :11434 on ollama fallback while manager-12 holds :11446 4.1GiB. Asked him a/b/c.
 - 11-04 13:3x: his 'C please' (1567513977356034129): spawned acgeo-fix (cwd ~/data/acoustic-geoloc, reports to him) for the NaN hang + re-enable; told manager-7 to stand down. new-manager.sh gained AGENT_DIR/SEED_FILE.
+- 11-04 13:4x: acgeo-fix done, VERIFIED: 28fb502 committed (no remote; asked him), tree clean, truth.json not in commit, timer active, TimeoutStartSec 1h40, 13:42 run finished in 61s, GPU free of acgeo; gpu-share back on turbo (pid 229912, 6988 MiB).
