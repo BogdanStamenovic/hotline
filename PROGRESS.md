@@ -16445,3 +16445,12 @@ backup is the only rollback that exists.
 - 11-04 21:4x: manager-12 bench :11499 reaped (low RAM, Claude Code bg reaping, no kernel OOM) ~21:40; VERIFIED GPU empty, 12.8G avail; turbo3 not loaded (loads on demand). m12 waits for Bogdan's OK before retaking GPU.
 - 11-04 21:5x: manager-12 retook GPU :11499 ~40 min (kvufit), call guard + 3G RAM guard; following Bogdan's reply in its channel (msg 1567637690244005939).
 - 11-04 22:0x: manager-12 VERIFIED: bench :11499 gone; gpu-share piccolo profile now -np 2 (props: total_slots 2, n_ctx 131072/slot; argv has -np 1 then -np 2, last wins), bak config.json.bak-np2-20261104-213417, gpu-share active.
+- 11-05 02:1x: Bogdan (1567708744391852043, verified): spawned manager-13; background pane watcher (20 s) for the cyber-flag menu, will pick Opus 4.8 per his order.
+- 11-05 02:1x: manager-13 cyber-flagged 02:17:47; picked 'Switch to Opus 4.8' (menu option 1) per Bogdan; resumed working. Did not read the triggering content.
+- 11-05 07:4x: Bogdan (1567807253929529408, verified): sent ~/.claude/CLAUDE.md (35101 B) as a Discord attachment, msg 1567807375522398234 (hotline-say has no attach; bot API multipart).
+- 11-05 07:5x: wake uxonews-shadow-compare fired; spawned uxonews-shadow (Opus, ~/data/uxonews-master, read-only on VPS). Warrant mistakenly pointed at his CLAUDE.md msg; corrected to the agent.
+- 11-05 08:0x: Bogdan (1567811190397075559, verified): OpenRouter depleted 2-3 wk, admin@kinreply.rs blocked (domain lapse), no verification code. Relayed to uxonews-shadow (arm B is OpenRouter-first). OR users: uxonews, jev-strategies, classwatch. Offered a/b/c.
+- 11-05 08:1x: Bogdan (1567811478034317394, verified): read OpenRouter support thread (uids 3284-3298): need signed-in ticket from admin@kinreply.rs (catch-22), auto-closed after 10-24 nudges. Suggested OAuth login / reply-from-kinreply to reopen / new account.
+- 11-05 08:2x: Bogdan (1567811994973642833): check OpenRouter via kinreply@gmail Chrome profile. NOT FOUND on archserver (google-chrome Default only) or /mnt/windows Chrome (5 profiles, none kinreply); arch offline 14h. Offered a/b/c.
+- 11-05 08:3x: uxonews-shadow VERIFIED: 0ff3c71 on origin/testing only (not main); 4 clean days (OpenRouter 402 stopped both arms since 10-20); rec keep B, combine later = his money call; VPS untouched. Reported to him itself.
+- 2026-11-05 10:15 CET device sweep: 46 duties, 0 contradicted, 0 unclaimed units on archserver/pigion/teamserbia; arch unreachable (3 duties unknown, kept). Posted.
