@@ -1,24 +1,28 @@
 #!/usr/bin/env python3
-"""Stop every agent when the Claude weekly usage reaches a threshold, until it resets.
+"""At a weekly Claude usage threshold, interrupt active agents and tell them to wind down.
 
-Bogdan 2026-11-08 (Discord 1569051228372209666): "keep an eye on the usage i need
-you to stop all the agent at 95 till tomorrow".
+Bogdan 2026-11-08: stop at 95 (Discord 1569051228372209666), then refined to no full
+stop (1569056818888445953): "it just needs to interrupt all the active agents and tell
+them wind down for the night, push, that's it. And leave them like that so I can
+override them with a message".
 
-Stops by killing the tmux session of every Claude pane except the operator's:
-transcripts survive, so agents can be resumed, but whatever a pane was running dies.
-While tripped it keeps polling and re-kills, because any message or wake task revives
-an hl-* agent, and keepalive.timer is stopped so never-sleep agents stay down.
-At the reset it restarts keepalive.timer, tells the operator, and exits.
-
-Not covered: Claude outside tmux (his remote sessions) and the call agent's API use.
-Lift it early: touch ~/.local/state/usage-guard/release
+So this fires once and exits. It kills nothing and leaves keepalive alone. Idle agents
+get no message, because waking them would itself spend usage. An interrupted agent
+stays reachable, and any message restarts it.
 """
-import argparse, datetime as dt, json, os, subprocess, sys, tempfile, time, urllib.request
+import argparse, datetime as dt, json, os, re, subprocess, sys, tempfile, time, urllib.request
 from pathlib import Path
 
 HOME = Path.home()
-STATE = HOME / ".local/state/usage-guard"
-OPERATOR_TMUX = "hotline"
+OPERATOR = "hotline-80"
+ACTIVE = {"busy", "shell"}
+GUILD = next(l.split("=", 1)[1].strip().strip('"') for l in open(HOME / "data/hotline/.env") if l.startswith("DISCORD_GUILD_ID="))
+WARRANT = f"https://discord.com/channels/{GUILD}/1541610683240554527/1569056818888445953"
+WIND_DOWN = (
+    "From Bogdan, via the usage guard: the weekly Claude limit hit {pct:.0f}%. Wind down for the night: "
+    "commit and push what you have, and that's it. Don't start anything new, don't spawn agents, and stop any "
+    "background subagents. Then stay idle. He may override this with a message, and if he does, follow him."
+)
 ENV = {**os.environ, "PATH": f"{HOME}/.claude/bin:{HOME}/.local/bin:/usr/local/bin:{os.environ.get('PATH', '/usr/bin:/bin')}"}
 
 
@@ -35,32 +39,46 @@ def usage():
 def say(text):
     with tempfile.NamedTemporaryFile("w", suffix=".msg", delete=False) as f:
         f.write(text)
-    r = subprocess.run(["hotline-say", "--agent", "hotline-80", "--file", f.name], env=ENV, capture_output=True, text=True)
+    r = subprocess.run(["hotline-say", "--agent", OPERATOR, "--file", f.name], env=ENV, capture_output=True, text=True)
     os.unlink(f.name)
     if r.returncode:
         print("hotline-say failed:", r.stderr, file=sys.stderr, flush=True)
 
 
-def targets():
-    out = subprocess.run(["tmux", "list-panes", "-a", "-F", "#{session_name} #{pane_pid}"], capture_output=True, text=True).stdout
-    found = set()
+def active():
+    """[(name, pid)] of agents doing something, read from hotline --list."""
+    out = subprocess.run(["hotline", "--list"], env=ENV, capture_output=True, text=True).stdout
+    found = []
     for line in out.splitlines():
-        session, pid = line.split()
-        if session == OPERATOR_TMUX:
-            continue
-        args = subprocess.run(["ps", "-o", "args=", "-p", pid], capture_output=True, text=True).stdout
-        if "claude-code/bin/claude" in args:
-            found.add(session)
-    return sorted(found)
+        m = re.match(r"(\S+) .*\(pid (\d+), [^)]*\)\s+(\w+)", line)
+        if m and m[1] != OPERATOR and m[3] in ACTIVE:
+            found.append((m[1], int(m[2])))
+    return found
 
 
-def stop(dry):
-    names = targets()
-    if not dry:
-        subprocess.run(["systemctl", "--user", "stop", "keepalive.timer"])
-        for s in names:
-            subprocess.run(["tmux", "kill-session", "-t", s])
-    return names
+def pane_of(pid):
+    out = subprocess.run(["tmux", "list-panes", "-a", "-F", "#{pane_pid} #{pane_id}"], capture_output=True, text=True).stdout
+    for line in out.splitlines():
+        p, pane = line.split()
+        if int(p) == pid:
+            return pane
+    return None
+
+
+def wind_down(pct):
+    done, failed = [], []
+    for name, pid in active():
+        pane = pane_of(pid)
+        if pane:
+            subprocess.run(["tmux", "send-keys", "-t", pane, "Escape"])
+            time.sleep(1)
+        r = subprocess.run(
+            ["hotline", "--to", name, "--no-wait", "--warrant", WARRANT, WIND_DOWN.format(pct=pct)],
+            env=ENV, capture_output=True, text=True,
+        )
+        (done if r.returncode == 0 and pane else failed).append(name)
+        print(name, pane, r.returncode, r.stderr[:200], flush=True)
+    return done, failed
 
 
 def main():
@@ -68,28 +86,20 @@ def main():
     ap.add_argument("--threshold", type=float, default=95)
     ap.add_argument("--warn", type=float, default=90)
     ap.add_argument("--every", type=int, default=120)
-    ap.add_argument("--dry-run", action="store_true", help="one pass: report, kill nothing")
-    ap.add_argument("--quiet", action="store_true", help="no start announcement")
+    ap.add_argument("--dry-run", action="store_true", help="one pass: report, touch nothing")
     a = ap.parse_args()
-    STATE.mkdir(parents=True, exist_ok=True)
-    release = STATE / "release"
-    release.unlink(missing_ok=True)
-
-    if a.dry_run:
-        pct, reset = usage()
-        print(f"usage {pct}% resets {reset}; trip={pct >= a.threshold}; would stop: {targets()}")
-        return
 
     pct, reset = usage()
+    if a.dry_run:
+        print(f"usage {pct}% resets {reset}; trip={pct >= a.threshold}; would wind down: {active()}")
+        return
     # resets_at rolls forward a week once this one passes, so the end is fixed here.
     first_reset = reset
-    if not a.quiet:
-        say(f"Usage guard is on: the weekly limit is at {pct:.0f}% and it checks every {a.every // 60} min. At {a.threshold:.0f}% it stops every agent until the reset at {reset.astimezone():%H:%M %a}.")
-    tripped = warned = False
+    warned = False
     fails = 0
-    while True:
+    while dt.datetime.now(dt.timezone.utc) < first_reset:
         try:
-            pct, reset = usage()
+            pct, _ = usage()
             fails = 0
         except Exception as exc:
             fails += 1
@@ -98,30 +108,17 @@ def main():
                 say(f"Usage guard can't read usage ({exc}). It stays running, but it can't see the limit until this clears.")
             time.sleep(a.every)
             continue
-        print(f"{dt.datetime.now():%H:%M:%S} {pct}% tripped={tripped}", flush=True)
-        if tripped and (dt.datetime.now(dt.timezone.utc) >= until or pct < a.threshold - 20):
-            break
-        if release.exists():
-            say("Usage guard lifted by hand.")
-            break
-        if not tripped and pct >= a.warn and not warned:
+        print(f"{dt.datetime.now():%H:%M:%S} {pct}%", flush=True)
+        if pct >= a.warn and not warned:
             warned = True
-            say(f"Usage is at {pct:.0f}%. Agents get stopped at {a.threshold:.0f}%.")
-        if not tripped and pct >= a.threshold:
-            tripped, until = True, reset
-            names = stop(False)
-            (STATE / "stopped.json").write_text(json.dumps({"at": time.time(), "stopped": names}))
-            say(f"Usage hit {pct:.0f}%, so I stopped all agents until {until.astimezone():%H:%M %a}: {', '.join(names) or 'none were running'}. Their conversations are saved, but anything they were running died. Your calls still work and still count toward the limit.")
-        elif tripped:
-            again = stop(False)
-            if again:
-                print("re-stopped", again, flush=True)
-        if not tripped and dt.datetime.now(dt.timezone.utc) >= first_reset:
-            say("Weekly usage reset without reaching the limit. Usage guard is off.")
+            say(f"Usage is at {pct:.0f}%. Active agents get told to wind down at {a.threshold:.0f}%.")
+        if pct >= a.threshold:
+            done, failed = wind_down(pct)
+            note = f" Couldn't fully reach: {', '.join(failed)}." if failed else ""
+            say(f"Usage hit {pct:.0f}%. I interrupted the active agents and told them to push and wind down: {', '.join(done) or 'none were active'}.{note} Nothing was killed, and a message from you overrides it. The limit resets {first_reset.astimezone():%H:%M %a}.")
             return
         time.sleep(a.every)
-    subprocess.run(["systemctl", "--user", "start", "keepalive.timer"])
-    subprocess.run(["hotline", "--to", "hotline-80", "--no-wait", "usage guard: reset reached, keepalive restarted. Revive the agents listed in ~/.local/state/usage-guard/stopped.json that keepalive does not cover, and tell Bogdan."], env=ENV)
+    say("Weekly usage reset without reaching the threshold. Usage guard is off.")
 
 
 if __name__ == "__main__":
