@@ -89,7 +89,18 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="one pass: report, touch nothing")
     a = ap.parse_args()
 
-    pct, reset = usage()
+    # The usage endpoint answers 429 under quick repeated reads, and a crash here
+    # left the guard dead for a whole night on 11-08 while it was reported as running.
+    for attempt in range(10):
+        try:
+            pct, reset = usage()
+            break
+        except Exception as exc:
+            print("usage read failed:", exc, file=sys.stderr, flush=True)
+            if attempt == 9:
+                say(f"Usage guard could not start: {exc}")
+                raise
+            time.sleep(a.every)
     if a.dry_run:
         print(f"usage {pct}% resets {reset}; trip={pct >= a.threshold}; would wind down: {active()}")
         return
