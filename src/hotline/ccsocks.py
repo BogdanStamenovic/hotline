@@ -23,6 +23,7 @@ import asyncio
 import json
 import os
 import signal
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
@@ -110,6 +111,31 @@ def status_of(pid: int) -> str | None:
 PROGRAMMATIC_ENTRYPOINTS = frozenset({"sdk-cli", "sdk-py", "sdk-ts"})
 
 
+def _pane_sessions() -> dict[str, str]:
+    """Current tmux session name of every pane, by pane id ("%12" -> "hl-foo")."""
+    try:
+        out = subprocess.run(
+            ["tmux", "list-panes", "-a", "-F", "#{pane_id} #{session_name}"],
+            capture_output=True, text=True, timeout=3, check=False,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    return dict(line.split(" ", 1) for line in out.splitlines() if " " in line)
+
+
+def live_tmux(recorded: str | None, panes: dict[str, str]) -> str | None:
+    """The CLI writes "session:@window.%pane" once, at start. A session renamed
+    afterwards (hand-spawned agents moved to hl-* on 2026-11-11 so the sleeper
+    would see them) keeps the stale name there; the pane id survives renames, so
+    the live name is looked up by it. Unknown pane or no tmux: the recorded value."""
+    if not recorded or "%" not in recorded:
+        return recorded
+    current = panes.get("%" + recorded.rsplit("%", 1)[1])
+    if not current:
+        return recorded
+    return current + ":" + recorded.split(":", 1)[1] if ":" in recorded else current
+
+
 def discover(include_self: bool = False, include_programmatic: bool = False) -> list[LiveSession]:
     """Every live, verified session a human could be sitting in front of, newest first.
 
@@ -120,6 +146,7 @@ def discover(include_self: bool = False, include_programmatic: bool = False) -> 
     out: list[LiveSession] = []
     self_pid = os.getpid()
     directory = sessions_dir()
+    panes: dict[str, str] | None = None
     try:
         entries = sorted(directory.glob("*.json"))
     except OSError:
@@ -162,7 +189,7 @@ def discover(include_self: bool = False, include_programmatic: bool = False) -> 
                 kind=desc.get("kind") or "interactive",
                 status=desc.get("status"),
                 entrypoint=entrypoint,
-                tmux=desc.get("tmux"),
+                tmux=live_tmux(desc.get("tmux"), panes if panes is not None else (panes := _pane_sessions())),
             )
         )
     out.sort(key=lambda s: s.started_at, reverse=True)

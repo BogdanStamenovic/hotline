@@ -107,3 +107,18 @@ def test_verify_still_flags_text_hidden_in_the_block(tmp_path: Path) -> None:
 def test_verify_keeps_other_additions_before_the_block(tmp_path: Path) -> None:
     added = "relay note\n\n" + _block(tmp_path, ["shot.png"])
     assert strip_matching(added, [{"filename": "shot.png"}]) == "relay note"
+
+
+# ---- renamed tmux sessions (same day, same reason: hand-spawned agents never slept) ----
+
+from hotline.ccsocks import live_tmux
+
+
+def test_a_renamed_session_is_seen_by_its_live_name() -> None:
+    assert live_tmux("mt-app:@3.%7", {"%7": "hl-music-trainer-ad"}) == "hl-music-trainer-ad:@3.%7"
+
+
+def test_unknown_pane_or_no_tmux_keeps_the_recorded_name() -> None:
+    assert live_tmux("mt-app:@3.%7", {}) == "mt-app:@3.%7"
+    assert live_tmux(None, {"%7": "x"}) is None
+    assert live_tmux("weird", {"%7": "x"}) == "weird"
