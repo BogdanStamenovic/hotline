@@ -624,6 +624,10 @@ def _verify_claim(
                 f"Discord has: {posted[:200]!r}",
             )
         added = _added(body, posted)
+        if added:
+            from .files import strip_matching
+
+            added = strip_matching(added, list(original.get("attachments") or []))
     else:
         posted, added = str(original.get("content", "")), ""
 

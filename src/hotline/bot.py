@@ -175,7 +175,7 @@ class HotlineBot(discord.Bot):
             return
 
         text = message.content.strip()
-        if not text:
+        if not text and not message.attachments:
             return
         if self.page_outstanding():
             self.log(f"page outstanding; leaving {text[:60]!r} for the pager")
@@ -189,6 +189,12 @@ class HotlineBot(discord.Bot):
         if text.lower() in ("!leave", "!hangup"):
             await self._leave_voice(message)
             return
+
+        if message.attachments:
+            from .files import save_all
+
+            text += await save_all(message)
+            text = text.strip()
 
         key = f"discord-{message.channel.id}"
         # Typing in an agent's own channel is how you say which agent you mean.
