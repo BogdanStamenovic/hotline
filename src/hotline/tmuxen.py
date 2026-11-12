@@ -325,6 +325,44 @@ async def send_command(target: str, command: str, settle: float = COMMAND_SETTLE
     return session
 
 
+TRUST_QUESTION = "Is this a project you created or one you trust?"
+TRUST_YES = "Yes, I trust this folder"
+
+
+def trust_choice(pane: str) -> str | None:
+    """Which key moves the folder-trust dialog to "Yes" and confirms it, or None
+    if the pane is not showing that dialog. The dialog opens on "No, exit", so a
+    bare Enter would quit the session it is meant to resume."""
+    if TRUST_QUESTION not in pane or TRUST_YES not in pane:
+        return None
+    for line in pane.splitlines():
+        if TRUST_YES in line:
+            return "Enter" if line.lstrip().startswith(("❯", ">")) else "Up"
+    return None
+
+
+def accept_folder_trust(target: str) -> bool:
+    """Answer the folder-trust dialog in a pane that is RESUMING a session.
+
+    Only for resumes: the session already ran in this directory, so the trust
+    was given when it first started there; the dialog appears only because the
+    directory was never recorded as trusted (hand-spawned agents, 2026-11-12:
+    voice-score-40 sat on it until the 120 s wake timeout, after which hotline
+    killed it and revived it from its handoff, losing its context). A fresh
+    spawn into a new directory is not answered here.
+    """
+    key = trust_choice(capture(target))
+    if key is None:
+        return False
+    _tmux("send-keys", "-t", target, key, check=False)
+    if key == "Up":
+        if trust_choice(capture(target)) != "Enter":
+            return False
+        _tmux("send-keys", "-t", target, "Enter", check=False)
+    log.info("%s: accepted the folder-trust dialog for a resumed session", target)
+    return True
+
+
 async def spawn(
     key: str,
     cwd: str | None = None,
@@ -388,6 +426,8 @@ async def spawn(
             raise ClaudeLaunchFailed(
                 f"{target} exited before registering. Pane said:\n{capture(target)}"
             )
+        if resume:
+            accept_folder_trust(target)
         await asyncio.sleep(0.25)
 
     pane = capture(target)
