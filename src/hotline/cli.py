@@ -362,6 +362,22 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
         if team is not None:
             log(f"team: {team.display} ({teams.persona_of(agent.name)})")
         topic = _topic(teams.persona_of(agent.name), agent.task)
+        if agent.wants_channel and agent.channel_id is not None:
+            # A re-declare is how an agent asks for its channel back, but a
+            # record still holding the id of a DELETED channel never reached the
+            # creation branch below (manager-13, 2026-11-16: 404 on every post).
+            # Clear the id only when the guild listing actually succeeded and
+            # lacks it; a failed listing proves nothing and must not mint a
+            # duplicate (see ChannelManager.exists).
+            manager = channels_from_env()
+            if manager is not None:
+                try:
+                    present = {int(c["id"]) for c in manager.all()}
+                except HotlineError:
+                    present = None
+                if present is not None and int(agent.channel_id) not in present:
+                    log(f"channel {agent.channel_id} no longer exists; recreating it")
+                    agent.channel_id = None
         if agent.wants_channel and agent.channel_id is None:
             manager = channels_from_env()
             if manager is None:
