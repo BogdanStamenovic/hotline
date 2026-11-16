@@ -50,6 +50,17 @@ UPSTREAM_MAC = os.environ.get("HOTLINE_UPSTREAM_MAC", "")
 WAKE_BROADCAST = os.environ.get("HOTLINE_WAKE_BROADCAST", "192.168.1.255")
 WAKE_DEADLINE = float(os.environ.get("HOTLINE_WAKE_DEADLINE", "90"))
 
+# gamemode's relay runs on Pigion and answers {"active": true} while archserver is
+# booted into Windows for a gaming session. Then archserver is "down" on purpose:
+# waking it does nothing (it is on, just not Linux) and "did not answer" is noise.
+# Any failure to reach the relay reads as "not gaming", i.e. today's behaviour.
+GAMEMODE_STATUS = os.environ.get("HOTLINE_GAMEMODE_STATUS", "http://127.0.0.1:8797/status")
+
+GAMING = (
+    "The workstation is in Windows gaming mode, so the agents are offline. "
+    "End the gaming session to bring them back."
+)
+
 ASLEEP = (
     "The workstation isn't reachable right now, so I can't answer that. "
     "Try again in a minute."
@@ -65,6 +76,16 @@ def upstream_awake() -> bool:
         with urllib.request.urlopen(f"{UPSTREAM}/health", timeout=HEALTH_TIMEOUT) as response:
             return bool(json.loads(response.read()).get("ok"))
     except (urllib.error.URLError, OSError, ValueError):
+        return False
+
+
+def gaming_active() -> bool:
+    if not GAMEMODE_STATUS:
+        return False
+    try:
+        with urllib.request.urlopen(GAMEMODE_STATUS, timeout=2.0) as response:
+            return json.loads(response.read()).get("active") is True
+    except (urllib.error.URLError, OSError, ValueError, AttributeError):
         return False
 
 
@@ -147,6 +168,9 @@ class Handler(BaseHTTPRequestHandler):
         body = self.rfile.read(length) if length else b"{}"
 
         if not upstream_awake():
+            if gaming_active():
+                self._send(200, {"response": GAMING, "upstream": "gaming"})
+                return
             # Wait, rather than fire and forget: the caller is on the phone with a
             # question, and "hold on, waking it" then answering beats "try again
             # later" when the box takes forty seconds to boot.
@@ -244,6 +268,18 @@ def _waker(token: str) -> Callable[[int], None]:
             if upstream_awake():
                 return
             state["last"] = time.monotonic()
+            gaming = gaming_active()
+
+        if gaming:
+            log(f"bogdan wrote in {channel_id} during a gaming session -- not waking")
+            post_message(
+                token,
+                channel_id,
+                "archserver is in Windows gaming mode, so the agents are offline. "
+                "This message stays in the channel and the operator reads it when "
+                "archserver is back in Arch.",
+            )
+            return
 
         def run() -> None:
             log(f"bogdan wrote in {channel_id} while archserver is down -- waking it")
