@@ -16612,3 +16612,5 @@ backup is the only rollback that exists.
 - Health: devices check all verified, hotline-ios ring_ready, no failed units, no then_do armed in wake.db, root 2.8G free. Keepalive revived lookoncetohear-76, manager-13, manager-14, stizem-manager.
 
 - 00:20 Verified gamemode-0f fix (planted 06-clean.ps1 matches, unit After=network-online, tests 7/7); booting cleaning attempt 2.
+
+- 00:56 Back from cleaning attempt 2: exit 0, 11 threats found (quarantine 3, ProgramData 1, Downloads 7); relay self-disarmed. gaming on --sleep multi-name bug (rc=2) passed to gamemode-0f. stizem watchdog asked for hotline --resume stizem-manager; left it to keepalive (00:59) because --resume inherits my cwd.

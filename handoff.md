@@ -1,3 +1,7 @@
+> ## STATE 2026-11-17 ~01:00 CET (operator hotline-80) -- after cleaning attempt 2
+> - Back in Arch 00:56, relay self-disarmed. 06-clean exit 0 (2060 s): 11 threats (quarantine 3, ProgramData 1, Downloads 7). gamemode-0f resumed to report to him. No further Windows boot without his word.
+> - Bug passed on: gaming on calls hotline --sleep with 5 names (rc=2). Stizem watchdog note says repo /mnt/offload/stizem; keepalive revives stizem-manager in its registered cwd instead (do NOT hotline --resume it from here: wrong cwd).
+
 > ## STATE 2026-11-17 ~00:20 CET (operator hotline-80, session 63cc43ab) -- written right before CLEANING BOOT ATTEMPT 2
 > - Attempt 1 died at Start-MpScan (OperationCanceledException). gamemode-0f fixed it (MpCmdRun + per-step isolation; 06-clean.ps1 planted on /mnt/windows matches ~/.config/gamemode/tasks; boot unit now After=network-online + 3-min relay retry; gamemode 1693905, 7 tests pass). Verified by me before booting. Covered by his "Try cleaning it." (1572022509023395991); no word from him since 22:57Z.
 > - Ran: gaming on --prep --deadline 80. Up to ~80 min in Windows; pigion hard bound.
