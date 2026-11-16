@@ -16610,3 +16610,5 @@ backup is the only rollback that exists.
 - gamemode-boot.service ran 00:01:17 before the network was up ("relay not found by MAC ... nor at 100.114.148.69:8797"), so the relay was left active. I re-ran `gaming boot-hook` by hand and pigion /status now shows active:false. Unit needs network-online ordering or a retry (told gamemode-0f).
 - Resumed gamemode-0f (woke from sleep) with both bugs. It reports to him and must test the fix from Linux before asking for another Windows boot.
 - Health: devices check all verified, hotline-ios ring_ready, no failed units, no then_do armed in wake.db, root 2.8G free. Keepalive revived lookoncetohear-76, manager-13, manager-14, stizem-manager.
+
+- 00:20 Verified gamemode-0f fix (planted 06-clean.ps1 matches, unit After=network-online, tests 7/7); booting cleaning attempt 2.

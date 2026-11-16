@@ -1,3 +1,8 @@
+> ## STATE 2026-11-17 ~00:20 CET (operator hotline-80, session 63cc43ab) -- written right before CLEANING BOOT ATTEMPT 2
+> - Attempt 1 died at Start-MpScan (OperationCanceledException). gamemode-0f fixed it (MpCmdRun + per-step isolation; 06-clean.ps1 planted on /mnt/windows matches ~/.config/gamemode/tasks; boot unit now After=network-online + 3-min relay retry; gamemode 1693905, 7 tests pass). Verified by me before booting. Covered by his "Try cleaning it." (1572022509023395991); no word from him since 22:57Z.
+> - Ran: gaming on --prep --deadline 80. Up to ~80 min in Windows; pigion hard bound.
+> - After boot: uname, BootCurrent 0003, pigion :8797/status must show active:false (re-run gaming boot-hook if not), then RESUME gamemode-0f (handoff ~/.local/state/gamemode/handoff.md). It reports to him.
+
 > ## STATE 2026-11-17 ~00:15 CET (operator hotline-80, session 63cc43ab) -- after cleaning boot cycle 2
 > - Back in Arch 00:01. The cleaning DID NOT RUN: 06-clean exited 1 at 15 s (no sig update, quick scan died). The boot hook ran before the network was up and left the pigion relay armed; I disarmed it by hand. gamemode-0f was resumed with both bugs and reports to him. HOLD on Windows boots until it has a tested fix.
 > - Healthy: devices all verified, no poweroff armed, root 2.8G free. Last word from him 22:57Z.
