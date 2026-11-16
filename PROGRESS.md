@@ -16603,3 +16603,10 @@ backup is the only rollback that exists.
 - Pre-existing test failures (6, same with and without the fix): test_pool reaping, test_sleep x2, test_standin orphaned, test_timeout_reasons x2. Not investigated -- likely live-tmux environment coupling.
 - Posted one consolidated boot summary to #agent-hotline-80.
 - 00:0x 11-17: gamemode-0f found a likely .NET loader on Windows (he confirmed ChannelName.exe + the AddInProcess exclusion are not his, msg 1572021411189362739). HOLD on Windows boots until he picks reinstall/clean/continue. Exposure check: the /mnt/windows/ml/archive-* dirs I flagged no longer exist (verified: ls); no .env or ssh private keys on NTFS outside system dirs at depth 6 (only Windows' own Users/Korisnik/.ollama/id_ed25519). Windows' previous boot before tonight was 2026-08-27 (agent's claim, from Windows logs).
+
+## 2026-11-17 00:03-00:15 CET — operator hotline-80 (session 63cc43ab): after gamemode cleaning boot (cycle 2)
+- Booted 00:01 (shutdown 23:59:31). Started by the watchdog timer after the cleaning reboot. Nothing new from him since 22:57Z.
+- Cleaning FAILED to run: Windows up ~2 min; 06-clean exit 1 after 14.9 s. Signature still 1.463.334.0, quick scan printed header only, then "prep tasks finished" restart. Reports in ~/.local/state/gamemode/sessions/20261117-000119/.
+- gamemode-boot.service ran 00:01:17 before the network was up ("relay not found by MAC ... nor at 100.114.148.69:8797"), so the relay was left active. I re-ran `gaming boot-hook` by hand and pigion /status now shows active:false. Unit needs network-online ordering or a retry (told gamemode-0f).
+- Resumed gamemode-0f (woke from sleep) with both bugs. It reports to him and must test the fix from Linux before asking for another Windows boot.
+- Health: devices check all verified, hotline-ios ring_ready, no failed units, no then_do armed in wake.db, root 2.8G free. Keepalive revived lookoncetohear-76, manager-13, manager-14, stizem-manager.

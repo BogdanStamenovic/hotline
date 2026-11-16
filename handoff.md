@@ -1,3 +1,7 @@
+> ## STATE 2026-11-17 ~00:15 CET (operator hotline-80, session 63cc43ab) -- after cleaning boot cycle 2
+> - Back in Arch 00:01. The cleaning DID NOT RUN: 06-clean exited 1 at 15 s (no sig update, quick scan died). The boot hook ran before the network was up and left the pigion relay armed; I disarmed it by hand. gamemode-0f was resumed with both bugs and reports to him. HOLD on Windows boots until it has a tested fix.
+> - Healthy: devices all verified, no poweroff armed, root 2.8G free. Last word from him 22:57Z.
+
 > ## STATE 2026-11-17 ~00:05 CET (operator hotline-80, session 803ec879) -- written right before gamemode CLEANING BOOT (cycle 2)
 > - His word: "Try cleaning it." (gamemode-0f channel, msg 1572022509023395991, verified author id). Ran `gaming on --prep --deadline 80 --force` (--force only because the operator itself is busy; all other agents idle). Windows: Defender sig update + scans + persistence report, then back to Arch. Up to ~80 min; pigion hard bound 95 min.
 > - After boot: same as cycle 1 (uname, relay status at http://pigion:8797/status, BootOrder 0003 first, gamemode-boot.service archive), then RESUME gamemode-0f (handoff ~/.local/state/gamemode/handoff.md) so it posts the scan results. Recorders gapped during the stint.
