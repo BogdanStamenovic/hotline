@@ -1,3 +1,8 @@
+> ## STATE 2026-11-17 ~00:05 CET (operator hotline-80, session 803ec879) -- written right before gamemode CLEANING BOOT (cycle 2)
+> - His word: "Try cleaning it." (gamemode-0f channel, msg 1572022509023395991, verified author id). Ran `gaming on --prep --deadline 80 --force` (--force only because the operator itself is busy; all other agents idle). Windows: Defender sig update + scans + persistence report, then back to Arch. Up to ~80 min; pigion hard bound 95 min.
+> - After boot: same as cycle 1 (uname, relay status at http://pigion:8797/status, BootOrder 0003 first, gamemode-boot.service archive), then RESUME gamemode-0f (handoff ~/.local/state/gamemode/handoff.md) so it posts the scan results. Recorders gapped during the stint.
+> - Offline cleanup done before boot: 5 rogue Defender exclusions removed, 6 files quarantined to C:\gamemode-quarantine (nothing deleted); backup /mnt/offload/gamemode-backup-20261116-235719.
+
 > ## STATE 2026-11-16 ~23:55 CET (operator hotline-80, session 803ec879) -- after prep cycle 1
 > - Prep cycle 1 SUCCEEDED (6/6 tasks, back in Arch on its own). gamemode-0f resumed, reading reports; it reports in its own channel. Open for it: Windows RTC localtime skew (RealTimeIsUniversal), Moonlight on laptop needs his yes.
 > - **HOLD: no Windows boots (`gaming on`)** until he picks reinstall/clean/continue: gamemode-0f found a likely .NET loader (ChannelName.exe posing as Cloudflare WARP + Defender exclusions for it, AddInProcess.exe, powershell.exe); he confirmed those two are not his (msg 1572021411189362739). Relay token + Apollo password rotated.
