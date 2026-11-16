@@ -1,5 +1,6 @@
 > ## STATE 2026-11-16 ~23:55 CET (operator hotline-80, session 803ec879) -- after prep cycle 1
 > - Prep cycle 1 SUCCEEDED (6/6 tasks, back in Arch on its own). gamemode-0f resumed, reading reports; it reports in its own channel. Open for it: Windows RTC localtime skew (RealTimeIsUniversal), Moonlight on laptop needs his yes.
+> - **HOLD: no Windows boots (`gaming on`)** until he picks reinstall/clean/continue: gamemode-0f found a likely .NET loader (ChannelName.exe posing as Cloudflare WARP + Defender exclusions for it, AddInProcess.exe, powershell.exe); he confirmed those two are not his (msg 1572021411189362739). Relay token + Apollo password rotated.
 > - hotline 2808315: re-declare recreates a deleted channel. pigion/gamemode-relay claimed. Root 2.9G free. No poweroff armed. Nothing from him since 22:35Z.
 
 > ## STATE 2026-11-16 ~23:45 CET (operator hotline-80, session 3b5ccbd6) -- written right before gamemode PREP BOOT CYCLE 1 (archserver boots WINDOWS, then returns to Arch)
