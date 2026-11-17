@@ -16634,3 +16634,4 @@ backup is the only rollback that exists.
 - track-slot-0900 runs at 08:02Z with no poweroff, so the box stays up after it. Standing setup, not changed.
 - Watchdog race is benign but noisy: watchdog.sh can fire in the first 5 min after boot, before keepalive. Not changed (stizem's file).
 - 09:1x pm-ai-rewards weekly (wake): CONTINUE; 21d rewards $4398 ($209/d), trading -$1761 (+1h), net +$2637 ($126/d); RED = books 211/235 (89.8% vs 90%) after boot, REST errs ~50% but clob 200 to plain curl (likely book-less ended markets, not a block). Relayed to him.
+- 09:15 operator-device-sweep (wake): 49 duties, 0 contradicted; teamserbia/archserver/pigion 0 unclaimed; arch unreachable (its duties unknown, untouched). Nothing changed since 09:01; no Discord post.
