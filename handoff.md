@@ -1,3 +1,6 @@
+> ## STATE 2026-11-17 ~19:45 CET (operator hotline-80) -- daily poweroff back ON (his order 1572313963343913183)
+> - track-slot-0900 08:02Z then_do=poweroff; guard waits 45 min for busy agents, idle ones (hotline --idle-names) + hotline-80 are furniture; RTC skips <6 h pollers. FIRST REAL RUN 11-18 08:02Z: check journalctl --user -u wake-agent for "powering off" / "staying up" / "gave up waiting" on the next boot.
+
 > ## POWER-OFF 2026-11-17 ~02:05 CET at his word (verified 1572054481854537819, 01:03:15Z: "Good now lets shutdown for the night")
 > - Before: all agents idle (gamemode-0f, stizem-manager, manager-13, manager-14, lookoncetohear-76), nothing unpushed (uncommitted WIP on disk: manager-13 10 files, LookOnceToHear 1, stizem 2). Docker inactive, no GPU jobs, relay inactive, BootOrder GRUB first. never-sleep list restored (5 names); gamemode never-sleep fix 938476e verified.
 > - Wake paths: WoL `Wake-on: g` (sudo ethtool), pigion up 5d with wakeonlan. RTC NOT armed. wol task track-slot-0900-resume due 08:00Z will wake the box; no then_do poweroff pending.
