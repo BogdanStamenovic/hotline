@@ -1,6 +1,6 @@
 > ## STATE 2026-11-17 ~01:20 CET (operator hotline-80) -- after the GAMING boot
 > - Back in Arch 01:13. Gaming stint ~10 min, stream connected, ended via the Arch shortcut. Relay disarmed, BootCurrent 0003. 3 leftovers deleted; full Defender scan cut by the reboot (unfinished).
-> - gaming on wiped never-sleep.json (sleep now clears never); restored 4 names 01:28, fix with gamemode-0f: VERIFY IT before the next Windows boot.
+> - gaming on wiped never-sleep.json (sleep now clears never); restored 4 names 01:28; fix gamemode 938476e VERIFIED 01:4x (negative case fails on old code).
 > - gamemode-0f woken: answers his unanswered "bow do i do that" (00:01:54Z) and posts bench numbers to him. No Windows boot without his word.
 
 > ## STATE 2026-11-17 ~01:10 CET (operator hotline-80) -- written right before GAMING MODE boot (not prep)
