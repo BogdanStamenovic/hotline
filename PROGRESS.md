@@ -16649,3 +16649,11 @@ backup is the only rollback that exists.
 - 20:3x his msg 1572333032466022432 (verified): all-AliExpress strength difference + must be SHOULDER-WORN (much smaller). --resume spawned a duplicate stuck on folder trust (then gone); the original directional-speaker-cb session was still alive (--done only closes the record). Sent it the ask with warrant + "re-declare, never --done"; it verified the warrant and re-declared: channel restored. Its ask includes ultrasound at HIS ear (transducer ~15-20 cm away).
 - 20:5x directional-speaker-cb answered the shoulder follow-up in its restored channel (msgs 1572338476966482032, 1572339527262019625, 1572339528491077804), artifact updated, repo pushed 7f55e05/ac1c3bc, idle. Not retired: he may follow up there.
 - 21:05Z his verified "I need game mode on so bye bye" (1572356972458672179). Logged, pushed, then `gaming on`. never-sleep before switch: lookoncetohear-76, manager-13, manager-14, stizem-manager, stizem-site-9a (gamemode 938476e should keep it). Next Arch boot: check never-sleep intact + the 08:02Z wake poweroff journal.
+
+## 2026-11-18 00:24 CET -- operator hotline-80: boot after the GAMING session (his 21:05Z "game mode on")
+- Gaming 21:05:40Z-23:24:53Z (~139 min), ended "asked locally (gamemoded arch)" = the Arch shortcut. Relay active:false, rescues [], BootCurrent 0003, kernel 7.3.4. Windows tasks 00-acl.always/02-sshd/04-apollo exit 0. Reports archived to ~/.local/state/gamemode/sessions/20261118-002454.
+- never-sleep list intact across `gaming on` (5 names): gamemode 938476e held in a real switch.
+- stizem watchdog fired at boot before keepalive again and asked for `hotline --resume stizem-manager`. Did NOT --resume (wrong-cwd trap); ran keepalive by hand 00:26:12: lookoncetohear-76, manager-13, manager-14, stizem-manager revived, all idle in their own cwds.
+- Discord since 21:00Z: nothing from him after "bye bye". directional-speaker-cb's 21:00Z China list/Pi answer is posted to him.
+- devices check 49 duties, 0 contradicted; discover archserver/pigion/teamserbia 0 unclaimed; arch: surfsharkd only (his VPN, not claimed). Root 2.7G free.
+- Armed: track-slot-0900 08:02Z then_do=poweroff (FIRST real run of the new guard; check wake-agent journal on the next boot). RTC unarmed.
