@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import subprocess
 import time
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from helpers import make_session
 from hotline import sleep as sleep_mod
 from hotline.agents import Registry
 from hotline.ccsocks import LiveSession, discover
+from hotline.errors import HotlineError
 from hotline.errors import SessionNotFound
 from hotline.router import Router
 
@@ -367,3 +369,51 @@ def test_parse_sleep_commands():
     for prose in ("sleep on it", "go to sleep", "sleep is good for you", "sleep never again"):
         assert parse_sleep(prose) is None, prose
     assert parse_utterance("sleep never").action == "sleep"
+
+
+async def test_the_operator_is_started_fresh_never_resumed(
+    fake_claude: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """2026-11-17: a catch-up wake task's message resumed yesterday's operator
+    before the watchdog could start a fresh one, skipping its boot routine."""
+    _transcript(fake_claude, "sid-old", str(tmp_path))
+    reg = Registry()
+    reg.declare("sid-old", "hotline-80", "operator")
+    reg.grant("hotline-80", "sys-admin", "1", "2")
+    agent = Registry().by_name("hotline-80")
+    assert agent is not None and agent.privileged
+
+    async def spawn(*a, **kw):
+        raise AssertionError("the operator must not be resumed")
+
+    started: list[list[str]] = []
+
+    def fake_run(cmd, **kw):
+        if cmd[0] != sleep_mod.OPERATOR_START:  # discover() asks tmux too
+            return subprocess.CompletedProcess(cmd, 1, "", "")
+        started.append(cmd)
+        Registry().adopt("hotline-80", "sid-fresh")
+        make_session(fake_claude, 81, "hotline-80", str(tmp_path), session_id="sid-fresh")
+        return subprocess.CompletedProcess(cmd, 0, "started: tmux attach -t hotline", "")
+
+    monkeypatch.setattr("hotline.tmuxen.spawn", spawn)
+    monkeypatch.setattr(sleep_mod.subprocess, "run", fake_run)
+    s = await sleep_mod.wake(agent)
+    assert s.session_id == "sid-fresh"
+    assert started == [[sleep_mod.OPERATOR_START, "start"]]
+
+
+async def test_an_operator_that_never_adopts_is_an_error(
+    fake_claude: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    reg = Registry()
+    reg.declare("sid-old", "hotline-80", "operator")
+    reg.grant("hotline-80", "sys-admin", "1", "2")
+    agent = Registry().by_name("hotline-80")
+    monkeypatch.setattr(
+        sleep_mod.subprocess, "run",
+        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "FAILED to start"),
+    )
+    monkeypatch.setattr(sleep_mod, "discover", lambda **kw: [])
+    with pytest.raises(HotlineError, match="has not adopted"):
+        await sleep_mod.wake(agent)

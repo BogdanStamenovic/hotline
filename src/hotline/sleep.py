@@ -30,6 +30,7 @@ import asyncio
 import json
 import logging
 import os
+import subprocess
 import time
 from collections.abc import Iterable
 from pathlib import Path
@@ -309,6 +310,16 @@ async def wake(agent: Agent, timeout: float = 120.0) -> LiveSession:
     fut: asyncio.Future[LiveSession] = loop.create_future()
     _waking[agent.session_id] = fut
     try:
+        if agent.privileged:
+            # The operator is never resumed by a message. A resume skips its
+            # boot routine (adopt, handoff, Discord, device sweep) and carries
+            # its context across reboots; on 2026-11-17 a catch-up wake task's
+            # `hotline --to hotline-80` beat the watchdog by two minutes and
+            # resumed yesterday's session. Start it the way the watchdog does,
+            # fresh from its fixed prompt, and deliver once it has adopted.
+            session = await _start_operator(agent, timeout)
+            fut.set_result(session)
+            return session
         try:
             session = await _resume(agent, timeout)
         except HotlineError as exc:
@@ -322,6 +333,25 @@ async def wake(agent: Agent, timeout: float = 120.0) -> LiveSession:
         raise
     finally:
         _waking.pop(agent.session_id, None)
+
+
+OPERATOR_START = "/home/bodas/.claude/bin/hotline-run"
+
+
+async def _start_operator(agent: Agent, timeout: float) -> LiveSession:
+    """A fresh operator via hotline-run, which returns once it has adopted the name."""
+    done = await asyncio.to_thread(
+        subprocess.run, [OPERATOR_START, "start"],
+        capture_output=True, text=True, timeout=max(timeout, 120.0),
+    )
+    fresh = Registry().by_name(agent.name)
+    live = {s.session_id: s for s in discover(include_self=True, include_programmatic=True)}
+    if fresh is None or fresh.session_id not in live:
+        raise HotlineError(
+            f"started a fresh {agent.name} but it has not adopted the name: "
+            f"{(done.stdout + done.stderr).strip()[-300:] or done.returncode}"
+        )
+    return live[fresh.session_id]
 
 
 async def _resume(agent: Agent, timeout: float) -> LiveSession:
