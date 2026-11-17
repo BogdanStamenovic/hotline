@@ -16657,3 +16657,4 @@ backup is the only rollback that exists.
 - Discord since 21:00Z: nothing from him after "bye bye". directional-speaker-cb's 21:00Z China list/Pi answer is posted to him.
 - devices check 49 duties, 0 contradicted; discover archserver/pigion/teamserbia 0 unclaimed; arch: surfsharkd only (his VPN, not claimed). Root 2.7G free.
 - Armed: track-slot-0900 08:02Z then_do=poweroff (FIRST real run of the new guard; check wake-agent journal on the next boot). RTC unarmed.
+- 00:29 his verified 1572393287006953493 ("gamemode agent look at logs on arch and archserver for performance"): woke gamemode-0f (session 2b47a24c, own cwd) via hotline --to with warrant + session context; it is working, reports to him in its channel.
