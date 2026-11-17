@@ -1,3 +1,7 @@
+> ## STATE 2026-11-17 ~01:20 CET (operator hotline-80) -- after the GAMING boot
+> - Back in Arch 01:13. Gaming stint ~10 min, stream connected, ended via the Arch shortcut. Relay disarmed, BootCurrent 0003. 3 leftovers deleted; full Defender scan cut by the reboot (unfinished).
+> - gamemode-0f woken: answers his unanswered "bow do i do that" (00:01:54Z) and posts bench numbers to him. No Windows boot without his word.
+
 > ## STATE 2026-11-17 ~01:10 CET (operator hotline-80) -- written right before GAMING MODE boot (not prep)
 > - His word (verified, gamemode-0f channel, msg 1572038650286440451, 00:00:21Z): "delete the 3 inert leftowers. And start a background full scan and lets test out the gaming performance".
 > - Ran: gaming on --force (operator-only busy). Windows runs 07-clean2 (deletes the 3 remaining .bin in C:\gamemode-quarantine: assessor.yaml, hospice.pdf, relay.dll; starts MpCmdRun full scan in background), Apollo; laptop arch runs gamemode-bench unit. Returns on 20 min no stream or his DM "gaming off"; NO hard deadline, pigion rescues on heartbeat loss.

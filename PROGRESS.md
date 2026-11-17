@@ -16616,3 +16616,9 @@ backup is the only rollback that exists.
 - 00:56 Back from cleaning attempt 2: exit 0, 11 threats found (quarantine 3, ProgramData 1, Downloads 7); relay self-disarmed. gaming on --sleep multi-name bug (rc=2) passed to gamemode-0f. stizem watchdog asked for hotline --resume stizem-manager; left it to keepalive (00:59) because --resume inherits my cwd.
 
 - 01:10 Verified his msg 1572038650286440451 (author id = DISCORD_USER_ID), sleep fix b2e3ef6 installed (eb14ac4), 07-clean2 planted; quarantine holds exactly the 3 approved files. Booting GAMING mode.
+
+## 2026-11-17 01:15 CET -- operator hotline-80: boot after the GAMING boot
+- Windows gaming stint 00:02:26Z-00:12:20Z (~10 min). Apollo client connected, streaming, ~18.7 Mbit up. Ended by "asked locally (gamemoded arch)" = the Arch shortcut, not the idle timer and not a DM. Relay self-disarmed (active:false, rescues []), BootCurrent 0003, kernel 7.3.4.
+- 07-clean2 exit 0: 3 approved .bin deleted (hashes in task log). Full MpCmdRun scan started in background at 00:02:31Z and was cut by the 00:12 reboot: assume NOT finished.
+- His last message 00:01:54Z "bow do i do that" (1572039042219114549) went unanswered (box went down). Woke gamemode-0f with that + the facts; it is pulling the laptop bench logs and reports to him.
+- devices check 49 duties 0 contradicted; discover: arch has user surfsharkd.service unclaimed (his VPN client, not infra; not claimed). prusa-connect access token expired, refresh token present. No then_do armed. Root 2.8G free. hotline-ios ring_ready.
