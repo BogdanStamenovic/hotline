@@ -16627,3 +16627,9 @@ backup is the only rollback that exists.
 - 01:3x manager-13/14 reported "4th keepalive resume", guessed sleeper/keepalive ping-pong. Checked: no idle-sleep events (never-sleep exempt); the 4 resumes = 4 reboots tonight (23:42, 00:01, 00:56, 01:13). Replied; kept them on the list (his setting).
 - 01:4x VERIFIED gamemode 938476e (never-sleep kept across gaming on): pushed, ownbox install boot.py identical to the commit, 8/8 tests pass; negative case: new test FAILS with the pre-fix boot.py and passes with the fix. Handoff gate cleared.
 - 02:05 POWER-OFF at his verified word 1572054481854537819. Checks: agents idle, nothing unpushed, WoL g, pigion up, docker inactive, RTC unarmed, wol task 08:00Z pending.
+
+## 2026-11-17 09:00 CET -- operator hotline-80: morning boot (wol track-slot-0900-resume, as announced at shutdown)
+- stizem watchdog fired before keepalive's first 5-min tick and asked for --resume again; ran keepalive by hand 09:00:54: lookoncetohear-76, manager-13, manager-14, stizem-manager revived. never-sleep list intact (5 names) -- the gamemode fix did not need to act, no gaming switch since.
+- Nothing from him since 01:03:15Z "shutdown for the night". devices check 49/0 contradicted; discover archserver/pigion 0 unclaimed; arch unreachable (laptop asleep; duties untouched). No then_do pending, RTC unarmed, root 2.9G.
+- track-slot-0900 runs at 08:02Z with no poweroff, so the box stays up after it. Standing setup, not changed.
+- Watchdog race is benign but noisy: watchdog.sh can fire in the first 5 min after boot, before keepalive. Not changed (stizem's file).
