@@ -16633,3 +16633,4 @@ backup is the only rollback that exists.
 - Nothing from him since 01:03:15Z "shutdown for the night". devices check 49/0 contradicted; discover archserver/pigion 0 unclaimed; arch unreachable (laptop asleep; duties untouched). No then_do pending, RTC unarmed, root 2.9G.
 - track-slot-0900 runs at 08:02Z with no poweroff, so the box stays up after it. Standing setup, not changed.
 - Watchdog race is benign but noisy: watchdog.sh can fire in the first 5 min after boot, before keepalive. Not changed (stizem's file).
+- 09:1x pm-ai-rewards weekly (wake): CONTINUE; 21d rewards $4398 ($209/d), trading -$1761 (+1h), net +$2637 ($126/d); RED = books 211/235 (89.8% vs 90%) after boot, REST errs ~50% but clob 200 to plain curl (likely book-less ended markets, not a block). Relayed to him.
