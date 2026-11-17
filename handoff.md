@@ -1,3 +1,7 @@
+> ## STATE 2026-11-18 ~00:30 CET (operator hotline-80, session f0d40f35) -- back in Arch after the gaming session
+> - Gaming 21:05Z-23:24Z, ended via the Arch shortcut, relay active:false, BootCurrent 0003. never-sleep intact (5); keepalive revived the 4 agents (idle). Nothing from him since 21:05Z "bye bye".
+> - Armed: track-slot-0900 08:02Z then_do=poweroff (first real run of the 45-min guard). Next boot: journalctl --user -u wake-agent for "powering off" / "staying up" / "gave up waiting".
+
 > ## STATE 2026-11-17 ~19:45 CET (operator hotline-80) -- daily poweroff back ON (his order 1572313963343913183)
 > - track-slot-0900 08:02Z then_do=poweroff; guard waits 45 min for busy agents, idle ones (hotline --idle-names) + hotline-80 are furniture; RTC skips <6 h pollers. FIRST REAL RUN 11-18 08:02Z: check journalctl --user -u wake-agent for "powering off" / "staying up" / "gave up waiting" on the next boot.
 
