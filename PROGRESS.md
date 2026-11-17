@@ -16626,3 +16626,4 @@ backup is the only rollback that exists.
 - Side note: watchdog.sh hardcodes "Stizem website build is stalled" whatever the state; stizem-manager was just idle waiting on him (IG test, CSP). Noise in his channel every 30 min while it is down. Not changed (stizem's file).
 - 01:3x manager-13/14 reported "4th keepalive resume", guessed sleeper/keepalive ping-pong. Checked: no idle-sleep events (never-sleep exempt); the 4 resumes = 4 reboots tonight (23:42, 00:01, 00:56, 01:13). Replied; kept them on the list (his setting).
 - 01:4x VERIFIED gamemode 938476e (never-sleep kept across gaming on): pushed, ownbox install boot.py identical to the commit, 8/8 tests pass; negative case: new test FAILS with the pre-fix boot.py and passes with the fix. Handoff gate cleared.
+- 02:05 POWER-OFF at his verified word 1572054481854537819. Checks: agents idle, nothing unpushed, WoL g, pigion up, docker inactive, RTC unarmed, wol task 08:00Z pending.

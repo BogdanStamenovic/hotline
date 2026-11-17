@@ -1,3 +1,8 @@
+> ## POWER-OFF 2026-11-17 ~02:05 CET at his word (verified 1572054481854537819, 01:03:15Z: "Good now lets shutdown for the night")
+> - Before: all agents idle (gamemode-0f, stizem-manager, manager-13, manager-14, lookoncetohear-76), nothing unpushed (uncommitted WIP on disk: manager-13 10 files, LookOnceToHear 1, stizem 2). Docker inactive, no GPU jobs, relay inactive, BootOrder GRUB first. never-sleep list restored (5 names); gamemode never-sleep fix 938476e verified.
+> - Wake paths: WoL `Wake-on: g` (sudo ethtool), pigion up 5d with wakeonlan. RTC NOT armed. wol task track-slot-0900-resume due 08:00Z will wake the box; no then_do poweroff pending.
+> - On boot: keepalive revives the 4 never-sleep agents. gamemode open items with gamemode-0f (bench numbers, unfinished full scan). No Windows boot without his word.
+
 > ## STATE 2026-11-17 ~01:20 CET (operator hotline-80) -- after the GAMING boot
 > - Back in Arch 01:13. Gaming stint ~10 min, stream connected, ended via the Arch shortcut. Relay disarmed, BootCurrent 0003. 3 leftovers deleted; full Defender scan cut by the reboot (unfinished).
 > - gaming on wiped never-sleep.json (sleep now clears never); restored 4 names 01:28; fix gamemode 938476e VERIFIED 01:4x (negative case fails on old code).
