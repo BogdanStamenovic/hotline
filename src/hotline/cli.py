@@ -201,6 +201,17 @@ def _build_parser() -> argparse.ArgumentParser:
         "'NAME' = back to the normal idle cycle; 'NAME now' = that, and stop it now",
     )
     parser.add_argument("--list", action="store_true", help="list live sessions and exit")
+    # For wake's poweroff guard (POWEROFF_ALLOW_CMD): a session that is fully idle
+    # is furniture, not work. Same test the sleeper uses, with a shorter clock.
+    parser.add_argument(
+        "--idle-names",
+        nargs="?",
+        type=float,
+        const=300.0,
+        default=None,
+        metavar="SECONDS",
+        help="print the names of live sessions fully idle for SECONDS (default 300) and exit",
+    )
     parser.add_argument(
         "--install-hook",
         action="store_true",
@@ -1068,6 +1079,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         or args.sleep is not None
     ):
         return _agent_command(args, log)
+
+    if args.idle_names is not None:
+        from . import sleep as sleep_policy
+        for session in router.sessions():
+            if session.name and sleep_policy.busy_reason(session, idle_after=args.idle_names) is None:
+                print(session.name)
+        return 0
 
     if args.list:
         live = router.sessions()

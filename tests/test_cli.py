@@ -99,3 +99,25 @@ def test_kill_without_a_real_session_falls_through_to_a_question(
     monkeypatch.setattr(cli_module.Router, "ask_fresh", fake_fresh)
     assert cli_module.main(["kill", "the", "process", "on", "port", "9999"]) == 0
     assert asked == ["kill the process on port 9999"]
+
+
+def test_idle_names_prints_only_fully_idle_sessions(fake_claude: Path, monkeypatch, capsys) -> None:
+    # wake's poweroff guard reads this: an idle name is furniture, anything else is work.
+    from hotline import sleep as sleep_policy
+
+    make_session(fake_claude, 100, "idle-1", "/home/bodas/data", "aaa", started_at=1000)
+    make_session(fake_claude, 300, "busy-2", "/home/bodas/data", "ccc", started_at=3000)
+    seen: list[float] = []
+
+    def fake_busy(session, now=None, idle_after=0.0, proc=None):
+        seen.append(idle_after)
+        return None if session.name == "idle-1" else "status is 'busy'"
+
+    monkeypatch.setattr(sleep_policy, "busy_reason", fake_busy)
+    assert main(["--idle-names"]) == 0
+    assert capsys.readouterr().out.split() == ["idle-1"]
+    assert seen and all(s == 300.0 for s in seen)
+    seen.clear()
+    assert main(["--idle-names", "60"]) == 0
+    assert capsys.readouterr().out.split() == ["idle-1"]
+    assert seen and all(s == 60.0 for s in seen)
