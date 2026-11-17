@@ -1,3 +1,8 @@
+> ## STATE 2026-11-17 ~01:10 CET (operator hotline-80) -- written right before GAMING MODE boot (not prep)
+> - His word (verified, gamemode-0f channel, msg 1572038650286440451, 00:00:21Z): "delete the 3 inert leftowers. And start a background full scan and lets test out the gaming performance".
+> - Ran: gaming on --force (operator-only busy). Windows runs 07-clean2 (deletes the 3 remaining .bin in C:\gamemode-quarantine: assessor.yaml, hospice.pdf, relay.dll; starts MpCmdRun full scan in background), Apollo; laptop arch runs gamemode-bench unit. Returns on 20 min no stream or his DM "gaming off"; NO hard deadline, pigion rescues on heartbeat loss.
+> - After boot: uname, BootCurrent 0003, pigion :8797/status active:false (else gaming boot-hook), resume gamemode-0f (it reports bench numbers to him).
+
 > ## STATE 2026-11-17 ~01:00 CET (operator hotline-80) -- after cleaning attempt 2
 > - Back in Arch 00:56, relay self-disarmed. 06-clean exit 0 (2060 s): 11 threats (quarantine 3, ProgramData 1, Downloads 7). gamemode-0f resumed to report to him. No further Windows boot without his word.
 > - Bug passed on: gaming on calls hotline --sleep with 5 names (rc=2). Stizem watchdog note says repo /mnt/offload/stizem; keepalive revives stizem-manager in its registered cwd instead (do NOT hotline --resume it from here: wrong cwd).
