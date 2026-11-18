@@ -16671,3 +16671,5 @@ backup is the only rollback that exists.
 - cactus-whisper GPU ask: approved <=4 GiB, ~30 min, yields to a call lease (gpu-share status), free after.
 - his verified 1572616720705790015 "Its a 24m model so it fits" relayed to cactus-whisper with warrant.
 - 14:5xZ /mnt/offload 100% (644M) reported by cactus-whisper. Probed: no other grower (only cactus ~0.5G in 90 min, no deleted-open files). uv cache prune -2.1G -> 2.8G free. Asked him: sysupgrade-20261116 (3.6G), manager-13-bench (16G, 11-05), venvs (21G), android (16G); pacman-cache keep.
+- cactus-whisper GPU released (verified 2 MiB, 0 procs), ~12 min, peak ~2 GB.
+- 15:05Z his verified 1572628881389916211 "Do both": deleted /mnt/offload/sysupgrade-20261116 (sudo for root-owned cache) -> 15G free; asked manager-13 (warrant) to free/justify manager-13-bench 16G.
