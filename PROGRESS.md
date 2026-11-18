@@ -16685,3 +16685,4 @@ backup is the only rollback that exists.
 - 19:00Z his verified 1572687737348165663 (sagicc turbo-sr vs our own on the calls): relayed to cactus-whisper with warrant. 44 calls have only live large-v3 'heard' text, no human references, so it must use an honest method (blind A/B for him), not agreement-as-accuracy. Audio stays local.
 - 19:00Z his verified 1572687737348165663 (sagicc turbo-sr vs our own on the calls): relayed to cactus-whisper with warrant. 44 calls have only live large-v3 'heard' text, no human references, so it must use an honest method (blind A/B for him), not agreement-as-accuracy. Audio stays local.
 - 19:03Z his verified 1572688541853552813: yes. Disagreement clips plus both transcripts go to him blind A/B, and cactus-whisper also judges by context, labelled as judgement. Relayed with warrant.
+- 19:25Z cactus-whisper released the GPU after the calls A/B (large-v3 + Sagicc turbo-sr-v2, about 20 min, peak 2.2 GB). Verified free.
