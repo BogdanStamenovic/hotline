@@ -16658,3 +16658,6 @@ backup is the only rollback that exists.
 - devices check 49 duties, 0 contradicted; discover archserver/pigion/teamserbia 0 unclaimed; arch: surfsharkd only (his VPN, not claimed). Root 2.7G free.
 - Armed: track-slot-0900 08:02Z then_do=poweroff (FIRST real run of the new guard; check wake-agent journal on the next boot). RTC unarmed.
 - 00:29 his verified 1572393287006953493 ("gamemode agent look at logs on arch and archserver for performance"): woke gamemode-0f (session 2b47a24c, own cwd) via hotline --to with warrant + session context; it is working, reports to him in its channel.
+- 00:3x directional-speaker-cb asked for Petar's address (warrant 1572394331460075711 verified: 'mail the part list to koostic petar'): answered koosticpetar@gmail.com (PROGRESS 11-09 govvpn email, only Petar address on record).
+- 01:02Z his verified 1572416596347982045 "Give me a new manage": spawned manager-17 (operator/new-manager.sh, Opus, ~/data/manager-17, tmux hl-manager-17), registered, posted ready in #agent-manager-17.
+- 01:03Z FOUND: Claude refreshTokenExpiresAt = 2026-11-18 18:28:07Z (credentials.json; pane banner "login expires in 1 day"). After that every agent stops until he runs /login in a fresh terminal on archserver. Told him.
