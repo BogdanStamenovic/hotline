@@ -1,3 +1,7 @@
+> ## STATE 2026-11-18 ~23:00 CET (operator hotline-80, session 45b8a354) -- right before GAMING MODE (his "So gmaemode on", 1572732252780109916)
+> - GRUB is now the UUID image (gamemode bf8ca4e, verified). The return to Arch is its FIRST real boot. On boot: compare the last Windows heartbeat with `last -x` (any gap = incident), BootCurrent 0003, relay inactive, then keepalive. Tell gamemode-0f the result (it asked him for a reboot test).
+> - Windows Update is on manual with 25H2 pinned (offline hive). Armed: track-slot-0900 11-19 08:02Z poweroff.
+
 > ## STATE 2026-11-18 ~22:50 CET (operator hotline-80, session 45b8a354) -- back in Arch after the 20:58Z game mode
 > - Back 21:43Z, relay inactive, BootCurrent 0003. keepalive revived the 4 (idle). Nothing from him since 'turn on game mode'; kiri-wake wound down at his word.
 > - Armed: track-slot-0900 11-19 08:02Z then_do=poweroff. Root 2.3G free. Open with him: cactus-whisper A/B picks; arch tandem-client unclaimed.
