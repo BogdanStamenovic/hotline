@@ -1,3 +1,7 @@
+> ## STATE 2026-11-18 ~22:50 CET (operator hotline-80, session 45b8a354) -- back in Arch after the 20:58Z game mode
+> - Back 21:43Z, relay inactive, BootCurrent 0003. keepalive revived the 4 (idle). Nothing from him since 'turn on game mode'; kiri-wake wound down at his word.
+> - Armed: track-slot-0900 11-19 08:02Z then_do=poweroff. Root 2.3G free. Open with him: cactus-whisper A/B picks; arch tandem-client unclaimed.
+
 > ## STATE 2026-11-18 ~00:30 CET (operator hotline-80, session f0d40f35) -- back in Arch after the gaming session
 > - Gaming 21:05Z-23:24Z, ended via the Arch shortcut, relay active:false, BootCurrent 0003. never-sleep intact (5); keepalive revived the 4 agents (idle). Nothing from him since 21:05Z "bye bye".
 > - Claude login RENEWED 01:4xZ 11-18 at his word (1572425120813813962): refresh token now expires 2026-12-15 06:17Z, same Max account.

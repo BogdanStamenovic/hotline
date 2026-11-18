@@ -16692,3 +16692,10 @@ backup is the only rollback that exists.
 - 20:33Z his verified 1572711454144995451: 'Its me', so the 21:27-21:29 laptop SSH and the Claude Code session row were him. Closed.
 - 20:35Z his verified 1572711585896472731 (new manager on kiri-wake): spawned hl-kiri-wake (Opus, cwd ~/data/kiri-wake, registered, working). Seed: read README + HANDOFF-paused-20261102, check live state, post status to him, wait. Heredoc/no --done/no pgrep loops/GPU-share rules included.
 - 20:58Z his verified 1572717650054873190 'turn on game mode': dry-run refused only because hotline-80 (me) was busy; no other busy agents, GPU idle. Ran gaming on --force. Open on return: his A/B picks for cactus-whisper; kiri-wake manager spawned; pm-copy-live closed (handoff line stale); ollama noprune drop-in in place.
+
+## 2026-11-18 22:43 CET -- operator hotline-80 (session 45b8a354): boot after the 20:58Z game mode
+- Windows boots 20:59Z and 21:37Z (second one: no stream through 21:39Z), back in Arch 21:43Z (reboot 22:43 CET). Exit path not determined (~5 min after the 2nd boot, faster than the 20-min idle rule; pigion relay journal not readable without sudo). BootCurrent 0003, relay active:false, GPU 18 MiB. Reports archived ~/.local/state/gamemode/sessions/20261118-224344.
+- stizem watchdog again asked for hotline --resume stizem-manager; did NOT (wrong-cwd trap). Ran keepalive by hand 22:44: lookoncetohear-76, manager-13, manager-14, stizem-manager revived, idle, own cwds. never-sleep intact (5).
+- Discord since 20:50Z: nothing from him after 'turn on game mode'. kiri-wake: his 'We will wind down for tonight' -> wound down, pushed 2259cd0, then slept 21:44Z.
+- devices check: 50 duties, 0 contradicted. discover: archserver/pigion/teamserbia 0 unclaimed; arch tandem-client.service (system) + surfsharkd (his VPN). tandem-client not claimed: tandem-3f/manager-17 own it, flagged to him.
+- Armed: track-slot-0900 2026-11-19 08:02Z then_do=poweroff. RTC unarmed. Root 2.3G free (97%).
