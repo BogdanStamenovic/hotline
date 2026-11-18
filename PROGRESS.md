@@ -16687,3 +16687,4 @@ backup is the only rollback that exists.
 - 19:03Z his verified 1572688541853552813: yes. Disagreement clips plus both transcripts go to him blind A/B, and cactus-whisper also judges by context, labelled as judgement. Relayed with warrant.
 - 19:25Z cactus-whisper released the GPU after the calls A/B (large-v3 + Sagicc turbo-sr-v2, about 20 min, peak 2.2 GB). Verified free.
 - 19:40Z cactus-whisper delivered the calls A/B (259 blind clips, private artifact) and the Cactus report. Its contextual tally: large-v3 82 / turbo 65 / equal 99 / ? 13; turbo hallucinates 254/254 on non-speech. Withdrew the turbo swap suggestion; waiting on his picks. Recording still off.
+- 20:10Z his verified 1572705379190710353 (turbo v3 speed on iPhone): his phone is an iPhone 15 Pro (A17 Pro, hotline-ios docs). Published numbers only, not measured: Whisper Notes 15 Pro 10 min in 82 s (~7x real time); Argmax dashboard 15 Pro Max 2.41x. Offered a real measurement.
