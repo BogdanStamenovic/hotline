@@ -217,14 +217,20 @@ def arrange(
     # Teams alphabetically, the teamless ones last.
     order = sorted(asleep, key=lambda t: (t == LOOSE, t.casefold()))
     packed = pack([(t, asleep[t]) for t in order])
-    beds: list[tuple[int, list[tuple[str, list[int]]]]] = []
-    for index, groups in enumerate(packed):
-        bed = category(bed_name(index))
+    bed_ids = [category(bed_name(index)) for index in range(len(packed))]
+    # Fill the LAST bed first. Channels leave an earlier bed for a later one
+    # before anything enters the earlier one, so a bed sitting at the cap has
+    # room by the time its newcomers arrive (11-19: the first live pass sent
+    # gamemode-0f into a still-full asleep and Discord refused it).
+    landed_by_bed: dict[int, list[tuple[str, list[int]]]] = {}
+    for index in reversed(range(len(packed))):
+        bed = bed_ids[index]
         landed = [
             (team_name, [cid for cid in cids if place(cid, bed, f"{team_name} asleep")])
-            for team_name, cids in groups
+            for team_name, cids in packed[index]
         ]
-        beds.append((bed, [(t, c) for t, c in landed if c]))
+        landed_by_bed[index] = [(t, c) for t, c in landed if c]
+    beds = [(bed_ids[i], landed_by_bed[i]) for i in range(len(packed))]
     if not dry_run:
         _tidy_beds(manager, beds, plan)
 

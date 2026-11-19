@@ -486,3 +486,30 @@ def test_wake_targets_are_read_from_pending_tasks(tmp_path) -> None:
     assert pending_wake_targets(tmp_path / "absent.db") == set()
     (tmp_path / "junk.db").write_text("not sqlite")
     assert pending_wake_targets(tmp_path / "junk.db") is None
+
+
+def test_a_full_bed_empties_out_before_newcomers_arrive(world, monkeypatch) -> None:
+    """The first live pass (11-19): asleep held 50, the new plan sent some of
+    them on to asleep 2 and brought newcomers in -- and moved the newcomers
+    first, into a bed Discord still counted as full."""
+    fake, manager, registry, teams = world
+    real = fake.__call__
+
+    def capped(path, method="GET", body=None):
+        if method == "PATCH" and isinstance(body, dict) and body.get("parent_id"):
+            cid = path.rsplit("/", 1)[-1]
+            held = [c for c in fake.channels if c.get("parent_id") == body["parent_id"] and c["id"] != cid]
+            if len(held) >= CATEGORY_CAP:
+                raise RuntimeError("CHANNEL_PARENT_MAX_CHANNELS")
+        return real(path, method, body)
+
+    monkeypatch.setattr(Channels, "_call", lambda self, p, m="GET", b=None: capped(p, m, b))
+    bed = manager.ensure_category("asleep")
+    # 50 teamless sleepers already filling asleep, then a team falls asleep.
+    for i in range(50):
+        _agent(fake, registry, f"data-{i:02x}", f"s{i}", parent=str(bed))
+    late = _agent(fake, registry, "gamemode-0f", "g1")
+    teams.join("gamemode", late.name)
+    plan = arrange(manager, registry, set(), teams=teams)
+    assert plan.failed == []
+    assert _category_of(fake, late) == "asleep"
