@@ -16708,3 +16708,9 @@ backup is the only rollback that exists.
 - A peer note ("watchdog: stizem-manager absent, run hotline --resume stizem-manager") arrived at boot. Did NOT run it (wrong-cwd trap per handoff). Started keepalive.service by hand instead: revived lookoncetohear-76, manager-13, manager-14, stizem-manager; panes checked, all idle; stizem-manager cwd ~/data/stizem-manager.
 - Discord: nothing from him since 21:56:29Z "So gmaemode on". Devices check 50/0 contradicted; discover: only arch tandem-client + surfsharkd (already open). Posted one consolidated status.
 - Armed: track-slot-0900 11-19 08:02Z then_do=poweroff. RTC not armed. Root 2.3G free.
+
+## 2026-11-19 ~01:10 CET -- his two asks (verified msg 1572763334300930191, 23:59:59Z)
+- "why are sleeper agents not put into the asleep category, fix that": asleep hit Discord's 50/category cap on 11-15 10:38; every arrange since died on the first PATCH (CHANNEL_PARENT_MAX_CHANNELS, 4126 lines) and the exception aborted the whole pass. Fix 761489d: overflow beds "asleep 2.."; per-move failures recorded, not raised. Negative case: new spill + refused-move tests fail on old code. Live dry run: 33 moves.
+- "inactive agents asleep 10 days should perish even if not done": same commit. Exempt operator, keepers, live, pending wake `--to NAME`; unreadable wake.db => retire nobody. Live dry run: 23 records. Keepers exempt is MY call, flagged to him (4 keepers asleep 35 d).
+- Full suite: 6 failures, identical set before and after the change (pre-existing: test_pool, test_sleep x2, test_standin, test_timeout_reasons x2). Not chased.
+- Posted list + 15-min objection window; deploy = hotlined restart after it.
