@@ -361,13 +361,21 @@ class Registry:
         moment = time.time() if now is None else now
         kept = self.team_members()
 
+        def keeper(a: Agent) -> bool:
+            return a.name.lower() in kept
+
         def due(a: Agent) -> bool:
-            return a.expires_at is not None and moment >= a.expires_at
+            return a.expires_at is not None and moment >= a.expires_at and not keeper(a)
 
         def abandoned(a: Agent) -> bool:
             # The 11-01 lesson stands for anything short of ten days: sleep is
-            # not completion. Ten days asleep is his line for "gone anyway".
-            if a.done or live_ids is None or seen is None or wake_targets is None:
+            # not completion. Ten days asleep is his line for "gone anyway" --
+            # keepers included ("let them go aswell", msg 1572765596079358063).
+            # A finished passing agent keeps its own `keep_days` clock instead
+            # (meme-trend asked for 30); a finished keeper has no other clock.
+            if a.done and not keeper(a):
+                return False
+            if live_ids is None or seen is None or wake_targets is None:
                 return False
             if a.session_id in live_ids or a.name.lower() in wake_targets:
                 return False
@@ -382,11 +390,8 @@ class Registry:
             # a retention sweep quietly deleting it three days after one stint
             # ended would take the role with it.
             if not a.privileged
-            # Nor does a team's keeper. Bogdan marks the standing agents he wants
-            # to persist (KinReply's managers, hotline's operator) as keepers
-            # precisely so their channels stay; reaping one three days after a
-            # `--done` would undo that. Passing members expire like anyone.
-            and a.name.lower() not in kept
+            # A keeper does not expire on `--done` (KinReply's managers, kept so
+            # their channels stay), only on ten days asleep, like everyone.
             and (due(a) or abandoned(a))
         ]
 

@@ -435,9 +435,32 @@ def test_a_live_agent_is_never_retired_as_asleep(world, tmp_path) -> None:
     assert swept == [] and channel is not None
 
 
-def test_a_keeper_is_never_retired_as_asleep(world, tmp_path) -> None:
+def test_a_keeper_asleep_ten_days_goes_too(world, tmp_path) -> None:
+    """11-19 "let them go aswell": keepers are not exempt from the asleep rule."""
     swept, channel, _ = _sweep_asleep(world, tmp_path, 30, keeper=True)
+    assert swept == ["data-59"] and channel is None
+
+
+def test_a_finished_keeper_asleep_ten_days_goes_too(world, tmp_path) -> None:
+    swept, _, _ = _sweep_asleep(world, tmp_path, 10.01, keeper=True, done=True)
+    assert swept == ["data-59"]
+
+
+def test_a_keeper_asleep_nine_days_stays(world, tmp_path) -> None:
+    swept, channel, _ = _sweep_asleep(world, tmp_path, 9.9, keeper=True, done=True)
     assert swept == [] and channel is not None
+
+
+def test_a_finished_passing_agent_keeps_its_own_clock(world, tmp_path) -> None:
+    """meme-trend: done with keep_days=30, asleep 17 days -- not retired early."""
+    fake, _manager, registry, _ = world
+    agent = _agent(fake, registry, "meme-trend", "s1")
+    registry.complete("s1")
+    agent = registry.get("s1")
+    agent.keep_days = 30
+    registry.save()
+    now = time.time()
+    assert registry.expired(now, live_ids=set(), seen={"meme-trend": now - 17 * 86400}, wake_targets=set()) == []
 
 
 def test_unknown_wake_tasks_retire_nobody(world, tmp_path) -> None:
