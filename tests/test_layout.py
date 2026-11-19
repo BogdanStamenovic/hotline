@@ -513,3 +513,17 @@ def test_a_full_bed_empties_out_before_newcomers_arrive(world, monkeypatch) -> N
     plan = arrange(manager, registry, set(), teams=teams)
     assert plan.failed == []
     assert _category_of(fake, late) == "asleep"
+
+
+def test_two_records_sharing_a_channel_settle(world) -> None:
+    """Two data-ca rows pointed at one channel; asleep was reordered every minute."""
+    fake, manager, registry, teams = world
+    first = _agent(fake, registry, "data-ca", "s1")
+    twin = registry.declare("s2", "data-ca", "twin")
+    twin.channel_id = first.channel_id
+    registry.save()
+    _agent(fake, registry, "data-ed", "s3")
+    arrange(manager, registry, set(), teams=teams)
+    fake.calls.clear()
+    arrange(manager, registry, set(), teams=teams)
+    assert [m for m, _, _ in fake.calls if m != "GET"] == []

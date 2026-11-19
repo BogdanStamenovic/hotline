@@ -214,6 +214,16 @@ def arrange(
             else:
                 asleep.setdefault(LOOSE, []).append(cid)
 
+    # One channel can be named by two records (two data-ca rows share one id,
+    # seen 11-19). Listed twice, it can never match the order Discord reports,
+    # and every pass reordered asleep forever.
+    placed: set[int] = set()
+    for team_name in list(asleep):
+        unique = [cid for cid in asleep[team_name] if not (cid in placed or placed.add(cid))]
+        asleep[team_name] = unique
+        if not unique:
+            del asleep[team_name]
+
     # Teams alphabetically, the teamless ones last.
     order = sorted(asleep, key=lambda t: (t == LOOSE, t.casefold()))
     packed = pack([(t, asleep[t]) for t in order])
