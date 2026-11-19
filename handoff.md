@@ -1,3 +1,9 @@
+> ## STATE 2026-11-19 ~08:55 CET (operator hotline-80, session hotline-a5) -- Nothing Phone night; box powering off 08:02Z
+> - Nothing Phone (1) = device cbrain1 (tailnet 100.92.155.28, LAN 192.168.1.69), adb key-auth, adb root works (not persistent). Owner agent nothing-phone1-78 (hl-nothing-phone1-78, ~/data/nothing-phone1); told to checkpoint before poweroff. OPEN for it: Tailscale not running on the phone (adb-tailnet ❌), root init service for nothing-screend + tailscale.
+> - nothing-screen-60 DONE: iPhone PWA (repo nothing-screen private, ownbox, nothing-screen-web.service :8460). WAITING ON HIM: yes/no that laptop Wi-Fi "Bogdan" is the iPhone hotspot; iPhone one-time setup steps (posted in #agent-hotline-80).
+> - Open questions to him: move 11 idle repos (~4.2G) to /mnt/offload/data-idle (Claude Code rm guard blocked me); swapfile 8->4G / docker images / cuda; fix hotline --done deleting the channel + final summary (bit twice 11-19). Root 2.9G free.
+> - hotline-registry e692d20: local probe exit 255 = unknown. Phone probes via ~/data/nothing-phone1/tools/np-probe.
+
 > ## STATE 2026-11-19 ~01:45 CET (operator hotline-80, session hotline-a5) -- asleep-cap fix + 10-day asleep rule LIVE
 > - His asks (verified 1572763334300930191, 1572765596079358063): asleep overflow beds (Discord cap 50) and retire anyone asleep 10+ days incl. keepers. Commits 761489d 869c908 e35d40e 1400b59, deployed; swept 28, registry 31. Exempt: operator, live, pending wake `--to NAME`.
 
