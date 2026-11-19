@@ -16714,3 +16714,6 @@ backup is the only rollback that exists.
 - "inactive agents asleep 10 days should perish even if not done": same commit. Exempt operator, keepers, live, pending wake `--to NAME`; unreadable wake.db => retire nobody. Live dry run: 23 records. Keepers exempt is MY call, flagged to him (4 keepers asleep 35 d).
 - Full suite: 6 failures, identical set before and after the change (pre-existing: test_pool, test_sleep x2, test_standin, test_timeout_reasons x2). Not chased.
 - Posted list + 15-min objection window; deploy = hotlined restart after it.
+- 01:12-01:41 deploy. Live pass 1 (761489d) refused gamemode-0f: newcomers moved into asleep before overflow left it -> e35d40e (fill last bed first; fake now enforces the cap). Then "asleep reordered" every pass: two data-ca rows share one channel id -> 1400b59 (dedupe). His "let them go aswell" (verified 1572765596079358063) -> 869c908, keepers included.
+- Sweep run by hand via housekeep(print, True) at 01:30 (restart resets the 10-tick counter; slow churn passes had pushed tick 10 out to ~01:33): swept 28, 25 archives (data-ca twin shared a channel, stizem-apps-64 channel already gone, pm-fed-combo had none). Registry 59 -> 31. Backup agents.json.bak.20261119-before-asleep-rule.
+- Settled: no arrange writes 01:37-01:41+. asleep 23, asleep 2 folded away. Reported to him.

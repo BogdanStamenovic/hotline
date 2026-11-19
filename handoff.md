@@ -1,3 +1,6 @@
+> ## STATE 2026-11-19 ~01:45 CET (operator hotline-80, session hotline-a5) -- asleep-cap fix + 10-day asleep rule LIVE
+> - His asks (verified 1572763334300930191, 1572765596079358063): asleep overflow beds (Discord cap 50) and retire anyone asleep 10+ days incl. keepers. Commits 761489d 869c908 e35d40e 1400b59, deployed; swept 28, registry 31. Exempt: operator, live, pending wake `--to NAME`.
+
 > ## STATE 2026-11-19 ~00:50 CET (operator hotline-80, session hotline-a5) -- back in Arch after the 21:56Z game mode
 > - UUID GRUB (bf8ca4e) PROVEN on real hardware by this boot; relay inactive, no heartbeat gap, BootCurrent 0003. keepalive revived the 4 (idle). Nothing from him since "So gmaemode on".
 > - Armed: track-slot-0900 11-19 08:02Z poweroff. Open with him: arch tandem-client/surfsharkd unclaimed; cactus-whisper A/B picks.
