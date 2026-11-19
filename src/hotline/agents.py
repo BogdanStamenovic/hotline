@@ -35,6 +35,40 @@ from typing import Any
 from .config import agents_file
 
 DEFAULT_KEEP_DAYS = 3.0
+# Bogdan's rule (11-19, msg 1572763334300930191): "inactive agents put to sleep
+# 10 days ago should perish as a new rule even if they arent done".
+ASLEEP_RETIRE_DAYS = 10.0
+
+
+def pending_wake_targets(db: Path | None = None) -> set[str] | None:
+    """Lowercased agent names a pending wake task will message (`hotline --to NAME`).
+
+    An agent somebody scheduled to wake is not abandoned, whatever its idle
+    time: 11-01 deleted two sleeping agents with wake tasks due. None means the
+    wake database exists but could not be read -- the caller must then retire
+    nobody, since it cannot tell who is spoken for. No database at all means no
+    wake tasks, so an empty set.
+    """
+    import re
+    import sqlite3
+
+    path = db or Path(
+        os.environ.get("HOTLINE_WAKE_DB", Path.home() / ".local/state/wake/wake.db")
+    )
+    if not path.exists():
+        return set()
+    try:
+        con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
+        try:
+            rows = con.execute("select task from tasks where status = 'pending'").fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return None
+    names: set[str] = set()
+    for (task,) in rows:
+        names.update(m.lower() for m in re.findall(r"--to[ =]['\"]?([A-Za-z0-9._-]+)", task or ""))
+    return names
 
 
 @dataclass
@@ -304,10 +338,15 @@ class Registry:
         now: float | None = None,
         live_ids: set[str] | None = None,
         seen: dict[str, float] | None = None,
+        wake_targets: set[str] | None = None,
     ) -> list[Agent]:
         """Agents whose retention has run out and whose record should go.
 
-        Only a completed agent expires: `keep_days` after its `--done`.
+        A completed agent expires `keep_days` after its `--done`. An unfinished
+        one expires once it has been asleep `ASLEEP_RETIRE_DAYS` (11-19 rule,
+        below) -- but only when the caller knows who is live, when each was last
+        seen, and which agents a wake task is waiting on. Any of those missing
+        and the asleep rule retires nobody.
 
         A stopped one used to expire `keep_days` after it was last seen alive
         (Bogdan's 10-14 rule, written when "not alive" meant killed or gone
@@ -325,6 +364,16 @@ class Registry:
         def due(a: Agent) -> bool:
             return a.expires_at is not None and moment >= a.expires_at
 
+        def abandoned(a: Agent) -> bool:
+            # The 11-01 lesson stands for anything short of ten days: sleep is
+            # not completion. Ten days asleep is his line for "gone anyway".
+            if a.done or live_ids is None or seen is None or wake_targets is None:
+                return False
+            if a.session_id in live_ids or a.name.lower() in wake_targets:
+                return False
+            last = seen.get(a.name.lower())
+            return last is not None and moment - last >= ASLEEP_RETIRE_DAYS * 86400
+
         return [
             a
             for a in self.agents.values()
@@ -338,7 +387,7 @@ class Registry:
             # precisely so their channels stay; reaping one three days after a
             # `--done` would undo that. Passing members expire like anyone.
             and a.name.lower() not in kept
-            and due(a)
+            and (due(a) or abandoned(a))
         ]
 
     def team_members(self) -> set[str]:
@@ -362,6 +411,7 @@ class Registry:
         live_ids: set[str] | None = None,
         seen: dict[str, float] | None = None,
         archive_dir: Path | None = None,
+        wake_targets: set[str] | None = None,
     ) -> list[str]:
         """Close out agents whose retention has run out. Returns what was swept.
 
@@ -373,7 +423,7 @@ class Registry:
         swept: list[str] = []
         present: set[int] | None = None
         listed = False
-        for agent in self.expired(now, live_ids=live_ids, seen=seen):
+        for agent in self.expired(now, live_ids=live_ids, seen=seen, wake_targets=wake_targets):
             if manager is not None:
                 for attr in ("channel_id", "voice_channel_id"):
                     cid = getattr(agent, attr)

@@ -308,7 +308,7 @@ def housekeep(log: Callable[[str], None], sweep: bool) -> None:
     not the registry's [working] field, which goes on saying working after a
     power-off.
     """
-    from .agents import Registry
+    from .agents import Registry, pending_wake_targets
     from .ccsocks import discover
     from .channels import from_env as channels_from_env
     from .config import state_dir
@@ -334,6 +334,7 @@ def housekeep(log: Callable[[str], None], sweep: bool) -> None:
         live_ids=live_ids,
         seen=seen,
         archive_dir=state_dir() / "discord-archive" / time.strftime("%Y-%m-%d"),
+        wake_targets=pending_wake_targets(),
     )
     if swept:
         log(f"swept {len(swept)} expired agent(s): {', '.join(swept)}")

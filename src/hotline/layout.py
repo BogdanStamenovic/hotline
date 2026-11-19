@@ -42,6 +42,41 @@ from .teams import Teams
 ASLEEP = "asleep"
 LOOSE = "no team"
 DIVIDER = "📁-"
+# Discord refuses a 51st channel in one category (CHANNEL_PARENT_MAX_CHANNELS),
+# dividers included. asleep hit it on 11-15 and every arrange pass for four days
+# died on its first move into it, so overflow spills into "asleep 2", "asleep 3".
+CATEGORY_CAP = 50
+
+
+def bed_name(index: int) -> str:
+    return ASLEEP if index == 0 else f"{ASLEEP} {index + 1}"
+
+
+def is_bed(name: str) -> bool:
+    plain = bare(name)
+    head, _, tail = plain.partition(" ")
+    return head == ASLEEP and (not tail or tail.isdigit())
+
+
+def pack(groups: list[tuple[str, list[int]]], cap: int = CATEGORY_CAP) -> list[list[tuple[str, list[int]]]]:
+    """Split team groups into beds of at most `cap` channels, one divider each.
+
+    A team is kept whole inside one bed when it fits; one bigger than a whole bed
+    is cut into pieces, each under its own divider in the next bed.
+    """
+    beds: list[list[tuple[str, list[int]]]] = [[]]
+    room = cap
+    for team, cids in groups:
+        pending = list(cids)
+        while pending:
+            fits_whole_bed = 1 + len(pending) <= cap
+            if 1 + len(pending) > room and (fits_whole_bed or room < 2):
+                beds.append([])
+                room = cap
+            take, pending = pending[: room - 1], pending[room - 1 :]
+            beds[-1].append((team, take))
+            room -= 1 + len(take)
+    return [b for b in beds if b]
 
 
 def sleeping(team: str) -> str:
@@ -57,12 +92,17 @@ def divider_name(team: str) -> str:
 class Plan:
     moves: list[str] = field(default_factory=list)
     removed: list[str] = field(default_factory=list)
+    failed: list[str] = field(default_factory=list)
 
     def __bool__(self) -> bool:
-        return bool(self.moves or self.removed)
+        return bool(self.moves or self.removed or self.failed)
 
     def describe(self) -> str:
-        return "; ".join(self.moves + [f"removed empty category {c}" for c in self.removed])
+        return "; ".join(
+            self.moves
+            + [f"removed empty category {c}" for c in self.removed]
+            + [f"FAILED {f}" for f in self.failed]
+        )
 
 
 def _parent(channel: dict) -> int | None:
@@ -100,18 +140,31 @@ def arrange(
             if cid is not None and int(cid) in by_id
         ]
 
-    def place(cid: int, parent: int | None, label: str, position: int | None = None) -> None:
+    def place(cid: int, parent: int | None, label: str, position: int | None = None) -> bool:
+        """Move one channel; False if Discord refused, which never stops the pass.
+
+        One refused move used to raise out of arrange, so everything queued
+        behind it stayed put too -- the whole sidebar froze for four days on a
+        single full category (11-15..11-19).
+        """
         current = by_id[int(cid)]
         if _parent(current) == parent and (position is None or current.get("position") == position):
-            return
+            return True
         where = category_names.get(parent, "a new category") if parent else "the top row"
-        plan.moves.append(f"#{current.get('name')} → {where} ({label})")
+        line = f"#{current.get('name')} → {where} ({label})"
         if dry_run:
-            return
+            plan.moves.append(line)
+            return True
         body: dict[str, Any] = {"parent_id": str(parent) if parent is not None else None}
         if position is not None:
             body["position"] = position
-        manager.patch(int(cid), body)
+        try:
+            manager.patch(int(cid), body)
+        except Exception as exc:  # noqa: BLE001 - logged in the plan, the rest still runs
+            plan.failed.append(f"{line}: {exc}"[:300])
+            return False
+        plan.moves.append(line)
+        return True
 
     def category(name: str) -> int:
         if dry_run:
@@ -163,12 +216,17 @@ def arrange(
 
     # Teams alphabetically, the teamless ones last.
     order = sorted(asleep, key=lambda t: (t == LOOSE, t.casefold()))
-    bed = category(ASLEEP) if asleep else None
-    for team_name in order:
-        for cid in asleep[team_name]:
-            place(cid, bed, f"{team_name} asleep")
+    packed = pack([(t, asleep[t]) for t in order])
+    beds: list[tuple[int, list[tuple[str, list[int]]]]] = []
+    for index, groups in enumerate(packed):
+        bed = category(bed_name(index))
+        landed = [
+            (team_name, [cid for cid in cids if place(cid, bed, f"{team_name} asleep")])
+            for team_name, cids in groups
+        ]
+        beds.append((bed, [(t, c) for t, c in landed if c]))
     if not dry_run:
-        _tidy_bed(manager, bed, [(t, asleep[t]) for t in order], plan)
+        _tidy_beds(manager, beds, plan)
 
     # Empty team categories: the dead team's heading would otherwise stay in the
     # sidebar with nothing under it, which is the visible thing he asked to lose.
@@ -178,7 +236,7 @@ def arrange(
         ours |= {bare(sleeping(team.display)) for team in teams.all()}
         occupied = {_parent(c) for c in manager.all()}
         for cid, name in category_names.items():
-            if bare(name) in ours and cid not in occupied:
+            if (bare(name) in ours or is_bed(name)) and cid not in occupied:
                 manager.delete_category(cid)
                 plan.removed.append(name)
 
@@ -187,61 +245,68 @@ def arrange(
     return plan
 
 
-def _tidy_bed(
-    manager: Any, bed: int | None, groups: list[tuple[str, list[int]]], plan: Plan
+def _tidy_beds(
+    manager: Any, beds: list[tuple[int, list[tuple[str, list[int]]]]], plan: Plan
 ) -> None:
-    """Dividers and order inside asleep, and asleep below every other category.
+    """Dividers and order inside each asleep bed, and the beds below every other category.
 
     Writes only when something is out of place, so a settled sidebar costs the
     one extra GET this needs to see the moves it just made.
     """
     listing = manager.all()
-    stale = [
-        c
-        for c in listing
-        if str(c.get("name", "")).startswith(DIVIDER)
-        and (bed is None or _parent(c) != bed)
-        and c.get("type") != CATEGORY
-    ]
-    if bed is None:
-        for c in stale:
+    bed_ids = {bed for bed, _ in beds}
+    for c in listing:
+        if (
+            str(c.get("name", "")).startswith(DIVIDER)
+            and c.get("type") != CATEGORY
+            and _parent(c) not in bed_ids
+        ):
             manager.delete(int(c["id"]), force=True)
             plan.removed.append(f"#{c['name']}")
+    if not beds:
         return
-    children = [c for c in listing if _parent(c) == bed]
-    dividers = {
-        str(c["name"]): int(c["id"]) for c in children if str(c["name"]).startswith(DIVIDER)
-    }
-    wanted: list[int] = []
-    for team_name, cids in groups:
-        name = divider_name(team_name)
-        if name not in dividers:
-            dividers[name] = manager.create_divider(name, bed, team_name)
-            plan.moves.append(f"#{name} created in asleep")
-        wanted.append(dividers[name])
-        wanted.extend(cids)
-    keep = set(wanted)
-    for name, cid in dividers.items():
-        if cid not in keep:
-            manager.delete(cid, force=True)
-            plan.removed.append(f"#{name}")
-    for c in stale:
-        manager.delete(int(c["id"]), force=True)
-        plan.removed.append(f"#{c['name']}")
+
+    changed = False
+    for bed, groups in beds:
+        children = [c for c in listing if _parent(c) == bed]
+        dividers = {
+            str(c["name"]): int(c["id"]) for c in children if str(c["name"]).startswith(DIVIDER)
+        }
+        wanted: list[int] = []
+        for team_name, cids in groups:
+            name = divider_name(team_name)
+            if name not in dividers:
+                dividers[name] = manager.create_divider(name, bed, team_name)
+                plan.moves.append(f"#{name} created in asleep")
+                changed = True
+            wanted.append(dividers[name])
+            wanted.extend(cids)
+        keep = set(wanted)
+        for name, cid in dividers.items():
+            if cid not in keep:
+                manager.delete(cid, force=True)
+                plan.removed.append(f"#{name}")
+                changed = True
+        if changed:
+            listing = manager.all()
+        current = [
+            int(c["id"])
+            for c in sorted(
+                (c for c in listing if _parent(c) == bed and int(c["id"]) in keep),
+                key=lambda c: (int(c.get("position", 0)), int(c["id"])),
+            )
+        ]
+        if current != wanted:
+            manager.reorder([(cid, i) for i, cid in enumerate(wanted)])
+            plan.moves.append("asleep reordered by team")
 
     listing = manager.all()
-    current = [
-        int(c["id"])
-        for c in sorted(
-            (c for c in listing if _parent(c) == bed and int(c["id"]) in keep),
-            key=lambda c: (int(c.get("position", 0)), int(c["id"])),
-        )
-    ]
-    if current != wanted:
-        manager.reorder([(cid, i) for i, cid in enumerate(wanted)])
-        plan.moves.append("asleep reordered by team")
-
     cats = {int(c["id"]): int(c.get("position", 0)) for c in listing if c.get("type") == CATEGORY}
-    others = [p for cid, p in cats.items() if cid != bed]
-    if others and cats.get(bed, 0) <= max(others):
-        manager.patch(bed, {"position": max(others) + 1})
+    others = [p for cid, p in cats.items() if cid not in bed_ids]
+    floor = max(others) if others else -1
+    for index, (bed, _) in enumerate(beds):
+        target = floor + 1 + index
+        prev = cats.get(beds[index - 1][0], floor) if index else floor
+        if cats.get(bed, 0) <= prev:
+            manager.patch(bed, {"position": target})
+            cats[bed] = target

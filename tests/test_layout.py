@@ -325,3 +325,141 @@ def test_sleeping_teams_are_grouped_under_dividers_in_one_section(world) -> None
     arrange(manager, registry, {"s1", "s2", "s3", "s4", "s5"}, teams=teams)
     assert not any(str(c["name"]).startswith("📁-") for c in fake.channels)
     assert not any("asleep" in bare(c["name"]) for c in fake.categories())
+
+
+# ---- 11-19: asleep overflowed Discord's 50-per-category cap ------------------
+
+from hotline.layout import CATEGORY_CAP, pack
+
+
+def _sizes(beds):
+    return [sum(1 + len(c) for _, c in bed) for bed in beds]
+
+
+def test_pack_keeps_teams_whole_and_never_exceeds_the_cap() -> None:
+    groups = [(f"t{i}", list(range(i * 100, i * 100 + 9))) for i in range(8)]  # 8 x 10 slots
+    beds = pack(groups)
+    assert _sizes(beds) == [50, 30]
+    assert all(len(c) == 9 for bed in beds for _, c in bed)
+
+
+def test_pack_splits_a_team_bigger_than_a_bed() -> None:
+    beds = pack([("small", [1, 2]), ("huge", list(range(100, 200)))])
+    assert all(s <= CATEGORY_CAP for s in _sizes(beds))
+    assert sorted(c for bed in beds for t, cs in bed if t == "huge" for c in cs) == list(range(100, 200))
+
+
+def test_pack_under_the_cap_is_one_bed() -> None:
+    assert len(pack([("a", [1, 2, 3]), ("b", [4])])) == 1
+    assert pack([]) == []
+
+
+def test_a_full_asleep_spills_into_asleep_2(world) -> None:
+    """The live failure: 50 channels already in asleep, then more agents fall asleep."""
+    fake, manager, registry, teams = world
+    sleepers = [_agent(fake, registry, f"data-{i:02x}", f"s{i}") for i in range(60)]
+    arrange(manager, registry, set(), teams=teams)
+    beds = [c for c in fake.categories() if "asleep" in bare(c["name"])]
+    assert sorted(bare(c["name"]) for c in beds) == ["asleep", "asleep 2"]
+    for bed in beds:
+        assert sum(1 for c in fake.channels if c.get("parent_id") == bed["id"]) <= CATEGORY_CAP
+    assert all(_category_of(fake, a) in {"asleep", "asleep 2"} for a in sleepers)
+    # Settled: a second pass writes nothing.
+    fake.calls.clear()
+    arrange(manager, registry, set(), teams=teams)
+    assert [m for m, _, _ in fake.calls if m != "GET"] == []
+    # Everyone wakes: both beds go away.
+    arrange(manager, registry, {f"s{i}" for i in range(60)}, teams=teams)
+    assert not any("asleep" in bare(c["name"]) for c in fake.categories())
+
+
+def test_one_refused_move_does_not_freeze_the_rest(world, monkeypatch) -> None:
+    fake, manager, registry, teams = world
+    bad = _agent(fake, registry, "data-bad", "s1")
+    good = _agent(fake, registry, "data-good", "s2")
+    real = manager.patch
+
+    def patch(cid, body):
+        if int(cid) == bad.channel_id:
+            raise RuntimeError("CHANNEL_PARENT_MAX_CHANNELS")
+        return real(cid, body)
+
+    monkeypatch.setattr(manager, "patch", patch)
+    plan = arrange(manager, registry, set(), teams=teams)
+    assert _category_of(fake, good) == "asleep"
+    assert _category_of(fake, bad) is None
+    assert any("data-bad" in f for f in plan.failed)
+
+
+# ---- 11-19: ten days asleep retires an unfinished agent ----------------------
+
+import sqlite3
+
+from hotline.agents import pending_wake_targets
+
+
+def _sweep_asleep(world, tmp_path, days, *, wake=frozenset(), live=frozenset(), keeper=False, done=False):
+    fake, manager, registry, teams = world
+    agent = _agent(fake, registry, "data-59", "s1")
+    if keeper:
+        teams.join("data", agent.name, keeper=True)
+    if done:
+        registry.complete("s1")
+    now = time.time()
+    manager.history = lambda cid: ({"name": "agent-data-59", "id": str(cid)}, [])  # type: ignore[method-assign]
+    cid = agent.channel_id
+    swept = registry.sweep(
+        manager, now=now, live_ids=set(live), seen={"data-59": now - days * 86400},
+        archive_dir=tmp_path / "arch", wake_targets=set(wake),
+    )
+    return swept, fake.by_id(cid), tmp_path / "arch" / f"agent-data-59-{cid}.json"
+
+
+def test_ten_days_asleep_retires_an_unfinished_agent(world, tmp_path) -> None:
+    swept, channel, archive = _sweep_asleep(world, tmp_path, 10.01)
+    assert swept == ["data-59"] and channel is None and archive.exists()
+
+
+def test_nine_days_asleep_is_kept(world, tmp_path) -> None:
+    swept, channel, _ = _sweep_asleep(world, tmp_path, 9.9)
+    assert swept == [] and channel is not None
+
+
+def test_a_pending_wake_task_keeps_a_long_sleeper(world, tmp_path) -> None:
+    swept, channel, _ = _sweep_asleep(world, tmp_path, 30, wake={"data-59"})
+    assert swept == [] and channel is not None
+
+
+def test_a_live_agent_is_never_retired_as_asleep(world, tmp_path) -> None:
+    swept, channel, _ = _sweep_asleep(world, tmp_path, 30, live={"s1"})
+    assert swept == [] and channel is not None
+
+
+def test_a_keeper_is_never_retired_as_asleep(world, tmp_path) -> None:
+    swept, channel, _ = _sweep_asleep(world, tmp_path, 30, keeper=True)
+    assert swept == [] and channel is not None
+
+
+def test_unknown_wake_tasks_retire_nobody(world, tmp_path) -> None:
+    fake, _manager, registry, _ = world
+    _agent(fake, registry, "data-59", "s1")
+    now = time.time()
+    assert registry.expired(now, live_ids=set(), seen={"data-59": now - 30 * 86400}, wake_targets=None) == []
+
+
+def test_wake_targets_are_read_from_pending_tasks(tmp_path) -> None:
+    db = tmp_path / "wake.db"
+    con = sqlite3.connect(db)
+    con.execute("create table tasks (task text, status text)")
+    con.executemany("insert into tasks values (?, ?)", [
+        ('PATH=x hotline --to Manager-15 --no-wait "hi"', "pending"),
+        ("hotline --to 'stizem-64' --no-wait 'x'", "pending"),
+        ("hotline --to data-59 --no-wait x", "done"),
+        ("setsid -f pmfed-report", "pending"),
+    ])
+    con.commit()
+    con.close()
+    assert pending_wake_targets(db) == {"manager-15", "stizem-64"}
+    assert pending_wake_targets(tmp_path / "absent.db") == set()
+    (tmp_path / "junk.db").write_text("not sqlite")
+    assert pending_wake_targets(tmp_path / "junk.db") is None

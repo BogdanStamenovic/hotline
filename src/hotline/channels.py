@@ -75,7 +75,9 @@ def bare(name: str) -> str:
 
 def dressed(name: str) -> str:
     plain = name.strip()
-    icon = ICONS["asleep"] if plain.endswith(" · asleep") else ICONS.get(bare(plain), DEFAULT_ICON)
+    head, _, tail = bare(plain).partition(" ")
+    is_bed = head == "asleep" and (not tail or tail.isdigit())
+    icon = ICONS["asleep"] if plain.endswith(" · asleep") or is_bed else ICONS.get(bare(plain), DEFAULT_ICON)
     return f"{icon} {plain}"
 
 
