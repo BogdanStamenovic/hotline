@@ -16767,3 +16767,6 @@ narative-62's bench (/mnt/narative/speech/results/asr/report.md, verified): 7/34
 
 ### 2026-11-20 07:51Z: daily device sweep
 58 duties, 0 contradicted. arch unreachable (3 unknown, kept). discover: archserver/pigion/teamserbia 0 unclaimed. discover cbrain1 wrongly lists 35 archserver units (runs locally for an adb-only device): a hotline-registry bug, nothing claimed.
+
+### 2026-11-20 12:50Z: phone milestone relayed; poweroff correction
+nothing-phone1-78: tswatch v2.3, Bluetooth always off, no hotspot trigger; Wi-Fi scan every 20 s; watchdog stuck-process bug fixed. adb check: bluetooth_on=0, but bluetooth_manager state BLE_ON (BLE scan mode), passed to the agent. Correction: the 11-20 08:02Z poweroff did not happen. track-slot-0900 deferred at 09:04 CET ("staying up": tty session 8 + pid 566452 narative-fe); it is re-armed for 11-21 08:02Z. My 07:3x Discord posts said the box would power off; corrected on Discord.
