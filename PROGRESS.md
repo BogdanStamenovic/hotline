@@ -16755,3 +16755,6 @@ Bogdan (Discord 1573168822515539978, verified, relayed by narative-fe) asked me 
 
 ### 2026-11-20 02:57Z: approved narative's two reasoning-model pulls
 Bogdan (Discord 1573170036367954054, verified) asked narative to try OlmoLogic-7B-Think and TwIL-LM3-Pro. Approved narative-fe's ollama pulls to /mnt/windows and two new narative-only nocache gpu-share profiles (twil-lm3-pro-narative 16k, olmologic-7b-narative 32k), same conditions as change 2. It must confirm the exact ollama_model names and announce the gpu-share restart to me first. Not applied yet.
+
+### 2026-11-20 04:18Z: narative gpu-share change 3 (OlmoLogic, TwIL, Gemma 4)
+Approved and verified: 3 narative-only nocache profiles added (diff vs bak-20261120-040119 purely additive), gpu-share restarted 04:20:01 CET. Gemma: a --reasoning-budget 0 fix (restart 05:17:19) did nothing, because gpu-share never served it: 107 "no model layer in manifest; falling back to ollama" lines since 04:26 (gemma4:e4b is an ollama manifest LIST). The Gemma profile+alias were removed (diff vs bak-20261120-051745 checked); narative now uses ollama /api/chat think:false. Open gpu-share gap for Bogdan: no manifest-list resolution.
