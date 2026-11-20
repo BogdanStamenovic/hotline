@@ -16764,3 +16764,6 @@ The wake reminder fired. The Chrome extension wasn't connected and no Chrome was
 
 ### 2026-11-20 07:29Z: queued ears.py blocklist additions
 narative-62's bench (/mnt/narative/speech/results/asr/report.md, verified): 7/340 noise clips still invent text with VAD, 130/340 without. Missing from HALLUCINATIONS: "hvala što pratite kanal", "hvala što pratite", "hvala vam na pozornosti", "merci", ja/ko thanks. Exact-match only; one real call had the phrase as a prefix of a 27 s turn, so a prefix strip is also needed. Deferred until after the 08:02Z poweroff (no calld restart while he sleeps).
+
+### 2026-11-20 07:51Z: daily device sweep
+58 duties, 0 contradicted. arch unreachable (3 unknown, kept). discover: archserver/pigion/teamserbia 0 unclaimed. discover cbrain1 wrongly lists 35 archserver units (runs locally for an adb-only device): a hotline-registry bug, nothing claimed.
