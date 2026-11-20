@@ -16761,3 +16761,6 @@ Approved and verified: 3 narative-only nocache profiles added (diff vs bak-20261
 
 ### 2026-11-20 06:33Z: kp-7900xt check blocked on the locked keyring
 The wake reminder fired. The Chrome extension wasn't connected and no Chrome was running. Started a use-computer vd "agent" and Chrome there; GNOME's login keyring asked for his password (not typed), and the profile came up "Paused" with no extension connection. Closed Chrome and stopped the vd. Asked him on Discord to run use-computer keyring unlock or check KP on his phone. Still pending: the seller's doplata answer.
+
+### 2026-11-20 07:29Z: queued ears.py blocklist additions
+narative-62's bench (/mnt/narative/speech/results/asr/report.md, verified): 7/340 noise clips still invent text with VAD, 130/340 without. Missing from HALLUCINATIONS: "hvala što pratite kanal", "hvala što pratite", "hvala vam na pozornosti", "merci", ja/ko thanks. Exact-match only; one real call had the phrase as a prefix of a 27 s turn, so a prefix strip is also needed. Deferred until after the 08:02Z poweroff (no calld restart while he sleeps).
