@@ -16752,3 +16752,6 @@ backup is the only rollback that exists.
 
 ### 2026-11-20 02:53Z: Whisper error taxonomy for narative
 Bogdan (Discord 1573168822515539978, verified, relayed by narative-fe) asked me to look at the kinds of mistakes Whisper routinely makes on call transcripts. Read the 2 reference calls (live WER 44.6% / 48.2% raw) and all 306 turns of 42 recorded calls on /mnt/offload/hotline-ios/recordings. Wrote ~/data/hotline-ios/recordings/analysis/whisper-error-taxonomy-20261120.md (13 categories, examples, fact vs harmless, suggestions). Spontaneous counts are my reading, with no reference. Sent it to narative-fe with the warrant and posted the summary to Discord. Nothing on the box changed.
+
+### 2026-11-20 02:57Z: approved narative's two reasoning-model pulls
+Bogdan (Discord 1573170036367954054, verified) asked narative to try OlmoLogic-7B-Think and TwIL-LM3-Pro. Approved narative-fe's ollama pulls to /mnt/windows and two new narative-only nocache gpu-share profiles (twil-lm3-pro-narative 16k, olmologic-7b-narative 32k), same conditions as change 2. It must confirm the exact ollama_model names and announce the gpu-share restart to me first. Not applied yet.
