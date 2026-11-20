@@ -16770,3 +16770,6 @@ narative-62's bench (/mnt/narative/speech/results/asr/report.md, verified): 7/34
 
 ### 2026-11-20 12:50Z: phone milestone relayed; poweroff correction
 nothing-phone1-78: tswatch v2.3, Bluetooth always off, no hotspot trigger; Wi-Fi scan every 20 s; watchdog stuck-process bug fixed. adb check: bluetooth_on=0, but bluetooth_manager state BLE_ON (BLE scan mode), passed to the agent. Correction: the 11-20 08:02Z poweroff did not happen. track-slot-0900 deferred at 09:04 CET ("staying up": tty session 8 + pid 566452 narative-fe); it is re-armed for 11-21 08:02Z. My 07:3x Discord posts said the box would power off; corrected on Discord.
+
+### 2026-11-20 20:08Z: voiceprint source for narative capture
+narative-62 asked (warrant 1573429545942388758, verified: his go for tonight's capture, "my voice print?") to enroll his voice from his side of hotline call recordings. Approved local-only, read-only: turn-NN.wav files, 48 kHz Opus (~1000 s) + 16 kHz WhatsApp 11-08 (~2500 s), skip 8 kHz. Excluded call-20261031-213743 (friend on the line), 20260918-232223 and 20261105-183346; outlier rejection before averaging.
