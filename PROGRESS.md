@@ -16758,3 +16758,6 @@ Bogdan (Discord 1573170036367954054, verified) asked narative to try OlmoLogic-7
 
 ### 2026-11-20 04:18Z: narative gpu-share change 3 (OlmoLogic, TwIL, Gemma 4)
 Approved and verified: 3 narative-only nocache profiles added (diff vs bak-20261120-040119 purely additive), gpu-share restarted 04:20:01 CET. Gemma: a --reasoning-budget 0 fix (restart 05:17:19) did nothing, because gpu-share never served it: 107 "no model layer in manifest; falling back to ollama" lines since 04:26 (gemma4:e4b is an ollama manifest LIST). The Gemma profile+alias were removed (diff vs bak-20261120-051745 checked); narative now uses ollama /api/chat think:false. Open gpu-share gap for Bogdan: no manifest-list resolution.
+
+### 2026-11-20 06:33Z: kp-7900xt check blocked on the locked keyring
+The wake reminder fired. The Chrome extension wasn't connected and no Chrome was running. Started a use-computer vd "agent" and Chrome there; GNOME's login keyring asked for his password (not typed), and the profile came up "Paused" with no extension connection. Closed Chrome and stopped the vd. Asked him on Discord to run use-computer keyring unlock or check KP on his phone. Still pending: the seller's doplata answer.
