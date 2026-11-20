@@ -16750,5 +16750,5 @@ backup is the only rollback that exists.
 - 11-20 ~02:5x approved narative-fe gpu-share: add qwen3-4b-instruct-q8-16k-nocache (alias qwen3:4b-instruct-narative), remove its 02:00 qwen3:4b reroute + profile (restores pre-02:00 for all clients).
 - 11-20 02:45 narative-fe gpu-share change 2 applied (verified diff vs bak-20261120-024455: qwen3:4b reroute + profile removed, instruct-narative added; gpu-share active). Instruct model answers without reasoning; RSS flat.
 
-### 2026-11-20 ~03:10Z: Whisper error taxonomy for narative
+### 2026-11-20 02:53Z: Whisper error taxonomy for narative
 Bogdan (Discord 1573168822515539978, verified, relayed by narative-fe) asked me to look at the kinds of mistakes Whisper routinely makes on call transcripts. Read the 2 reference calls (live WER 44.6% / 48.2% raw) and all 306 turns of 42 recorded calls on /mnt/offload/hotline-ios/recordings. Wrote ~/data/hotline-ios/recordings/analysis/whisper-error-taxonomy-20261120.md (13 categories, examples, fact vs harmless, suggestions). Spontaneous counts are my reading, with no reference. Sent it to narative-fe with the warrant and posted the summary to Discord. Nothing on the box changed.
