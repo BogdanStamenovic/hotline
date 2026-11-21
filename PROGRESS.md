@@ -16776,3 +16776,6 @@ narative-62 asked (warrant 1573429545942388758, verified: his go for tonight's c
 
 ### 2026-11-21 03:50Z: compacted the narative agents
 Bogdan (Discord 1573544929286820051, verified): "Check the context of the agents working on narrative and compact them. keep their logic to the top nothc". Sent /compact with explicit preserve-the-logic instructions via each hl-* pane while idle (input text checked as dim ghost suggestions first). preTokens: 62 704k, 02 469k, fe 486k, 96 175k; boundaries 03:48-03:49Z. 62's summary checked. Background shells survived.
+
+### 2026-11-21 07:50Z daily device sweep
+54/58 verified, 0 contradicted; arch 3 unknown (ssh timeout, duties kept); phone/shortcut unprobed. Unclaimed: archserver narative-view.service, transient (systemd-run, RuntimeMaxSec=1w, started 04:39 CET, tailnet :8787) so not claimed. cbrain1 discover still lists archserver units (known bug). Nothing claimed.
