@@ -16773,3 +16773,6 @@ nothing-phone1-78: tswatch v2.3, Bluetooth always off, no hotspot trigger; Wi-Fi
 
 ### 2026-11-20 20:08Z: voiceprint source for narative capture
 narative-62 asked (warrant 1573429545942388758, verified: his go for tonight's capture, "my voice print?") to enroll his voice from his side of hotline call recordings. Approved local-only, read-only: turn-NN.wav files, 48 kHz Opus (~1000 s) + 16 kHz WhatsApp 11-08 (~2500 s), skip 8 kHz. Excluded call-20261031-213743 (friend on the line), 20260918-232223 and 20261105-183346; outlier rejection before averaging.
+
+### 2026-11-21 03:50Z: compacted the narative agents
+Bogdan (Discord 1573544929286820051, verified): "Check the context of the agents working on narrative and compact them. keep their logic to the top nothc". Sent /compact with explicit preserve-the-logic instructions via each hl-* pane while idle (input text checked as dim ghost suggestions first). preTokens: 62 704k, 02 469k, fe 486k, 96 175k; boundaries 03:48-03:49Z. 62's summary checked. Background shells survived.
