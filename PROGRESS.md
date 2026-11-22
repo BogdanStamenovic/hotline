@@ -16779,3 +16779,6 @@ Bogdan (Discord 1573544929286820051, verified): "Check the context of the agents
 
 ### 2026-11-21 07:50Z daily device sweep
 54/58 verified, 0 contradicted; arch 3 unknown (ssh timeout, duties kept); phone/shortcut unprobed. Unclaimed: archserver narative-view.service, transient (systemd-run, RuntimeMaxSec=1w, started 04:39 CET, tailnet :8787) so not claimed. cbrain1 discover still lists archserver units (known bug). Nothing claimed.
+
+### 2026-11-22 07:45Z cbrain1/adb-tailnet contradicted
+tailscale ping ok, tcp 100.92.155.28:5555 closed, LAN adb ok; no tun iface, no VPN network agent, IPNService running; wifi agent created 01:51Z; always_on_vpn_app null. Routed to nothing-phone1-78 (owner), Discord posted.
