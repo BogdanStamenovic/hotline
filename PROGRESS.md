@@ -16786,3 +16786,6 @@ tailscale ping ok, tcp 100.92.155.28:5555 closed, LAN adb ok; no tun iface, no V
 
 ### 2026-11-22 07:50Z daily device sweep
 58 checked, 0 contradicted (cbrain1 4/4 after the tailnet fix); arch 3 unknown (ssh timeout, duties kept); phone/shortcut unprobed; narative-view still transient, unclaimed. Nothing claimed.
+
+### 2026-11-22 12:15-12:25Z new top-priority team: innovnation
+Bogdan 1574035562955014285 / ...6065675776081 / ...6596687376485 (all verified). InnovNation Competition Serbia 2026 (NTP), team Kreativno Pero T15, Izazov 2 Charge&GO Go2 robot dog for SE Lapovo. Mentor meeting Thu 26 Nov 15:00. Saved attachments to ~/data/innovnation/docs/email (gitignored); private repo BogdanStamenovic/innovnation. Copied arch:~/govvpn to archserver ~/govvpn (484 files, 700/600). Spawned innovnation-89 (Opus, hl-innovnation, trust prompt accepted). 2FA = TOTP in govvpn; agents do not enter his creds/codes.
