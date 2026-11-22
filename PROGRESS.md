@@ -16782,3 +16782,4 @@ Bogdan (Discord 1573544929286820051, verified): "Check the context of the agents
 
 ### 2026-11-22 07:45Z cbrain1/adb-tailnet contradicted
 tailscale ping ok, tcp 100.92.155.28:5555 closed, LAN adb ok; no tun iface, no VPN network agent, IPNService running; wifi agent created 01:51Z; always_on_vpn_app null. Routed to nothing-phone1-78 (owner), Discord posted.
+07:49Z: adb-tailnet green again (verified: 4/4, tcp open, tun up, always_on=com.tailscale.ipn). Fix by nothing-phone1-78: force-stop + start Tailscale after tswatch looped ~7h; tswatch v2.4 does it after 3 failed cycles. CORRECTION: always_on_vpn_app was set; my null reading was mid re-toggle.
