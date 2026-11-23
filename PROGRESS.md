@@ -16792,3 +16792,7 @@ Bogdan 1574035562955014285 / ...6065675776081 / ...6596687376485 (all verified).
 
 ### 2026-11-23 07:50Z daily device sweep
 58 checked, 0 contradicted; arch unreachable (3 unknown, duties kept); phone/shortcut unprobed; narative-view transient, unclaimed. Claimed arch/tandem-client (seen active 11-22 21:55 CET); admin-channel republish hit 429.
+
+### 2026-11-23 11:00-12:30Z NTP workshop attended for Bogdan
+Bogdan 1574378761334558771 (verified): join Zoom as "Bogdan Stamenovic - AshGuard - Kreativno Pero", record, Whisper, summarize; 1574379103925051433: no notice to others. Chrome on use-computer vd with PULSE_SINK=zoomrec null sink, parecord 16k mono; faster-whisper large-v3 int8_float16 (hotline-call venv + cublas/cudnn libs from /mnt/narative/uv-cache). Attendance sheet rows 42-43 (AshGuard/Srednjoškolski/2, Kreativno Pero T15/AI/1), consent "Da" per 1574384161706213377. Summary posted; files ~/data/hotline-meetings/zoom-20261123. Lesson: pkill -f 'zoom-agent-chrome' killed its own shell (exit 144).
+pm-sot-live C1 not reached (59/150, wk 4.4/12); re-armed weekly wake pm-sot-live-c1-weekly Mon 07:40Z.
