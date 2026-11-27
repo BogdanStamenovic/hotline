@@ -145,29 +145,28 @@ def test_the_sweep_leaves_a_team_members_channel(tmp_path: Path) -> None:
     assert registry.by_name("manager") is not None
 
 
-def test_done_on_a_team_member_keeps_its_channel(
+def test_done_is_removed_and_never_deletes_a_channel(
+    guild: FakeGuild, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """11-27, Bogdan: --done lost his threads; it must refuse and touch nothing."""
+    agent = _seed(guild, "api-ab", "sid-api")
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "sid-api")
+    assert cli.main(["--done", "--handoff", "/tmp/h.md"]) == 2
+    assert guild.by_id(agent.channel_id) is not None
+    assert not any(m == "DELETE" for m, _, _ in guild.calls)
+    after = Registry().by_name("api-ab")
+    assert after is not None and not after.done
+    assert after.channel_id == agent.channel_id
+
+
+def test_done_refuses_for_a_team_member_too(
     guild: FakeGuild, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     agent = _seed(guild, "kinreply-legal-1d", "sid-legal")
     assert cli.main(["--team", "KinReply", "--join", "kinreply-legal-1d"]) == 0
     monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "sid-legal")
-    assert cli.main(["--done", "--handoff", "/tmp/handoff.md"]) == 0
-
+    assert cli.main(["--done", "--handoff", "/tmp/handoff.md"]) == 2
     assert guild.by_id(agent.channel_id) is not None
-    assert not any(m == "DELETE" for m, _, _ in guild.calls)
-    after = Registry().by_name("kinreply-legal-1d")
-    assert after is not None and after.done
-    assert after.handoff == "/tmp/handoff.md"
-    assert after.channel_id == agent.channel_id
-
-
-def test_done_on_an_ordinary_agent_still_deletes(
-    guild: FakeGuild, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    agent = _seed(guild, "api-ab", "sid-api")
-    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "sid-api")
-    assert cli.main(["--done", "--handoff", "/tmp/h.md"]) == 0
-    assert guild.by_id(agent.channel_id) is None
 
 
 # ---- join / leave ------------------------------------------------------------
@@ -365,14 +364,14 @@ def test_a_hand_made_team_wins_over_the_repo(tmp_path: Path) -> None:
     assert teams.persona_of("legal") == "keeper"
 
 
-def test_done_on_a_passing_member_deletes_its_channel(
+def test_done_on_a_passing_member_no_longer_deletes_its_channel(
     guild: FakeGuild, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     agent = _seed(guild, "worker-1", "sid-w")
     Teams(agents_file().with_name("teams.json")).join("tells", "worker-1", keeper=False)
     monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "sid-w")
-    assert cli.main(["--done", "--handoff", "/tmp/h.md"]) == 0
-    assert guild.by_id(agent.channel_id) is None
+    assert cli.main(["--done", "--handoff", "/tmp/h.md"]) == 2
+    assert guild.by_id(agent.channel_id) is not None
 
 
 def test_set_persona_command_and_listing_puts_keepers_first(

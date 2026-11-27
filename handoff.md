@@ -1,3 +1,7 @@
+> ## TODO (his order, 2026-11-27 ~02:05 CET): trial2 is PAUSED, keep it as a TODO
+> - Bogdan paused trial2 (anvil's 2nd user team: folding armour-leg exoskeleton) "running low on usage" (msg 1575677684766343190, relayed by trial2-7f; Discord 429'd my re-check). Resume ONLY on his word.
+> - Handoff: ~/data/trial2/HANDOFF.md (design frozen on option 2; open with him: hand-assisted vs clockwork deploy; mech/struct mid-flight items listed). Resume = respawn 3 Opus specialists from ~/data/trial2/seeds/ (hotline --resume trial2-df/-10/-24 works only until ~11-30, records kept 3 days).
+
 > ## STATE 2026-11-19 ~08:55 CET (operator hotline-80, session hotline-a5) -- Nothing Phone night; box powering off 08:02Z
 > - Nothing Phone (1) = device cbrain1 (tailnet 100.92.155.28, LAN 192.168.1.69), adb key-auth, adb root works (not persistent). Owner agent nothing-phone1-78 (hl-nothing-phone1-78, ~/data/nothing-phone1); told to checkpoint before poweroff. OPEN for it: Tailscale not running on the phone (adb-tailnet ❌), root init service for nothing-screend + tailscale.
 > - nothing-screen-60 DONE: iPhone PWA (repo nothing-screen private, ownbox, nothing-screen-web.service :8460). WAITING ON HIM: yes/no that laptop Wi-Fi "Bogdan" is the iPhone hotspot; iPhone one-time setup steps (posted in #agent-hotline-80).

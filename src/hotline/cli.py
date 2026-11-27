@@ -89,7 +89,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--done",
         action="store_true",
-        help="mark this session finished; its channel is deleted and its record kept",
+        help="REMOVED 2026-11-27 (it deleted channels); refuses and changes nothing",
     )
     parser.add_argument(
         "--handoff",
@@ -412,6 +412,26 @@ def _agent_command(args: argparse.Namespace, log: Callable[[str], None]) -> int:
                 with contextlib.suppress(HotlineError):
                     manager.retopic(agent.channel_id, topic)
         return 0
+
+    # REMOVED 2026-11-27 at Bogdan's order (Discord 1575851364347682857): "it
+    # makes more problems than progress". `--done` deleted the agent's channel on
+    # the spot, with no archive, and he lost threads with results in them
+    # (trial2-7f on 11-27, directional-speaker-cb on 11-17, the presentation
+    # agents). A "never run --done" line in every seed did not stop it, so the
+    # verb itself refuses now. Finishing = write the handoff, report, go idle;
+    # the idle reaper puts the session to sleep and a message wakes it.
+    # The code below is kept unreachable on purpose so the retention/keeper
+    # semantics it documents stay readable if he ever wants a safe variant.
+    if args.done:
+        print(
+            "hotline: --done has been removed (Bogdan, 2026-11-27): it deleted the "
+            "agent's Discord channel and lost his threads. Nothing was changed. "
+            "To finish: write your handoff, post your final report with hotline-say, "
+            "then simply stop. Idle agents are put to sleep after 30 min and a "
+            "message wakes them.",
+            file=sys.stderr,
+        )
+        return 2
 
     finished = registry.complete(session_id, handoff=args.handoff)
     if finished is None:

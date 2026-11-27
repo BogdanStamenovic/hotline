@@ -7,7 +7,7 @@
 #   operator/new-stizem-team.sh prepare MSGID "his words"
 #       asks every current role-holder to commit/push its work and write HANDOFF-<name>.md in its cwd
 #   operator/new-stizem-team.sh swap [--dry-run] [--force] MSGID "his words"
-#       per role: retire the old agent (hotline --done + kill its tmux), then spawn the fresh one in the same cwd.
+#       DISABLED 2026-11-27 (it relied on hotline --done, now removed). Was: retire old agent, spawn fresh one.
 #       Refuses a role whose handoff is missing or older than its prepare request, unless --force.
 #
 # Roles (his words 11-11: "apps sec does security, apps pwa does the actual apps, site does the site, legal does legal"):
@@ -90,6 +90,11 @@ EOF
   done; done
   ;;
 swap)
+  # Disabled 2026-11-27: swap retired old agents with `hotline --done`, which
+  # Bogdan had removed (it deleted channels and lost his threads). Without it the
+  # old holders stay registered and holder() would hand them to the next swap.
+  # Rework to a non-destructive retire before re-enabling.
+  echo "swap is disabled: hotline --done was removed on 2026-11-27 (it deleted channels). Ask the operator." >&2; exit 2
   shift; dry=0 force=0
   while [ "${1:-}" = --dry-run ] || [ "${1:-}" = --force ]; do [ "$1" = --dry-run ] && dry=1; [ "$1" = --force ] && force=1; shift; done
   [ $# -eq 2 ] || { sed -n 6,13p "$0" >&2; exit 2; }
